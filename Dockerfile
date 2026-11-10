@@ -10,7 +10,7 @@
 # platform because the standalone server bundles native image-processing
 # binaries.
 
-FROM node:24-bookworm-slim AS web-build
+FROM node:26-bookworm-slim AS web-build
 WORKDIR /src/web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci
@@ -20,7 +20,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV NEXT_PUBLIC_GIPHY_API_KEY=${NEXT_PUBLIC_GIPHY_API_KEY}
 RUN npm run build
 
-FROM --platform=$BUILDPLATFORM node:24-bookworm-slim AS ops-build
+FROM --platform=$BUILDPLATFORM node:26-bookworm-slim AS ops-build
 WORKDIR /src/ops
 COPY ops/package.json ops/package-lock.json ./
 RUN npm ci
@@ -37,7 +37,7 @@ RUN dotnet publish server/Stellarr.Api/Stellarr.Api.csproj \
     -c Release -o /out/api --no-restore -p:UseAppHost=false
 
 FROM rustfs/rustfs:1.0.0-beta.11-preview.1 AS rustfs-bin
-FROM node:24-bookworm-slim AS node-runtime
+FROM node:26-bookworm-slim AS node-runtime
 
 # Target of docker-compose.dev.yml: the SDK with the source bind-mounted.
 FROM mcr.microsoft.com/dotnet/sdk:10.0-noble AS api-dev
