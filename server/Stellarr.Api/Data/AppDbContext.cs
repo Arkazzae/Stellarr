@@ -31,8 +31,11 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<PermissionOverride> PermissionOverrides => Set<PermissionOverride>();
     public DbSet<ServerEmoji> ServerEmoji => Set<ServerEmoji>();
     public DbSet<Message> Messages => Set<Message>();
+    public DbSet<MessageChange> MessageChanges => Set<MessageChange>();
+    public DbSet<MessageIndexEntry> MessageIndexEntries => Set<MessageIndexEntry>();
     public DbSet<MessageReaction> MessageReactions => Set<MessageReaction>();
     public DbSet<ImageAttachment> ImageAttachments => Set<ImageAttachment>();
+    public DbSet<ObjectDeletion> ObjectDeletions => Set<ObjectDeletion>();
     public DbSet<MessageAttachment> MessageAttachments => Set<MessageAttachment>();
     public DbSet<MessageEmbed> MessageEmbeds => Set<MessageEmbed>();
     public DbSet<UserNotification> UserNotifications => Set<UserNotification>();

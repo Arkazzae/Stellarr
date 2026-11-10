@@ -239,6 +239,105 @@ public sealed class DataModelContentTests(StellarrWebApplicationFactory factory)
         Assert.False(await db.OperationsSettings.AnyAsync(x => x.ServerId == server.Id));
     }
 
+    [Fact]
+    public async Task TheJournalAssignsRisingSequencesAndOutlivesTheMessagesItAnnounces()
+    {
+        await using var scope = factory.OpenScope(out var db);
+        var author = (await AddUsersAsync(db, 1))[0];
+        var message = Post(author);
+        db.Messages.Add(message);
+        await db.SaveChangesAsync();
+        var upsert = Change(message, MessageChangeKind.Upsert);
+        var delete = Change(message, MessageChangeKind.Delete);
+        db.MessageChanges.Add(upsert);
+        await db.SaveChangesAsync();
+        db.MessageChanges.Add(delete);
+        await db.SaveChangesAsync();
+
+        Assert.True(upsert.Sequence > 0);
+        Assert.True(delete.Sequence > upsert.Sequence);
+
+        await db.Messages.Where(x => x.Id == message.Id).ExecuteDeleteAsync();
+
+        // Compared by sequence, so that entries the database may add itself when
+        // a message changes do not matter.
+        var kept = await db.MessageChanges
+            .Where(x => x.Sequence == upsert.Sequence || x.Sequence == delete.Sequence)
+            .OrderBy(x => x.Sequence)
+            .Select(x => x.Kind)
+            .ToListAsync();
+        Assert.Equal([MessageChangeKind.Upsert, MessageChangeKind.Delete], kept);
+    }
+
+    [Fact]
+    public async Task ACatalogueRowBelongsToOneMessageAndLeavesWithIt()
+    {
+        await using var scope = factory.OpenScope(out var db);
+        var author = (await AddUsersAsync(db, 1))[0];
+        var message = Post(author);
+        db.Messages.Add(message);
+        await db.SaveChangesAsync();
+        // Whatever the database catalogued on its own, start from the row written here.
+        await db.MessageIndexEntries.Where(x => x.MessageId == message.Id).ExecuteDeleteAsync();
+        db.ChangeTracker.Clear();
+        db.MessageIndexEntries.Add(Catalogue(message));
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+
+        db.MessageIndexEntries.Add(Catalogue(message));
+        await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+        db.ChangeTracker.Clear();
+
+        db.MessageIndexEntries.Add(Catalogue(Post(author)));
+        await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+        db.ChangeTracker.Clear();
+
+        await db.Messages.Where(x => x.Id == message.Id).ExecuteDeleteAsync();
+
+        Assert.False(await db.MessageIndexEntries.AnyAsync(x => x.MessageId == message.Id));
+    }
+
+    [Fact]
+    public async Task TheCatalogueIsIndexedNewestFirstWithinEachChannelFilter()
+    {
+        await using var scope = factory.OpenScope(out var db);
+
+        var columns = await db.Database
+            .SqlQueryRaw<IndexColumn>(
+                """
+                SELECT il.name AS IndexName, ix.name AS ColumnName, ix."desc" AS IsDescending
+                FROM pragma_index_list('MessageIndexEntries') AS il
+                JOIN pragma_index_xinfo(il.name) AS ix
+                WHERE ix.key = 1 AND il.origin = 'c'
+                ORDER BY il.name, ix.seqno
+                """)
+            .ToListAsync();
+
+        var indexes = columns
+            .GroupBy(x => x.IndexName)
+            .Select(group => group.Select(x => (x.ColumnName, x.IsDescending == 1)).ToArray())
+            .ToList();
+        Assert.Equal(2, indexes.Count);
+        Assert.Contains(indexes, index => index.SequenceEqual(
+            [("ChannelId", false), ("HasAttachments", false), ("CreatedAt", true), ("MessageId", true)]));
+        Assert.Contains(indexes, index => index.SequenceEqual(
+            [("ChannelId", false), ("HasLinks", false), ("CreatedAt", true), ("MessageId", true)]));
+    }
+
+    [Fact]
+    public async Task AnObjectIsQueuedForDeletionOnce()
+    {
+        await using var scope = factory.OpenScope(out var db);
+        var key = $"uploads/{Guid.NewGuid():N}";
+        db.ObjectDeletions.Add(new ObjectDeletion { ObjectKey = key, QueuedAt = DateTime.UtcNow });
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+
+        db.ObjectDeletions.Add(new ObjectDeletion { ObjectKey = key, QueuedAt = DateTime.UtcNow });
+
+        await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+    }
+
     private static async Task<StellarrServer> AddServerAsync(AppDbContext db)
     {
         var server = new StellarrServer { Id = Guid.NewGuid(), Name = UniqueName(), CreatedAt = DateTime.UtcNow };
@@ -287,4 +386,36 @@ public sealed class DataModelContentTests(StellarrWebApplicationFactory factory)
         Tone = "info",
         CreatedAt = DateTime.UtcNow,
     };
+
+    private static Message Post(User author) => new()
+    {
+        Id = Guid.NewGuid(),
+        ChannelId = TestData.GeneralChannelId,
+        AuthorId = author.Id,
+        Content = "hello",
+        CreatedAt = DateTime.UtcNow,
+    };
+
+    private static MessageChange Change(Message message, MessageChangeKind kind) => new()
+    {
+        ChannelId = message.ChannelId,
+        MessageId = message.Id,
+        Kind = kind,
+        CreatedAt = DateTime.UtcNow,
+    };
+
+    private static MessageIndexEntry Catalogue(Message message) => new()
+    {
+        MessageId = message.Id,
+        ChannelId = message.ChannelId,
+        CreatedAt = message.CreatedAt,
+        SearchText = message.Content,
+    };
+
+    private sealed class IndexColumn
+    {
+        public required string IndexName { get; init; }
+        public required string ColumnName { get; init; }
+        public int IsDescending { get; init; }
+    }
 }
