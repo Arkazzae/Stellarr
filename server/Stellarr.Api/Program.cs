@@ -53,6 +53,7 @@ builder.Services.AddSingleton<TurnCredentialService>();
 builder.Services.AddSingleton<SlowModeGate>();
 builder.Services.AddSingleton<SoundboardPlaybackGate>();
 builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddSingleton(services => ClientDiscoveryIdentity.Load(services.GetRequiredService<IConfiguration>()));
 builder.Services.AddSignalR(options =>
 {
     options.MaximumReceiveMessageSize = 160 * 1024;
@@ -156,6 +157,7 @@ app.MapGet("/health/ready", async (AppDbContext db, CancellationToken cancellati
         ? Results.Ok(new { status = "ready" })
         : Results.Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: "Database unavailable"));
 
+app.MapClientDiscoveryEndpoints();
 app.MapAuthEndpoints();
 app.MapPasswordRecoveryEndpoints();
 app.MapRegistrationEndpoints();
