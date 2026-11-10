@@ -18,6 +18,10 @@ export {
 } from "./DirectoryProvider";
 export { useEmoji, type EmojiValue } from "./EmojiProvider";
 export {
+  useFriendsContext as useFriends,
+  type FriendsValue,
+} from "./FriendsProvider";
+export {
   useKeybindContext as useKeybinds,
   type KeybindValue,
 } from "./KeybindProvider";
