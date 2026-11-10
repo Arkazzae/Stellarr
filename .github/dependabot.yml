@@ -1,0 +1,82 @@
+version: 2
+
+# Every ecosystem updates weekly. Minor and patch updates share one pull request
+# per ecosystem; major updates get their own. Version updates wait five days
+# after a release (security updates are not delayed). The commit prefix keeps the
+# pull request titles, which become the squash commit subjects, in the
+# repository's commit format.
+updates:
+  - package-ecosystem: nuget
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        patterns: ["*"]
+        update-types: [minor, patch]
+    cooldown:
+      default-days: 5
+    commit-message:
+      prefix: build(deps)
+
+  - package-ecosystem: npm
+    directory: /web
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        patterns: ["*"]
+        update-types: [minor, patch]
+    cooldown:
+      default-days: 5
+    commit-message:
+      prefix: build(deps)
+
+  - package-ecosystem: npm
+    directory: /ops
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        patterns: ["*"]
+        update-types: [minor, patch]
+    cooldown:
+      default-days: 5
+    commit-message:
+      prefix: build(deps)
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        patterns: ["*"]
+        update-types: [minor, patch]
+    cooldown:
+      default-days: 5
+    commit-message:
+      prefix: build(deps)
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      minor-and-patch:
+        patterns: ["*"]
+        update-types: [minor, patch]
+    cooldown:
+      default-days: 5
+    commit-message:
+      prefix: build(deps)
