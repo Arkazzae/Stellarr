@@ -1,0 +1,46 @@
+/* Outfit is the typeface of the interface; the files are the ones of the brand
+   guidelines. The unicode ranges are the Latin and Latin Extended subsets, so a
+   page in plain English loads only the first. */
+@font-face {
+  font-family: 'Outfit';
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('../../../branding/guidelines/fonts/outfit-100-900-latin-ext.woff2') format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: 'Outfit';
+  font-weight: 100 900;
+  font-display: swap;
+  src: url('../../../branding/guidelines/fonts/outfit-100-900-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/*
+ * The accent is #6f65d1. White on it has a contrast of 4.71:1, which holds for
+ * buttons in both schemes. As link text the accent reaches 4.71:1 on white but
+ * only 3.64:1 on the dark background and 3.94:1 on the tinted callout
+ * background, so link text uses a darker step in the light scheme and a lighter
+ * one in the dark scheme. Every text/background pair the theme draws with
+ * --vp-c-brand-1 and --vp-c-brand-2 stays above 4.5:1.
+ */
+:root {
+  --vp-font-family-base: 'Outfit', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
+    'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+
+  --vp-c-brand-1: #5549b8;
+  --vp-c-brand-2: #4f44b0;
+  --vp-c-brand-3: #6f65d1;
+  --vp-c-brand-soft: rgba(111, 101, 209, 0.14);
+
+  --vp-button-brand-bg: #6f65d1;
+  --vp-button-brand-hover-bg: #5f54c4;
+  --vp-button-brand-active-bg: #5549b8;
+}
+
+.dark {
+  --vp-c-brand-1: #a39cf2;
+  --vp-c-brand-2: #b0aaf5;
+  --vp-c-brand-soft: rgba(111, 101, 209, 0.16);
+}
