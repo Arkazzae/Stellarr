@@ -6,6 +6,7 @@ using System.Threading.Channels;
 using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -130,6 +131,148 @@ public sealed class EmbedPipelineTests
             .DrainDeletionQueueAsync(10, CancellationToken.None);
         Assert.False(storage.Contains(objectKey));
     }
+
+    [Fact]
+    public async Task EditingAMessageAddsAndRemovesItsCards()
+    {
+        using var factory = CreateFactory(new FakeUnfurler());
+        var (client, cookie) = await SignInAsync(factory);
+        await using var updates = await EmbedUpdates.ConnectAsync(factory, cookie);
+        var storage = (FakeObjectStorage)factory.Services.GetRequiredService<IObjectStorage>();
+
+        // Every send is queued, and a message without a link ends up with an
+        // empty set.
+        var messageId = await PostAsync(client, "nothing to see here");
+        Assert.Empty((await updates.WaitForAsync(messageId)).GetProperty("embeds").EnumerateArray());
+        Assert.Empty(await HistoryEmbedsAsync(client, messageId));
+
+        await EditAsync(client, messageId, "now with https://news.example/story");
+        var added = Assert.Single((await updates.WaitForAsync(messageId)).GetProperty("embeds").EnumerateArray());
+        Assert.Equal("news.example", added.GetProperty("domain").GetString());
+        Assert.Single(await HistoryEmbedsAsync(client, messageId));
+        Assert.Equal(1, storage.Count);
+
+        await EditAsync(client, messageId, "and now without one");
+        Assert.Empty((await updates.WaitForAsync(messageId)).GetProperty("embeds").EnumerateArray());
+        Assert.Empty(await HistoryEmbedsAsync(client, messageId));
+        Assert.Equal(0, storage.Count);
+    }
+
+    [Fact]
+    public async Task RecoveryQueuesOnlyYouTubeEmbedsThatNeverGotATitle()
+    {
+        using var factory = CreateFactory(new FakeUnfurler());
+        using var client = factory.CreateClient();
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var stale = await AddYouTubeMessageAsync(db, title: null);
+        await AddYouTubeMessageAsync(db, title: "Already complete");
+
+        var inbox = new EmbedInbox();
+        await EmbedRecovery.EnqueueStaleYouTubeAsync(db, inbox, CancellationToken.None);
+
+        using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await using var queued = inbox.ReadAllAsync(timeout.Token).GetAsyncEnumerator(timeout.Token);
+        Assert.True(await queued.MoveNextAsync());
+        Assert.Equal(new EmbedRequest(TestData.GeneralChannelId, stale), queued.Current);
+
+        // Nothing else was queued: the next read just waits.
+        timeout.CancelAfter(TimeSpan.FromMilliseconds(300));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(async () => await queued.MoveNextAsync());
+    }
+
+    [Fact]
+    public async Task AYouTubeEmbedFromBeforeTheResolverIsRebuiltWhenTheServerStarts()
+    {
+        var databasePath = Path.Combine(Path.GetTempPath(), $"stellarr-tests-{Guid.NewGuid():N}.db");
+        var dataRoot = Path.Combine(Path.GetTempPath(), $"stellarr-data-{Guid.NewGuid():N}");
+        try
+        {
+            Guid messageId;
+            using (var before = new StellarrWebApplicationFactory(
+                loadTestData: true, databasePath: databasePath, dataRoot: dataRoot, deleteStorageOnDispose: false))
+            {
+                using var client = before.CreateClient();
+                await using var scope = before.Services.CreateAsyncScope();
+                messageId = await AddYouTubeMessageAsync(scope.ServiceProvider.GetRequiredService<AppDbContext>(), title: null);
+            }
+
+            using var after = new StellarrWebApplicationFactory(
+                loadTestData: true,
+                databasePath: databasePath,
+                dataRoot: dataRoot,
+                deleteStorageOnDispose: false,
+                configureServices: UseFakes(new FakeUnfurler(), new FakeYouTube()));
+            using var afterClient = after.CreateClient();
+
+            var title = await PollAsync(async () =>
+            {
+                await using var scope = after.Services.CreateAsyncScope();
+                return await scope.ServiceProvider.GetRequiredService<AppDbContext>().MessageEmbeds
+                    .Where(x => x.MessageId == messageId)
+                    .Select(x => x.Title)
+                    .SingleOrDefaultAsync();
+            });
+            Assert.Equal("Video title", title);
+        }
+        finally
+        {
+            SqliteConnection.ClearAllPools();
+            foreach (var suffix in new[] { "", "-wal", "-shm" })
+            {
+                File.Delete(databasePath + suffix);
+            }
+
+            if (Directory.Exists(dataRoot))
+            {
+                Directory.Delete(dataRoot, recursive: true);
+            }
+        }
+    }
+
+    private static async Task<Guid> AddYouTubeMessageAsync(AppDbContext db, string? title)
+    {
+        var messageId = Guid.NewGuid();
+        db.Messages.Add(new Message
+        {
+            Id = messageId,
+            ChannelId = TestData.GeneralChannelId,
+            AuthorId = await db.Users.Where(x => x.Username == "maja").Select(x => x.Id).SingleAsync(),
+            Content = "https://youtu.be/aqz-KE-bpKQ",
+            CreatedAt = DateTime.UtcNow,
+        });
+        db.MessageEmbeds.Add(new MessageEmbed
+        {
+            Id = Guid.NewGuid(),
+            MessageId = messageId,
+            Url = "https://youtu.be/aqz-KE-bpKQ",
+            Kind = EmbedKind.Video,
+            Provider = VideoLinks.YouTube,
+            ProviderId = "aqz-KE-bpKQ",
+            Domain = "youtu.be",
+            Title = title,
+            Position = 0,
+            CreatedAt = DateTime.UtcNow,
+        });
+        await db.SaveChangesAsync();
+        return messageId;
+    }
+
+    private static async Task<T?> PollAsync<T>(Func<Task<T?>> read)
+    {
+        var deadline = DateTime.UtcNow.AddSeconds(10);
+        T? value = await read();
+        while (value is null && DateTime.UtcNow < deadline)
+        {
+            await Task.Delay(50);
+            value = await read();
+        }
+
+        return value;
+    }
+
+    private static async Task EditAsync(HttpClient client, Guid messageId, string content) =>
+        (await client.PatchAsJsonAsync($"/api/messages/{messageId}", new { content })).EnsureSuccessStatusCode();
 
     internal static StellarrWebApplicationFactory CreateFactory(
         FakeUnfurler unfurler,

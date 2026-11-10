@@ -167,7 +167,9 @@ static async Task InitializeApplicationAsync(WebApplication app)
     var stopping = app.Lifetime.ApplicationStopping;
     await using (var scope = app.Services.CreateAsyncScope())
     {
-        await DatabaseSchema.UpgradeAsync(scope.ServiceProvider.GetRequiredService<AppDbContext>(), stopping);
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        await DatabaseSchema.UpgradeAsync(db, stopping);
+        await EmbedRecovery.EnqueueStaleYouTubeAsync(db, app.Services.GetRequiredService<EmbedInbox>(), stopping);
     }
 
     if (app.Configuration.GetValue<bool>("Storage:SkipInitialization"))

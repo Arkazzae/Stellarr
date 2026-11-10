@@ -284,6 +284,7 @@ public static class MessageEndpoints
         HttpContext http,
         AppDbContext db,
         IHubContext<AppHub> hub,
+        EmbedInbox embeds,
         CancellationToken cancellationToken)
     {
         var content = request.Content?.Trim() ?? "";
@@ -307,7 +308,8 @@ public static class MessageEndpoints
 
         // Saving the same text twice is not an edit, and "edited" is a claim
         // readers rely on.
-        if (!string.Equals(message.Content, content, StringComparison.Ordinal))
+        var changed = !string.Equals(message.Content, content, StringComparison.Ordinal);
+        if (changed)
         {
             message.Content = content;
             message.EditedAt = DateTime.UtcNow;
@@ -318,6 +320,12 @@ public static class MessageEndpoints
         // are the viewer's own; clients keep that from history.
         await hub.Clients.Group(AppHub.ServerGroup(serverId))
             .SendAsync("MessageUpdated", message.ToDto(), CancellationToken.None);
+
+        // The new text may have gained links, or lost the ones it had cards for.
+        if (changed)
+        {
+            embeds.Enqueue(new EmbedRequest(message.ChannelId, message.Id));
+        }
 
         return Results.Ok(message.ToDto(userId));
     }
