@@ -52,6 +52,7 @@ public sealed partial class AppHub
         }
 
         await BroadcastVoiceSnapshotAsync(roomId);
+        await AnnounceJoinSoundAsync(roomId, userId);
     }
 
     public async Task LeaveVoice()
