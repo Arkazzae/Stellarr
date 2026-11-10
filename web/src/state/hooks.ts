@@ -12,6 +12,7 @@ export {
   useAccountContext as useAccount,
   type AccountValue,
 } from "./AccountProvider";
+export { useChatContext as useChat, type ChatValue } from "./ChatProvider";
 export {
   useDirectoryContext as useDirectory,
   type DirectoryValue,
