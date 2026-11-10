@@ -128,6 +128,7 @@ public static class MessageEndpoints
             !await ServerAccess.HasAsync(db, userId, serverId, channelId, ServerPrivileges.ManageChannels, cancellationToken);
         Message message;
         ChannelReadDto read;
+        IReadOnlyList<UserNotification> mentions;
         using (await slowMode.EnterAsync(enforceSlowMode, cancellationToken))
         {
             if (enforceSlowMode &&
@@ -164,7 +165,7 @@ public static class MessageEndpoints
             };
             try
             {
-                read = await StoreAsync(db, message, cancellationToken);
+                (read, mentions) = await StoreAsync(db, serverId, message, cancellationToken);
             }
             catch (DbUpdateException exception) when (
                 submission.ClientMessageId is not null && DatabaseErrors.IsUniqueConstraint(exception))
@@ -188,6 +189,7 @@ public static class MessageEndpoints
             .SendAsync("MessageCreated", response, CancellationToken.None);
         await hub.Clients.Group(AppHub.UserGroup(userId))
             .SendAsync("ChannelReadChanged", read, CancellationToken.None);
+        await MessageMentions.FanOutAsync(hub, mentions, CancellationToken.None);
         return Results.Created($"/api/channels/{channelId}/messages/{message.Id}", response);
     }
 
@@ -237,11 +239,14 @@ public static class MessageEndpoints
     }
 
     /// <summary>
-    /// Stores the message and moves its author's read marker to it in one
-    /// transaction: whoever sent a message has read everything before it.
+    /// Stores the message, moves its author's read marker to it and adds the
+    /// inbox entries of the members it mentions, all in one transaction:
+    /// whoever sent a message has read everything before it, and nobody is
+    /// told about a message that was not stored.
     /// </summary>
-    private static async Task<ChannelReadDto> StoreAsync(
+    private static async Task<(ChannelReadDto Read, IReadOnlyList<UserNotification> Mentions)> StoreAsync(
         AppDbContext db,
+        Guid serverId,
         Message message,
         CancellationToken cancellationToken)
     {
@@ -250,8 +255,14 @@ public static class MessageEndpoints
         await db.SaveChangesAsync(cancellationToken);
         var read = await ChannelReadEndpoints.AdvanceAsync(
             db, message.ChannelId, message.AuthorId, message.CreatedAt, cancellationToken);
+        var mentions = await MessageMentions.AddNotificationsAsync(db, serverId, message, cancellationToken);
+        if (mentions.Count > 0)
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
         await transaction.CommitAsync(cancellationToken);
-        return read;
+        return (read, mentions);
     }
 
     /// <summary>

@@ -48,6 +48,7 @@ builder.Services.AddSingleton<RegistrationGate>();
 builder.Services.AddSingleton<PresenceTracker>();
 builder.Services.AddSingleton<TurnCredentialService>();
 builder.Services.AddSingleton<SlowModeGate>();
+builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSignalR(options =>
 {
     options.MaximumReceiveMessageSize = 160 * 1024;
@@ -137,6 +138,7 @@ app.MapAssetEndpoints();
 app.MapMessageEndpoints();
 app.MapMessageHistoryEndpoints();
 app.MapChannelReadEndpoints();
+app.MapNotificationEndpoints();
 app.MapHub<AppHub>("/hubs/app");
 
 await InitializeApplicationAsync(app);
