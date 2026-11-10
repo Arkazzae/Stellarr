@@ -38,8 +38,8 @@ function Probe() {
     <>
       <output aria-label="theme">{JSON.stringify(theme)}</output>
       <output aria-label="resolved">{resolved}</output>
-      <button onClick={() => update({ palette: "spotify", accent: "#1db954" })}>
-        spotify
+      <button onClick={() => update({ palette: "evergreen", accent: "#1db954" })}>
+        evergreen
       </button>
       <button onClick={() => update({ density: "compact" })}>compact</button>
       <button onClick={() => update({ scheme: "system" })}>follow system</button>
@@ -98,11 +98,11 @@ describe("ThemeProvider", () => {
     renderProvider();
 
     expect(shownTheme()).toMatchObject({
-      palette: "github-dark",
+      palette: "ink",
       scheme: "light",
       font: "jetbrains-mono",
     });
-    expect(root.dataset.theme).toBe("github-dark");
+    expect(root.dataset.theme).toBe("ink");
     expect(root.dataset.scheme).toBe("light");
     expect(root.dataset.font).toBe("jetbrains-mono");
     expect(root.style.getPropertyValue("--palette-accent")).toBe("#58a6ff");
@@ -120,18 +120,18 @@ describe("ThemeProvider", () => {
     const user = userEvent.setup();
     renderProvider();
 
-    await user.click(screen.getByRole("button", { name: "spotify" }));
+    await user.click(screen.getByRole("button", { name: "evergreen" }));
     await user.click(screen.getByRole("button", { name: "compact" }));
 
     const expected = {
       ...DEFAULT_THEME,
-      palette: "spotify",
+      palette: "evergreen",
       accent: "#1db954",
       density: "compact",
     };
     expect(shownTheme()).toEqual(expected);
     expect(storedTheme()).toEqual(expected);
-    expect(root.dataset.theme).toBe("spotify");
+    expect(root.dataset.theme).toBe("evergreen");
     expect(root.dataset.density).toBe("compact");
     expect(root.style.getPropertyValue("--palette-accent")).toBe("#1db954");
     expect(root.style.getPropertyValue("--palette-background-primary")).toBe(
@@ -153,7 +153,7 @@ describe("ThemeProvider", () => {
   it("resets every axis with a single write", async () => {
     const user = userEvent.setup();
     renderProvider();
-    await user.click(screen.getByRole("button", { name: "spotify" }));
+    await user.click(screen.getByRole("button", { name: "evergreen" }));
     const setItem = vi.spyOn(localStorage, "setItem");
 
     await user.click(screen.getByRole("button", { name: "reset" }));

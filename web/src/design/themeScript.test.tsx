@@ -81,7 +81,7 @@ describe("ThemeScript", () => {
   );
 
   it("takes the default accent of the palette when the stored one is not a colour", () => {
-    const stored = { palette: "steam", accent: "red;" };
+    const stored = { palette: "harbor", accent: "red;" };
     localStorage.setItem(THEME_STORAGE_KEY, JSON.stringify(stored));
 
     runScript();
@@ -106,7 +106,7 @@ describe("ThemeScript", () => {
 
     runScript();
 
-    expect(root.dataset.theme).toBe("github-dark");
+    expect(root.dataset.theme).toBe("ink");
     expect(root.dataset.font).toBe("source-sans-3");
     expect(snapshot()).toEqual(expectedFor(stored));
   });

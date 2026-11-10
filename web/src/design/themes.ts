@@ -90,8 +90,8 @@ export const PALETTES = [
     accessibleFaint: "#9aa0ad",
   },
   {
-    id: "discord",
-    label: "Discord",
+    id: "slate",
+    label: "Slate",
     colors: {
       accent: "#5865f2",
       backgrounds: {
@@ -120,8 +120,8 @@ export const PALETTES = [
     accessibleFaint: "#afb3bb",
   },
   {
-    id: "spotify",
-    label: "Spotify",
+    id: "evergreen",
+    label: "Evergreen",
     colors: {
       accent: "#1db954",
       backgrounds: {
@@ -150,8 +150,8 @@ export const PALETTES = [
     accessibleFaint: "#a0a0a0",
   },
   {
-    id: "steam",
-    label: "Steam",
+    id: "harbor",
+    label: "Harbor",
     colors: {
       accent: "#1a9fff",
       backgrounds: {
@@ -180,8 +180,8 @@ export const PALETTES = [
     accessibleFaint: "#d1d9df",
   },
   {
-    id: "twitch",
-    label: "Twitch",
+    id: "amethyst",
+    label: "Amethyst",
     colors: {
       accent: "#9146ff",
       backgrounds: {
@@ -210,8 +210,8 @@ export const PALETTES = [
     accessibleFaint: "#a4a4ae",
   },
   {
-    id: "github-dark",
-    label: "GitHub Dark",
+    id: "ink",
+    label: "Ink",
     colors: {
       accent: "#58a6ff",
       backgrounds: {
@@ -323,8 +323,13 @@ export const THEME_STORAGE_KEY = "stellarr.theme";
 
 /** Ids written by earlier versions, and the current id each one now means. */
 export const LEGACY_PALETTES: Readonly<Record<string, PaletteId>> = {
+  discord: "slate",
+  spotify: "evergreen",
+  steam: "harbor",
+  twitch: "amethyst",
+  "github-dark": "ink",
   indigo: "midnight",
-  github: "github-dark",
+  github: "ink",
   teal: "midnight",
   amber: "midnight",
   rose: "midnight",

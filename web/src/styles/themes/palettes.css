@@ -12,27 +12,27 @@
   --c-neutral: 1;
 }
 
-[data-theme="discord"] {
+[data-theme="slate"] {
   --h-neutral: 270;
   --c-neutral: 1.2;
 }
 
-[data-theme="spotify"] {
+[data-theme="evergreen"] {
   --h-neutral: 0;
   --c-neutral: 0;
 }
 
-[data-theme="steam"] {
+[data-theme="harbor"] {
   --h-neutral: 254;
   --c-neutral: 3.6;
 }
 
-[data-theme="twitch"] {
+[data-theme="amethyst"] {
   --h-neutral: 286;
   --c-neutral: 0.7;
 }
 
-[data-theme="github-dark"] {
+[data-theme="ink"] {
   --h-neutral: 258;
   --c-neutral: 2;
 }

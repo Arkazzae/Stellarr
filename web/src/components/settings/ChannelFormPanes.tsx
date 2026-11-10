@@ -6,7 +6,7 @@ import { SettingsSection } from "@/components/settings/SettingsSection";
 import type { ChannelSettingsVM } from "@/components/settings/channelSettingsModel";
 import type { MessageKey, Translator } from "@/i18n";
 
-/** Discord's ladder, in the words this app uses. 0 is off. */
+/** The slow-mode steps, in the words this app uses. 0 is off. */
 const SLOW_MODE: readonly { seconds: number; label: MessageKey }[] = [
   { seconds: 0, label: "channel.slowMode.off" },
   { seconds: 5, label: "channel.slowMode.5" },

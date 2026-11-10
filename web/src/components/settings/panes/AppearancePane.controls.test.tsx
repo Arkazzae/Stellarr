@@ -40,9 +40,9 @@ describe("AppearancePane controls", () => {
 
     expect(screen.getByRole("button", { name: "Przywróć domyślne" })).toBeDisabled();
     expect(screen.getByLabelText("Kolor akcentu")).toBeDisabled();
-    expect(screen.getByRole("radio", { name: /Spotify/ })).toBeDisabled();
+    expect(screen.getByRole("radio", { name: /Evergreen/ })).toBeDisabled();
 
-    await user.click(screen.getByRole("radio", { name: /Spotify/ }));
+    await user.click(screen.getByRole("radio", { name: /Evergreen/ }));
     expect(p.onChange).not.toHaveBeenCalled();
   });
 

@@ -66,11 +66,11 @@ describe("theme registry", () => {
   it("offers the requested complete preset set", () => {
     expect(PALETTES.map(({ label }) => label)).toEqual([
       "Midnight",
-      "Discord",
-      "Spotify",
-      "Steam",
-      "Twitch",
-      "GitHub Dark",
+      "Slate",
+      "Evergreen",
+      "Harbor",
+      "Amethyst",
+      "Ink",
     ]);
   });
 
@@ -188,10 +188,10 @@ describe.each(PALETTES)("$label palette", (palette) => {
   });
 });
 
-describe("Spotify palette", () => {
+describe("Evergreen palette", () => {
   it("preserves the supplied full colour vocabulary", () => {
-    const spotify = PALETTES.find(({ id }) => id === "spotify");
-    expect(spotify?.colors).toEqual({
+    const evergreen = PALETTES.find(({ id }) => id === "evergreen");
+    expect(evergreen?.colors).toEqual({
       accent: "#1db954",
       backgrounds: {
         darkest: "#0a0a0a",
@@ -229,7 +229,7 @@ describe("stored preference migration", () => {
       }),
     ).toEqual({
       ...DEFAULT_THEME,
-      palette: "github-dark",
+      palette: "ink",
       accent: "#58a6ff",
       font: "jetbrains-mono",
       density: "compact",
@@ -238,7 +238,7 @@ describe("stored preference migration", () => {
 
   it("rejects malformed custom accent values", () => {
     expect(
-      normaliseTheme({ ...DEFAULT_THEME, palette: "spotify", accent: "red;" })
+      normaliseTheme({ ...DEFAULT_THEME, palette: "evergreen", accent: "red;" })
         .accent,
     ).toBe("#1db954");
   });

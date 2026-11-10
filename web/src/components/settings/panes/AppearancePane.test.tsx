@@ -41,9 +41,9 @@ describe("AppearancePane", () => {
   it("paints each card with the theme it offers", () => {
     render(<AppearancePane {...props({ resolvedScheme: "light" })} />);
 
-    const spotify = screen.getByRole("radio", { name: /Spotify/ });
-    expect(spotify).toHaveAttribute("data-theme", "spotify");
-    expect(spotify).toHaveAttribute("data-scheme", "light");
+    const evergreen = screen.getByRole("radio", { name: /Evergreen/ });
+    expect(evergreen).toHaveAttribute("data-theme", "evergreen");
+    expect(evergreen).toHaveAttribute("data-scheme", "light");
 
     expect(screen.getByRole("radio", { name: /JetBrains Mono/ })).toHaveAttribute(
       "data-font",
@@ -56,11 +56,11 @@ describe("AppearancePane", () => {
     const p = props();
     render(<AppearancePane {...p} />);
 
-    await user.click(screen.getByRole("radio", { name: /Spotify/ }));
+    await user.click(screen.getByRole("radio", { name: /Evergreen/ }));
     // A preset is a palette and nothing else — picking one may not quietly
     // take back the face or the density someone chose.
     expect(p.onChange).toHaveBeenCalledWith({
-      palette: "spotify",
+      palette: "evergreen",
       accent: "#1db954",
     });
 
@@ -118,7 +118,7 @@ describe("AppearancePane", () => {
     render(
       <AppearancePane
         {...props({
-          theme: { ...DEFAULT_THEME, palette: "spotify", accent: "#1db954" },
+          theme: { ...DEFAULT_THEME, palette: "evergreen", accent: "#1db954" },
         })}
       />,
     );
