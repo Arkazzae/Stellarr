@@ -1,0 +1,25 @@
+.git
+.idea
+.vscode
+
+**/node_modules
+**/.next
+**/dist
+**/bin
+**/obj
+**/TestResults
+**/artifacts
+
+# Instance data and credentials never belong in an image.
+data
+**/secrets
+**/certs
+**/.env
+**/.env.*
+!**/.env.example
+**/*.local
+**/*.key
+**/*.pem
+**/*.p12
+**/*.pfx
+**/*.jks
