@@ -15,6 +15,8 @@ public static class AuthEndpoints
 
         group.MapPost("/login", LoginAsync).RequireRateLimiting(RateLimitPolicies.Login);
         group.MapPost("/logout", LogoutAsync).RequireAuthorization();
+        group.MapGet("/oidc", GetOidcStatus);
+        group.MapGet("/oidc/login", ChallengeOidc).RequireRateLimiting(RateLimitPolicies.Login);
 
         return endpoints;
     }
@@ -47,6 +49,17 @@ public static class AuthEndpoints
         await SessionAuthentication.SignInAsync(context, user, session.Id);
         return Results.Ok(user.ToDto("online"));
     }
+
+    /// <summary>Whether the sign-in page should offer the provider, and under what name.</summary>
+    private static IResult GetOidcStatus(ExternalOidcOptions options) =>
+        Results.Ok(new { enabled = options.IsConfigured, displayName = options.DisplayName });
+
+    private static IResult ChallengeOidc(string? returnUrl, ExternalOidcOptions options) =>
+        options.IsConfigured
+            ? Results.Challenge(
+                new AuthenticationProperties { RedirectUri = ExternalOidcOptions.SafeReturnUrl(returnUrl) },
+                [ExternalOidcOptions.AuthenticationScheme])
+            : Results.NotFound();
 
     private static async Task<IResult> LogoutAsync(
         HttpContext context,

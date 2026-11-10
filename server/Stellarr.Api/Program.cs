@@ -43,10 +43,15 @@ builder.Services.AddSingleton<IAmazonS3>(services =>
 });
 builder.Services.AddSingleton<IObjectStorage, S3ObjectStorage>();
 
+var externalOidc = builder.Configuration
+    .GetSection(ExternalOidcOptions.SectionName)
+    .Get<ExternalOidcOptions>() ?? new ExternalOidcOptions();
+builder.Services.AddSingleton(externalOidc);
 builder.Services
     .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
     .AddSessionCookie(
-        allowPlainHttp: builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing"));
+        allowPlainHttp: builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing"))
+    .AddExternalOidc(externalOidc);
 builder.Services.AddAuthorization();
 builder.Services.AddRateLimitPolicies(builder.Configuration, builder.Environment);
 
