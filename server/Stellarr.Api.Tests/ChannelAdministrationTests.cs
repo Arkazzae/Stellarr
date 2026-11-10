@@ -151,6 +151,79 @@ public sealed class ChannelAdministrationTests : IClassFixture<StellarrWebApplic
         Assert.Equal(1, await db.Channels.CountAsync(x => x.Kind == ChannelKind.Voice));
     }
 
+    [Fact]
+    public async Task ASectionThatStillHoldsChannelsCannotBeDeleted()
+    {
+        using var owner = await SignedInAsync(_factory, "maja", "Aurora!2026");
+        var sectionId = await IdOfAsync(await owner.PostAsJsonAsync(
+            "/api/admin/sections", new { name = $"Held-{Guid.NewGuid():N}" }));
+        var channelId = await IdOfAsync(await CreateAsync(owner, $"held-{Guid.NewGuid():N}", "text"));
+        Assert.Equal(
+            HttpStatusCode.NoContent,
+            (await owner.PatchAsJsonAsync($"/api/admin/channels/{channelId}/section", new { sectionId })).StatusCode);
+
+        Assert.Equal(HttpStatusCode.Conflict, (await owner.DeleteAsync($"/api/admin/sections/{sectionId}")).StatusCode);
+
+        using var bootstrap = JsonDocument.Parse(await owner.GetStringAsync("/api/bootstrap"));
+        Assert.Contains(
+            bootstrap.RootElement.GetProperty("sections").EnumerateArray(),
+            x => x.GetProperty("id").GetString() == sectionId);
+        Assert.Equal(
+            sectionId,
+            bootstrap.RootElement.GetProperty("channels").EnumerateArray()
+                .Single(x => x.GetProperty("id").GetString() == channelId)
+                .GetProperty("sectionId").GetString());
+    }
+
+    [Fact]
+    public async Task AChannelMovesOnlyIntoAnExistingSectionAndOnlyForAManager()
+    {
+        using var owner = await SignedInAsync(_factory, "maja", "Aurora!2026");
+        using var moderator = await SignedInAsync(_factory, "ada", "Quasar!2026");
+        var sectionId = await IdOfAsync(await owner.PostAsJsonAsync(
+            "/api/admin/sections", new { name = $"Target-{Guid.NewGuid():N}" }));
+        var path = $"/api/admin/channels/{TestData.GeneralChannelId}/section";
+
+        Assert.Equal(
+            HttpStatusCode.NotFound,
+            (await owner.PatchAsJsonAsync(path, new { sectionId = Guid.NewGuid() })).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await moderator.PatchAsJsonAsync(path, new { sectionId })).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await owner.PatchAsJsonAsync(path, new { sectionId })).StatusCode);
+        Assert.Equal(
+            HttpStatusCode.NoContent,
+            (await owner.PatchAsJsonAsync(path, new { sectionId = (string?)null })).StatusCode);
+    }
+
+    [Fact]
+    public async Task SectionsAreAddedToADatabaseThatPredatesThem()
+    {
+        using var factory = new StellarrWebApplicationFactory();
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await db.Database.ExecuteSqlRawAsync(
+                """
+                DROP INDEX "IX_Channels_SectionId";
+                ALTER TABLE "Channels" DROP COLUMN "SectionId";
+                DROP TABLE "Sections";
+                """);
+        }
+
+        // Twice: the steps run on every start, also on a database already upgraded.
+        for (var run = 0; run < 2; run++)
+        {
+            await using var scope = factory.Services.CreateAsyncScope();
+            await DatabaseSchema.UpgradeAsync(
+                scope.ServiceProvider.GetRequiredService<AppDbContext>(), CancellationToken.None);
+        }
+
+        using var owner = await SignedInAsync(factory, "maja", "Aurora!2026");
+        var sectionId = await IdOfAsync(await owner.PostAsJsonAsync("/api/admin/sections", new { name = "Wróciła" }));
+        var assigned = await owner.PatchAsJsonAsync(
+            $"/api/admin/channels/{TestData.GeneralChannelId}/section", new { sectionId });
+        Assert.Equal(HttpStatusCode.NoContent, assigned.StatusCode);
+    }
+
     private static Task<HttpResponseMessage> ReorderAsync(HttpClient client, IEnumerable<Guid> ids) =>
         client.PutAsJsonAsync("/api/admin/channels/order", new { channelIds = ids });
 

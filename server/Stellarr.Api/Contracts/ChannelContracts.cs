@@ -12,3 +12,12 @@ public sealed record UpdateChannelRequest(
     int? UserLimit);
 
 public sealed record ReorderChannelsRequest(IReadOnlyList<Guid> ChannelIds);
+
+public sealed record CreateSectionRequest(string? Name);
+
+public sealed record UpdateSectionRequest(string? Name);
+
+public sealed record ReorderSectionsRequest(IReadOnlyList<Guid> SectionIds);
+
+/// <summary>A null <c>SectionId</c> takes the channel out of its section.</summary>
+public sealed record AssignChannelSectionRequest(Guid? SectionId);
