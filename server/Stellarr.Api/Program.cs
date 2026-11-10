@@ -10,6 +10,7 @@ using Stellarr.Api.Auth;
 using Stellarr.Api.Data;
 using Stellarr.Api.Embeds;
 using Stellarr.Api.Endpoints;
+using Stellarr.Api.Localization;
 using Stellarr.Api.Logging;
 using Stellarr.Api.Mail;
 using Stellarr.Api.Maintenance;
@@ -38,6 +39,13 @@ builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = 
 builder.Services.Configure<FormOptions>(options => options.MultipartBodyLengthLimit = MaxRequestBodyBytes);
 
 builder.Services.AddProblemDetails();
+// Bound and checked once the host starts, so that a language set by a test or
+// by the environment is the one validated.
+builder.Services.AddSingleton<IValidateOptions<LanguageOptions>, LanguageOptionsValidator>();
+builder.Services.AddOptions<LanguageOptions>()
+    .Bind(builder.Configuration.GetSection(LanguageOptions.SectionName))
+    .ValidateOnStart();
+builder.Services.AddSingleton(services => new Messages(services.GetRequiredService<IOptions<LanguageOptions>>().Value));
 // The operator panel reads the host's recent log lines from this provider.
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<OpsLogBuffer>();

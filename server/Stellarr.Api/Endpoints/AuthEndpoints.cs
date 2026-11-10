@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Stellarr.Api.Auth;
 using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
+using Stellarr.Api.Localization;
 
 namespace Stellarr.Api.Endpoints;
 
@@ -25,6 +26,7 @@ public static class AuthEndpoints
         LoginRequest request,
         AppDbContext db,
         PasswordService passwords,
+        Messages messages,
         HttpContext context,
         CancellationToken cancellationToken)
     {
@@ -40,7 +42,7 @@ public static class AuthEndpoints
             await Task.Delay(Random.Shared.Next(80, 180), cancellationToken);
             return Results.Problem(
                 statusCode: StatusCodes.Status401Unauthorized,
-                title: "Nieprawidłowy login lub hasło.");
+                title: messages.Get(MessageKey.SignInFailed));
         }
 
         var session = SessionAuthentication.CreateSession(context, user.Id);
