@@ -70,6 +70,36 @@ public sealed record OpsSessionDto(
     DateTime ExpiresAt,
     bool Current);
 
+public sealed record OpsRuntimeServiceDto(string Name, string State, string Detail);
+
+public sealed record OpsRuntimeDto(
+    DateTime StartedAt,
+    long UptimeSeconds,
+    long WorkingSetBytes,
+    long GcHeapBytes,
+    int ThreadCount,
+    int RealtimeConnections,
+    int VoiceRooms,
+    double DatabaseLatencyMs,
+    IReadOnlyList<OpsRuntimeServiceDto> Services);
+
+public sealed record OpsLogEntryDto(
+    DateTime At,
+    string Level,
+    string Source,
+    string Message,
+    string TraceId);
+
+public sealed record OpsAuditEntryDto(
+    string Id,
+    string Actor,
+    string Summary,
+    DateTime At);
+
+public sealed record OpsLogsDto(
+    IReadOnlyList<OpsLogEntryDto> Logs,
+    IReadOnlyList<OpsAuditEntryDto> Audit);
+
 public sealed record CreateOpsUserRequest(
     string? Username,
     string? DisplayName,

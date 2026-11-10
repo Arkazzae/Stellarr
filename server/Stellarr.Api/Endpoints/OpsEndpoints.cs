@@ -30,6 +30,9 @@ public static partial class OpsEndpoints
         ops.MapPatch("/roles/{roleId:guid}", UpdateRoleAsync);
         ops.MapGet("/sessions", GetSessionsAsync);
         ops.MapDelete("/sessions/{sessionId:guid}", RevokeSessionAsync);
+        ops.MapGet("/runtime", GetRuntimeAsync);
+        ops.MapGet("/logs", GetLogsAsync);
+        ops.MapGet("/logs/export", ExportLogs);
         return endpoints;
     }
 

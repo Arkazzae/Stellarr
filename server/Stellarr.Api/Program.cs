@@ -37,6 +37,10 @@ builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = 
 builder.Services.Configure<FormOptions>(options => options.MultipartBodyLengthLimit = MaxRequestBodyBytes);
 
 builder.Services.AddProblemDetails();
+// The operator panel reads the host's recent log lines from this provider.
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddSingleton<OpsLogBuffer>();
+builder.Services.AddSingleton<ILoggerProvider>(services => services.GetRequiredService<OpsLogBuffer>());
 // The keys that protect the session cookie live on the data volume, so a
 // restart or a new container does not sign everybody out.
 builder.Services.AddDataProtection()
