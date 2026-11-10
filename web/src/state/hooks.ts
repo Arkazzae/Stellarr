@@ -16,6 +16,7 @@ export {
   useDirectoryContext as useDirectory,
   type DirectoryValue,
 } from "./DirectoryProvider";
+export { useEmoji, type EmojiValue } from "./EmojiProvider";
 export {
   useLanguage,
   type InterfaceLocale,
@@ -23,9 +24,18 @@ export {
   type LanguageValue,
   type TranslationTargetLanguage,
 } from "./LanguageProvider";
+export {
+  useNotificationContext as useNotifications,
+  type NotificationValue,
+} from "./NotificationProvider";
 export { usePorts, useRuntime } from "./PortsProvider";
+export {
+  useProfileContext as useProfile,
+  type ProfileValue,
+} from "./ProfileProvider";
 export {
   useSessionContext as useSession,
   type SessionPhase,
   type SessionValue,
 } from "./SessionProvider";
+export { useTheme } from "./ThemeProvider";
