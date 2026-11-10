@@ -88,6 +88,7 @@ builder.Services.AddScoped<MediaStorage>();
 
 builder.Services.Configure<MaintenanceOptions>(builder.Configuration.GetSection(MaintenanceOptions.SectionName));
 builder.Services.AddScoped<InstanceMaintenance>();
+builder.Services.AddHostedService<MaintenanceWorker>();
 
 builder.Services.Configure<MailOptions>(builder.Configuration.GetSection(MailOptions.SectionName));
 builder.Services.AddHttpClient<IEmailDelivery, ResendEmailDelivery>(http =>
