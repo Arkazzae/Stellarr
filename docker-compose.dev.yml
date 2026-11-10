@@ -1,0 +1,169 @@
+# Development stack: each process runs from a bind mount of the working tree
+# and reloads on change, so editing code never needs an image build. The
+# production docker-compose.yml is the opposite: one container, everything
+# baked in.
+#
+#   web     :3000  next dev, the chat client
+#   ops     :3001  vite, the operator panel
+#   api     :5000  dotnet watch, reached by the browser through the web proxy
+#   rustfs  :9000  object storage for uploads
+#   coturn  :3478  only behind the "turn" profile
+#
+#   docker compose -f docker-compose.dev.yml up
+#   docker compose -f docker-compose.dev.yml --profile turn up
+#
+# The first start installs the npm packages and restores the NuGet packages
+# into named volumes, so it is slow. Later starts reuse them.
+#
+# Voice between two tabs on one machine needs no TURN server. Start the turn
+# profile to test a connection that has to cross a NAT. It uses the host
+# network, so it listens on the host's own ports 3478 and 49160-49200.
+
+name: stellarr-dev
+
+services:
+  web:
+    image: node:24-bookworm-slim
+    working_dir: /app
+    # npm install instead of npm ci: package-lock.json lives on the host, and
+    # adding a dependency should not mean rebuilding anything. ci would also
+    # empty node_modules and reinstall everything on every start.
+    command: >
+      sh -c "npm install --no-audit --no-fund &&
+             npm run dev -- --hostname 0.0.0.0 --port 3000"
+    environment:
+      # next dev proxies /api, /assets and /hubs to the API. In production
+      # Nginx does that and Next registers no rewrites.
+      STELLARR_API_ORIGIN: http://api:5000
+      # Next refuses its dev-only chunks to a page opened from a host it does
+      # not know. 127.0.0.1 is always allowed; list further names for an IDE
+      # or remote preview.
+      STELLARR_ALLOWED_DEV_ORIGINS: ${STELLARR_ALLOWED_DEV_ORIGINS:-}
+      STELLARR_LANGUAGE: ${STELLARR_LANGUAGE:-en}
+      NEXT_PUBLIC_GIPHY_API_KEY: ${GIPHY_API_KEY:-}
+      NEXT_TELEMETRY_DISABLED: "1"
+      # File events do not cross a bind mount on every host (Docker Desktop on
+      # macOS and Windows), so Next polls for changes.
+      WATCHPACK_POLLING: ${WATCHPACK_POLLING:-true}
+    ports:
+      - "${STELLARR_DEV_WEB_PORT:-3000}:3000"
+    volumes:
+      - ./web:/app
+      # Named volumes keep these directories inside Docker. Without them the
+      # bind mount shows the host's copies: node_modules built for another OS
+      # and a .next written by a host-side build.
+      - web_node_modules:/app/node_modules
+      - web_next:/app/.next
+    depends_on:
+      - api
+
+  ops:
+    image: node:24-bookworm-slim
+    working_dir: /app
+    command: >
+      sh -c "npm install --no-audit --no-fund && npm run dev"
+    environment:
+      STELLARR_API_ORIGIN: http://api:5000
+    ports:
+      - "${STELLARR_DEV_OPS_PORT:-3001}:3001"
+    volumes:
+      - ./ops:/app
+      - ops_node_modules:/app/node_modules
+    depends_on:
+      - api
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: api-dev
+    image: stellarr-v2-api-dev:local
+    working_dir: /src/server/Stellarr.Api
+    # Hot reload is off: when applying an edit in place fails, it can stop the
+    # whole watcher, while a plain rebuild and restart always recovers.
+    # TreatWarningsAsErrors is on for the whole repository, which suits CI but
+    # would stop the watcher on an unused variable in the middle of an edit,
+    # so warnings are muted and no longer fail the build here.
+    command: >
+      dotnet watch --no-hot-reload run
+        --no-launch-profile
+        --property:WarningLevel=0
+        --property:TreatWarningsAsErrors=false
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://0.0.0.0:5000
+      GIPHY_API_KEY: ${GIPHY_API_KEY:-}
+      # Same reason as WATCHPACK_POLLING above: inotify events from the host
+      # do not reach the container.
+      DOTNET_USE_POLLING_FILE_WATCHER: "1"
+      # The browser reaches the API only through the Next.js proxy, so there
+      # is no page of the API's own to refresh. The one HTML response the API
+      # sends is the desktop browser-login confirmation. Its CSP is
+      # `default-src 'none'`, which blocks the script that dotnet watch would
+      # inject into HTML responses.
+      DOTNET_WATCH_SUPPRESS_BROWSER_REFRESH: "1"
+      # appsettings.Development.json points at 127.0.0.1. In this stack the
+      # object store is a separate service.
+      Storage__Endpoint: http://rustfs:9000
+      Storage__SkipInitialization: "false"
+      ConnectionStrings__Database: Data Source=/data/stellarr/stellarr-dev.db;Cache=Shared;Pooling=True
+      DataRoot: /data/stellarr
+      Rtc__PublicHost: ${PUBLIC_HOST:-localhost}
+      Operations__PublicUrl: http://localhost:${STELLARR_DEV_WEB_PORT:-3000}
+      Operations__TimeZone: ${STELLARR_TIME_ZONE:-Europe/Warsaw}
+      Desktop__CanonicalOrigin: http://127.0.0.1:${STELLARR_DEV_API_PORT:-5000}
+      Desktop__MinimumVersion: ${STELLARR_DESKTOP_MINIMUM_VERSION:-0.1.0}
+      Desktop__RecommendedVersion: ${STELLARR_DESKTOP_RECOMMENDED_VERSION:-0.1.3}
+      Stellarr__InstanceId: ${STELLARR_INSTANCE_ID:-}
+      Stellarr__InstanceName: ${STELLARR_INSTANCE_NAME:-Stellarr Dev}
+      Stellarr__Language: ${STELLARR_LANGUAGE:-en}
+      Mail__Enabled: ${STELLARR_MAIL_ENABLED:-true}
+      Mail__ResendApiKey: ${STELLARR_RESEND_API_KEY:-}
+      Mail__FromAddress: ${STELLARR_MAIL_FROM:-onboarding@resend.dev}
+      Mail__FromName: ${STELLARR_MAIL_FROM_NAME:-Stellarr}
+    ports:
+      # Published so the API can be called with curl; the browser uses :3000.
+      - "${STELLARR_DEV_API_PORT:-5000}:5000"
+    volumes:
+      - ./:/src
+      # Build output and the package cache stay in the container. Sharing obj/
+      # with a host that also builds leads to restore errors that point at the
+      # wrong machine's paths.
+      - api_obj:/src/server/Stellarr.Api/obj
+      - api_bin:/src/server/Stellarr.Api/bin
+      - nuget:/root/.nuget/packages
+      - stellarr_dev_data:/data/stellarr
+    depends_on:
+      rustfs:
+        condition: service_started
+
+  rustfs:
+    image: rustfs/rustfs:1.0.0-beta.11-preview.1
+    environment:
+      RUSTFS_ACCESS_KEY: stellarr
+      RUSTFS_SECRET_KEY: stellarr-development-secret
+      RUSTFS_ADDRESS: 0.0.0.0:9000
+    ports:
+      - "${STELLARR_DEV_S3_PORT:-9000}:9000"
+    volumes:
+      - stellarr_dev_objects:/data
+
+  coturn:
+    profiles: ["turn"]
+    image: coturn/coturn:4.6
+    network_mode: host
+    command: >
+      -n --log-file=stdout
+      --listening-port=3478 --realm=stellarr
+      --use-auth-secret --static-auth-secret=stellarr-turn-development-secret
+      --min-port=49160 --max-port=49200
+
+volumes:
+  web_node_modules:
+  ops_node_modules:
+  web_next:
+  api_obj:
+  api_bin:
+  nuget:
+  stellarr_dev_data:
+  stellarr_dev_objects:
