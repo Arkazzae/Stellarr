@@ -160,6 +160,8 @@ public sealed partial class ChannelMessageFlowTests
                 DROP TRIGGER "Messages_Changes_AfterInsert";
                 DROP TRIGGER "Messages_Changes_AfterUpdate";
                 DROP TRIGGER "Messages_Changes_AfterDelete";
+                DROP TRIGGER "MessageEmbeds_Changes_AfterInsert";
+                DROP TRIGGER "MessageEmbeds_Changes_AfterDelete";
                 DROP TRIGGER "Channels_Changes_AfterDelete";
                 DROP TABLE "MessageChanges";
                 DROP INDEX "IX_Messages_ChannelId_PinnedAt";

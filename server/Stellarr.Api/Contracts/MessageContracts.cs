@@ -31,6 +31,15 @@ public sealed record MessageEmbedDto(
     string? Description,
     string? ThumbnailUrl);
 
+/// <summary>
+/// Pushed when the embeds of a message have been rebuilt, after the message
+/// itself was delivered. An empty list means it has none (any more).
+/// </summary>
+public sealed record MessageEmbedsDto(
+    string MessageId,
+    string ChannelId,
+    IReadOnlyList<MessageEmbedDto> Embeds);
+
 public sealed record MessageReactionDto(string Emoji, int Count, bool Mine);
 
 public sealed record MessageReferenceDto(

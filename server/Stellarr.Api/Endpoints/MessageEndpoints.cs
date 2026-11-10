@@ -5,6 +5,7 @@ using Stellarr.Api.Auth;
 using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
 using Stellarr.Api.Domain;
+using Stellarr.Api.Embeds;
 using Stellarr.Api.Messaging;
 using Stellarr.Api.Realtime;
 
@@ -51,6 +52,7 @@ public static class MessageEndpoints
         AppDbContext db,
         IHubContext<AppHub> hub,
         SlowModeGate slowMode,
+        EmbedInbox embeds,
         CancellationToken cancellationToken)
     {
         if (request.AttachmentIds is { Count: > MaxAttachments })
@@ -190,6 +192,11 @@ public static class MessageEndpoints
         await hub.Clients.Group(AppHub.UserGroup(userId))
             .SendAsync("ChannelReadChanged", read, CancellationToken.None);
         await MessageMentions.FanOutAsync(hub, mentions, CancellationToken.None);
+
+        // Last: unfurling talks to hosts we do not control, and no send waits
+        // for one of them.
+        embeds.Enqueue(new EmbedRequest(channelId, message.Id));
+
         return Results.Created($"/api/channels/{channelId}/messages/{message.Id}", response);
     }
 
@@ -311,6 +318,7 @@ public static class MessageEndpoints
         // are the viewer's own; clients keep that from history.
         await hub.Clients.Group(AppHub.ServerGroup(serverId))
             .SendAsync("MessageUpdated", message.ToDto(), CancellationToken.None);
+
         return Results.Ok(message.ToDto(userId));
     }
 
@@ -323,6 +331,7 @@ public static class MessageEndpoints
         HttpContext http,
         AppDbContext db,
         IHubContext<AppHub> hub,
+        EmbedBuilder embedBuilder,
         CancellationToken cancellationToken)
     {
         var serverId = http.RequireActiveServerId();
@@ -341,7 +350,9 @@ public static class MessageEndpoints
         }
 
         // The attachment links go with the message; the stored files stay,
-        // because another message may use them.
+        // because another message may use them. The preview images belong to
+        // the message's embeds alone, so they are removed with it.
+        await embedBuilder.ClearAsync(messageId, cancellationToken);
         db.Messages.Remove(message);
         await db.SaveChangesAsync(cancellationToken);
 

@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Stellarr.Api.Auth;
 using Stellarr.Api.Data;
+using Stellarr.Api.Embeds;
 using Stellarr.Api.Endpoints;
 using Stellarr.Api.Logging;
 using Stellarr.Api.Realtime;
@@ -72,6 +73,21 @@ builder.Services.AddSingleton<IObjectStorage, S3ObjectStorage>();
 builder.Services.Configure<UploadOptions>(builder.Configuration.GetSection(UploadOptions.SectionName));
 builder.Services.AddSingleton<UploadAdmissionGate>();
 builder.Services.AddScoped<MediaStorage>();
+
+builder.Services.Configure<EmbedOptions>(builder.Configuration.GetSection(EmbedOptions.SectionName));
+builder.Services.AddSingleton<EmbedInbox>();
+builder.Services.AddScoped<EmbedBuilder>();
+builder.Services.AddHostedService<EmbedWorker>();
+builder.Services
+    .AddHttpClient<ILinkUnfurler, LinkUnfurler>(ConfigureEmbedClient(
+        // Ask for a page and say so: a host that would rather not be previewed
+        // can answer 406 instead of guessing what we want.
+        "text/html,application/xhtml+xml,image/*;q=0.8",
+        "pl,en;q=0.8"))
+    .ConfigurePrimaryHttpMessageHandler(CreateEmbedHandler);
+builder.Services
+    .AddHttpClient<IYouTubeMetadataResolver, YouTubeMetadataResolver>(ConfigureEmbedClient("application/json"))
+    .ConfigurePrimaryHttpMessageHandler(CreateEmbedHandler);
 
 var externalOidc = builder.Configuration
     .GetSection(ExternalOidcOptions.SectionName)
@@ -176,5 +192,23 @@ static async Task InitializeApplicationAsync(WebApplication app)
         }
     }
 }
+
+// Both clients that read other people's pages connect through the handler that
+// refuses private addresses, and both give up after the same time.
+static Action<IServiceProvider, HttpClient> ConfigureEmbedClient(string accept, string? acceptLanguage = null) =>
+    (services, http) =>
+    {
+        var embeds = services.GetRequiredService<IOptions<EmbedOptions>>().Value;
+        http.Timeout = TimeSpan.FromSeconds(Math.Max(1, embeds.TimeoutSeconds));
+        http.DefaultRequestHeaders.UserAgent.ParseAdd(embeds.UserAgent);
+        http.DefaultRequestHeaders.Accept.ParseAdd(accept);
+        if (acceptLanguage is not null)
+        {
+            http.DefaultRequestHeaders.AcceptLanguage.ParseAdd(acceptLanguage);
+        }
+    };
+
+static HttpMessageHandler CreateEmbedHandler(IServiceProvider services) =>
+    LinkUnfurler.CreateHandler(services.GetRequiredService<IOptions<EmbedOptions>>().Value);
 
 public partial class Program;
