@@ -5,6 +5,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { OpsApiError, opsApi, type OpsBootstrap } from "@/lib/api";
 import { useOps } from "@/state/ops-context";
 import { OpsProvider } from "@/state/ops-provider";
+import { selectPolish } from "@/test/locale";
+
+selectPolish();
 
 vi.mock("@/lib/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api")>()),

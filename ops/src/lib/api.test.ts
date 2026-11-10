@@ -1,7 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { OpsApiError, opsApi, type OpsSettings } from "./api";
+import { selectPolish } from "@/test/locale";
 
 const fetchMock = vi.fn<typeof fetch>();
+
+selectPolish();
 
 beforeEach(() => {
   fetchMock.mockReset();

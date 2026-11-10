@@ -23,27 +23,21 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { t } from "@/i18n";
+import { formatDateTime, formatMegabytes, formatNumber } from "@/i18n/format";
 import { opsApi } from "@/lib/api";
 import { useOpsResource } from "@/lib/use-ops-resource";
 
-const megabytes = new Intl.NumberFormat("pl-PL", {
-  style: "unit",
-  unit: "megabyte",
-  maximumFractionDigits: 1,
-});
-
-function formatMemory(bytes: number): string {
-  return megabytes.format(bytes / 1024 / 1024);
-}
+const formatMemory = (bytes: number) => formatMegabytes(bytes, 1);
 
 /** Days and hours are left out when zero; minutes are always shown. */
 function formatUptime(totalSeconds: number): string {
   const days = Math.floor(totalSeconds / 86400);
   const hours = Math.floor((totalSeconds % 86400) / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const parts = [`${minutes} min`];
-  if (hours) parts.unshift(`${hours} h`);
-  if (days) parts.unshift(`${days} d`);
+  const parts = [t("runtime.uptime.minutes", { value: minutes })];
+  if (hours) parts.unshift(t("runtime.uptime.hours", { value: hours }));
+  if (days) parts.unshift(t("runtime.uptime.days", { value: days }));
   return parts.join(" ");
 }
 
@@ -70,25 +64,25 @@ function Metric({ label, value, icon: Icon }: MetricProps) {
 export function RuntimePage() {
   const { data, error, loading, refresh } = useOpsResource(
     opsApi.runtime,
-    "Nie udało się pobrać metryk runtime.",
+    t("runtime.loadFailed"),
   );
 
   const metrics: MetricProps[] = data
     ? [
-        { label: "Czas działania", value: formatUptime(data.uptimeSeconds), icon: Clock3 },
-        { label: "Pamięć procesu", value: formatMemory(data.workingSetBytes), icon: HardDrive },
-        { label: "Sterta GC", value: formatMemory(data.gcHeapBytes), icon: Cpu },
-        { label: "Wątki procesu", value: String(data.threadCount), icon: Cpu },
-        { label: "Połączenia realtime", value: String(data.realtimeConnections), icon: RadioTower },
-        { label: "Aktywne pokoje głosowe", value: String(data.voiceRooms), icon: UsersRound },
+        { label: t("runtime.metric.uptime"), value: formatUptime(data.uptimeSeconds), icon: Clock3 },
+        { label: t("runtime.metric.memory"), value: formatMemory(data.workingSetBytes), icon: HardDrive },
+        { label: t("runtime.metric.gcHeap"), value: formatMemory(data.gcHeapBytes), icon: Cpu },
+        { label: t("runtime.metric.threads"), value: String(data.threadCount), icon: Cpu },
+        { label: t("runtime.metric.realtime"), value: String(data.realtimeConnections), icon: RadioTower },
+        { label: t("runtime.metric.voiceRooms"), value: String(data.voiceRooms), icon: UsersRound },
         {
-          label: "Opóźnienie SQLite",
-          value: `${data.databaseLatencyMs.toLocaleString("pl-PL")} ms`,
+          label: t("runtime.metric.latency"),
+          value: `${formatNumber(data.databaseLatencyMs)} ms`,
           icon: Database,
         },
         {
-          label: "Start procesu",
-          value: new Date(data.startedAt).toLocaleString("pl-PL"),
+          label: t("runtime.metric.startedAt"),
+          value: formatDateTime(data.startedAt),
           icon: Clock3,
         },
       ]
@@ -97,19 +91,19 @@ export function RuntimePage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Runtime"
-        description="Metryki procesu API, bazy danych, realtime i usług infrastruktury."
+        title={t("runtime.title")}
+        description={t("runtime.description")}
         actions={
           <Button variant="outline" onClick={() => void refresh()} disabled={loading}>
             <RefreshCw className={loading ? "animate-spin" : ""} aria-hidden="true" />
-            Odśwież dane
+            {t("runtime.refresh")}
           </Button>
         }
       />
 
       {error ? (
         <Alert variant="destructive">
-          <AlertTitle>Błąd runtime</AlertTitle>
+          <AlertTitle>{t("runtime.error")}</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}
@@ -120,7 +114,7 @@ export function RuntimePage() {
           className="flex min-h-48 items-center justify-center gap-2 text-sm text-muted-foreground"
         >
           <LoaderCircle className="animate-spin" aria-hidden="true" />
-          Wczytywanie metryk
+          {t("runtime.loading")}
         </div>
       ) : null}
 
@@ -134,16 +128,16 @@ export function RuntimePage() {
 
           <Card className="shadow-none">
             <CardHeader>
-              <CardTitle>Usługi</CardTitle>
-              <CardDescription>Kontrole wykonane przez działający proces backendu.</CardDescription>
+              <CardTitle>{t("runtime.services.title")}</CardTitle>
+              <CardDescription>{t("runtime.services.description")}</CardDescription>
             </CardHeader>
             <CardContent className="px-4 sm:px-6">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Usługa</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Szczegóły</TableHead>
+                    <TableHead>{t("common.service")}</TableHead>
+                    <TableHead>{t("common.status")}</TableHead>
+                    <TableHead>{t("runtime.services.details")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

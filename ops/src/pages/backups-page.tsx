@@ -14,17 +14,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { t } from "@/i18n";
+import { formatDateTime, formatMegabytes } from "@/i18n/format";
 import { opsApi, type OpsBackup } from "@/lib/api";
 import { useOpsResource } from "@/lib/use-ops-resource";
 
-const megabytes = new Intl.NumberFormat("pl-PL", {
-  style: "unit",
-  unit: "megabyte",
-  maximumFractionDigits: 2,
-});
-
-const formatSize = (bytes: number) => megabytes.format(bytes / 1024 / 1024);
-const formatTime = (value: string) => new Date(value).toLocaleString("pl-PL");
+const formatSize = (bytes: number) => formatMegabytes(bytes, 2);
 
 interface SummaryProps {
   value: string;
@@ -54,13 +49,13 @@ function BackupRow({ backup, verifying, onVerify }: BackupRowProps) {
   return (
     <TableRow>
       <TableCell className="font-mono text-xs">{backup.id}</TableCell>
-      <TableCell>{formatTime(backup.createdAt)}</TableCell>
+      <TableCell>{formatDateTime(backup.createdAt)}</TableCell>
       <TableCell>{formatSize(backup.sizeBytes)}</TableCell>
       <TableCell>
         {backup.verifiedAt ? (
-          <Badge variant="success">{formatTime(backup.verifiedAt)}</Badge>
+          <Badge variant="success">{formatDateTime(backup.verifiedAt)}</Badge>
         ) : (
-          <Badge variant="warning">Niesprawdzony</Badge>
+          <Badge variant="warning">{t("backups.unverified")}</Badge>
         )}
       </TableCell>
       <TableCell className="text-right">
@@ -71,10 +66,10 @@ function BackupRow({ backup, verifying, onVerify }: BackupRowProps) {
             ) : (
               <ShieldCheck aria-hidden="true" />
             )}
-            Sprawdź
+            {t("backups.verify")}
           </Button>
           <Button variant="ghost" size="icon-sm" asChild>
-            <a href={opsApi.backupDownloadUrl(backup.id)} download aria-label={`Pobierz ${backup.id}`}>
+            <a href={opsApi.backupDownloadUrl(backup.id)} download aria-label={t("backups.download", { id: backup.id })}>
               <Download aria-hidden="true" />
             </a>
           </Button>
@@ -87,7 +82,7 @@ function BackupRow({ backup, verifying, onVerify }: BackupRowProps) {
 export function BackupsPage() {
   const { data, error: loadError, refresh } = useOpsResource(
     opsApi.backups,
-    "Nie udało się pobrać backupów.",
+    t("backups.loadFailed"),
   );
   const [actionError, setActionError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -100,9 +95,9 @@ export function BackupsPage() {
       const backup = await opsApi.createBackup();
       await refresh();
       setActionError(null);
-      setNotice(`Utworzono ${backup.id}.`);
+      setNotice(t("backups.created", { id: backup.id }));
     } catch (cause) {
-      setActionError(cause instanceof Error ? cause.message : "Nie udało się utworzyć backupu.");
+      setActionError(cause instanceof Error ? cause.message : t("backups.createFailed"));
     } finally {
       setCreating(false);
     }
@@ -114,9 +109,9 @@ export function BackupsPage() {
       await opsApi.verifyBackup(backup.id);
       await refresh();
       setActionError(null);
-      setNotice(`Kontrola integralności ${backup.id} zakończona powodzeniem.`);
+      setNotice(t("backups.verified", { id: backup.id }));
     } catch (cause) {
-      setActionError(cause instanceof Error ? cause.message : "Backup nie przeszedł weryfikacji.");
+      setActionError(cause instanceof Error ? cause.message : t("backups.verifyFailed"));
     } finally {
       setVerifyingId(null);
     }
@@ -131,8 +126,8 @@ export function BackupsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Backup i odtwarzanie"
-        description="Rzeczywiste kopie SQLite tworzone przez mechanizm online backup."
+        title={t("backups.title")}
+        description={t("backups.description")}
         actions={
           <Button onClick={() => void create()} disabled={creating}>
             {creating ? (
@@ -140,20 +135,20 @@ export function BackupsPage() {
             ) : (
               <Plus aria-hidden="true" />
             )}
-            {creating ? "Tworzenie" : "Utwórz backup"}
+            {creating ? t("common.creating") : t("backups.create")}
           </Button>
         }
       />
 
       {error ? (
         <Alert variant="destructive">
-          <AlertTitle>Błąd backupu</AlertTitle>
+          <AlertTitle>{t("backups.error")}</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}
       {notice ? (
         <Alert>
-          <AlertTitle>Gotowe</AlertTitle>
+          <AlertTitle>{t("common.done")}</AlertTitle>
           <AlertDescription>{notice}</AlertDescription>
         </Alert>
       ) : null}
@@ -161,36 +156,36 @@ export function BackupsPage() {
       <section className="grid gap-4 sm:grid-cols-3">
         <Summary
           icon={DatabaseBackup}
-          value={latest ? formatTime(latest.createdAt) : "Brak"}
-          label="Ostatni backup"
+          value={latest ? formatDateTime(latest.createdAt) : t("common.none")}
+          label={t("backups.summary.latest")}
         />
         <Summary
           icon={ShieldCheck}
-          value={latestVerified?.verifiedAt ? formatTime(latestVerified.verifiedAt) : "Brak"}
-          label="Ostatnia weryfikacja"
+          value={
+            latestVerified?.verifiedAt ? formatDateTime(latestVerified.verifiedAt) : t("common.none")
+          }
+          label={t("backups.summary.latestVerification")}
         />
         <Summary
           value={String(backups.length)}
-          label={`Kopii · retencja ${data?.retentionDays ?? "—"} dni`}
+          label={t("backups.summary.count", { days: data?.retentionDays ?? "—" })}
         />
       </section>
 
       <Card className="shadow-none">
         <CardHeader>
-          <CardTitle>Kopie SQLite</CardTitle>
-          <CardDescription>
-            Każdą kopię można sprawdzić przez PRAGMA integrity_check i pobrać jako plik bazy.
-          </CardDescription>
+          <CardTitle>{t("backups.table.title")}</CardTitle>
+          <CardDescription>{t("backups.table.description")}</CardDescription>
         </CardHeader>
         <CardContent className="px-4 sm:px-6">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Identyfikator</TableHead>
-                <TableHead>Utworzono</TableHead>
-                <TableHead>Rozmiar</TableHead>
-                <TableHead>Weryfikacja</TableHead>
-                <TableHead className="text-right">Akcje</TableHead>
+                <TableHead>{t("backups.col.id")}</TableHead>
+                <TableHead>{t("backups.col.created")}</TableHead>
+                <TableHead>{t("backups.col.size")}</TableHead>
+                <TableHead>{t("backups.col.verification")}</TableHead>
+                <TableHead className="text-right">{t("backups.col.actions")}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -205,7 +200,7 @@ export function BackupsPage() {
               {data && backups.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="h-28 text-center text-muted-foreground">
-                    Nie utworzono jeszcze żadnej kopii.
+                    {t("backups.empty")}
                   </TableCell>
                 </TableRow>
               ) : null}
@@ -215,11 +210,8 @@ export function BackupsPage() {
       </Card>
 
       <Alert>
-        <AlertTitle>Zakres kopii</AlertTitle>
-        <AlertDescription>
-          Backup obejmuje bazę SQLite. Obiekty z zewnętrznego storage oraz sekrety środowiskowe nie są
-          kopiowane przez ten endpoint.
-        </AlertDescription>
+        <AlertTitle>{t("backups.scope.title")}</AlertTitle>
+        <AlertDescription>{t("backups.scope.description")}</AlertDescription>
       </Alert>
     </div>
   );

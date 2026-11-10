@@ -11,6 +11,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { t } from "@/i18n";
 import type { OpsRole } from "@/lib/api";
 
 interface RolesTabProps {
@@ -24,22 +25,22 @@ export function RolesTab({ roles, onCreate, onEdit }: RolesTabProps) {
     <Card className="shadow-none">
       <CardHeader className="sm:flex sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <CardTitle>Role serwera</CardTitle>
-          <CardDescription className="mt-1.5">Role i efektywne uprawnienia.</CardDescription>
+          <CardTitle>{t("roles.title")}</CardTitle>
+          <CardDescription className="mt-1.5">{t("roles.description")}</CardDescription>
         </div>
         <Button variant="outline" size="sm" onClick={onCreate}>
           <Plus aria-hidden="true" />
-          Dodaj rolę
+          {t("roles.add")}
         </Button>
       </CardHeader>
       <CardContent className="px-4 sm:px-6">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Rola</TableHead>
-              <TableHead>Użytkownicy</TableHead>
-              <TableHead>Uprawnienia</TableHead>
-              <TableHead>Typ</TableHead>
+              <TableHead>{t("common.role")}</TableHead>
+              <TableHead>{t("common.users")}</TableHead>
+              <TableHead>{t("roles.col.permissions")}</TableHead>
+              <TableHead>{t("roles.col.type")}</TableHead>
               <TableHead />
             </TableRow>
           </TableHeader>
@@ -55,19 +56,21 @@ export function RolesTab({ roles, onCreate, onEdit }: RolesTabProps) {
                 </TableCell>
                 <TableCell>{role.memberCount}</TableCell>
                 <TableCell>
-                  {role.permissions.length === 0 ? "Brak" : `${role.permissions.length} uprawnień`}
+                  {role.permissions.length === 0
+                    ? t("common.none")
+                    : t("roles.permissionCount", { count: role.permissions.length })}
                 </TableCell>
                 <TableCell>
                   {role.isSystem ? (
-                    <Badge variant="outline">Systemowa</Badge>
+                    <Badge variant="outline">{t("roles.typeSystem")}</Badge>
                   ) : (
-                    <Badge variant="secondary">Własna</Badge>
+                    <Badge variant="secondary">{t("roles.typeCustom")}</Badge>
                   )}
                 </TableCell>
                 <TableCell className="text-right">
                   {role.isOwner ? null : (
                     <Button variant="ghost" size="sm" onClick={() => onEdit(role)}>
-                      Edytuj
+                      {t("roles.edit")}
                     </Button>
                   )}
                 </TableCell>

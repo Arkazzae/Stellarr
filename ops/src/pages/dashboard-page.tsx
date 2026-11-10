@@ -31,6 +31,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { t } from "@/i18n";
+import { formatNumber } from "@/i18n/format";
 import { readHealth, type HealthCheckState, type HealthSnapshot } from "@/lib/health";
 import { useOps } from "@/state/ops-context";
 
@@ -48,15 +50,15 @@ function formatBytes(value: number): string {
     size /= 1024;
     unit += 1;
   }
-  return `${size.toLocaleString("pl-PL", { maximumFractionDigits: 1 })} ${BYTE_UNITS[unit]}`;
+  return `${formatNumber(size, { maximumFractionDigits: 1 })} ${BYTE_UNITS[unit]}`;
 }
 
 function HealthBadge({ state }: { state: HealthCheckState }) {
-  if (state === "checking") return <Badge variant="secondary">Sprawdzanie</Badge>;
+  if (state === "checking") return <Badge variant="secondary">{t("dashboard.health.checking")}</Badge>;
   return state === "healthy" ? (
-    <StatusBadge state="healthy" label="Działa" />
+    <StatusBadge state="healthy" />
   ) : (
-    <StatusBadge state="error" label="Niedostępne" />
+    <StatusBadge state="error" label={t("dashboard.health.unavailable")} />
   );
 }
 
@@ -141,39 +143,39 @@ export function DashboardPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Przegląd instancji"
-        description={`Stan usług i rzeczywiste liczniki dla ${instance.name}.`}
+        title={t("dashboard.title")}
+        description={t("dashboard.description", { name: instance.name })}
         actions={
           <Button variant="outline" onClick={() => void recheck()} disabled={rechecking}>
             <RefreshCw className={rechecking ? "animate-spin" : undefined} aria-hidden="true" />
-            Sprawdź ponownie
+            {t("dashboard.recheck")}
           </Button>
         }
       />
 
-      <section aria-label="Podsumowanie" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section aria-label={t("dashboard.summary")} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <Counter
-          title="Użytkownicy"
-          value={overview.userCount.toLocaleString("pl-PL")}
-          detail={`${overview.onlineUserCount} w sieci`}
+          title={t("common.users")}
+          value={formatNumber(overview.userCount)}
+          detail={t("dashboard.users.detail", { count: overview.onlineUserCount })}
           icon={UsersRound}
         />
         <Counter
-          title="Połączenia realtime"
-          value={overview.realtimeConnectionCount.toLocaleString("pl-PL")}
-          detail="aktywne połączenia SignalR"
+          title={t("dashboard.realtime.title")}
+          value={formatNumber(overview.realtimeConnectionCount)}
+          detail={t("dashboard.realtime.detail")}
           icon={Activity}
         />
         <Counter
-          title="Obiekty"
+          title={t("dashboard.objects.title")}
           value={formatBytes(overview.storedObjectBytes)}
-          detail="według metadanych w bazie"
+          detail={t("dashboard.objects.detail")}
           icon={HardDrive}
         />
         <Counter
-          title="Wiadomości"
-          value={overview.messageCount.toLocaleString("pl-PL")}
-          detail="na kanałach serwera"
+          title={t("dashboard.messages.title")}
+          value={formatNumber(overview.messageCount)}
+          detail={t("dashboard.messages.detail")}
           icon={MessageSquareText}
         />
       </section>
@@ -181,16 +183,16 @@ export function DashboardPage() {
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.8fr)]">
         <Card className="shadow-none">
           <CardHeader>
-            <CardTitle>Usługi z aktywnym healthcheckiem</CardTitle>
-            <CardDescription>Stan API i możliwość połączenia z SQLite.</CardDescription>
+            <CardTitle>{t("dashboard.services.title")}</CardTitle>
+            <CardDescription>{t("dashboard.services.description")}</CardDescription>
           </CardHeader>
           <CardContent className="px-4 sm:px-6">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Usługa</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Źródło</TableHead>
+                  <TableHead>{t("common.service")}</TableHead>
+                  <TableHead>{t("common.status")}</TableHead>
+                  <TableHead className="text-right">{t("dashboard.services.source")}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -199,21 +201,25 @@ export function DashboardPage() {
                   name="API"
                   endpoint="/health/live"
                   status={<HealthBadge state={health.api} />}
-                  origin="backend"
+                  origin={t("dashboard.services.originBackend")}
                 />
                 <ServiceRow
                   icon={Database}
                   name="SQLite"
                   endpoint="/health/ready"
                   status={<HealthBadge state={health.database} />}
-                  origin="backend"
+                  origin={t("dashboard.services.originBackend")}
                 />
                 <ServiceRow
                   icon={Activity}
-                  name="Realtime"
+                  name={t("common.realtime")}
                   endpoint="PresenceTracker"
-                  status={<Badge variant="outline">{overview.realtimeConnectionCount} połączeń</Badge>}
-                  origin="pamięć procesu"
+                  status={
+                    <Badge variant="outline">
+                      {t("dashboard.services.connections", { count: overview.realtimeConnectionCount })}
+                    </Badge>
+                  }
+                  origin={t("dashboard.services.originProcess")}
                 />
               </TableBody>
             </Table>
@@ -222,20 +228,20 @@ export function DashboardPage() {
 
         <Card className="shadow-none">
           <CardHeader>
-            <CardTitle>Zakres kontraktu</CardTitle>
-            <CardDescription>Co panel odczytuje dzisiaj.</CardDescription>
+            <CardTitle>{t("dashboard.contract.title")}</CardTitle>
+            <CardDescription>{t("dashboard.contract.description")}</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4 text-sm">
             <div>
-              <p className="font-medium">Podłączone</p>
+              <p className="font-medium">{t("dashboard.contract.connected")}</p>
               <p className="mt-1 leading-6 text-muted-foreground">
-                Właściciel, instancja, użytkownicy, role, obecność, liczniki treści i ustawienia.
+                {t("dashboard.contract.connectedDetail")}
               </p>
             </div>
             <div className="border-t pt-4">
-              <p className="font-medium">Jeszcze bez modelu domenowego</p>
+              <p className="font-medium">{t("dashboard.contract.pending")}</p>
               <p className="mt-1 leading-6 text-muted-foreground">
-                TURN pozostaje widokiem projektowym.
+                {t("dashboard.contract.pendingDetail")}
               </p>
             </div>
           </CardContent>
@@ -244,10 +250,8 @@ export function DashboardPage() {
 
       <Alert>
         <Info aria-hidden="true" />
-        <AlertTitle>Panel nie zgaduje stanu procesów</AlertTitle>
-        <AlertDescription>
-          Brakujące obszary dostaną dane dopiero z dedykowanych kontraktów i trwałych modeli backendu.
-        </AlertDescription>
+        <AlertTitle>{t("dashboard.notice.title")}</AlertTitle>
+        <AlertDescription>{t("dashboard.notice.description")}</AlertDescription>
       </Alert>
     </div>
   );

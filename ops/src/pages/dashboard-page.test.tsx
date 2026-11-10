@@ -5,9 +5,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { OpsOverview } from "@/lib/api";
 import { DashboardPage } from "@/pages/dashboard-page";
 import { OpsContext, type OpsContextValue } from "@/state/ops-context";
+import { selectPolish } from "@/test/locale";
 import { opsValue } from "@/test/ops-fixtures";
 
 const fetchMock = vi.fn<typeof fetch>();
+
+selectPolish();
 
 beforeEach(() => {
   fetchMock.mockReset();

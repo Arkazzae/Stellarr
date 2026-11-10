@@ -4,6 +4,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { opsApi, type OpsRuntime } from "@/lib/api";
 import { RuntimePage } from "@/pages/runtime-page";
+import { selectPolish } from "@/test/locale";
+
+selectPolish();
 
 vi.mock("@/lib/api", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/api")>()),

@@ -12,11 +12,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { t } from "@/i18n";
+import { formatShortDateTime, lowerCase } from "@/i18n/format";
 import type { OpsRole, OpsUser } from "@/lib/api";
 import { UserActions } from "@/pages/users/user-actions";
 import type { Perform } from "@/pages/users/use-access-actions";
-
-const dateFormatter = new Intl.DateTimeFormat("pl-PL", { dateStyle: "medium", timeStyle: "short" });
 
 export interface AccountFilter {
   query: string;
@@ -25,15 +25,17 @@ export interface AccountFilter {
 }
 
 function PresenceBadge({ presence }: { presence: OpsUser["presence"] }) {
-  if (presence === "online") return <Badge variant="success">● W sieci</Badge>;
-  if (presence === "idle") return <Badge variant="warning">◐ Zaraz wracam</Badge>;
-  if (presence === "dnd") return <Badge variant="destructive">■ Nie przeszkadzać</Badge>;
-  return <Badge variant="outline">○ Poza siecią</Badge>;
+  if (presence === "online") return <Badge variant="success">{t("accounts.presence.online")}</Badge>;
+  if (presence === "idle") return <Badge variant="warning">{t("accounts.presence.idle")}</Badge>;
+  if (presence === "dnd") {
+    return <Badge variant="destructive">{t("accounts.presence.dnd")}</Badge>;
+  }
+  return <Badge variant="outline">{t("accounts.presence.offline")}</Badge>;
 }
 
 function matchesFilter(user: OpsUser, { query, roleId }: AccountFilter): boolean {
-  const needle = query.trim().toLocaleLowerCase("pl");
-  const name = `${user.displayName} ${user.username}`.toLocaleLowerCase("pl");
+  const needle = lowerCase(query.trim());
+  const name = lowerCase(`${user.displayName} ${user.username}`);
   return name.includes(needle) && (!roleId || user.roleId === roleId);
 }
 
@@ -52,8 +54,10 @@ export function AccountsTab({ users, roles, filter, onFilterChange, perform }: A
     <Card className="shadow-none">
       <CardHeader className="gap-4 sm:flex sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <CardTitle>Konta</CardTitle>
-          <CardDescription className="mt-1.5">{users.length} kont w instancji.</CardDescription>
+          <CardTitle>{t("accounts.title")}</CardTitle>
+          <CardDescription className="mt-1.5">
+            {t("accounts.count", { count: users.length })}
+          </CardDescription>
         </div>
         <div className="flex gap-2">
           <div className="relative">
@@ -62,17 +66,17 @@ export function AccountsTab({ users, roles, filter, onFilterChange, perform }: A
               value={filter.query}
               onChange={(event) => onFilterChange({ ...filter, query: event.target.value })}
               className="pl-9"
-              placeholder="Szukaj użytkownika"
-              aria-label="Szukaj użytkownika"
+              placeholder={t("accounts.search")}
+              aria-label={t("accounts.search")}
             />
           </div>
           <select
             value={filter.roleId}
             onChange={(event) => onFilterChange({ ...filter, roleId: event.target.value })}
-            aria-label="Filtruj według roli"
+            aria-label={t("accounts.roleFilter")}
             className="h-9 rounded-md border border-input bg-background px-3 text-sm"
           >
-            <option value="">Wszystkie role</option>
+            <option value="">{t("accounts.allRoles")}</option>
             {roles.map((role) => (
               <option key={role.id} value={role.id}>
                 {role.name}
@@ -85,11 +89,11 @@ export function AccountsTab({ users, roles, filter, onFilterChange, perform }: A
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Użytkownik</TableHead>
-              <TableHead>Rola</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Realtime</TableHead>
-              <TableHead>Dołączono</TableHead>
+              <TableHead>{t("common.user")}</TableHead>
+              <TableHead>{t("common.role")}</TableHead>
+              <TableHead>{t("common.status")}</TableHead>
+              <TableHead>{t("common.realtime")}</TableHead>
+              <TableHead>{t("accounts.col.joined")}</TableHead>
               <TableHead />
             </TableRow>
           </TableHeader>
@@ -118,14 +122,14 @@ export function AccountsTab({ users, roles, filter, onFilterChange, perform }: A
                 </TableCell>
                 <TableCell>
                   {user.isDisabled ? (
-                    <Badge variant="outline">Wyłączone</Badge>
+                    <Badge variant="outline">{t("accounts.disabled")}</Badge>
                   ) : (
                     <PresenceBadge presence={user.presence} />
                   )}
                 </TableCell>
                 <TableCell>{user.realtimeConnections}</TableCell>
                 <TableCell className="text-muted-foreground">
-                  {dateFormatter.format(new Date(user.joinedAt))}
+                  {formatShortDateTime(user.joinedAt)}
                 </TableCell>
                 <TableCell>
                   <UserActions user={user} roles={roles} perform={perform} />
@@ -135,7 +139,7 @@ export function AccountsTab({ users, roles, filter, onFilterChange, perform }: A
             {visible.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={6} className="h-28 text-center text-muted-foreground">
-                  Brak wyników.
+                  {t("accounts.empty")}
                 </TableCell>
               </TableRow>
             ) : null}

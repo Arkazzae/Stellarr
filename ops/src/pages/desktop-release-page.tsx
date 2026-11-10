@@ -1,4 +1,12 @@
-import { Download, LoaderCircle, PackageOpen, Save, ShieldCheck, Smartphone } from "lucide-react";
+import {
+  Download,
+  LoaderCircle,
+  PackageOpen,
+  Save,
+  ShieldCheck,
+  Smartphone,
+  type LucideIcon,
+} from "lucide-react";
 import { useState, type FormEvent } from "react";
 
 import { PageHeader } from "@/components/page-header";
@@ -8,6 +16,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { t, type MessageKey } from "@/i18n";
+import { formatDate } from "@/i18n/format";
 import {
   OpsApiError,
   opsApi,
@@ -22,9 +32,22 @@ function formatSize(bytes: number): string {
 }
 
 const platforms = {
-  android: { title: "Android", architecture: "ARM64", download: "Pobierz APK", icon: Smartphone },
-  arch: { title: "Arch Linux", architecture: "x86_64", download: "Pobierz paczkę", icon: PackageOpen },
-};
+  android: {
+    title: "Android",
+    architecture: "ARM64",
+    downloadKey: "release.downloadApk",
+    icon: Smartphone,
+  },
+  arch: {
+    title: "Arch Linux",
+    architecture: "x86_64",
+    downloadKey: "release.downloadPackage",
+    icon: PackageOpen,
+  },
+} satisfies Record<
+  string,
+  { title: string; architecture: string; downloadKey: MessageKey; icon: LucideIcon }
+>;
 
 interface PublishedReleaseProps {
   platform: keyof typeof platforms;
@@ -32,7 +55,7 @@ interface PublishedReleaseProps {
 }
 
 function PublishedRelease({ platform, release }: PublishedReleaseProps) {
-  const { title, architecture, download, icon: Icon } = platforms[platform];
+  const { title, architecture, downloadKey, icon: Icon } = platforms[platform];
 
   return (
     <div className="border-t py-5 first:border-t-0 first:pt-0 last:pb-0">
@@ -52,14 +75,14 @@ function PublishedRelease({ platform, release }: PublishedReleaseProps) {
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {architecture} · {formatSize(release.sizeBytes)} ·{" "}
-                  {new Date(release.publishedAt).toLocaleDateString("pl-PL")}
+                  {formatDate(release.publishedAt)}
                 </p>
               </div>
             </div>
             <Button asChild>
               <a href={release.downloadUrl} download={release.fileName}>
                 <Download aria-hidden="true" />
-                {download}
+                {t(downloadKey)}
               </a>
             </Button>
           </div>
@@ -77,7 +100,7 @@ function PublishedRelease({ platform, release }: PublishedReleaseProps) {
       ) : (
         <div className="flex min-h-24 items-center gap-3 text-sm text-muted-foreground">
           <Icon className="size-5" aria-hidden="true" />
-          Brak opublikowanego wydania dla {title}.
+          {t("release.missing", { platform: title })}
         </div>
       )}
     </div>
@@ -137,7 +160,7 @@ function DesktopReleaseView({ initial }: { initial: OpsDesktopRelease }) {
         setFieldErrors(cause.errors);
         setSaveError(cause.message);
       } else {
-        setSaveError("Nie udało się zapisać wersji klienta desktopowego.");
+        setSaveError(t("release.saveFailed"));
       }
     } finally {
       setSaving(false);
@@ -149,21 +172,19 @@ function DesktopReleaseView({ initial }: { initial: OpsDesktopRelease }) {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Wydania aplikacji"
-        description="Paczki Android i Arch Linux, które operator umieścił w katalogu wydań serwera."
+        title={t("release.title")}
+        description={t("release.description")}
       />
 
       <Card className="shadow-none">
         <CardHeader>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <CardTitle>Opublikowane aplikacje</CardTitle>
-              <CardDescription>
-                Pliki są czytane z trwałego katalogu wydań i dostępne w WebUI.
-              </CardDescription>
+              <CardTitle>{t("release.published.title")}</CardTitle>
+              <CardDescription>{t("release.published.description")}</CardDescription>
             </div>
             <Badge variant={publishedCount === 2 ? "success" : "warning"}>
-              Opublikowano {publishedCount} z 2
+              {t("release.published.count", { count: publishedCount })}
             </Badge>
           </div>
         </CardHeader>
@@ -175,25 +196,22 @@ function DesktopReleaseView({ initial }: { initial: OpsDesktopRelease }) {
 
       <Card className="shadow-none">
         <CardHeader>
-          <CardTitle>Kompatybilność klienta</CardTitle>
-          <CardDescription>
-            Klient Arch odrzuci wersję niższą od minimalnej i zaproponuje aktualizację poniżej wersji
-            zalecanej.
-          </CardDescription>
+          <CardTitle>{t("release.compatibility.title")}</CardTitle>
+          <CardDescription>{t("release.compatibility.description")}</CardDescription>
         </CardHeader>
         <CardContent>
           <form className="space-y-5" onSubmit={(event) => void save(event)}>
             <div className="grid max-w-2xl gap-4 sm:grid-cols-2">
               <VersionField
                 id="desktop-minimum"
-                label="Wersja minimalna"
+                label={t("release.minimumVersion")}
                 value={minimumVersion}
                 errors={fieldErrors.minimumVersion}
                 onChange={setMinimumVersion}
               />
               <VersionField
                 id="desktop-recommended"
-                label="Wersja zalecana"
+                label={t("release.recommendedVersion")}
                 value={recommendedVersion}
                 errors={fieldErrors.recommendedVersion}
                 onChange={setRecommendedVersion}
@@ -201,17 +219,15 @@ function DesktopReleaseView({ initial }: { initial: OpsDesktopRelease }) {
             </div>
             {saveError ? (
               <Alert variant="destructive">
-                <AlertTitle>Nie zapisano wersji</AlertTitle>
+                <AlertTitle>{t("release.saveError")}</AlertTitle>
                 <AlertDescription>{saveError}</AlertDescription>
               </Alert>
             ) : null}
             {saved ? (
               <Alert>
                 <ShieldCheck aria-hidden="true" />
-                <AlertTitle>Wersje zapisane</AlertTitle>
-                <AlertDescription>
-                  Nowe wartości są już zwracane klientom w publicznym handshake.
-                </AlertDescription>
+                <AlertTitle>{t("release.saved.title")}</AlertTitle>
+                <AlertDescription>{t("release.saved.description")}</AlertDescription>
               </Alert>
             ) : null}
             <Button
@@ -223,7 +239,7 @@ function DesktopReleaseView({ initial }: { initial: OpsDesktopRelease }) {
               ) : (
                 <Save aria-hidden="true" />
               )}
-              {saving ? "Zapisywanie…" : "Zapisz wersje"}
+              {saving ? t("release.saving") : t("release.save")}
             </Button>
           </form>
         </CardContent>
@@ -233,12 +249,12 @@ function DesktopReleaseView({ initial }: { initial: OpsDesktopRelease }) {
 }
 
 export function DesktopReleasePage() {
-  const { data, error } = useOpsResource(opsApi.desktopRelease, "Nie udało się odczytać wydania.");
+  const { data, error } = useOpsResource(opsApi.desktopRelease, t("release.loadFailed"));
 
   if (error) {
     return (
       <Alert variant="destructive">
-        <AlertTitle>Nie udało się wczytać wydań</AlertTitle>
+        <AlertTitle>{t("release.loadError")}</AlertTitle>
         <AlertDescription>{error}</AlertDescription>
       </Alert>
     );
@@ -250,7 +266,7 @@ export function DesktopReleasePage() {
         className="flex min-h-64 items-center justify-center text-sm text-muted-foreground"
       >
         <LoaderCircle className="mr-2 size-4 animate-spin" aria-hidden="true" />
-        Wczytywanie wydań…
+        {t("release.loading")}
       </div>
     );
   }

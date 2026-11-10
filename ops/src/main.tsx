@@ -4,6 +4,7 @@ import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
 import { AppGate } from "@/components/app-gate";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { detectLocale, setLocale } from "@/i18n";
 import { BackupsPage } from "@/pages/backups-page";
 import { DashboardPage } from "@/pages/dashboard-page";
 import { DesktopReleasePage } from "@/pages/desktop-release-page";
@@ -36,6 +37,9 @@ const router = createBrowserRouter(
   // nginx serves the build under /ops/; the router wants the prefix without its trailing slash.
   { basename: import.meta.env.BASE_URL.replace(/\/$/, "") || "/" },
 );
+
+// The language is decided once, before anything renders: the web client's cookie, then the browser.
+setLocale(detectLocale());
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

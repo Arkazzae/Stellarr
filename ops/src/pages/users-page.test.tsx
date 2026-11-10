@@ -4,6 +4,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { opsApi, type OpsRole, type OpsSession, type OpsUser } from "@/lib/api";
 import { UsersPage } from "@/pages/users-page";
+import { selectPolish } from "@/test/locale";
+
+selectPolish();
 
 vi.mock("@/lib/api", async (importOriginal) => {
   const original = await importOriginal<typeof import("@/lib/api")>();

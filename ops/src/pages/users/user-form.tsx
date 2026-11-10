@@ -11,6 +11,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { t } from "@/i18n";
 import { opsApi, type OpsRole } from "@/lib/api";
 import type { Perform } from "@/pages/users/use-access-actions";
 
@@ -46,8 +47,8 @@ export function UserForm({ open, roles, onOpenChange, perform }: UserFormProps) 
           password: String(values.get("password")),
           roleId: String(values.get("roleId")),
         }),
-      "Utworzono konto użytkownika.",
-      "Nie udało się utworzyć konta.",
+      t("userForm.created"),
+      t("userForm.createFailed"),
     );
     setPending(false);
     if (created) onOpenChange(false);
@@ -57,18 +58,16 @@ export function UserForm({ open, roles, onOpenChange, perform }: UserFormProps) 
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="overflow-y-auto sm:max-w-md">
         <SheetHeader>
-          <SheetTitle>Nowy użytkownik</SheetTitle>
-          <SheetDescription>
-            Konto zostanie od razu dodane do instancji z wybraną rolą.
-          </SheetDescription>
+          <SheetTitle>{t("userForm.title")}</SheetTitle>
+          <SheetDescription>{t("userForm.description")}</SheetDescription>
         </SheetHeader>
         <form onSubmit={(event) => void submit(event)} className="space-y-4 px-4">
           <div className="space-y-2">
-            <Label htmlFor="new-user-display-name">Nazwa wyświetlana</Label>
+            <Label htmlFor="new-user-display-name">{t("userForm.displayName")}</Label>
             <Input id="new-user-display-name" name="displayName" required maxLength={64} />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="new-user-username">Login</Label>
+            <Label htmlFor="new-user-username">{t("userForm.username")}</Label>
             <Input
               id="new-user-username"
               name="username"
@@ -79,11 +78,11 @@ export function UserForm({ open, roles, onOpenChange, perform }: UserFormProps) 
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="new-user-email">E-mail (opcjonalnie)</Label>
+            <Label htmlFor="new-user-email">{t("userForm.email")}</Label>
             <Input id="new-user-email" name="email" type="email" />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="new-user-password">Hasło tymczasowe</Label>
+            <Label htmlFor="new-user-password">{t("userForm.password")}</Label>
             <Input
               id="new-user-password"
               name="password"
@@ -93,7 +92,7 @@ export function UserForm({ open, roles, onOpenChange, perform }: UserFormProps) 
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="new-user-role">Rola</Label>
+            <Label htmlFor="new-user-role">{t("common.role")}</Label>
             <select
               id="new-user-role"
               name="roleId"
@@ -115,7 +114,7 @@ export function UserForm({ open, roles, onOpenChange, perform }: UserFormProps) 
             ) : (
               <Plus aria-hidden="true" />
             )}
-            {pending ? "Tworzenie" : "Utwórz konto"}
+            {pending ? t("common.creating") : t("userForm.submit")}
           </Button>
         </form>
       </SheetContent>

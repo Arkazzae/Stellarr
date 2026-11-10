@@ -1,3 +1,5 @@
+import { t } from "@/i18n";
+
 export interface OpsOperator {
   id: string;
   username: string;
@@ -211,14 +213,14 @@ async function request<T>(
     });
   } catch (error) {
     if (error instanceof DOMException && error.name === "AbortError") throw error;
-    throw new OpsApiError(0, "Nie udało się połączyć z backendem Stellarr.");
+    throw new OpsApiError(0, t("api.unreachable"));
   }
 
   if (!response.ok) {
     const problem = await readProblem(response);
     throw new OpsApiError(
       response.status,
-      problem.detail ?? problem.title ?? `Backend odpowiedział kodem ${response.status}.`,
+      problem.detail ?? problem.title ?? t("api.status", { status: response.status }),
       problem.errors ?? {},
     );
   }

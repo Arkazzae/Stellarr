@@ -5,7 +5,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { OpsApiError, opsApi, type OpsSettings } from "@/lib/api";
 import { SettingsPage } from "@/pages/settings-page";
 import { OpsContext, type OpsContextValue } from "@/state/ops-context";
+import { selectPolish } from "@/test/locale";
 import { opsValue } from "@/test/ops-fixtures";
+
+selectPolish();
 
 vi.mock("@/lib/api", async (importOriginal) => {
   const original = await importOriginal<typeof import("@/lib/api")>();

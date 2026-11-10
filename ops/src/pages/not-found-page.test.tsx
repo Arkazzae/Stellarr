@@ -4,6 +4,9 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 
 import { NotFoundPage } from "@/pages/not-found-page";
+import { selectPolish } from "@/test/locale";
+
+selectPolish();
 
 describe("NotFoundPage", () => {
   it("leads back to the overview", async () => {

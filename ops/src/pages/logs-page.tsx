@@ -16,20 +16,20 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { t } from "@/i18n";
+import { formatDateTime, lowerCase } from "@/i18n/format";
 import { opsApi, type OpsAuditEntry, type OpsLogEntry } from "@/lib/api";
 import { useOpsResource } from "@/lib/use-ops-resource";
 
-const formatTime = (value: string) => new Date(value).toLocaleString("pl-PL");
-
-/** `query` must already be lower-cased with the same locale. */
+/** `query` must already be lower-cased with `lowerCase`. */
 function containsQuery(text: string, query: string): boolean {
-  return text.toLocaleLowerCase("pl").includes(query);
+  return lowerCase(text).includes(query);
 }
 
 function LogLevel({ level }: { level: OpsLogEntry["level"] }) {
-  if (level === "error") return <Badge variant="destructive">Błąd</Badge>;
-  if (level === "warn") return <Badge variant="warning">Ostrzeżenie</Badge>;
-  return <Badge variant="outline">Informacja</Badge>;
+  if (level === "error") return <Badge variant="destructive">{t("logs.level.error")}</Badge>;
+  if (level === "warn") return <Badge variant="warning">{t("logs.level.warn")}</Badge>;
+  return <Badge variant="outline">{t("logs.level.info")}</Badge>;
 }
 
 function EmptyRow({ columns, children }: { columns: number; children: string }) {
@@ -47,18 +47,20 @@ function LogTable({ entries }: { entries: OpsLogEntry[] }) {
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Czas</TableHead>
-          <TableHead>Poziom</TableHead>
-          <TableHead>Źródło</TableHead>
-          <TableHead>Komunikat</TableHead>
-          <TableHead>Trace</TableHead>
+          <TableHead>{t("logs.col.time")}</TableHead>
+          <TableHead>{t("logs.col.level")}</TableHead>
+          <TableHead>{t("logs.col.source")}</TableHead>
+          <TableHead>{t("logs.col.message")}</TableHead>
+          <TableHead>{t("logs.col.trace")}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {/* Entries carry no id and may share a timestamp, so rows are told apart by position. */}
         {entries.map((entry, position) => (
           <TableRow key={position}>
-            <TableCell className="whitespace-nowrap font-mono text-xs">{formatTime(entry.at)}</TableCell>
+            <TableCell className="whitespace-nowrap font-mono text-xs">
+              {formatDateTime(entry.at)}
+            </TableCell>
             <TableCell>
               <LogLevel level={entry.level} />
             </TableCell>
@@ -69,7 +71,7 @@ function LogTable({ entries }: { entries: OpsLogEntry[] }) {
             </TableCell>
           </TableRow>
         ))}
-        {entries.length === 0 ? <EmptyRow columns={5}>Brak logów pasujących do filtrów.</EmptyRow> : null}
+        {entries.length === 0 ? <EmptyRow columns={5}>{t("logs.empty")}</EmptyRow> : null}
       </TableBody>
     </Table>
   );
@@ -80,20 +82,22 @@ function AuditTable({ entries }: { entries: OpsAuditEntry[] }) {
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Czas</TableHead>
-          <TableHead>Aktor</TableHead>
-          <TableHead>Operacja</TableHead>
+          <TableHead>{t("logs.col.time")}</TableHead>
+          <TableHead>{t("logs.col.actor")}</TableHead>
+          <TableHead>{t("logs.col.operation")}</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
         {entries.map((entry) => (
           <TableRow key={entry.id}>
-            <TableCell className="whitespace-nowrap text-muted-foreground">{formatTime(entry.at)}</TableCell>
+            <TableCell className="whitespace-nowrap text-muted-foreground">
+              {formatDateTime(entry.at)}
+            </TableCell>
             <TableCell className="font-medium">{entry.actor}</TableCell>
             <TableCell>{entry.summary}</TableCell>
           </TableRow>
         ))}
-        {entries.length === 0 ? <EmptyRow columns={3}>Brak wpisów audytowych.</EmptyRow> : null}
+        {entries.length === 0 ? <EmptyRow columns={3}>{t("logs.auditEmpty")}</EmptyRow> : null}
       </TableBody>
     </Table>
   );
@@ -102,12 +106,12 @@ function AuditTable({ entries }: { entries: OpsAuditEntry[] }) {
 export function LogsPage() {
   const { data, error, loading, refresh } = useOpsResource(
     opsApi.logs,
-    "Nie udało się pobrać logów.",
+    t("logs.loadFailed"),
   );
   const [search, setSearch] = useState("");
   const [level, setLevel] = useState("all");
 
-  const query = search.trim().toLocaleLowerCase("pl");
+  const query = lowerCase(search.trim());
   const logs = (data?.logs ?? []).filter(
     (entry) =>
       (level === "all" || entry.level === level) &&
@@ -120,18 +124,18 @@ export function LogsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Logi i audyt"
-        description="Bufor logów bieżącego procesu oraz trwały ślad zmian administracyjnych."
+        title={t("logs.title")}
+        description={t("logs.description")}
         actions={
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => void refresh()} disabled={loading}>
               <RefreshCw className={loading ? "animate-spin" : ""} aria-hidden="true" />
-              Odśwież
+              {t("logs.refresh")}
             </Button>
             <Button variant="outline" asChild>
               <a href={opsApi.logExportUrl} download>
                 <Download aria-hidden="true" />
-                Eksportuj TSV
+                {t("logs.export")}
               </a>
             </Button>
           </div>
@@ -140,7 +144,7 @@ export function LogsPage() {
 
       {error ? (
         <Alert variant="destructive">
-          <AlertTitle>Błąd logów</AlertTitle>
+          <AlertTitle>{t("logs.error")}</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}
@@ -148,10 +152,8 @@ export function LogsPage() {
       <Card className="shadow-none">
         <CardHeader className="gap-4 sm:flex sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <CardTitle>Zdarzenia</CardTitle>
-            <CardDescription className="mt-1.5">
-              Do 500 najnowszych wpisów dostępnych w procesie i bazie.
-            </CardDescription>
+            <CardTitle>{t("logs.events.title")}</CardTitle>
+            <CardDescription className="mt-1.5">{t("logs.events.description")}</CardDescription>
           </div>
           <div className="flex gap-2">
             <div className="relative">
@@ -162,21 +164,21 @@ export function LogsPage() {
               <Input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
-                placeholder="Szukaj"
-                aria-label="Szukaj"
+                placeholder={t("logs.search")}
+                aria-label={t("logs.search")}
                 className="pl-9 sm:w-80"
               />
             </div>
             <select
               value={level}
               onChange={(event) => setLevel(event.target.value)}
-              aria-label="Poziom logów"
+              aria-label={t("logs.levelFilter")}
               className="h-9 rounded-md border border-input bg-background px-3 text-sm"
             >
-              <option value="all">Wszystkie poziomy</option>
-              <option value="info">Informacje</option>
-              <option value="warn">Ostrzeżenia</option>
-              <option value="error">Błędy</option>
+              <option value="all">{t("logs.filter.all")}</option>
+              <option value="info">{t("logs.filter.info")}</option>
+              <option value="warn">{t("logs.filter.warn")}</option>
+              <option value="error">{t("logs.filter.error")}</option>
             </select>
           </div>
         </CardHeader>
@@ -187,13 +189,13 @@ export function LogsPage() {
               className="flex min-h-48 items-center justify-center gap-2 text-muted-foreground"
             >
               <LoaderCircle className="animate-spin" aria-hidden="true" />
-              Wczytywanie
+              {t("logs.loading")}
             </div>
           ) : (
             <Tabs defaultValue="logs">
               <TabsList>
-                <TabsTrigger value="logs">{`Logi (${logs.length})`}</TabsTrigger>
-                <TabsTrigger value="audit">{`Audyt (${audit.length})`}</TabsTrigger>
+                <TabsTrigger value="logs">{t("logs.tab.logs", { count: logs.length })}</TabsTrigger>
+                <TabsTrigger value="audit">{t("logs.tab.audit", { count: audit.length })}</TabsTrigger>
               </TabsList>
               <TabsContent value="logs">
                 <LogTable entries={logs} />

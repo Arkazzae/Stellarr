@@ -2,6 +2,9 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { StatusBadge } from "@/components/status-badge";
+import { selectPolish } from "@/test/locale";
+
+selectPolish();
 
 describe("StatusBadge", () => {
   it.each([

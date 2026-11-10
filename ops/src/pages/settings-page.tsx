@@ -9,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { t } from "@/i18n";
 import { OpsApiError, opsApi, type OpsSettings } from "@/lib/api";
 import { useOpsResource } from "@/lib/use-ops-resource";
 import { useOps } from "@/state/ops-context";
@@ -99,29 +100,29 @@ function InstanceCard({ settings, update, errors }: CardProps) {
   return (
     <Section
       icon={Server}
-      title="Instancja"
-      description="Nazwa, publiczny adres i czas używany w zadaniach."
+      title={t("settings.instance.title")}
+      description={t("settings.instance.description")}
     >
       <Field
         id="instance-name"
-        label="Nazwa instancji"
+        label={t("settings.instance.name")}
         value={settings.instanceName}
         onChange={(event) => update("instanceName", event.target.value)}
         errors={errors.instanceName}
       />
       <Field
         id="public-url"
-        label="Publiczny adres"
+        label={t("settings.instance.publicUrl")}
         type="url"
         value={settings.publicUrl}
         onChange={(event) => update("publicUrl", event.target.value)}
         placeholder="https://stellarr.example.net"
-        hint="Używany w zaproszeniach i wiadomościach systemowych."
+        hint={t("settings.instance.publicUrlHint")}
         errors={errors.publicUrl}
       />
       <Field
         id="timezone"
-        label="Strefa czasowa serwera"
+        label={t("settings.instance.timeZone")}
         value={settings.timeZone}
         onChange={(event) => update("timeZone", event.target.value)}
         placeholder="Europe/Warsaw"
@@ -160,24 +161,24 @@ function RetentionCard(props: CardProps) {
   return (
     <Section
       icon={ShieldCheck}
-      title="Retencja danych"
-      description="Limity są zapisywane już teraz; zadania sprzątające powstaną osobno."
+      title={t("settings.retention.title")}
+      description={t("settings.retention.description")}
     >
       <div className="grid gap-4 sm:grid-cols-3">
-        <RetentionField {...props} id="backup-days" label="Backupy, dni" field="backupRetentionDays" />
-        <RetentionField {...props} id="log-days" label="Logi, dni" field="logRetentionDays" />
+        <RetentionField {...props} id="backup-days" label={t("settings.retention.backups")} field="backupRetentionDays" />
+        <RetentionField {...props} id="log-days" label={t("settings.retention.logs")} field="logRetentionDays" />
         <RetentionField
           {...props}
           id="orphan-days"
-          label="Obiekty, dni"
+          label={t("settings.retention.objects")}
           field="orphanObjectRetentionDays"
         />
       </div>
       <div className="rounded-lg border px-4">
         <SettingToggle
           id="auto-cleanup"
-          title="Automatyczne sprzątanie"
-          description="Włącza okresowe usuwanie przeterminowanych backupów, logów i osieroconych obiektów."
+          title={t("settings.cleanup.title")}
+          description={t("settings.cleanup.description")}
           checked={settings.automaticCleanupEnabled}
           onCheckedChange={(checked) => update("automaticCleanupEnabled", checked)}
         />
@@ -191,33 +192,35 @@ function MailCard({ settings, update, errors }: CardProps) {
     <Section
       icon={Mail}
       title="Resend"
-      description="Wiadomości transakcyjne przez HTTPS API, bez konfiguracji SMTP."
+      description={t("settings.mail.description")}
     >
       <div className="rounded-lg border px-4">
         <SettingToggle
           id="mail-enabled"
-          title="Włącz mailing"
-          description="Pozwala wysyłać linki odzyskiwania, zaproszenia i testy dostarczenia."
+          title={t("settings.mail.enable.title")}
+          description={t("settings.mail.enable.description")}
           checked={settings.mailingEnabled}
           onCheckedChange={(checked) => update("mailingEnabled", checked)}
         />
       </div>
       <div className="flex items-center justify-between gap-4 rounded-lg border p-4">
         <div>
-          <p className="text-sm font-medium">Transport</p>
-          <p className="mt-1 text-sm text-muted-foreground">api.resend.com przez szyfrowane HTTPS</p>
+          <p className="text-sm font-medium">{t("settings.mail.transport")}</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {t("settings.mail.transportDetail")}
+          </p>
         </div>
         <Badge variant="secondary">Resend API</Badge>
       </div>
       <Field
         id="mail-from"
-        label="Adres nadawcy"
+        label={t("settings.mail.from")}
         type="email"
         value={settings.mailFromAddress}
         onChange={(event) => update("mailFromAddress", event.target.value)}
         disabled={!settings.mailingEnabled}
         placeholder="stellarr@example.net"
-        hint="Użyj onboarding@resend.dev do testów albo adresu ze zweryfikowanej domeny."
+        hint={t("settings.mail.fromHint")}
         errors={errors.mailFromAddress}
       />
     </Section>
@@ -236,9 +239,9 @@ function TestMail({ settings }: { settings: OpsSettings }) {
     setFailure(null);
     try {
       const { id } = await opsApi.sendTestMail(recipient.trim());
-      setResult(`Resend przyjął wiadomość. ID: ${id}`);
+      setResult(t("settings.test.accepted", { id }));
     } catch (cause) {
-      setFailure(cause instanceof Error ? cause.message : "Nie udało się wysłać wiadomości testowej.");
+      setFailure(cause instanceof Error ? cause.message : t("settings.test.failed"));
     } finally {
       setSending(false);
     }
@@ -247,9 +250,9 @@ function TestMail({ settings }: { settings: OpsSettings }) {
   return (
     <div className="space-y-3 rounded-lg border p-4">
       <div>
-        <Label htmlFor="test-recipient">Odbiorca testu</Label>
+        <Label htmlFor="test-recipient">{t("settings.test.recipient")}</Label>
         <p className="mt-1 text-sm text-muted-foreground">
-          Adres Resend poniżej bezpiecznie symuluje poprawne dostarczenie.
+          {t("settings.test.hint")}
         </p>
       </div>
       <div className="flex flex-col gap-2 sm:flex-row">
@@ -273,7 +276,7 @@ function TestMail({ settings }: { settings: OpsSettings }) {
           ) : (
             <Send aria-hidden="true" />
           )}
-          {sending ? "Wysyłanie" : "Wyślij test"}
+          {sending ? t("settings.test.sending") : t("settings.test.send")}
         </Button>
       </div>
       {result ? (
@@ -295,43 +298,46 @@ function DeliveryCard({ settings, update }: Omit<CardProps, "errors">) {
   return (
     <Section
       icon={KeyRound}
-      title="Klucz i test dostarczenia"
-      description="Sekret Resend nigdy nie wraca do przeglądarki ani do SQLite."
+      title={t("settings.delivery.title")}
+      description={t("settings.delivery.description")}
     >
       <div className="flex items-start justify-between gap-4 rounded-lg border p-4">
         <div>
-          <p className="text-sm font-medium">Klucz API</p>
+          <p className="text-sm font-medium">{t("settings.delivery.key")}</p>
           <p className="mt-1 text-sm leading-6 text-muted-foreground">
-            Ustaw jako <code className="rounded bg-muted px-1 py-0.5 text-xs">Mail__ResendApiKey</code>{" "}
-            w środowisku backendu.
+            {t("settings.delivery.keyBefore")}{" "}
+            <code className="rounded bg-muted px-1 py-0.5 text-xs">Mail__ResendApiKey</code>{" "}
+            {t("settings.delivery.keyAfter")}
           </p>
         </div>
         <Badge variant={settings.resendApiKeyConfigured ? "success" : "warning"}>
-          {settings.resendApiKeyConfigured ? "Skonfigurowany" : "Brak sekretu"}
+          {settings.resendApiKeyConfigured
+            ? t("settings.delivery.keyConfigured")
+            : t("settings.delivery.keyMissing")}
         </Badge>
       </div>
       <TestMail settings={settings} />
       <div className="rounded-lg border px-4">
         <SettingToggle
           id="invite-mail"
-          title="Zaproszenia"
-          description="Wiadomości z linkiem do utworzenia konta."
+          title={t("settings.delivery.invite.title")}
+          description={t("settings.delivery.invite.description")}
           checked={settings.inviteMailEnabled}
           onCheckedChange={(checked) => update("inviteMailEnabled", checked)}
           disabled={mailOff}
         />
         <SettingToggle
           id="recovery-mail"
-          title="Odzyskiwanie konta"
-          description="Bezpieczne linki do zmiany hasła."
+          title={t("settings.delivery.recovery.title")}
+          description={t("settings.delivery.recovery.description")}
           checked={settings.recoveryMailEnabled}
           onCheckedChange={(checked) => update("recoveryMailEnabled", checked)}
           disabled={mailOff}
         />
         <SettingToggle
           id="alert-mail"
-          title="Alerty operacyjne"
-          description="Informacje o niedostępności i nieudanych zadaniach."
+          title={t("settings.delivery.alert.title")}
+          description={t("settings.delivery.alert.description")}
           checked={settings.alertMailEnabled}
           onCheckedChange={(checked) => update("alertMailEnabled", checked)}
           disabled={mailOff}
@@ -343,7 +349,7 @@ function DeliveryCard({ settings, update }: Omit<CardProps, "errors">) {
 
 export function SettingsPage() {
   const { reload } = useOps();
-  const { data, error: loadError } = useOpsResource(opsApi.settings, "Nie udało się pobrać ustawień.");
+  const { data, error: loadError } = useOpsResource(opsApi.settings, t("settings.loadFailed"));
   // What the server last stored, once a save has returned it, and the edits made since.
   const [stored, setStored] = useState<OpsSettings | null>(null);
   const [edits, setEdits] = useState<Partial<OpsSettings>>({});
@@ -375,7 +381,7 @@ export function SettingsPage() {
       setSaved(true);
       await reload();
     } catch (cause) {
-      setSaveError(cause instanceof Error ? cause.message : "Nie udało się zapisać ustawień.");
+      setSaveError(cause instanceof Error ? cause.message : t("settings.saveFailed"));
       if (cause instanceof OpsApiError) setFieldErrors(cause.errors);
     } finally {
       setSaving(false);
@@ -385,8 +391,8 @@ export function SettingsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Ustawienia instancji"
-        description="Konfiguracja zapisywana przez chroniony kontrakt właściciela. Sekrety pozostają w środowisku serwera."
+        title={t("settings.title")}
+        description={t("settings.description")}
         actions={
           <Button type="submit" form="ops-settings-form" disabled={!settings || saving}>
             {saving ? (
@@ -394,30 +400,28 @@ export function SettingsPage() {
             ) : (
               <Save aria-hidden="true" />
             )}
-            {saving ? "Zapisywanie" : "Zapisz ustawienia"}
+            {saving ? t("common.saving") : t("settings.save")}
           </Button>
         }
       />
 
       {loadError ? (
         <Alert variant="destructive">
-          <AlertTitle>Nie udało się pobrać ustawień</AlertTitle>
+          <AlertTitle>{t("settings.loadError")}</AlertTitle>
           <AlertDescription>{loadError}</AlertDescription>
         </Alert>
       ) : null}
       {saveError ? (
         <Alert variant="destructive">
-          <AlertTitle>Ustawienia nie zostały zapisane</AlertTitle>
+          <AlertTitle>{t("settings.saveError")}</AlertTitle>
           <AlertDescription>{saveError}</AlertDescription>
         </Alert>
       ) : null}
       {saved ? (
         <Alert>
           <Check aria-hidden="true" />
-          <AlertTitle>Ustawienia zapisane</AlertTitle>
-          <AlertDescription>
-            Backend zapisał konfigurację instancji i odświeżył dane panelu.
-          </AlertDescription>
+          <AlertTitle>{t("settings.saved.title")}</AlertTitle>
+          <AlertDescription>{t("settings.saved.description")}</AlertDescription>
         </Alert>
       ) : null}
 
@@ -427,7 +431,7 @@ export function SettingsPage() {
           className="flex min-h-64 items-center justify-center gap-2 text-sm text-muted-foreground"
         >
           <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
-          Wczytywanie ustawień
+          {t("settings.loading")}
         </div>
       ) : null}
 

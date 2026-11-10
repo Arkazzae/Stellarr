@@ -9,6 +9,9 @@ import {
   type OpsPublishedClientRelease,
 } from "@/lib/api";
 import { DesktopReleasePage } from "@/pages/desktop-release-page";
+import { selectPolish } from "@/test/locale";
+
+selectPolish();
 
 vi.mock("@/lib/api", async (importOriginal) => {
   const original = await importOriginal<typeof import("@/lib/api")>();

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
+import { t } from "@/i18n";
 import { OpsApiError, opsApi, type OpsBootstrap } from "@/lib/api";
 import { OpsContext, type OpsContextValue, type OpsPhase } from "@/state/ops-context";
 
@@ -21,7 +22,7 @@ function sessionAfterFailure(cause: unknown): Session {
   return {
     phase: "error",
     bootstrap: null,
-    error: cause instanceof Error ? cause.message : "Nie udało się uruchomić panelu OPs.",
+    error: cause instanceof Error ? cause.message : t("session.startFailed"),
   };
 }
 

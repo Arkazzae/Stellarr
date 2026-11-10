@@ -11,10 +11,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { t } from "@/i18n";
+import { formatShortDateTime } from "@/i18n/format";
 import { opsApi, type OpsSession } from "@/lib/api";
 import type { Perform } from "@/pages/users/use-access-actions";
-
-const dateFormatter = new Intl.DateTimeFormat("pl-PL", { dateStyle: "medium", timeStyle: "short" });
 
 function SessionClient({ session }: { session: OpsSession }) {
   if (!session.clientName) {
@@ -43,22 +43,19 @@ export function SessionsTab({ sessions, perform }: SessionsTabProps) {
   return (
     <Card className="shadow-none">
       <CardHeader>
-        <CardTitle>Aktywne sesje logowania</CardTitle>
-        <CardDescription>
-          Każda sesja odpowiada jednemu cookie logowania. Bieżącej sesji nie można odciąć z tego
-          widoku.
-        </CardDescription>
+        <CardTitle>{t("sessions.title")}</CardTitle>
+        <CardDescription>{t("sessions.description")}</CardDescription>
       </CardHeader>
       <CardContent className="px-4 sm:px-6">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Użytkownik</TableHead>
-              <TableHead>Klient</TableHead>
-              <TableHead>Wersja</TableHead>
+              <TableHead>{t("common.user")}</TableHead>
+              <TableHead>{t("sessions.col.client")}</TableHead>
+              <TableHead>{t("sessions.col.version")}</TableHead>
               <TableHead>IP</TableHead>
-              <TableHead>Ostatnia aktywność</TableHead>
-              <TableHead>Wygasa</TableHead>
+              <TableHead>{t("sessions.col.lastSeen")}</TableHead>
+              <TableHead>{t("sessions.col.expires")}</TableHead>
               <TableHead />
             </TableRow>
           </TableHeader>
@@ -69,7 +66,7 @@ export function SessionsTab({ sessions, perform }: SessionsTabProps) {
                   {session.userDisplayName}
                   {session.current ? (
                     <Badge className="ml-2" variant="outline">
-                      Ta sesja
+                      {t("sessions.current")}
                     </Badge>
                   ) : null}
                 </TableCell>
@@ -84,8 +81,8 @@ export function SessionsTab({ sessions, perform }: SessionsTabProps) {
                   )}
                 </TableCell>
                 <TableCell className="font-mono text-xs">{session.ipAddress}</TableCell>
-                <TableCell>{dateFormatter.format(new Date(session.lastSeenAt))}</TableCell>
-                <TableCell>{dateFormatter.format(new Date(session.expiresAt))}</TableCell>
+                <TableCell>{formatShortDateTime(session.lastSeenAt)}</TableCell>
+                <TableCell>{formatShortDateTime(session.expiresAt)}</TableCell>
                 <TableCell>
                   <Button
                     variant="ghost"
@@ -94,13 +91,13 @@ export function SessionsTab({ sessions, perform }: SessionsTabProps) {
                     onClick={() =>
                       void perform(
                         () => opsApi.revokeSession(session.id),
-                        `Unieważniono sesję ${session.userDisplayName}.`,
-                        "Nie udało się unieważnić sesji.",
+                        t("sessions.revoked", { name: session.userDisplayName }),
+                        t("sessions.revokeFailed"),
                       )
                     }
                   >
                     <KeyRound aria-hidden="true" />
-                    Unieważnij
+                    {t("sessions.revoke")}
                   </Button>
                 </TableCell>
               </TableRow>
@@ -108,7 +105,7 @@ export function SessionsTab({ sessions, perform }: SessionsTabProps) {
             {sessions.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} className="h-28 text-center text-muted-foreground">
-                  Brak aktywnych sesji.
+                  {t("sessions.empty")}
                 </TableCell>
               </TableRow>
             ) : null}

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { t } from "@/i18n";
 import { OpsApiError } from "@/lib/api";
 import { useOps } from "@/state/ops-context";
 
@@ -16,9 +17,9 @@ function CenteredState({ children }: { children: ReactNode }) {
 
 function loginFailureMessage(cause: unknown): string {
   if (cause instanceof OpsApiError && cause.status === 429) {
-    return "Za dużo prób logowania. Spróbuj ponownie za chwilę.";
+    return t("gate.tooManyAttempts");
   }
-  return cause instanceof Error ? cause.message : "Logowanie nie powiodło się.";
+  return cause instanceof Error ? cause.message : t("gate.loginFailed");
 }
 
 function LoginScreen() {
@@ -48,13 +49,13 @@ function LoginScreen() {
           <div className="mb-2 grid size-9 place-items-center rounded-md bg-primary text-primary-foreground">
             <LockKeyhole className="size-4" aria-hidden="true" />
           </div>
-          <CardTitle>Logowanie do Stellarr OPs</CardTitle>
-          <CardDescription>Panel jest dostępny wyłącznie dla właściciela instancji.</CardDescription>
+          <CardTitle>{t("gate.login.title")}</CardTitle>
+          <CardDescription>{t("gate.login.description")}</CardDescription>
         </CardHeader>
         <CardContent>
           <form className="space-y-4" onSubmit={submit}>
             <div className="space-y-2">
-              <Label htmlFor="ops-username">Login</Label>
+              <Label htmlFor="ops-username">{t("gate.login.username")}</Label>
               <Input
                 id="ops-username"
                 autoComplete="username"
@@ -65,7 +66,7 @@ function LoginScreen() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="ops-password">Hasło</Label>
+              <Label htmlFor="ops-password">{t("gate.login.password")}</Label>
               <Input
                 id="ops-password"
                 type="password"
@@ -82,7 +83,7 @@ function LoginScreen() {
             ) : null}
             <Button type="submit" className="w-full" disabled={submitting}>
               {submitting ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : null}
-              {submitting ? "Logowanie" : "Zaloguj się"}
+              {submitting ? t("gate.login.submitting") : t("gate.login.submit")}
             </Button>
           </form>
         </CardContent>
@@ -104,7 +105,7 @@ export function AppGate() {
         <CenteredState>
           <div role="status" className="flex items-center gap-3 text-sm text-muted-foreground">
             <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
-            Sprawdzanie dostępu do OPs
+            {t("gate.checking")}
           </div>
         </CenteredState>
       );
@@ -114,14 +115,12 @@ export function AppGate() {
           <Card className="w-full max-w-md shadow-none">
             <CardHeader>
               <ShieldX className="mb-2 size-7 text-destructive" aria-hidden="true" />
-              <CardTitle>To konto nie jest właścicielem</CardTitle>
-              <CardDescription>
-                Zaloguj się kontem przypisanym do systemowej roli właściciela instancji.
-              </CardDescription>
+              <CardTitle>{t("gate.forbidden.title")}</CardTitle>
+              <CardDescription>{t("gate.forbidden.description")}</CardDescription>
             </CardHeader>
             <CardContent>
               <Button variant="outline" onClick={() => void logout()}>
-                Wyloguj konto
+                {t("gate.forbidden.logout")}
               </Button>
             </CardContent>
           </Card>
@@ -133,11 +132,11 @@ export function AppGate() {
           <Card className="w-full max-w-md shadow-none">
             <CardHeader>
               <ServerCrash className="mb-2 size-7 text-destructive" aria-hidden="true" />
-              <CardTitle>Nie udało się uruchomić OPs</CardTitle>
-              <CardDescription>{error ?? "Backend nie odpowiedział poprawnie."}</CardDescription>
+              <CardTitle>{t("gate.error.title")}</CardTitle>
+              <CardDescription>{error ?? t("gate.error.fallback")}</CardDescription>
             </CardHeader>
             <CardContent>
-              <Button onClick={() => void reload()}>Spróbuj ponownie</Button>
+              <Button onClick={() => void reload()}>{t("gate.error.retry")}</Button>
             </CardContent>
           </Card>
         </CenteredState>

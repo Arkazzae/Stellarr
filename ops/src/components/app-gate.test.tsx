@@ -6,6 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 import { AppGate } from "@/components/app-gate";
 import { OpsApiError } from "@/lib/api";
 import { OpsContext, type OpsContextValue } from "@/state/ops-context";
+import { selectPolish } from "@/test/locale";
 import { opsValue } from "@/test/ops-fixtures";
 
 function renderGate(value: OpsContextValue) {
@@ -23,6 +24,8 @@ async function fillAndSubmit(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText("Hasło"), "sekret");
   await user.click(screen.getByRole("button", { name: "Zaloguj się" }));
 }
+
+selectPolish();
 
 describe("AppGate by phase", () => {
   it("shows the panel once the session is ready", () => {

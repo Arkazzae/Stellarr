@@ -10,6 +10,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { t } from "@/i18n";
 import { opsApi, type OpsRole, type OpsUser } from "@/lib/api";
 import type { Perform } from "@/pages/users/use-access-actions";
 
@@ -27,7 +28,7 @@ export function UserActions({ user, roles, perform }: UserActionsProps) {
 
   async function run(action: () => Promise<unknown>, success: string) {
     setPending(true);
-    await perform(action, success, "Operacja nie powiodła się.");
+    await perform(action, success, t("accountActions.failed"));
     setPending(false);
   }
 
@@ -38,7 +39,7 @@ export function UserActions({ user, roles, perform }: UserActionsProps) {
         <Button
           variant="ghost"
           size="icon-sm"
-          aria-label={`Akcje dla ${user.displayName}`}
+          aria-label={t("accountActions.menu", { name: user.displayName })}
           disabled={pending}
         >
           <MoreHorizontal aria-hidden="true" />
@@ -52,25 +53,25 @@ export function UserActions({ user, roles, perform }: UserActionsProps) {
             if (email) {
               void run(
                 () => opsApi.requestPasswordReset(email),
-                `Wysłano żądanie zmiany hasła dla ${user.displayName}.`,
+                t("accountActions.resetPasswordSent", { name: user.displayName }),
               );
             }
           }}
         >
           <Mail aria-hidden="true" />
-          Wyślij reset hasła
+          {t("accountActions.resetPassword")}
         </DropdownMenuItem>
         {isOwner ? null : (
           <>
             <DropdownMenuSeparator />
-            <DropdownMenuLabel>Zmień rolę</DropdownMenuLabel>
+            <DropdownMenuLabel>{t("accountActions.changeRole")}</DropdownMenuLabel>
             {assignableRoles.map((role) => (
               <DropdownMenuItem
                 key={role.id}
                 onSelect={() =>
                   void run(
                     () => opsApi.setUserRole(user.id, role.id),
-                    `Przypisano rolę ${role.name}.`,
+                    t("accountActions.roleAssigned", { role: role.name }),
                   )
                 }
               >
@@ -88,13 +89,13 @@ export function UserActions({ user, roles, perform }: UserActionsProps) {
             void run(
               () => opsApi.setUserDisabled(user.id, !user.isDisabled),
               user.isDisabled
-                ? `Włączono konto ${user.displayName}.`
-                : `Wyłączono konto ${user.displayName} i jego sesje.`,
+                ? t("accountActions.enabled", { name: user.displayName })
+                : t("accountActions.disabled", { name: user.displayName }),
             )
           }
         >
           {user.isDisabled ? <UserCheck aria-hidden="true" /> : <UserX aria-hidden="true" />}
-          {user.isDisabled ? "Włącz konto" : "Wyłącz konto"}
+          {user.isDisabled ? t("accountActions.enable") : t("accountActions.disable")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

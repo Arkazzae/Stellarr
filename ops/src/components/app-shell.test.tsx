@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 
 import { AppShell } from "@/components/app-shell";
 import { OpsContext, type OpsContextValue } from "@/state/ops-context";
+import { selectPolish } from "@/test/locale";
 import { opsValue } from "@/test/ops-fixtures";
 
 function renderShell(path: string, value: OpsContextValue = opsValue(), basename?: string) {
@@ -34,6 +35,8 @@ function activeLinks() {
     .filter((link) => link.getAttribute("aria-current") === "page")
     .map((link) => link.textContent);
 }
+
+selectPolish();
 
 describe("AppShell navigation", () => {
   it("lists the seven areas of the panel in order", () => {

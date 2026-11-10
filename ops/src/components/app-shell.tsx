@@ -36,24 +36,25 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { UserAvatar } from "@/components/user-avatar";
+import { t, type MessageKey } from "@/i18n";
 import type { OpsOperator } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useOps } from "@/state/ops-context";
 
 interface NavigationItem {
-  label: string;
+  labelKey: MessageKey;
   href: string;
   icon: LucideIcon;
 }
 
 const navigation: readonly NavigationItem[] = [
-  { label: "Przegląd", href: "/", icon: LayoutDashboard },
-  { label: "Użytkownicy", href: "/users", icon: UsersRound },
-  { label: "Runtime", href: "/runtime", icon: Cpu },
-  { label: "Logi i audyt", href: "/logs", icon: ScrollText },
-  { label: "Backup", href: "/backups", icon: DatabaseBackup },
-  { label: "Wydania", href: "/desktop-release", icon: PackageOpen },
-  { label: "Ustawienia", href: "/settings", icon: Settings },
+  { labelKey: "nav.overview", href: "/", icon: LayoutDashboard },
+  { labelKey: "nav.users", href: "/users", icon: UsersRound },
+  { labelKey: "nav.runtime", href: "/runtime", icon: Cpu },
+  { labelKey: "nav.logs", href: "/logs", icon: ScrollText },
+  { labelKey: "nav.backups", href: "/backups", icon: DatabaseBackup },
+  { labelKey: "nav.releases", href: "/desktop-release", icon: PackageOpen },
+  { labelKey: "nav.settings", href: "/settings", icon: Settings },
 ];
 
 /** The root only matches itself; every other item also owns the pages beneath it. */
@@ -65,8 +66,8 @@ function activeItem(pathname: string): NavigationItem | undefined {
 
 function NavigationLinks({ onNavigate }: { onNavigate?: () => void }) {
   return (
-    <nav aria-label="Nawigacja OPs" className="flex flex-1 flex-col gap-1 p-3">
-      {navigation.map(({ label, href, icon: Icon }) => (
+    <nav aria-label={t("shell.navigationLabel")} className="flex flex-1 flex-col gap-1 p-3">
+      {navigation.map(({ labelKey, href, icon: Icon }) => (
         <NavLink
           key={href}
           to={href}
@@ -79,7 +80,7 @@ function NavigationLinks({ onNavigate }: { onNavigate?: () => void }) {
           }
         >
           <Icon className="size-4" aria-hidden="true" />
-          {label}
+          {t(labelKey)}
         </NavLink>
       ))}
     </nav>
@@ -93,8 +94,8 @@ function Brand() {
         <ShieldCheck className="size-4" aria-hidden="true" />
       </div>
       <div className="min-w-0">
-        <p className="truncate text-sm font-semibold">Stellarr OPs</p>
-        <p className="truncate text-xs text-muted-foreground">Właściciel instancji</p>
+        <p className="truncate text-sm font-semibold">{t("app.name")}</p>
+        <p className="truncate text-xs text-muted-foreground">{t("shell.role")}</p>
       </div>
     </div>
   );
@@ -112,7 +113,7 @@ function InstanceFooter({ instanceName }: { instanceName: string }) {
           <p className="truncate text-sm font-medium">{instanceName}</p>
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <span className="size-1.5 rounded-full bg-emerald-600" aria-hidden="true" />
-            Instancja lokalna
+            {t("shell.localInstance")}
           </p>
         </div>
       </div>
@@ -156,12 +157,12 @@ function OperatorMenu({ operator, onLogout }: { operator: OpsOperator; onLogout:
           {/* A plain anchor: the app lives at the site root, outside this panel's /ops/ router base. */}
           <a href="/">
             <Settings aria-hidden="true" />
-            Przejdź do aplikacji
+            {t("shell.openApp")}
           </a>
         </DropdownMenuItem>
         <DropdownMenuItem variant="destructive" onSelect={onLogout}>
           <LogOut aria-hidden="true" />
-          Wyloguj się
+          {t("shell.logout")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -174,6 +175,7 @@ export function AppShell() {
   const { bootstrap, logout } = useOps();
   if (!bootstrap) return null;
   const { instance, operator } = bootstrap;
+  const item = activeItem(pathname);
 
   return (
     <div className="min-h-svh bg-background">
@@ -185,26 +187,31 @@ export function AppShell() {
         <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b bg-background/95 px-4 supports-[backdrop-filter]:bg-background/85 supports-[backdrop-filter]:backdrop-blur-sm sm:px-6">
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild>
-              <Button variant="outline" size="icon" className="lg:hidden" aria-label="Otwórz nawigację">
+              <Button
+                variant="outline"
+                size="icon"
+                className="lg:hidden"
+                aria-label={t("shell.openNavigation")}
+              >
                 <Menu aria-hidden="true" />
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-72 gap-0 p-0">
               <SheetHeader className="sr-only">
-                <SheetTitle>Nawigacja</SheetTitle>
-                <SheetDescription>Przejdź do wybranego obszaru panelu OPs.</SheetDescription>
+                <SheetTitle>{t("shell.navigationTitle")}</SheetTitle>
+                <SheetDescription>{t("shell.navigationDescription")}</SheetDescription>
               </SheetHeader>
               <Sidebar instanceName={instance.name} onNavigate={() => setMobileOpen(false)} />
             </SheetContent>
           </Sheet>
 
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium">{activeItem(pathname)?.label ?? "Stellarr OPs"}</p>
+            <p className="truncate text-sm font-medium">{item ? t(item.labelKey) : t("app.name")}</p>
             <p className="hidden text-xs text-muted-foreground sm:block">{instance.name}</p>
           </div>
 
           <Badge variant="outline" className="hidden sm:inline-flex">
-            Właściciel
+            {t("shell.ownerBadge")}
           </Badge>
           <OperatorMenu operator={operator} onLogout={() => void logout()} />
         </header>

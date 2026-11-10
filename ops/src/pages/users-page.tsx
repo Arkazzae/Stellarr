@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/page-header";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { t } from "@/i18n";
 import { opsApi, type OpsRole, type OpsSession, type OpsUsers } from "@/lib/api";
 import { useOpsResource } from "@/lib/use-ops-resource";
 import { AccountsTab, type AccountFilter } from "@/pages/users/accounts-tab";
@@ -28,7 +29,7 @@ async function loadAccess(signal?: AbortSignal): Promise<Access> {
 type RoleSheet = { role: OpsRole | null } | null;
 
 export function UsersPage() {
-  const { data: firstRead, error } = useOpsResource(loadAccess, "Nie udało się pobrać danych.");
+  const { data: firstRead, error } = useOpsResource(loadAccess, t("users.loadFailed"));
   // The reads that follow a change do not go through the resource, which would turn a failure
   // into a page error beside a success notice. Here the failure rejects and reaches the notice.
   const [newerRead, setNewerRead] = useState<Access | null>(null);
@@ -45,25 +46,25 @@ export function UsersPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Użytkownicy i dostęp"
-        description="Konta, aktywne sesje, role i uprawnienia zapisane w backendzie."
+        title={t("users.title")}
+        description={t("users.description")}
         actions={
           <Button onClick={() => setUserSheetOpen(true)}>
             <Plus aria-hidden="true" />
-            Dodaj użytkownika
+            {t("users.add")}
           </Button>
         }
       />
 
       {error ? (
         <Alert variant="destructive">
-          <AlertTitle>Nie udało się pobrać danych</AlertTitle>
+          <AlertTitle>{t("users.loadError")}</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}
       {notice ? (
         <Alert variant={notice.error ? "destructive" : "default"}>
-          <AlertTitle>{notice.error ? "Błąd" : "Gotowe"}</AlertTitle>
+          <AlertTitle>{notice.error ? t("common.error") : t("common.done")}</AlertTitle>
           <AlertDescription>{notice.message}</AlertDescription>
         </Alert>
       ) : null}
@@ -74,7 +75,7 @@ export function UsersPage() {
           className="flex min-h-64 items-center justify-center gap-2 text-sm text-muted-foreground"
         >
           <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
-          Wczytywanie danych
+          {t("users.loading")}
         </div>
       ) : null}
 
@@ -95,10 +96,12 @@ export function UsersPage() {
             perform={perform}
           />
           <Tabs defaultValue="users">
-            <TabsList aria-label="Obszary dostępu">
-              <TabsTrigger value="users">Użytkownicy</TabsTrigger>
-              <TabsTrigger value="sessions">Sesje ({data.sessions.length})</TabsTrigger>
-              <TabsTrigger value="roles">Role</TabsTrigger>
+            <TabsList aria-label={t("users.areas")}>
+              <TabsTrigger value="users">{t("common.users")}</TabsTrigger>
+              <TabsTrigger value="sessions">
+                {t("users.tab.sessions", { count: data.sessions.length })}
+              </TabsTrigger>
+              <TabsTrigger value="roles">{t("users.tab.roles")}</TabsTrigger>
             </TabsList>
             <TabsContent value="users">
               <AccountsTab
