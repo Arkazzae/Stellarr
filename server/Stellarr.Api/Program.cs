@@ -179,6 +179,8 @@ app.MapPermissionOverrideEndpoints();
 app.MapServerDirectoryEndpoints();
 app.MapServerEndpoints();
 app.MapServerAdministrationEndpoints();
+app.MapModerationEndpoints();
+app.MapVoiceModerationEndpoints();
 app.MapNotificationEndpoints();
 app.MapHub<AppHub>("/hubs/app");
 

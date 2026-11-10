@@ -13,3 +13,6 @@ public sealed record VoiceSignalDto(
     string? ToUserId,
     string Kind,
     string Payload);
+
+/// <summary>Where a moderator sends a member who is in a voice channel.</summary>
+public sealed record MoveVoiceMemberRequest(Guid TargetChannelId);
