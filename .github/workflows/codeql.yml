@@ -1,12 +1,19 @@
 name: CodeQL
 
+# Runs when code changes on main or in a pull request that is ready for review,
+# and once a week for advisories published since. Changes to documentation or
+# configuration alone do not trigger it.
 on:
   push:
     branches: [main]
+    paths: ["server/**", "web/**", "ops/**", ".github/workflows/codeql.yml"]
   pull_request:
     branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths: ["server/**", "web/**", "ops/**", ".github/workflows/codeql.yml"]
   schedule:
     - cron: "23 4 * * 1"
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -15,7 +22,7 @@ jobs:
   analyze:
     # Code scanning is not available to a private repository on the free plan,
     # so the job is skipped until the repository is public.
-    if: github.event.repository.private == false
+    if: github.event.repository.private == false && github.event.pull_request.draft != true
     name: analyze (${{ matrix.language }})
     runs-on: ubuntu-latest
     timeout-minutes: 30

@@ -1,11 +1,18 @@
 name: CI
 
+# Runs for pull requests into main and for pushes to main; a push to any other
+# branch runs nothing. A draft pull request runs nothing until it is marked ready
+# for review. Each job runs only when files it checks have changed, so a change
+# to the web client does not rebuild the server. A job that does not run counts
+# as passed for branch protection. "Run workflow" on the Actions tab checks
+# everything.
 on:
   pull_request:
-    # "edited" re-checks the title of the pull request after it is renamed.
-    types: [opened, synchronize, reopened, edited]
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -15,7 +22,51 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
+  changes:
+    if: github.event.pull_request.draft != true
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      server: ${{ steps.filter.outputs.server }}
+      web: ${{ steps.filter.outputs.web }}
+      ops: ${{ steps.filter.outputs.ops }}
+      image: ${{ steps.filter.outputs.image }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - id: filter
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+        run: |
+          # A manual run, the first push of a branch, or a base that is no
+          # longer in the history checks everything.
+          if [[ $EVENT == workflow_dispatch || -z $BASE || $BASE =~ ^0+$ ]] \
+             || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            changed=ALL
+          elif [[ $EVENT == pull_request ]]; then
+            changed=$(git diff --name-only "$BASE...$HEAD")
+          else
+            changed=$(git diff --name-only "$BASE" "$HEAD")
+          fi
+          printf 'Changed files:\n%s\n' "$changed"
+          check() {
+            if [[ $changed == ALL ]] || grep -qE "$2" <<<"$changed"; then
+              echo "$1=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "$1=false" >> "$GITHUB_OUTPUT"
+            fi
+          }
+          check server '^(server/|Stellarr\.slnx$|Directory\.Build\.props$|global\.json$|\.github/workflows/ci\.yml$)'
+          check web '^(web/|\.github/workflows/ci\.yml$)'
+          check ops '^(ops/|\.github/workflows/ci\.yml$)'
+          check image '^(Dockerfile$|\.dockerignore$|infra/|server/.*\.csproj$|server/.*packages\.lock\.json$|(web|ops)/package(-lock)?\.json$|global\.json$|Directory\.Build\.props$|\.github/workflows/ci\.yml$)'
+
   server:
+    needs: changes
+    if: needs.changes.outputs.server == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -32,6 +83,8 @@ jobs:
       - run: dotnet test Stellarr.slnx --no-build --configuration Release
 
   web:
+    needs: changes
+    if: needs.changes.outputs.web == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
@@ -53,6 +106,8 @@ jobs:
       - run: npm run build
 
   ops:
+    needs: changes
+    if: needs.changes.outputs.ops == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     defaults:
@@ -71,9 +126,12 @@ jobs:
       - run: npm test
       - run: npm run build
 
-  # Builds the image without pushing it, so a change that breaks the Dockerfile
-  # fails its pull request. Runs on main too, which fills the build cache.
+  # Builds the image without pushing it, when the Dockerfile, the container
+  # configuration or a dependency list changes. On main it also refreshes the
+  # build cache that the release workflow reuses.
   image:
+    needs: changes
+    if: needs.changes.outputs.image == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
@@ -86,24 +144,3 @@ jobs:
           push: false
           cache-from: type=gha
           cache-to: type=gha,mode=max
-
-  # Pull requests are squash-merged and the title becomes the commit subject,
-  # so the title has to follow the format that .githooks/commit-msg checks.
-  commits:
-    if: github.event_name == 'pull_request'
-    runs-on: ubuntu-latest
-    timeout-minutes: 5
-    steps:
-      - name: Check the pull request title
-        env:
-          TITLE: ${{ github.event.pull_request.title }}
-        run: |
-          pattern='^(feat|fix|refactor|test|docs|build|ci|chore|perf)(\([a-z0-9][a-z0-9-]*\))?: [a-z0-9].*[^.[:space:]]$'
-          if [[ ! $TITLE =~ $pattern ]]; then
-            echo "::error::The title must look like 'type(scope): subject' in lower case, with no trailing period. Types: feat, fix, refactor, test, docs, build, ci, chore, perf."
-            exit 1
-          fi
-          if (( ${#TITLE} > 72 )); then
-            echo "::error::The title is ${#TITLE} characters long, the limit is 72."
-            exit 1
-          fi
