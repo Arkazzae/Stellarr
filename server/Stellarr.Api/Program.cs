@@ -54,6 +54,8 @@ builder.Services.AddSingleton<SlowModeGate>();
 builder.Services.AddSingleton<SoundboardPlaybackGate>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton(services => ClientDiscoveryIdentity.Load(services.GetRequiredService<IConfiguration>()));
+builder.Services.AddSingleton<DesktopReleaseCatalogue>();
+builder.Services.AddSingleton<AndroidReleaseCatalogue>();
 builder.Services.AddSignalR(options =>
 {
     options.MaximumReceiveMessageSize = 160 * 1024;
@@ -158,6 +160,8 @@ app.MapGet("/health/ready", async (AppDbContext db, CancellationToken cancellati
         : Results.Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: "Database unavailable"));
 
 app.MapClientDiscoveryEndpoints();
+app.MapDesktopReleaseEndpoints();
+app.MapAndroidReleaseEndpoints();
 app.MapAuthEndpoints();
 app.MapPasswordRecoveryEndpoints();
 app.MapRegistrationEndpoints();
