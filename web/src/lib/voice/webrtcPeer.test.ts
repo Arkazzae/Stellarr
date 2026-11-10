@@ -30,7 +30,7 @@ class FakeSender {
 }
 
 class FakeTransceiver {
-  mid = "0";
+  mid: string | null = "0";
   setCodecPreferences = vi.fn();
   constructor(readonly sender: FakeSender) {}
 }
@@ -82,6 +82,7 @@ beforeEach(() => {
       sent.push({ type, sdp });
     },
     remoteMediaLearned: (peer) => learned.push(peer),
+    screenAudioStereo: () => true,
   };
   vi.stubGlobal(
     "RTCPeerConnection",
@@ -222,6 +223,51 @@ describe("Negotiator.offer", () => {
     expect(sent[0]?.type).toBe("offer");
     expect(sent[0]?.sdp).toContain("maxaveragebitrate=256000");
     expect(sent[0]?.sdp).toContain("useinbandfec=1");
+  });
+
+  describe("with a share's sound beside the microphone", () => {
+    const twoSections = [
+      "v=0",
+      ...["0", "1"].flatMap((mid) => [
+        "m=audio 9 UDP/TLS/RTP/SAVPF 111",
+        `a=mid:${mid}`,
+        "a=rtpmap:111 opus/48000/2",
+        "a=fmtp:111 minptime=10;useinbandfec=1",
+      ]),
+      "",
+    ].join("\r\n");
+
+    async function offerWith(stereo: boolean): Promise<string[]> {
+      env.screenAudioStereo = () => stereo;
+      const peer = newPeer();
+      const mic = new FakeSender();
+      const screen = new FakeSender();
+      peer.micSender = mic as unknown as RTCRtpSender;
+      peer.screenAudioSender = screen as unknown as RTCRtpSender;
+      const screenSection = new FakeTransceiver(screen);
+      screenSection.mid = "1";
+      fake(peer).transceivers = [new FakeTransceiver(mic), screenSection];
+      fake(peer).createOffer.mockResolvedValueOnce({ type: "offer", sdp: twoSections });
+
+      await new Negotiator(env).offer(peer);
+
+      return (sent[0]?.sdp ?? "").split("m=audio").slice(1);
+    }
+
+    it("keeps the voice mono and gives the sound stereo when its source has two channels", async () => {
+      const [voice, shared] = await offerWith(true);
+
+      expect(voice).toContain("stereo=0");
+      expect(shared).toContain("stereo=1");
+      expect(shared).toContain("maxaveragebitrate=160000");
+      expect(shared).toContain("usedtx=0");
+    });
+
+    it("keeps the sound mono when its source has one channel", async () => {
+      const [, shared] = await offerWith(false);
+
+      expect(shared).toContain("stereo=0");
+    });
   });
 
   it("flags the offer in progress so a colliding one can be recognised", async () => {

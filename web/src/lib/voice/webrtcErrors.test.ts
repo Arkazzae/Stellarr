@@ -1,14 +1,18 @@
 import { describe, expect, it } from "vitest";
 
+import { CameraCaptureError } from "./camera";
 import { IceConfigError } from "./iceSession";
 import { MicCaptureError } from "./micPipeline";
+import { ScreenShareError } from "./screenShare";
 import {
+  cameraError,
   degradedNotice,
   iceConfigError,
   micError,
   peerLostError,
   peerStalledError,
   rtcIncompatibility,
+  screenShareError,
 } from "./webrtcErrors";
 
 describe("rtcIncompatibility", () => {
@@ -45,6 +49,49 @@ describe("micError", () => {
 
   it("treats anything else as a missing microphone", () => {
     expect(micError(new TypeError("boom"))).toMatchObject({ kind: "mic-unavailable" });
+  });
+});
+
+describe("cameraError", () => {
+  it("passes on what the capture said, and keeps the call usable", () => {
+    expect(cameraError(new CameraCaptureError("denied", "Zablokowana."))).toEqual({
+      kind: "camera",
+      message: "Zablokowana.",
+      recoverable: true,
+    });
+  });
+
+  it("falls back to a general sentence for anything else", () => {
+    expect(cameraError(new TypeError("boom"))).toMatchObject({
+      kind: "camera",
+      recoverable: true,
+      message: expect.stringContaining("kamery"),
+    });
+  });
+});
+
+describe("screenShareError", () => {
+  it("is silent when the picker was cancelled", () => {
+    expect(screenShareError(new ScreenShareError("cancelled", "Anulowane."))).toBeNull();
+  });
+
+  it.each(["denied", "unsupported", "unavailable"] as const)(
+    "reports a %s share without ending the call",
+    (kind) => {
+      expect(screenShareError(new ScreenShareError(kind, "Nie wyszło."))).toEqual({
+        kind: "screen-share",
+        message: "Nie wyszło.",
+        recoverable: true,
+      });
+    },
+  );
+
+  it("falls back to a general sentence for anything else", () => {
+    expect(screenShareError(new TypeError("boom"))).toMatchObject({
+      kind: "screen-share",
+      recoverable: true,
+      message: "Nie udało się udostępnić ekranu.",
+    });
   });
 });
 

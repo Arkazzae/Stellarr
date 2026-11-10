@@ -11,6 +11,8 @@ export interface SettingsChange {
   settings: VoiceSettings;
   /** Reopen the microphone even if its settings are unchanged. */
   recaptureMic: boolean;
+  /** Reopen the camera, if one is on, even if its settings are unchanged. */
+  recaptureCamera: boolean;
   /** Move playback to the output device even if its settings are unchanged. */
   refreshPlayback: boolean;
 }
@@ -45,6 +47,7 @@ export class SettingsQueue {
     this.waiting = {
       settings: change.settings,
       recaptureMic: (waiting?.recaptureMic ?? false) || change.recaptureMic,
+      recaptureCamera: (waiting?.recaptureCamera ?? false) || change.recaptureCamera,
       refreshPlayback: (waiting?.refreshPlayback ?? false) || change.refreshPlayback,
     };
     this.running ??= this.drain();
@@ -77,8 +80,9 @@ export interface DeviceChangePlan {
  * included: the choice is forgotten even when no camera is on. Even without a
  * vanished choice, a changed device list can move what the system default
  * points at, and the default's id stays the same when its endpoint does, so
- * the microphone and the speakers have to be reopened on their own account.
- * Null when no audio device came or went and the camera choice is still there.
+ * the microphone, the speakers and the camera have to be reopened on their own
+ * account. Null when no audio device came or went and the camera, which is
+ * left alone while it is chosen by id, is not affected.
  */
 export function planDeviceChange(
   settings: VoiceSettings,
@@ -90,13 +94,15 @@ export function planDeviceChange(
   const inputFellBack = "inputDeviceId" in persist;
   const outputFellBack = "outputDeviceId" in persist;
   const cameraFellBack = "videoDeviceId" in persist;
-  if (!changed.audioInput && !changed.audioOutput && !cameraFellBack) return null;
+  const recaptureCamera = cameraFellBack || (changed.videoInput && settings.videoDeviceId === null);
+  if (!changed.audioInput && !changed.audioOutput && !recaptureCamera) return null;
 
   return {
     persist,
     change: {
       settings: { ...settings, ...persist },
       recaptureMic: inputFellBack || (changed.audioInput && settings.inputDeviceId === null),
+      recaptureCamera,
       refreshPlayback: changed.audioOutput || outputFellBack,
     },
   };

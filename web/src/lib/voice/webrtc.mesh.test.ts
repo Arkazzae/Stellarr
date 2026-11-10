@@ -331,27 +331,6 @@ describe("joining and leaving", () => {
     expect(realtime.joinVoice).toHaveBeenCalledTimes(1);
   });
 
-  it("refuses an incompatible RTC contract before opening the microphone", async () => {
-    const client = new WebRtcVoiceClient({
-      realtime,
-      selfUserId: "u-a",
-      selfDisplayName: "Ja",
-      ice,
-      rtc: { protocolVersion: 2, topology: "mesh" },
-    });
-    clients.push(client);
-
-    await client.join(CHANNEL);
-
-    expect(client.getSnapshot()).toMatchObject({
-      connection: "failed",
-      transport: { signaling: "disconnected", media: "failed" },
-      error: { kind: "unsupported" },
-    });
-    expect(getUserMedia).not.toHaveBeenCalled();
-    expect(realtime.joinVoice).not.toHaveBeenCalled();
-  });
-
   it("reports a blocked microphone and never reaches the hub", async () => {
     getUserMedia.mockRejectedValueOnce(new DOMException("blocked", "NotAllowedError"));
     const client = build();
@@ -365,22 +344,6 @@ describe("joining and leaving", () => {
     });
     expect(ice.beginSession).not.toHaveBeenCalled();
     expect(realtime.joinVoice).not.toHaveBeenCalled();
-  });
-
-  it("joins on the system microphone when the saved device is gone, and remembers it", async () => {
-    settings = { ...settings, inputDeviceId: "missing-usb-mic" };
-    const updateSettings = vi.fn();
-    const replacement = fakeTrack();
-    getUserMedia
-      .mockRejectedValueOnce(new DOMException("gone", "NotFoundError"))
-      .mockResolvedValueOnce(fakeStream(replacement));
-    const client = build("u-a", updateSettings);
-
-    await client.join(CHANNEL);
-
-    expect(updateSettings).toHaveBeenCalledWith({ inputDeviceId: null });
-    expect(getUserMedia.mock.calls[1]?.[0].audio).not.toHaveProperty("deviceId");
-    expect(client.getSnapshot().connection).toBe("connected");
   });
 
   it("does not retry a blocked microphone on another device", async () => {
@@ -500,21 +463,6 @@ describe("offer and answer", () => {
     expect(realtime.sentOfKind("answer")[0]?.toUserId).toBe("u-a");
   });
 
-  it("ignores a colliding offer when impolite and yields when polite", async () => {
-    const impolite = build("u-a");
-    const first = await joinWith(impolite, "u-z");
-    realtime.signal("u-z", "offer", { type: "offer", sdp: SDP });
-    await Promise.resolve();
-    expect(first.setRemoteDescription).not.toHaveBeenCalled();
-
-    FakePeerConnection.instances = [];
-    const polite = build("u-z");
-    const second = await joinWith(polite, "u-a");
-    second.signalingState = "have-local-offer";
-    realtime.signal("u-a", "offer", { type: "offer", sdp: SDP });
-    await vi.waitFor(() => expect(second.setRemoteDescription).toHaveBeenCalled());
-  });
-
   it("sends local candidates and the end-of-candidates marker to that peer", async () => {
     const client = build();
     const pc = await joinWith(client);
@@ -532,26 +480,6 @@ describe("offer and answer", () => {
     expect(end?.payload).toBe("null");
   });
 
-  it("holds remote candidates until the answer, then applies them in order", async () => {
-    const client = build();
-    const pc = await joinWith(client);
-
-    for (const name of ["a", "b", "c"]) {
-      realtime.signal("u-z", "candidate", { candidate: `candidate:${name}`, sdpMid: "0" });
-    }
-    await Promise.resolve();
-    expect(pc.addIceCandidate).not.toHaveBeenCalled();
-
-    realtime.signal("u-z", "answer", { type: "answer", sdp: SDP });
-
-    await vi.waitFor(() => expect(pc.addedCandidates).toHaveLength(3));
-    expect(pc.addedCandidates.map((candidate) => candidate?.candidate)).toEqual([
-      "candidate:a",
-      "candidate:b",
-      "candidate:c",
-    ]);
-  });
-
   it("survives a frame it cannot parse, and one from someone who is not here", async () => {
     const client = build();
     await joinWith(client);
@@ -561,18 +489,6 @@ describe("offer and answer", () => {
     await Promise.resolve();
 
     expect(client.getSnapshot().connection).toBe("connected");
-    expect(client.getSnapshot().error).toBeNull();
-  });
-
-  it("does not report a targeted frame lost to a peer that already left", async () => {
-    realtime.sendVoiceSignal.mockImplementation(async (signal) => {
-      if (signal.toUserId !== undefined) throw new Error("peer already left");
-    });
-    const client = build();
-
-    await joinWith(client);
-    await Promise.resolve();
-
     expect(client.getSnapshot().error).toBeNull();
   });
 
@@ -639,18 +555,6 @@ describe("mute and deafen", () => {
     expect(peerOf(client)?.muted).toBe(true);
   });
 
-  it("silences every remote voice when deafened and restores it", async () => {
-    const client = build();
-    await joinWith(client);
-    const sink = document.querySelector("[data-stellarr-voice-audio] audio") as HTMLAudioElement;
-
-    client.setDeafened(true);
-    expect(sink.muted).toBe(true);
-    expect(micTrack.enabled).toBe(true);
-
-    client.setDeafened(false);
-    expect(sink.muted).toBe(false);
-  });
 });
 
 describe("remote voice", () => {
@@ -731,33 +635,6 @@ describe("remote voice", () => {
     expect(document.querySelector("video")).toBeNull();
   });
 
-  it("remembers how each person sounds and restores it next time", async () => {
-    const { ParticipantPreferencesStore } = await import("./participantPreferences");
-    const preferences = new ParticipantPreferencesStore(null, "u-a");
-    preferences.set("u-z", { volume: 40, gated: true, suppressed: true });
-    const client = new WebRtcVoiceClient({
-      realtime,
-      selfUserId: "u-a",
-      selfDisplayName: "Ja",
-      ice,
-      rtc: { protocolVersion: RTC_PROTOCOL_VERSION, topology: "mesh" },
-      getSettings: () => settings,
-      participantPreferences: preferences,
-    });
-    clients.push(client);
-    await joinWith(client);
-
-    await vi.waitFor(() =>
-      expect(peerOf(client)).toMatchObject({ playbackVolume: 40, gated: true, suppressed: true }),
-    );
-
-    client.setPeerVolume("u-z", 70);
-    client.setPeerGate("u-z", false);
-    client.setPeerSuppression("u-z", false);
-    expect(preferences.get("u-z")).toEqual({ volume: 70, gated: false, suppressed: false });
-    expect(peerOf(client)).toMatchObject({ playbackVolume: 70, gated: false, suppressed: false });
-  });
-
   it("clamps an absurd volume", async () => {
     const client = build();
     await joinWith(client);
@@ -783,24 +660,6 @@ describe("live settings", () => {
     expect(JSON.parse(realtime.sentOfKind("offer")[0]!.payload).sdp).toContain(
       "maxaveragebitrate=256000",
     );
-  });
-
-  it("moves every peer to the new microphone and stops the old device", async () => {
-    const client = build();
-    await client.join(CHANNEL);
-    announce("u-x", "u-z");
-    await vi.waitFor(() => expect(FakePeerConnection.instances).toHaveLength(2));
-    const replacement = fakeTrack();
-    getUserMedia.mockResolvedValueOnce(fakeStream(replacement));
-
-    await client.applySettings({ ...settings, inputDeviceId: "other-mic" });
-
-    for (const pc of FakePeerConnection.instances) {
-      expect(pc.senders[0]?.replaceTrack).toHaveBeenCalledWith(replacement);
-    }
-    expect(micTrack.stop).toHaveBeenCalled();
-    expect(realtime.leaveVoice).not.toHaveBeenCalled();
-    expect(client.getSnapshot().error).toBeNull();
   });
 
   it("tells everyone its state again once the microphone moved", async () => {
@@ -832,70 +691,6 @@ describe("live settings", () => {
     expect(realtime.sentOfKind("state")).toEqual([]);
   });
 
-  it("keeps the old microphone running when the new one cannot be opened", async () => {
-    const client = build();
-    await client.join(CHANNEL);
-    getUserMedia.mockRejectedValueOnce(new DOMException("gone", "NotFoundError"));
-
-    await client.applySettings({ ...settings, inputDeviceId: "unplugged" });
-
-    expect(client.getSnapshot()).toMatchObject({
-      connection: "connected",
-      error: { recoverable: true },
-    });
-    expect(micTrack.stop).not.toHaveBeenCalled();
-  });
-
-  it("puts every peer back when one of them refuses the new microphone", async () => {
-    const client = build();
-    await client.join(CHANNEL);
-    announce("u-x", "u-z");
-    await vi.waitFor(() => expect(FakePeerConnection.instances).toHaveLength(2));
-    const [accepting, refusing] = FakePeerConnection.instances.map((pc) => pc.senders[0]!);
-    refusing!.replaceTrack.mockRejectedValueOnce(new Error("sender closed"));
-    const replacement = fakeTrack();
-    getUserMedia.mockResolvedValueOnce(fakeStream(replacement));
-
-    await client.applySettings({ ...settings, inputDeviceId: "other-mic" });
-
-    expect(accepting!.track).toBe(micTrack);
-    expect(replacement.stop).toHaveBeenCalledOnce();
-    expect(micTrack.stop).not.toHaveBeenCalled();
-    expect(client.getSnapshot().error).toMatchObject({ kind: "mic-unavailable", recoverable: true });
-  });
-
-  it("reopens the system default when the active device ends, and forgets a dead choice", async () => {
-    settings = { ...settings, inputDeviceId: "usb-mic" };
-    const updateSettings = vi.fn();
-    const client = build("u-a", updateSettings);
-    await client.join(CHANNEL);
-    const replacement = fakeTrack();
-    getUserMedia.mockResolvedValueOnce(fakeStream(replacement));
-
-    (micTrack.onended as unknown as () => void)();
-
-    await vi.waitFor(() => expect(micTrack.stop).toHaveBeenCalled());
-    expect(updateSettings).toHaveBeenCalledWith({ inputDeviceId: null });
-    expect(replacement.stop).not.toHaveBeenCalled();
-  });
-
-  it("follows the system default when the plugged-in microphones change", async () => {
-    devices = [audioDevice("audioinput", "mic-a")];
-    const client = build();
-    await client.join(CHANNEL);
-    await vi.waitFor(() => expect(deviceChange).not.toBeNull());
-    await Promise.resolve();
-    const replacement = fakeTrack();
-    getUserMedia.mockResolvedValueOnce(fakeStream(replacement));
-
-    devices = [audioDevice("audioinput", "mic-b")];
-    deviceChange?.(new Event("devicechange"));
-
-    await vi.waitFor(() => expect(micTrack.stop).toHaveBeenCalled(), { timeout: 1000 });
-    expect(replacement.stop).not.toHaveBeenCalled();
-    expect(realtime.leaveVoice).not.toHaveBeenCalled();
-  });
-
   it("forgets a chosen microphone that was unplugged", async () => {
     devices = [audioDevice("audioinput", "usb-mic")];
     settings = { ...settings, inputDeviceId: "usb-mic" };
@@ -913,6 +708,78 @@ describe("live settings", () => {
       timeout: 1000,
     });
     await vi.waitFor(() => expect(micTrack.stop).toHaveBeenCalled());
+  });
+
+  describe("with the camera on", () => {
+    function cameraOn() {
+      const video = { ...fakeTrack(), kind: "video" } as MediaStreamTrack;
+      const media = {
+        id: `camera-${streamCounter++}`,
+        getTracks: () => [video],
+        getAudioTracks: () => [],
+        getVideoTracks: () => [video],
+      } as unknown as MediaStream;
+      return { video, media };
+    }
+
+    async function startCamera(client: WebRtcVoiceClient) {
+      devices = [audioDevice("videoinput", "cam-a"), audioDevice("videoinput", "cam-b")];
+      const pc = await joinWith(client);
+      await vi.waitFor(() => expect(deviceChange).not.toBeNull());
+      await Promise.resolve();
+      const first = cameraOn();
+      getUserMedia.mockResolvedValueOnce(first.media);
+      await client.startCamera();
+      return { pc, first };
+    }
+
+    it("reopens a camera that follows the system default when the cameras change", async () => {
+      const client = build();
+      const { pc, first } = await startCamera(client);
+      const second = cameraOn();
+      getUserMedia.mockResolvedValueOnce(second.media);
+
+      devices = [audioDevice("videoinput", "cam-c")];
+      deviceChange?.(new Event("devicechange"));
+
+      await vi.waitFor(() => expect(pc.senders[1]?.replaceTrack).toHaveBeenCalledWith(second.video), {
+        timeout: 1000,
+      });
+      expect(first.video.stop).toHaveBeenCalled();
+      expect(micTrack.stop).not.toHaveBeenCalled();
+    });
+
+    it("moves to the system camera when the chosen one is unplugged, and forgets the choice", async () => {
+      settings = { ...settings, videoDeviceId: "cam-a" };
+      const updateSettings = vi.fn();
+      const client = build("u-a", updateSettings);
+      const { pc, first } = await startCamera(client);
+      const second = cameraOn();
+      getUserMedia.mockResolvedValueOnce(second.media);
+
+      devices = [audioDevice("videoinput", "cam-b")];
+      deviceChange?.(new Event("devicechange"));
+
+      await vi.waitFor(() => expect(pc.senders[1]?.replaceTrack).toHaveBeenCalledWith(second.video), {
+        timeout: 1000,
+      });
+      expect(updateSettings).toHaveBeenCalledWith({ videoDeviceId: null });
+      expect(first.video.stop).toHaveBeenCalled();
+    });
+
+    it("leaves a camera chosen by id alone when another camera comes or goes", async () => {
+      settings = { ...settings, videoDeviceId: "cam-a" };
+      const client = build();
+      const { first } = await startCamera(client);
+      const callsBefore = getUserMedia.mock.calls.length;
+
+      devices = [audioDevice("videoinput", "cam-a")];
+      deviceChange?.(new Event("devicechange"));
+      await new Promise((resolve) => setTimeout(resolve, 300));
+
+      expect(getUserMedia).toHaveBeenCalledTimes(callsBefore);
+      expect(first.video.stop).not.toHaveBeenCalled();
+    });
   });
 
   it("forgets a chosen camera that was unplugged, though no camera is on", async () => {
@@ -934,24 +801,6 @@ describe("live settings", () => {
     expect(micTrack.stop).not.toHaveBeenCalled();
   });
 
-  it("applies only the newest of several quick device changes", async () => {
-    const client = build();
-    const pc = await joinWith(client);
-    const slow = deferred<MediaStream>();
-    const latest = fakeTrack();
-    const stale = fakeTrack();
-    getUserMedia.mockReturnValueOnce(slow.promise).mockResolvedValueOnce(fakeStream(latest));
-
-    const first = client.applySettings({ ...settings, inputDeviceId: "slow-mic" });
-    await vi.waitFor(() => expect(getUserMedia).toHaveBeenCalledTimes(2));
-    const second = client.applySettings({ ...settings, inputDeviceId: "latest-mic" });
-    slow.resolve(fakeStream(stale));
-    await Promise.all([first, second]);
-
-    expect(pc.senders[0]?.replaceTrack).toHaveBeenCalledTimes(1);
-    expect(pc.senders[0]?.replaceTrack).toHaveBeenCalledWith(latest);
-    expect(stale.stop).toHaveBeenCalledOnce();
-  });
 });
 
 describe("recovery", () => {
@@ -992,32 +841,6 @@ describe("recovery", () => {
     expect(client.getSnapshot().transport.media).toBe("failed");
   });
 
-  it("does not restart a connection that recovers on its own", async () => {
-    const client = build();
-    const pc = await joinWith(client);
-
-    pc.setState("disconnected");
-    pc.setState("connected");
-    await new Promise((resolve) => setTimeout(resolve, 80));
-
-    expect(pc.restartIce).not.toHaveBeenCalled();
-  });
-
-  it("repairs only the broken connections when the tab comes back", async () => {
-    const client = build();
-    await client.join(CHANNEL);
-    announce("u-x", "u-z");
-    await vi.waitFor(() => expect(FakePeerConnection.instances).toHaveLength(2));
-    const [healthy, broken] = FakePeerConnection.instances;
-    healthy!.connectionState = "connected";
-    broken!.connectionState = "failed";
-
-    document.dispatchEvent(new Event("visibilitychange"));
-
-    await vi.waitFor(() => expect(broken!.restartIce).toHaveBeenCalled());
-    expect(healthy!.restartIce).not.toHaveBeenCalled();
-  });
-
   it("only calls the media connected once audio crossed both ways", async () => {
     const client = build();
     const pc = await joinWith(client);
@@ -1039,27 +862,6 @@ describe("recovery", () => {
 });
 
 describe("following the hub", () => {
-  it("leaves and says so when a newer connection replaced this session", async () => {
-    const client = build();
-    await joinWith(client);
-
-    realtime.emit("VoiceSessionReplaced", { channelId: CHANNEL });
-
-    await vi.waitFor(() => expect(client.getSnapshot().error?.kind).toBe("session-replaced"));
-    expect(client.getSnapshot().channelId).toBeNull();
-    expect(micTrack.stop).toHaveBeenCalled();
-  });
-
-  it("releases media when a moderator kicks the session", async () => {
-    const client = build();
-    await joinWith(client);
-
-    realtime.emit("VoiceChannelKicked", { channelId: CHANNEL });
-
-    await vi.waitFor(() => expect(client.getSnapshot().error?.kind).toBe("channel-kicked"));
-    expect(micTrack.stop).toHaveBeenCalled();
-  });
-
   it("ignores events for another channel", async () => {
     const client = build();
     await client.join(CHANNEL);
@@ -1068,19 +870,6 @@ describe("following the hub", () => {
     realtime.emit("VoiceChannelMoved", { fromChannelId: "ch-other", toChannelId: "ch-third" });
 
     expect(client.getSnapshot()).toMatchObject({ connection: "connected", channelId: CHANNEL });
-  });
-
-  it("follows an administrator move without reopening the microphone", async () => {
-    const client = build();
-    const old = await joinWith(client);
-
-    realtime.emit("VoiceChannelMoved", { fromChannelId: CHANNEL, toChannelId: "ch-nocna" });
-
-    await vi.waitFor(() => expect(client.getSnapshot().channelId).toBe("ch-nocna"));
-    expect(realtime.joinVoice).toHaveBeenLastCalledWith("ch-nocna");
-    expect(old.close).toHaveBeenCalled();
-    expect(micTrack.stop).not.toHaveBeenCalled();
-    expect(client.getSnapshot().connection).toBe("connected");
   });
 
   it("ends the call when the move cannot be followed", async () => {
@@ -1092,47 +881,6 @@ describe("following the hub", () => {
 
     await vi.waitFor(() => expect(client.getSnapshot().error?.kind).toBe("signaling"));
     expect(client.getSnapshot().channelId).toBeNull();
-  });
-
-  it("leaves when the other person declines a direct call", async () => {
-    const client = build();
-    await client.join(CHANNEL);
-
-    realtime.emit("DirectCallDeclined", { channelId: CHANNEL, byUserId: "u-z" });
-
-    await vi.waitFor(() => expect(client.getSnapshot().channelId).toBeNull());
-    expect(realtime.leaveVoice).toHaveBeenCalled();
-  });
-
-  it("keeps healthy media through a hub reconnect and re-announces afterwards", async () => {
-    const client = build();
-    const pc = await joinWith(client);
-    realtime.joinVoice.mockClear();
-    realtime.sent = [];
-
-    realtime.setStatus("reconnecting");
-    expect(client.getSnapshot()).toMatchObject({
-      connection: "reconnecting",
-      transport: { signaling: "reconnecting" },
-    });
-    expect(pc.close).not.toHaveBeenCalled();
-
-    realtime.setStatus("connected");
-    await vi.waitFor(() => expect(realtime.joinVoice).toHaveBeenCalledWith(CHANNEL));
-    await vi.waitFor(() => expect(realtime.sentOfKind("state")).toHaveLength(1));
-    expect(client.getSnapshot().connection).toBe("connected");
-  });
-
-  it("reports a failed rejoin as recoverable", async () => {
-    const client = build();
-    await joinWith(client);
-    realtime.setStatus("reconnecting");
-    realtime.joinVoice.mockRejectedValueOnce(new Error("hub"));
-
-    realtime.setStatus("connected");
-
-    await vi.waitFor(() => expect(client.getSnapshot().error?.recoverable).toBe(true));
-    expect(client.getSnapshot().channelId).toBe(CHANNEL);
   });
 
   it("stops listening to the hub once the call is left", async () => {

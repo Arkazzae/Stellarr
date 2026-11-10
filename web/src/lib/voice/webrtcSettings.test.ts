@@ -8,6 +8,7 @@ function change(settings: Partial<VoiceSettings> = {}, flags: Partial<SettingsCh
   return {
     settings: { ...DEFAULT_SETTINGS, ...settings },
     recaptureMic: false,
+    recaptureCamera: false,
     refreshPlayback: false,
     ...flags,
   };
@@ -51,7 +52,7 @@ describe("SettingsQueue", () => {
     expect(applied.map((item) => item.settings.outputVolume)).toEqual([10, 30]);
   });
 
-  it("remembers a request to reopen the microphone or playback until it is applied", async () => {
+  it("remembers a request to reopen the microphone, camera or playback until it is applied", async () => {
     const hold = gate();
     const applied: SettingsChange[] = [];
     const queue = new SettingsQueue(async (next) => {
@@ -61,12 +62,17 @@ describe("SettingsQueue", () => {
 
     const running = queue.push(change());
     void queue.push(change({}, { recaptureMic: true }));
+    void queue.push(change({}, { recaptureCamera: true }));
     void queue.push(change({}, { refreshPlayback: true }));
     void queue.push(change());
     hold.open();
     await running;
 
-    expect(applied[1]).toMatchObject({ recaptureMic: true, refreshPlayback: true });
+    expect(applied[1]).toMatchObject({
+      recaptureMic: true,
+      recaptureCamera: true,
+      refreshPlayback: true,
+    });
   });
 
   it("does not carry a request over into the change after it", async () => {
@@ -143,12 +149,9 @@ describe("planDeviceChange", () => {
     videoInputs: new Set(videos),
   });
 
-  it("does nothing when no audio device came or went and no chosen camera vanished", () => {
-    const settings = { ...DEFAULT_SETTINGS };
-
-    expect(planDeviceChange(settings, snapshot(["a"], ["x"]), snapshot(["a"], ["x"]))).toBeNull();
+  it("does nothing when no device came or went", () => {
     expect(
-      planDeviceChange(settings, snapshot(["a"], [], ["cam-1"]), snapshot(["a"], [], ["cam-2"])),
+      planDeviceChange(DEFAULT_SETTINGS, snapshot(["a"], ["x"], ["cam"]), snapshot(["a"], ["x"], ["cam"])),
     ).toBeNull();
   });
 
@@ -199,6 +202,25 @@ describe("planDeviceChange", () => {
     expect(plan?.persist).toEqual({ videoDeviceId: null });
     expect(plan?.change.settings.videoDeviceId).toBeNull();
     expect(plan?.change).toMatchObject({ recaptureMic: false, refreshPlayback: false });
+  });
+
+  it("reopens a system-default camera when the list of cameras changed", () => {
+    const plan = planDeviceChange(
+      DEFAULT_SETTINGS,
+      snapshot(["a"], [], ["cam-1"]),
+      snapshot(["a"], [], ["cam-2"]),
+    );
+
+    expect(plan?.persist).toEqual({});
+    expect(plan?.change).toMatchObject({ recaptureCamera: true, recaptureMic: false });
+  });
+
+  it("reopens the camera on the system route when the chosen one vanished", () => {
+    const settings = { ...DEFAULT_SETTINGS, videoDeviceId: "cam-1" };
+
+    const plan = planDeviceChange(settings, snapshot([], [], ["cam-1"]), snapshot([], [], []));
+
+    expect(plan?.change.recaptureCamera).toBe(true);
   });
 
   it("reports every vanished choice together", () => {

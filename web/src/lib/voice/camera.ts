@@ -67,6 +67,11 @@ function browserGetUserMedia(): GetUserMedia | null {
   return (constraints) => navigator.mediaDevices.getUserMedia(constraints);
 }
 
+/** Whether this browser can open a camera at all, joined to a call or not. */
+export function cameraIsSupported(): boolean {
+  return browserGetUserMedia() !== null;
+}
+
 /** Opens one video-only stream and normalises browser errors for the UI. */
 export async function captureCamera(
   settings: CameraSettings,

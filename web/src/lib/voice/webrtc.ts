@@ -7,6 +7,7 @@ import {
 } from "@/lib/rtc/protocol";
 import { profileFor } from "./audioProfiles";
 import { AdaptiveBitrateController } from "./bitrate";
+import { cameraIsSupported } from "./camera";
 import { LifecycleWatcher } from "./lifecycle";
 import { snapshotVoiceDevices, watchVoiceDevices, type VoiceDeviceSnapshot } from "./deviceMonitor";
 import type { VoiceIceProvider } from "./iceSession";
@@ -29,6 +30,7 @@ import {
   signalingFailedError,
 } from "./webrtcErrors";
 import { CallHealth } from "./webrtcHealth";
+import { LocalCamera, LocalScreen, type LocalVideoEnv } from "./webrtcLocalVideo";
 import { LocalMicrophone } from "./webrtcMicrophone";
 import { Mesh } from "./webrtcMesh";
 import { Negotiator, type Peer } from "./webrtcPeer";
@@ -60,7 +62,9 @@ export interface WebRtcVoiceClientOptions {
   /** Grace before a `disconnected` peer is nudged with an ICE restart. */
   recoveryGraceMs?: number;
   /** Bootstrap contract used to refuse an incompatible media implementation. */
-  rtc: Pick<RtcConfig, "protocolVersion" | "topology">;
+  rtc: Pick<RtcConfig, "protocolVersion" | "topology"> & {
+    capabilities?: Pick<RtcConfig["capabilities"], "camera">;
+  };
 }
 
 /**
@@ -71,8 +75,9 @@ export interface WebRtcVoiceClientOptions {
  * facade the UI sees through `VoiceClient`; the work lives in its siblings:
  * `webrtcPeer` (connections and negotiation), `webrtcRemoteAudio` and
  * `webrtcRemoteMedia` (what the others sound like and which of their streams
- * is which), `webrtcMicrophone` (what they hear), `webrtcSettings` (live
- * changes) and `webrtcHealth` (proof that audio flows, and recovery).
+ * is which), `webrtcMicrophone`, `webrtcLocalVideo` (what they hear and see),
+ * `webrtcSettings` (live changes) and `webrtcHealth` (proof that audio flows,
+ * and recovery).
  */
 export class WebRtcVoiceClient implements VoiceClient {
   private readonly store = new VoiceStateStore();
@@ -85,6 +90,8 @@ export class WebRtcVoiceClient implements VoiceClient {
   private readonly negotiator: Negotiator;
   private readonly remoteAudio: RemoteAudio;
   private readonly microphone: LocalMicrophone;
+  private readonly camera: LocalCamera;
+  private readonly screen: LocalScreen;
   private readonly health: CallHealth;
   private readonly mesh: Mesh;
   private readonly settingsQueue: SettingsQueue;
@@ -140,6 +147,7 @@ export class WebRtcVoiceClient implements VoiceClient {
       send: (peer, type, sdp) =>
         this.send({ kind: type, toUserId: peer.userId, payload: encodeRtcDescription(type, sdp) }),
       remoteMediaLearned: (peer) => this.remoteAudio.route(peer),
+      screenAudioStereo: () => this.screen.stereo,
     });
     this.remoteAudio = new RemoteAudio({
       peers: this.peers,
@@ -167,10 +175,35 @@ export class WebRtcVoiceClient implements VoiceClient {
       bitrate: this.bitrate,
       statsIntervalMs: options.statsIntervalMs,
       recoveryGraceMs: options.recoveryGraceMs,
-      activeSession: () => (this.disposed || this.channelId === null ? null : this.session),
+      activeSession: () => this.activeSession(),
       reoffer: (peer) => this.negotiator.offer(peer),
       applyMicEncoding: () => this.mesh.applyMicEncoding(),
     });
+    const video: LocalVideoEnv = {
+      store: this.store,
+      peers: this.peers,
+      settings: () => this.settings,
+      session: () => this.activeSession(),
+      isStale: (session) => this.isStale(session),
+      publish: () => this.publishPeers(),
+      announce: () => {
+        this.publishPeers();
+        void this.broadcastState();
+      },
+      renegotiate: () => this.mesh.renegotiateAll(),
+    };
+    this.camera = new LocalCamera({
+      ...video,
+      useSystemCamera: () => this.useSystemCamera(),
+      recaptureCamera: (settings) =>
+        this.settingsQueue.push({
+          settings,
+          recaptureMic: false,
+          recaptureCamera: true,
+          refreshPlayback: false,
+        }),
+    });
+    this.screen = new LocalScreen(video);
     this.mesh = new Mesh(this.peers, {
       selfUserId: options.selfUserId,
       ice: options.ice,
@@ -178,6 +211,8 @@ export class WebRtcVoiceClient implements VoiceClient {
       negotiator: this.negotiator,
       remoteAudio: this.remoteAudio,
       microphone: this.microphone,
+      camera: this.camera,
+      screen: this.screen,
       health: this.health,
       bitrate: () => this.bitrate.getBitrate(),
       send: (signal) => this.send(signal),
@@ -192,6 +227,7 @@ export class WebRtcVoiceClient implements VoiceClient {
       (change) => this.applySettingsNow(change),
       () => this.disposed,
     );
+    this.store.set({ cameraSupported: this.cameraIsSupported() });
   }
 
   getSnapshot = (): VoiceState => this.store.getSnapshot();
@@ -234,6 +270,7 @@ export class WebRtcVoiceClient implements VoiceClient {
       transport: { signaling: "idle", media: "idle", peerCount: 0, connectedPeerCount: 0 },
       error: null,
       degraded: null,
+      cameraSupported: this.cameraIsSupported(),
       peers: [this.selfPeer(false)],
     });
 
@@ -297,6 +334,8 @@ export class WebRtcVoiceClient implements VoiceClient {
     this.health.stop();
     this.lifecycle.stop();
     this.bitrate.reset();
+    this.camera.release();
+    this.screen.release();
     this.releaseMicrophone();
     this.remoteAudio.removeHost();
     this.options.ice.endSession();
@@ -362,29 +401,21 @@ export class WebRtcVoiceClient implements VoiceClient {
     this.publishPeers();
   }
 
-  // Camera and screen share arrive with the video half of this client.
+  /** Must be called synchronously from the click, or the user gesture is lost. */
   startScreenShare(): Promise<void> {
-    return Promise.reject<void>({
-      kind: "screen-share",
-      message: "Nie udało się udostępnić ekranu.",
-      recoverable: true,
-    } satisfies VoiceError);
+    return this.screen.start();
   }
 
   stopScreenShare(): Promise<void> {
-    return Promise.resolve();
+    return this.screen.stop();
   }
 
   startCamera(): Promise<void> {
-    return Promise.reject<void>({
-      kind: "camera",
-      message: "Nie udało się włączyć kamery. Sprawdź urządzenie i spróbuj ponownie.",
-      recoverable: true,
-    } satisfies VoiceError);
+    return this.camera.start();
   }
 
   stopCamera(): Promise<void> {
-    return Promise.resolve();
+    return this.camera.stop();
   }
 
   // --------------------------------------------------------------- settings
@@ -401,6 +432,7 @@ export class WebRtcVoiceClient implements VoiceClient {
     return this.settingsQueue.push({
       settings: next,
       recaptureMic: false,
+      recaptureCamera: false,
       refreshPlayback: false,
     });
   }
@@ -430,6 +462,11 @@ export class WebRtcVoiceClient implements VoiceClient {
       await this.mesh.renegotiateAll();
     }
 
+    if (previous.screenShareQuality !== next.screenShareQuality) {
+      await this.screen.applyQuality(next.screenShareQuality);
+    }
+    await this.camera.follow(previous, next, change.recaptureCamera);
+
     if (this.channelId === null) return;
     const session = this.session;
     const swapped = await this.microphone.replace(
@@ -451,6 +488,7 @@ export class WebRtcVoiceClient implements VoiceClient {
     return this.settingsQueue.push({
       settings: this.settings,
       recaptureMic: true,
+      recaptureCamera: false,
       refreshPlayback: false,
     });
   }
@@ -465,6 +503,7 @@ export class WebRtcVoiceClient implements VoiceClient {
     await this.settingsQueue.push({
       settings: { ...this.settings, inputDeviceId: null },
       recaptureMic: true,
+      recaptureCamera: false,
       refreshPlayback: false,
     });
   }
@@ -684,8 +723,8 @@ export class WebRtcVoiceClient implements VoiceClient {
   private statePayload(): string {
     return encodeRtcState({
       muted: this.store.getSnapshot().muted,
-      screenStreamId: null,
-      cameraStreamId: null,
+      screenStreamId: this.screen.streamId,
+      cameraStreamId: this.camera.streamId,
     });
   }
 
@@ -720,8 +759,28 @@ export class WebRtcVoiceClient implements VoiceClient {
     return this.disposed || session !== this.session;
   }
 
+  /** The session of the call in progress, or null when there is none to act in. */
+  private activeSession(): number | null {
+    return this.disposed || this.channelId === null ? null : this.session;
+  }
+
+  private cameraIsSupported(): boolean {
+    return this.options.rtc.capabilities?.camera !== false && cameraIsSupported();
+  }
+
+  /** The chosen camera is gone: the system camera is the choice from now on. */
+  private useSystemCamera(): VoiceSettings {
+    if (this.settings.videoDeviceId !== null) {
+      this.options.updateSettings?.({ videoDeviceId: null });
+    }
+    this.settings = { ...this.settings, videoDeviceId: null };
+    return this.settings;
+  }
+
   private abortJoin(error: VoiceError): void {
     for (const unsubscribe of this.unsubscribes.splice(0)) unsubscribe();
+    this.camera.release();
+    this.screen.release();
     this.releaseMicrophone();
     this.health.stop();
     this.lifecycle.stop();
@@ -753,8 +812,8 @@ export class WebRtcVoiceClient implements VoiceClient {
       gated: false,
       suppressed: false,
       self: true,
-      screen: null,
-      camera: null,
+      screen: this.screen.local,
+      camera: this.camera.local,
     };
   }
 

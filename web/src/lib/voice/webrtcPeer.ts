@@ -1,5 +1,5 @@
 import type { UserId, VoiceOccupant } from "@/lib/api/types";
-import { opusParameters, profileFor } from "./audioProfiles";
+import { AUDIO_PROFILES, opusParameters, profileFor } from "./audioProfiles";
 import { RemoteCandidateQueue } from "./candidates";
 import { RecoveryWatchdog } from "./lifecycle";
 import type { ParticipantPreference } from "./participantPreferences";
@@ -62,7 +62,11 @@ export interface Peer {
   /** Every remote stream seen, so routing can be re-evaluated at will. */
   readonly media: RemoteMedia;
   readonly candidates: RemoteCandidateQueue;
+  /** What this side sends to this person; each is null while it is off. */
   micSender: RTCRtpSender | null;
+  cameraSender: RTCRtpSender | null;
+  screenVideoSender: RTCRtpSender | null;
+  screenAudioSender: RTCRtpSender | null;
   readonly watchdog: RecoveryWatchdog;
   /** Perfect-negotiation bookkeeping (https://w3c.github.io/webrtc-pc/#perfect-negotiation). */
   readonly polite: boolean;
@@ -120,6 +124,9 @@ export function createPeer(init: PeerInit): Peer {
       addIceCandidate: (candidate) => connection.addIceCandidate(candidate ?? undefined),
     }),
     micSender: null,
+    cameraSender: null,
+    screenVideoSender: null,
+    screenAudioSender: null,
     watchdog: new RecoveryWatchdog({
       graceMs: recovery.graceMs,
       maxAttempts: recovery.maxAttempts,
@@ -150,6 +157,8 @@ export interface NegotiatorEnv {
   send(peer: Peer, type: "offer" | "answer", sdp: string): Promise<void>;
   /** The remote description told more about what the peer's streams carry. */
   remoteMediaLearned(peer: Peer): void;
+  /** Whether the shared sound being sent has two channels. */
+  screenAudioStereo(): boolean;
 }
 
 /**
@@ -241,7 +250,8 @@ export class Negotiator {
     const { connection } = peer;
     const description =
       type === "offer" ? await connection.createOffer() : await connection.createAnswer();
-    const tuned = tuneLocalDescription(description, audioTuningPlan(peer, this.env.settings()));
+    const plan = audioTuningPlan(peer, this.env.settings(), this.env.screenAudioStereo());
+    const tuned = tuneLocalDescription(description, plan);
 
     try {
       await connection.setLocalDescription(tuned);
@@ -255,21 +265,40 @@ export class Negotiator {
   }
 }
 
-/** Which Opus settings each audio section of this peer's connection gets. */
-function audioTuningPlan(peer: Peer, settings: VoiceSettings): AudioTuningPlan {
+/**
+ * Which Opus settings each audio section of this peer's connection gets.
+ *
+ * Speech and shared sound share a connection but not a profile. Quality speech
+ * stays mono and continuous to protect onsets; shared content keeps stereo when
+ * its source really has two channels.
+ */
+function audioTuningPlan(peer: Peer, settings: VoiceSettings, stereo: boolean): AudioTuningPlan {
   const speech = profileFor(settings);
   const speechTuning: AudioSectionTuning = {
     parameters: opusParameters(speech),
     ptime: speech.ptime,
   };
+  const music = AUDIO_PROFILES.music;
+  const musicTuning: AudioSectionTuning = {
+    parameters: opusParameters(music, stereo),
+    ptime: music.ptime,
+  };
 
   const byMid = new Map<string, AudioSectionTuning>();
   for (const transceiver of peer.connection.getTransceivers()) {
-    if (transceiver.mid && peer.micSender && transceiver.sender === peer.micSender) {
+    if (!transceiver.mid) continue;
+    if (peer.screenAudioSender && transceiver.sender === peer.screenAudioSender) {
+      byMid.set(transceiver.mid, musicTuning);
+    } else if (peer.micSender && transceiver.sender === peer.micSender) {
       byMid.set(transceiver.mid, speechTuning);
     }
   }
   return { byMid, fallback: speechTuning };
+}
+
+/** The encodings of a sender, or one blank encoding for a browser that reports none. */
+export function sendEncodings(parameters: RTCRtpSendParameters): RTCRtpEncodingParameters[] {
+  return parameters.encodings && parameters.encodings.length > 0 ? parameters.encodings : [{}];
 }
 
 /**
@@ -280,8 +309,7 @@ export async function applyEncoding(sender: RTCRtpSender, bitrate: number): Prom
   if (typeof sender.getParameters !== "function") return;
   try {
     const parameters = sender.getParameters();
-    const encodings =
-      parameters.encodings && parameters.encodings.length > 0 ? parameters.encodings : [{}];
+    const encodings = sendEncodings(parameters);
     let changed = false;
     for (const encoding of encodings) {
       if (encoding.maxBitrate !== bitrate) {

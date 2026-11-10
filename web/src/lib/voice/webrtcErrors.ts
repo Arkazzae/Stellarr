@@ -1,12 +1,14 @@
 import type { RtcConfig } from "@/lib/api/types";
 import { RTC_PROTOCOL_VERSION } from "@/lib/rtc/protocol";
 import { usesWorkletSuppression, type WorkletSuppressor } from "./audioProfiles";
+import { CameraCaptureError } from "./camera";
 import { IceConfigError } from "./iceSession";
 import {
   MicCaptureError,
   type ActiveAutoGain,
   type ActiveNoiseSuppression,
 } from "./micPipeline";
+import { ScreenShareError } from "./screenShare";
 import type { VoiceSettings } from "./settings";
 import type { VoiceError } from "./types";
 
@@ -91,6 +93,46 @@ export const micSwapFailedError: VoiceError = {
   kind: "mic-unavailable",
   message:
     "Nie udało się przełączyć mikrofonu u wszystkich rozmówców. Poprzedni mikrofon nadal działa.",
+  recoverable: true,
+};
+
+/** A camera that would not open leaves the call untouched, so it is recoverable. */
+export function cameraError(cause: unknown): VoiceError {
+  const message =
+    cause instanceof CameraCaptureError
+      ? cause.message
+      : "Nie udało się włączyć kamery. Sprawdź urządzenie i spróbuj ponownie.";
+  return { kind: "camera", message, recoverable: true };
+}
+
+export const cameraLostError: VoiceError = {
+  kind: "camera",
+  message:
+    "Kamera została odłączona i nie znaleziono urządzenia zastępczego. Podłącz kamerę i włącz obraz ponownie.",
+  recoverable: true,
+};
+
+export const cameraSwapFailedError: VoiceError = {
+  kind: "camera",
+  message: "Nie udało się przełączyć kamery. Poprzedni obraz pozostaje aktywny.",
+  recoverable: true,
+};
+
+/** What a failed share says. Cancelling the picker is a decision, so it has no error. */
+export function screenShareError(cause: unknown): VoiceError | null {
+  const failure = cause instanceof ScreenShareError ? cause : null;
+  if (failure?.kind === "cancelled") return null;
+  return {
+    kind: "screen-share",
+    message: failure?.message ?? "Nie udało się udostępnić ekranu.",
+    recoverable: true,
+  };
+}
+
+export const screenQualityPartialError: VoiceError = {
+  kind: "screen-share",
+  message:
+    "Przeglądarka nie zastosowała pełnego profilu obrazu. Udostępnianie działa dalej z poprzednimi parametrami.",
   recoverable: true,
 };
 

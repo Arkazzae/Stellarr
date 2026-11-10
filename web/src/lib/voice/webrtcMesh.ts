@@ -9,6 +9,7 @@ import {
 import type { VoiceIceProvider } from "./iceSession";
 import type { ParticipantPreferencesStore } from "./participantPreferences";
 import type { CallHealth } from "./webrtcHealth";
+import type { LocalCamera, LocalScreen } from "./webrtcLocalVideo";
 import type { LocalMicrophone } from "./webrtcMicrophone";
 import { applyEncoding, createPeer, type Negotiator, type Peer } from "./webrtcPeer";
 import type { RemoteAudio } from "./webrtcRemoteAudio";
@@ -20,6 +21,8 @@ export interface MeshDeps {
   readonly negotiator: Negotiator;
   readonly remoteAudio: RemoteAudio;
   readonly microphone: LocalMicrophone;
+  readonly camera: LocalCamera;
+  readonly screen: LocalScreen;
   readonly health: CallHealth;
   /** The send ceiling the adaptive controller currently allows. */
   bitrate(): number;
@@ -206,6 +209,9 @@ export class Mesh {
       }
     }
     negotiator.tuneMicSender(peer);
+    // A person who arrives mid-share, or after the camera went on, sees it at once.
+    this.deps.camera.addTo(peer);
+    this.deps.screen.addTo(peer);
 
     connection.ontrack = (event) => this.receiveTrack(peer, event);
     connection.onicecandidate = (event) => {
