@@ -14,3 +14,6 @@ next-env.d.ts
 /public/audio/gtcrn.wasm
 /public/audio/speex-worklet.js
 /public/audio/speex.wasm
+
+# Written next to AGENTS.md by `next dev`.
+CLAUDE.md
