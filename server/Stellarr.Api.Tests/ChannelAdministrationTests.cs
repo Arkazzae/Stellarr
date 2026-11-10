@@ -27,6 +27,7 @@ public sealed class ChannelAdministrationTests : IClassFixture<StellarrWebApplic
 
     private static readonly string[] ManageMessages = ["manageMessages"];
     private static readonly string[] ManageMembersAndMessages = ["manageMembers", "manageMessages"];
+    private static readonly string[] None = [];
     private static readonly string[] MemberNames = ["Ada", "Ilya", "Jo", "Maja", "Nils"];
 
     private readonly StellarrWebApplicationFactory _factory;
@@ -363,6 +364,83 @@ public sealed class ChannelAdministrationTests : IClassFixture<StellarrWebApplic
             MemberNames,
             members.RootElement.EnumerateArray().Select(x => x.GetProperty("user").GetProperty("displayName").GetString()));
     }
+
+    [Fact]
+    public async Task AnOverrideOnASectionIsListedReplacedAndRemoved()
+    {
+        using var owner = await SignedInAsync(_factory, "maja", "Aurora!2026");
+        var sectionId = await IdOfAsync(await owner.PostAsJsonAsync(
+            "/api/admin/sections", new { name = $"Override-{Guid.NewGuid():N}" }));
+        var path = $"/api/admin/sections/{sectionId}/permissions";
+
+        (await owner.PutAsJsonAsync($"{path}/{MemberRoleId}", new { allow = ManageMessages, deny = None }))
+            .EnsureSuccessStatusCode();
+        (await owner.PutAsJsonAsync($"{path}/{MemberRoleId}", new { allow = None, deny = ManageMessages }))
+            .EnsureSuccessStatusCode();
+
+        var listed = JsonDocument.Parse(await owner.GetStringAsync(path)).RootElement.EnumerateArray().ToArray();
+        var only = Assert.Single(listed);
+        Assert.Equal(MemberRoleId.ToString(), only.GetProperty("roleId").GetString());
+        Assert.Empty(only.GetProperty("allow").EnumerateArray());
+        Assert.Equal(ManageMessages, only.GetProperty("deny").EnumerateArray().Select(x => x.GetString()));
+
+        Assert.Equal(HttpStatusCode.NoContent, (await owner.DeleteAsync($"{path}/{MemberRoleId}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await owner.DeleteAsync($"{path}/{MemberRoleId}")).StatusCode);
+        Assert.Empty(JsonDocument.Parse(await owner.GetStringAsync(path)).RootElement.EnumerateArray());
+    }
+
+    [Theory]
+    [InlineData("channels", "role")]
+    [InlineData("channels", "target")]
+    [InlineData("sections", "role")]
+    [InlineData("sections", "target")]
+    public async Task AnOverrideNeedsAnExistingTargetAndRole(string collection, string unknown)
+    {
+        using var owner = await SignedInAsync(_factory, "maja", "Aurora!2026");
+        var target = unknown == "target"
+            ? Guid.NewGuid()
+            : collection == "channels" ? TestData.GeneralChannelId : await SectionIdAsync(owner);
+        var role = unknown == "role" ? Guid.NewGuid() : MemberRoleId;
+
+        var path = $"/api/admin/{collection}/{target}/permissions";
+        Assert.Equal(
+            HttpStatusCode.NotFound,
+            (await owner.PutAsJsonAsync($"{path}/{role}", new { allow = ManageMessages, deny = None })).StatusCode);
+        if (unknown == "target")
+        {
+            Assert.Equal(HttpStatusCode.NotFound, (await owner.GetAsync(path)).StatusCode);
+            Assert.Equal(HttpStatusCode.NotFound, (await owner.DeleteAsync($"{path}/{role}")).StatusCode);
+        }
+    }
+
+    [Fact]
+    public async Task OverridesAreAddedToADatabaseThatPredatesThem()
+    {
+        using var factory = new StellarrWebApplicationFactory();
+        await using (var scope = factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            await db.Database.ExecuteSqlRawAsync("""DROP TABLE "PermissionOverrides";""");
+        }
+
+        for (var run = 0; run < 2; run++)
+        {
+            await using var scope = factory.Services.CreateAsyncScope();
+            await DatabaseSchema.UpgradeAsync(
+                scope.ServiceProvider.GetRequiredService<AppDbContext>(), CancellationToken.None);
+        }
+
+        using var owner = await SignedInAsync(factory, "maja", "Aurora!2026");
+        var path = $"/api/admin/channels/{TestData.GeneralChannelId}/permissions/{MemberRoleId}";
+        (await owner.PutAsJsonAsync(path, new { allow = ManageMessages, deny = None })).EnsureSuccessStatusCode();
+        (await owner.PutAsJsonAsync(path, new { allow = None, deny = ManageMessages })).EnsureSuccessStatusCode();
+        var listed = JsonDocument.Parse(await owner.GetStringAsync(path[..path.LastIndexOf('/')])).RootElement;
+        Assert.Equal(1, listed.GetArrayLength());
+    }
+
+    private static async Task<Guid> SectionIdAsync(HttpClient client) =>
+        Guid.Parse(await IdOfAsync(await client.PostAsJsonAsync(
+            "/api/admin/sections", new { name = $"Target-{Guid.NewGuid():N}" })));
 
     private static async Task<JsonElement[]> RolesAsync(HttpClient client) =>
         JsonDocument.Parse(await client.GetStringAsync("/api/admin/roles")).RootElement.EnumerateArray().ToArray();
