@@ -1,0 +1,30 @@
+#!/bin/sh
+# Checks the subject line of a commit message: "type(scope): subject", lower
+# case, no trailing period, at most 72 characters. The same format applies to
+# pull request titles, which become the subject of the squash commit.
+#
+# Enable the hook with: git config core.hooksPath .githooks
+
+subject=$(grep -v '^#' "$1" | head -n 1)
+
+# Git writes the subject of a merge commit itself.
+case $subject in
+  "Merge "*) exit 0 ;;
+esac
+
+pattern='^(feat|fix|refactor|test|docs|build|ci|chore|perf)(\([a-z0-9][a-z0-9-]*\))?: [a-z0-9].*[^.[:space:]]$'
+
+if ! printf '%s\n' "$subject" | grep -Eq "$pattern"; then
+  {
+    echo "commit-msg: the subject must look like 'type(scope): subject', in lower"
+    echo "case and without a trailing period."
+    echo "Types: feat, fix, refactor, test, docs, build, ci, chore, perf."
+    echo "Got: $subject"
+  } >&2
+  exit 1
+fi
+
+if [ "${#subject}" -gt 72 ]; then
+  echo "commit-msg: the subject is ${#subject} characters long, the limit is 72." >&2
+  exit 1
+fi
