@@ -39,3 +39,4 @@ export {
   type SessionValue,
 } from "./SessionProvider";
 export { useTheme } from "./ThemeProvider";
+export { useVoiceContext as useVoice, type VoiceValue } from "./VoiceProvider";
