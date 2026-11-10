@@ -136,6 +136,7 @@ app.MapUploadEndpoints();
 app.MapAssetEndpoints();
 app.MapMessageEndpoints();
 app.MapMessageHistoryEndpoints();
+app.MapChannelReadEndpoints();
 app.MapHub<AppHub>("/hubs/app");
 
 await InitializeApplicationAsync(app);

@@ -69,6 +69,19 @@ public sealed record CreateMessageRequest(
     Guid? ClientMessageId = null);
 
 /// <summary>
+/// A rewrite of a sent message. Text only: the attachments a message went out
+/// with stay, so that a picture cannot be swapped after people reacted to it.
+/// </summary>
+/// <param name="Content">Required; a null is answered like an empty text.</param>
+public sealed record EditMessageRequest(string? Content);
+
+/// <summary>
+/// Pushed when a message is removed. It names the channel as well, so that a
+/// client can drop the message without knowing which transcript held it.
+/// </summary>
+public sealed record MessageDeletedDto(string MessageId, string ChannelId);
+
+/// <summary>
 /// One page of a channel's history, oldest message first, so that a client can
 /// prepend the whole array without reversing it.
 /// </summary>

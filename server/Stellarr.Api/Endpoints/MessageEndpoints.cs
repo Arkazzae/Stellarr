@@ -10,7 +10,7 @@ using Stellarr.Api.Realtime;
 
 namespace Stellarr.Api.Endpoints;
 
-/// <summary>Posting to a text channel.</summary>
+/// <summary>Posting to a text channel, and rewriting or removing what was posted.</summary>
 public static class MessageEndpoints
 {
     private const int MaxAttachments = 10;
@@ -21,6 +21,8 @@ public static class MessageEndpoints
             .RequireAuthorization()
             .AddEndpointFilter<ServerMembershipFilter>();
         api.MapPost("/channels/{channelId:guid}/messages", CreateAsync);
+        api.MapPatch("/messages/{messageId:guid}", EditAsync);
+        api.MapDelete("/messages/{messageId:guid}", DeleteAsync);
         return endpoints;
     }
 
@@ -251,6 +253,98 @@ public static class MessageEndpoints
         await transaction.CommitAsync(cancellationToken);
         return read;
     }
+
+    /// <summary>
+    /// Rewrites a message. Only its author may: removing what somebody said
+    /// is one act, putting new words under their name is another. Anyone else,
+    /// moderators included, and any server notice, is answered with 404, so
+    /// that probing cannot tell which ids exist.
+    /// </summary>
+    private static async Task<IResult> EditAsync(
+        Guid messageId,
+        EditMessageRequest request,
+        HttpContext http,
+        AppDbContext db,
+        IHubContext<AppHub> hub,
+        CancellationToken cancellationToken)
+    {
+        var content = request.Content?.Trim() ?? "";
+        if (content.Length == 0 || content.Length > MessageLimits.MaxContentLength)
+        {
+            return Invalid(
+                "content",
+                $"Wiadomość musi zawierać tekst i mieć najwyżej {MessageLimits.MaxContentLength} znaków.");
+        }
+
+        var serverId = http.RequireActiveServerId();
+        var userId = http.User.RequireUserId();
+        var message = await OnServer(db, messageId, serverId)
+            .WithMessageDetails()
+            .AsSplitQuery()
+            .FirstOrDefaultAsync(cancellationToken);
+        if (message is null || message.IsSystem || message.AuthorId != userId)
+        {
+            return Results.NotFound();
+        }
+
+        // Saving the same text twice is not an edit, and "edited" is a claim
+        // readers rely on.
+        if (!string.Equals(message.Content, content, StringComparison.Ordinal))
+        {
+            message.Content = content;
+            message.EditedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        // The event is shared by everyone, so it cannot say which reactions
+        // are the viewer's own; clients keep that from history.
+        await hub.Clients.Group(AppHub.ServerGroup(serverId))
+            .SendAsync("MessageUpdated", message.ToDto(), CancellationToken.None);
+        return Results.Ok(message.ToDto(userId));
+    }
+
+    /// <summary>
+    /// Removes a message. Its author may, and so may whoever can manage
+    /// messages in that channel; everyone else is answered with 404.
+    /// </summary>
+    private static async Task<IResult> DeleteAsync(
+        Guid messageId,
+        HttpContext http,
+        AppDbContext db,
+        IHubContext<AppHub> hub,
+        CancellationToken cancellationToken)
+    {
+        var serverId = http.RequireActiveServerId();
+        var userId = http.User.RequireUserId();
+        var message = await OnServer(db, messageId, serverId).SingleOrDefaultAsync(cancellationToken);
+        if (message is null || message.IsSystem)
+        {
+            return Results.NotFound();
+        }
+
+        if (message.AuthorId != userId &&
+            !await ServerAccess.HasAsync(
+                db, userId, serverId, message.ChannelId, ServerPrivileges.ManageMessages, cancellationToken))
+        {
+            return Results.NotFound();
+        }
+
+        // The attachment links go with the message; the stored files stay,
+        // because another message may use them.
+        db.Messages.Remove(message);
+        await db.SaveChangesAsync(cancellationToken);
+
+        await hub.Clients.Group(AppHub.ServerGroup(serverId))
+            .SendAsync(
+                "MessageDeleted",
+                new MessageDeletedDto(messageId.ToString(), message.ChannelId.ToString()),
+                CancellationToken.None);
+        return Results.NoContent();
+    }
+
+    private static IQueryable<Message> OnServer(AppDbContext db, Guid messageId, Guid serverId) =>
+        db.Messages.Where(x => x.Id == messageId &&
+            db.Channels.Any(channel => channel.Id == x.ChannelId && channel.ServerId == serverId));
 
     private static IResult Invalid(string field, string message) =>
         Results.ValidationProblem(new Dictionary<string, string[]> { [field] = [message] });
