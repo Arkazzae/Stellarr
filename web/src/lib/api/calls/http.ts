@@ -12,7 +12,7 @@ export type Parse<T> = (value: unknown, path: string) => T;
 
 type BodyMethod = "POST" | "PUT" | "PATCH" | "DELETE";
 
-const ACCEPT_JSON: HeadersInit = { Accept: "application/json" };
+export const ACCEPT_JSON: HeadersInit = { Accept: "application/json" };
 
 /**
  * Builds a route with every interpolated value percent-encoded, so an id that

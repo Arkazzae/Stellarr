@@ -1,6 +1,15 @@
 import type { UploadMediaMetadata } from "@/lib/media/probe";
 import type { InboxNotification, NotificationPage } from "@/ports/notifications";
 
+import { accountCalls } from "./calls/account";
+import { channelCalls } from "./calls/channels";
+import { libraryCalls } from "./calls/library";
+import { memberCalls } from "./calls/members";
+import { messageCalls } from "./calls/messages";
+import { notificationCalls } from "./calls/notifications";
+import { serverCalls } from "./calls/server";
+import { sessionCalls } from "./calls/session";
+import { socialCalls } from "./calls/social";
 import type {
   AccountDetails,
   AccountImageKind,
@@ -395,4 +404,19 @@ export interface ApiNotificationSettings {
   voiceJoinSound: boolean;
   mutedChannelIds: string[];
   serverMuted: boolean;
+}
+
+/** The client over HTTP: every request group joined into one object. */
+export function createHttpApiClient(): ApiClient & SocialApiClient & AdminApiClient {
+  return {
+    ...sessionCalls(),
+    ...serverCalls(),
+    ...memberCalls(),
+    ...channelCalls(),
+    ...libraryCalls(),
+    ...messageCalls(),
+    ...notificationCalls(),
+    ...accountCalls(),
+    ...socialCalls(),
+  };
 }
