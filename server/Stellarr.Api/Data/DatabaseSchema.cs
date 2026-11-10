@@ -19,6 +19,7 @@ public static class DatabaseSchema
     private static readonly Func<AppDbContext, CancellationToken, Task>[] Steps =
     [
         AuthenticationSchema.UpgradeAsync,
+        ServerSchema.UpgradeAsync,
     ];
 
     public static async Task UpgradeAsync(AppDbContext db, CancellationToken cancellationToken)
