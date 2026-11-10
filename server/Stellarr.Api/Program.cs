@@ -155,6 +155,7 @@ app.MapMessageEndpoints();
 app.MapMessageHistoryEndpoints();
 app.MapMessageReactionEndpoints();
 app.MapMessagePinEndpoints();
+app.MapMessageThreadEndpoints();
 app.MapChannelReadEndpoints();
 app.MapNotificationEndpoints();
 app.MapHub<AppHub>("/hubs/app");

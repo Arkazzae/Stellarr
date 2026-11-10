@@ -137,6 +137,21 @@ public sealed record MessageSyncPageDto(
     bool HasMore,
     bool ResetRequired);
 
+/// <summary>
+/// One conversation rooted in a channel message. The list only needs a short
+/// reference to the root; opening a thread is a read of its own.
+/// </summary>
+/// <param name="ReplyCount">The messages that answer the root directly.</param>
+/// <param name="LastReplyAt">When the newest of them was sent, which orders the list.</param>
+public sealed record ThreadSummaryDto(
+    string ChannelId,
+    MessageReferenceDto Root,
+    int ReplyCount,
+    DateTime LastReplyAt);
+
+/// <summary>A thread's root and every reply to it, oldest first.</summary>
+public sealed record ThreadMessagesDto(IReadOnlyList<MessageDto> Messages);
+
 /// <summary>A channel's pinned messages, newest pin first.</summary>
 public sealed record PinnedMessagesDto(IReadOnlyList<MessageDto> Messages);
 
