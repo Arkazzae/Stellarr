@@ -17,7 +17,7 @@ public static class RoleEndpoints
     private const int MaxNameLength = 64;
     private const int MaxColorLength = 48;
 
-    private sealed record RoleDraft(string Name, string Color, ServerPrivileges Permissions);
+    internal sealed record RoleDraft(string Name, string Color, ServerPrivileges Permissions);
 
     public static IEndpointRouteBuilder MapRoleEndpoints(this IEndpointRouteBuilder endpoints)
     {
@@ -265,7 +265,7 @@ public static class RoleEndpoints
 
     private static bool ExceedsHeld(ServerPrivileges wanted, ServerPrivileges held) => (wanted & ~held) != 0;
 
-    private static RoleDraft? Validate(string? name, string? color, IEnumerable<string>? permissionNames)
+    internal static RoleDraft? Validate(string? name, string? color, IEnumerable<string>? permissionNames)
     {
         var trimmedName = name?.Trim() ?? "";
         var trimmedColor = color?.Trim() ?? "";
@@ -276,13 +276,13 @@ public static class RoleEndpoints
             : null;
     }
 
-    private static IResult InvalidRole() =>
+    internal static IResult InvalidRole() =>
         Results.ValidationProblem(new Dictionary<string, string[]>
         {
             ["role"] = ["Nazwa, kolor lub lista uprawnień roli jest nieprawidłowa."],
         });
 
-    private static async Task NotifyAsync(
+    internal static async Task NotifyAsync(
         IHubContext<AppHub> hub,
         Guid serverId,
         IEnumerable<Guid> userIds,

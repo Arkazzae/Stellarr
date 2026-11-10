@@ -195,6 +195,7 @@ app.MapSocialEndpoints();
 app.MapDirectMessageEndpoints();
 app.MapEmojiEndpoints();
 app.MapSoundboardEndpoints();
+app.MapOpsEndpoints();
 app.MapHub<AppHub>("/hubs/app");
 
 await InitializeApplicationAsync(app);
