@@ -31,6 +31,11 @@ public sealed record ChannelDto(
 
 public sealed record SectionDto(string Id, string Name, int Position);
 
+/// <summary>A change to the server profile; a property left out stays as it is.</summary>
+public sealed record UpdateServerRequest(string? Name, string? Description, bool? IsPublic);
+
+public sealed record ServerIconDto(string? IconUrl);
+
 public static class ServerContractMappings
 {
     public static ServerDto ToDto(this StellarrServer server) => new(

@@ -175,6 +175,7 @@ app.MapChannelEndpoints();
 app.MapSectionEndpoints();
 app.MapRoleEndpoints();
 app.MapPermissionOverrideEndpoints();
+app.MapServerEndpoints();
 app.MapNotificationEndpoints();
 app.MapHub<AppHub>("/hubs/app");
 
