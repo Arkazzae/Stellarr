@@ -58,12 +58,20 @@ public sealed partial class AppHub(AppDbContext db, PresenceTracker presence) : 
         }
         await Clients.Caller.SendAsync("PresenceChanged", PresenceUpdate(userId, presence.PresenceOf(userId)));
 
+        await RestoreDirectCallSnapshotsAsync(userId);
+
         await base.OnConnectedAsync();
     }
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        if (presence.Disconnect(Context.ConnectionId).BecameOffline && Context.User is { } user)
+        var (becameOffline, departure) = presence.Disconnect(Context.ConnectionId);
+        if (departure is not null)
+        {
+            await BroadcastVoiceSnapshotAsync(departure.ChannelId);
+        }
+
+        if (becameOffline && Context.User is { } user)
         {
             var userId = user.RequireUserId();
             var groups = (await MemberServerIdsAsync(userId)).Select(ServerGroup);
