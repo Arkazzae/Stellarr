@@ -28,6 +28,12 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("Database")));
 builder.Services.AddSingleton<PasswordService>();
 builder.Services.AddSingleton<PresenceTracker>();
+builder.Services.AddSignalR(options =>
+{
+    options.MaximumReceiveMessageSize = 160 * 1024;
+    options.KeepAliveInterval = TimeSpan.FromSeconds(15);
+    options.ClientTimeoutInterval = TimeSpan.FromSeconds(45);
+});
 
 builder.Services.Configure<StorageOptions>(builder.Configuration.GetSection(StorageOptions.SectionName));
 builder.Services.AddSingleton<IAmazonS3>(services =>
@@ -86,6 +92,10 @@ if (app.Environment.IsDevelopment())
 app.UseRateLimiter();
 app.UseAuthentication();
 app.UseAuthorization();
+// Sets how often WebSocket connections, the hub's included, are pinged.
+// Reverse proxies in front of existing installations rely on it to keep an
+// idle connection open.
+app.UseWebSockets(new WebSocketOptions { KeepAliveInterval = TimeSpan.FromSeconds(20) });
 
 app.MapGet("/health/live", () => Results.Ok(new { status = "live" }));
 app.MapGet("/health/ready", async (AppDbContext db, CancellationToken cancellationToken) =>
@@ -96,6 +106,7 @@ app.MapGet("/health/ready", async (AppDbContext db, CancellationToken cancellati
 app.MapAuthEndpoints();
 app.MapDesktopBrowserLoginEndpoints();
 app.MapSessionEndpoints();
+app.MapHub<AppHub>("/hubs/app");
 
 await InitializeApplicationAsync(app);
 await app.RunAsync();

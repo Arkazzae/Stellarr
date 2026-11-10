@@ -23,6 +23,12 @@ public sealed record UserDto(
     string? Bio = null,
     string? Pronouns = null);
 
+public sealed record TypingChangedDto(
+    string ChannelId,
+    string UserId,
+    string DisplayName,
+    DateTime ExpiresAt);
+
 public static class AuthContractMappings
 {
     public static UserDto ToDto(this User user, string presence = "offline") => new(
