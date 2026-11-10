@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="server/Stellarr.Api/Stellarr.Api.csproj" />
+  <Project Path="server/Stellarr.Api.Tests/Stellarr.Api.Tests.csproj" />
+</Solution>
