@@ -59,6 +59,9 @@ builder.Services.AddSingleton<IAmazonS3>(services =>
     return new AmazonS3Client(new BasicAWSCredentials(options.AccessKey, options.SecretKey), config);
 });
 builder.Services.AddSingleton<IObjectStorage, S3ObjectStorage>();
+builder.Services.Configure<UploadOptions>(builder.Configuration.GetSection(UploadOptions.SectionName));
+builder.Services.AddSingleton<UploadAdmissionGate>();
+builder.Services.AddScoped<MediaStorage>();
 
 var externalOidc = builder.Configuration
     .GetSection(ExternalOidcOptions.SectionName)

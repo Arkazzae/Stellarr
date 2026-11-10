@@ -20,6 +20,7 @@ public static class DatabaseSchema
     [
         AuthenticationSchema.UpgradeAsync,
         ServerSchema.UpgradeAsync,
+        AttachmentSchema.UpgradeAsync,
     ];
 
     public static async Task UpgradeAsync(AppDbContext db, CancellationToken cancellationToken)
