@@ -27,6 +27,7 @@ builder.Services.AddDataProtection()
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("Database")));
 builder.Services.AddSingleton<PasswordService>();
+builder.Services.AddSingleton<RegistrationGate>();
 builder.Services.AddSingleton<PresenceTracker>();
 builder.Services.AddSignalR(options =>
 {
@@ -104,6 +105,7 @@ app.MapGet("/health/ready", async (AppDbContext db, CancellationToken cancellati
         : Results.Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: "Database unavailable"));
 
 app.MapAuthEndpoints();
+app.MapRegistrationEndpoints();
 app.MapDesktopBrowserLoginEndpoints();
 app.MapSessionEndpoints();
 app.MapHub<AppHub>("/hubs/app");

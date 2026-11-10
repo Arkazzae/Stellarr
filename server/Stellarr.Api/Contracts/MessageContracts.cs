@@ -1,0 +1,149 @@
+using Stellarr.Api.Domain;
+
+namespace Stellarr.Api.Contracts;
+
+public sealed record AttachmentDto(
+    string Id,
+    string Name,
+    string ContentType,
+    long Size,
+    int? Width,
+    int? Height,
+    string Url,
+    double? DurationSeconds,
+    string? PosterUrl,
+    bool IsVoiceMessage);
+
+/// <summary>An unfurled link under a message.</summary>
+/// <param name="Kind">"link" for a card, "video" for something with a player.</param>
+/// <param name="Provider">"youtube", "vimeo", or the host.</param>
+/// <param name="ProviderId">The video id a player needs; null for a card.</param>
+/// <param name="ThumbnailUrl">Always one of our own /assets URLs, never a third party's.</param>
+public sealed record MessageEmbedDto(
+    string Id,
+    string Url,
+    string Kind,
+    string Provider,
+    string? ProviderId,
+    int? StartSeconds,
+    string Domain,
+    string? Title,
+    string? Description,
+    string? ThumbnailUrl);
+
+public sealed record MessageReactionDto(string Emoji, int Count, bool Mine);
+
+public sealed record MessageReferenceDto(
+    string Id,
+    string AuthorId,
+    string AuthorName,
+    string Preview,
+    bool HasAttachment);
+
+/// <param name="EditedAt">Null until the author rewrites it.</param>
+/// <param name="PinnedAt">When it was pinned to the channel, or null if it is not.</param>
+/// <param name="ReplyTo">A short reference to the message this one answers.</param>
+public sealed record MessageDto(
+    string Id,
+    string ChannelId,
+    UserDto Author,
+    string Content,
+    DateTime CreatedAt,
+    IReadOnlyList<AttachmentDto> Attachments,
+    IReadOnlyList<MessageEmbedDto> Embeds,
+    DateTime? EditedAt,
+    DateTime? PinnedAt = null,
+    MessageReferenceDto? ReplyTo = null,
+    IReadOnlyList<MessageReactionDto>? Reactions = null);
+
+public static class MessageContractMappings
+{
+    private const int PreviewLength = 160;
+
+    /// <summary>The author clients see on server notices, so that they offer no person-only actions.</summary>
+    private static readonly UserDto SystemAuthor = new("system", "system", "system", "#777777", "online");
+
+    public static AttachmentDto ToDto(this ImageAttachment attachment) => new(
+        attachment.Id.ToString(),
+        attachment.FileName,
+        attachment.ContentType,
+        attachment.SizeBytes,
+        attachment.Width,
+        attachment.Height,
+        $"/assets/{attachment.Id}",
+        attachment.DurationSeconds,
+        attachment.PosterObjectKey is null ? null : $"/assets/{attachment.Id}/poster",
+        attachment.IsVoiceMessage);
+
+    public static MessageEmbedDto ToDto(this MessageEmbed embed) => new(
+        embed.Id.ToString(),
+        embed.Url,
+        embed.Kind == EmbedKind.Video ? "video" : "link",
+        embed.Provider,
+        embed.ProviderId,
+        embed.StartSeconds,
+        embed.Domain,
+        embed.Title,
+        embed.Description,
+        embed.ThumbnailAttachmentId is { } thumbnailId ? $"/assets/{thumbnailId}" : null);
+
+    /// <summary>
+    /// The message with everything a transcript shows. It needs the graph that
+    /// <c>MessageQueries.WithMessageDetails</c> loads; reactions are counted
+    /// for everybody and flagged for <paramref name="viewerId"/>.
+    /// </summary>
+    public static MessageDto ToDto(this Message message, Guid? viewerId = null) => new(
+        message.Id.ToString(),
+        message.ChannelId.ToString(),
+        message.IsSystem ? SystemAuthor : message.Author.ToDto("online"),
+        message.Content,
+        message.CreatedAt.AsUtc(),
+        message.Attachments.Select(x => x.Attachment.ToDto()).ToArray(),
+        message.Embeds.OrderBy(x => x.Position).Select(x => x.ToDto()).ToArray(),
+        message.EditedAt.AsUtc(),
+        message.PinnedAt.AsUtc(),
+        message.ReplyToMessage?.ToReferenceDto(),
+        message.Reactions
+            .GroupBy(x => x.Emoji, StringComparer.Ordinal)
+            .OrderBy(group => group.Min(reaction => reaction.CreatedAt))
+            .Select(group => new MessageReactionDto(
+                group.Key,
+                group.Count(),
+                viewerId is { } viewer && group.Any(reaction => reaction.UserId == viewer)))
+            .ToArray());
+
+    /// <summary>The one-line quote shown above a reply.</summary>
+    public static MessageReferenceDto ToReferenceDto(this Message message)
+    {
+        var preview = string.Join(' ', message.Content.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
+        if (preview.Length > PreviewLength)
+        {
+            preview = $"{preview[..(PreviewLength - 3)]}…";
+        }
+
+        var hasAttachment = message.Attachments.Count > 0;
+        if (preview.Length == 0 && hasAttachment)
+        {
+            preview = "Załącznik";
+        }
+
+        return new MessageReferenceDto(
+            message.Id.ToString(),
+            message.IsSystem ? SystemAuthor.Id : message.AuthorId.ToString(),
+            message.IsSystem ? SystemAuthor.DisplayName : message.Author.DisplayName,
+            preview,
+            hasAttachment);
+    }
+}
+
+internal static class UtcDates
+{
+    /// <summary>
+    /// SQLite hands dates back without a kind, but every stored date is UTC,
+    /// and the wire format only stays unambiguous when it says so.
+    /// </summary>
+    internal static DateTime AsUtc(this DateTime value) =>
+        value.Kind == DateTimeKind.Utc ? value : DateTime.SpecifyKind(value, DateTimeKind.Utc);
+
+    internal static DateTime? AsUtc(this DateTime? value) => value?.AsUtc();
+}
