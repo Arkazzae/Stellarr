@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32" role="img" aria-label="Stellarr">
+  <title>Stellarr</title>
+  <rect width="32" height="32" rx="7" fill="#09090b"/>
+  <g transform="translate(16 16) scale(0.4167) translate(-32 -33)">
+  <path d="M20 10 H44 A12 12 0 0 1 56 22 V34 A12 12 0 0 1 44 46 H34 L22 56 V46 H20 A12 12 0 0 1 8 34 V22 A12 12 0 0 1 20 10 Z" fill="none" stroke="#f3f4f6" stroke-width="6" stroke-linejoin="round"/>
+  <g fill="#5865f2">
+    <rect x="21.5" y="22" width="5" height="12" rx="2.5"/>
+    <rect x="29.5" y="18" width="5" height="20" rx="2.5"/>
+    <rect x="37.5" y="20.5" width="5" height="15" rx="2.5"/>
+  </g>
+  </g>
+</svg>

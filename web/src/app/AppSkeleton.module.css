@@ -1,0 +1,554 @@
+.shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  height: 100vh;
+  height: 100dvh;
+  min-width: 0;
+  overflow: hidden;
+  padding: env(safe-area-inset-top) env(safe-area-inset-right)
+    env(safe-area-inset-bottom) env(safe-area-inset-left);
+  background: var(--surface-canvas);
+}
+
+.block {
+  display: block;
+  flex: none;
+  background: var(--surface-overlay);
+  border-radius: var(--radius-sm);
+}
+
+.rail {
+  display: none;
+  min-height: 0;
+  overflow: hidden;
+  flex-direction: column;
+  background: var(--surface-raised);
+  border-right: 1px solid var(--line);
+}
+
+.railHeader,
+.roomHeader,
+.rosterHeader {
+  height: var(--header-h);
+  min-height: var(--header-h);
+  display: flex;
+  align-items: center;
+}
+
+.railHeader {
+  gap: 4px;
+  padding: 0 12px 0 10px;
+  border-bottom: 1px solid var(--line-subtle);
+}
+
+.squareControl,
+.roundControl,
+.mobileMenu,
+.rosterControl {
+  width: 32px;
+  height: 32px;
+}
+
+.roundControl,
+.mobileMenu,
+.rosterControl {
+  border-radius: 50%;
+}
+
+.serverName {
+  width: 104px;
+  height: 18px;
+  margin-right: auto;
+}
+
+.railScroll {
+  flex: 1;
+  min-height: 0;
+  padding: 12px 8px;
+}
+
+.channelGroup + .channelGroup {
+  margin-top: 16px;
+}
+
+.groupLabel,
+.groupLabelShort {
+  width: 74px;
+  height: 9px;
+  margin: 5px 8px 7px;
+}
+
+.groupLabelShort {
+  width: 58px;
+}
+
+.channelList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.channel {
+  height: 32px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 8px;
+}
+
+.channelGlyph {
+  width: 16px;
+  height: 16px;
+}
+
+.wideChannel,
+.mediumChannel,
+.shortChannel {
+  height: 11px;
+}
+
+.wideChannel {
+  width: 112px;
+}
+
+.mediumChannel {
+  width: 86px;
+}
+
+.shortChannel {
+  width: 62px;
+}
+
+.channelCount {
+  width: 16px;
+  height: 10px;
+  margin-left: auto;
+}
+
+.occupant {
+  height: 30px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 28px;
+}
+
+.avatarXs,
+.avatarSm,
+.avatarMd {
+  border-radius: 50%;
+}
+
+.avatarXs {
+  width: var(--av-xs);
+  height: var(--av-xs);
+}
+
+.avatarSm {
+  width: var(--av-sm);
+  height: var(--av-sm);
+}
+
+.avatarMd {
+  width: var(--av-md);
+  height: var(--av-md);
+  margin-top: 2px;
+}
+
+.occupantName,
+.occupantNameShort {
+  width: 84px;
+  height: 10px;
+}
+
+.occupantNameShort {
+  width: 58px;
+}
+
+.account {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 22px 8px 22px 16px;
+  border-top: 1px solid var(--line-subtle);
+}
+
+.accountCopy {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.accountName {
+  width: 76px;
+  height: 11px;
+}
+
+.accountStatus {
+  width: 54px;
+  height: 9px;
+}
+
+.room {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-base);
+}
+
+.roomHeader {
+  gap: 8px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.mobileMenu {
+  display: block;
+}
+
+.roomGlyph {
+  width: 18px;
+  height: 18px;
+}
+
+.roomName {
+  width: 112px;
+  min-width: 40px;
+  flex: 0 1 112px;
+  height: 14px;
+}
+
+.topic {
+  display: none;
+  width: min(280px, 30%);
+  height: 11px;
+}
+
+.headerTools {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+}
+
+.roomBody {
+  min-width: 0;
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.transcript {
+  min-height: 0;
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  padding: 16px 0 8px;
+}
+
+.messageList {
+  width: 100%;
+  margin-top: auto;
+}
+
+.daySeparator {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0 16px;
+  padding: 18px 0 12px;
+}
+
+.daySeparator > span:not(.block) {
+  height: 1px;
+  flex: 1;
+  background: var(--line-subtle);
+}
+
+.dayLabel {
+  width: 42px;
+  height: 9px;
+}
+
+.message {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr);
+  align-items: start;
+  column-gap: 12px;
+  padding: 9px 16px;
+}
+
+.messageCopy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding-top: 1px;
+}
+
+.messageMeta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.author {
+  width: 86px;
+  height: 12px;
+}
+
+.timestamp {
+  width: 38px;
+  height: 9px;
+}
+
+.wideMessage,
+.mediumMessage,
+.shortMessage,
+.secondMessageLine {
+  max-width: 100%;
+  height: 11px;
+}
+
+.wideMessage {
+  width: min(620px, 88%);
+}
+
+.mediumMessage {
+  width: min(480px, 72%);
+}
+
+.shortMessage {
+  width: min(310px, 48%);
+}
+
+.secondMessageLine {
+  width: min(390px, 58%);
+}
+
+.composer {
+  width: 100%;
+  flex: none;
+  padding: 4px 16px 12px;
+}
+
+.composerBox {
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px 8px 16px;
+  background: var(--surface-field);
+  border: 1px solid var(--line-subtle);
+  border-radius: 16px;
+}
+
+.composerLead,
+.composerAction {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+}
+
+.composerLine {
+  width: min(280px, 50%);
+  height: 12px;
+  margin-right: auto;
+}
+
+.composerAction {
+  width: 34px;
+  height: 34px;
+}
+
+/* The loaded phone composer has one disclosure action while its empty send
+   action is collapsed. Keep the placeholder on the same geometry so loading
+   does not add and remove controls around the draft field. */
+@media (max-width: 767px) {
+  .composerLead,
+  .composerSendAction {
+    display: none;
+  }
+
+  .composerBox {
+    min-height: 60px;
+    padding-block: 7px;
+  }
+
+  .composerAction {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+@media (pointer: coarse) {
+  .squareControl,
+  .roundControl,
+  .mobileMenu,
+  .rosterControl {
+    width: 44px;
+    height: 44px;
+  }
+
+  .composerBox {
+    min-height: 60px;
+    padding-block: 7px;
+  }
+
+  .composerLead,
+  .composerAction {
+    width: 44px;
+    height: 44px;
+  }
+}
+
+.roster {
+  display: none;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--surface-raised);
+  border-left: 1px solid var(--line);
+}
+
+.rosterMini {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 0;
+}
+
+.rosterFull {
+  display: none;
+  width: var(--roster-w);
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.rosterHeader {
+  gap: 10px;
+  padding: 0 8px 0 16px;
+  border-bottom: 1px solid var(--line-subtle);
+}
+
+.rosterTitle {
+  width: 62px;
+  height: 15px;
+  margin-right: auto;
+}
+
+.rosterList {
+  flex: 1;
+  min-height: 0;
+  padding: 12px 12px 16px;
+}
+
+.peopleGroup + .peopleGroup {
+  margin-top: 16px;
+}
+
+.person {
+  height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 8px;
+}
+
+.widePerson,
+.mediumPerson,
+.shortPerson {
+  height: 11px;
+}
+
+.widePerson {
+  width: 126px;
+}
+
+.mediumPerson {
+  width: 102px;
+}
+
+.shortPerson {
+  width: 74px;
+}
+
+@media (min-width: 768px) {
+  .shell {
+    grid-template-columns: var(--rail-w) minmax(0, 1fr);
+  }
+
+  .rail {
+    display: flex;
+  }
+
+  .roomHeader {
+    gap: 12px;
+    padding: 0 20px;
+  }
+
+  .mobileMenu {
+    display: none;
+  }
+
+  .topic {
+    display: block;
+  }
+
+  .transcript {
+    padding-top: 24px;
+  }
+
+  .daySeparator {
+    margin-inline: 20px;
+  }
+
+  .message {
+    padding-inline: 20px;
+  }
+
+  .composer {
+    padding: 4px 20px 18px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .shell {
+    grid-template-columns: var(--rail-w) minmax(0, 1fr) var(--roster-mini-w);
+  }
+
+  .roster {
+    display: block;
+  }
+
+  .rosterControl {
+    display: none;
+  }
+}
+
+@media (min-width: 1440px) {
+  .shell {
+    grid-template-columns: var(--rail-w) minmax(0, 1fr) var(--roster-w);
+  }
+
+  .rosterMini {
+    display: none;
+  }
+
+  .rosterFull {
+    display: flex;
+  }
+}
+
+@media (max-height: 650px) {
+  .message:nth-of-type(2),
+  .message:nth-of-type(3) {
+    display: none;
+  }
+}

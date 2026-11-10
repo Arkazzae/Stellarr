@@ -1,0 +1,55 @@
+/*
+ * The single stylesheet entry point.
+ *
+ * Order matters: Tailwind declares the layers, the theme recipe and palettes
+ * publish the raw custom properties, `theme.css` maps them onto Tailwind's
+ * namespaces, and the component layer sits between base and utilities so a
+ * utility in JSX can always override a ported component rule.
+ */
+
+@import "tailwindcss";
+
+@import "../styles/themes/recipe.css";
+@import "../styles/themes/palettes.css";
+@import "../styles/themes/font-faces.css";
+@import "../styles/themes/typeset.css";
+@import "../styles/theme.css";
+@import "../styles/base.css";
+@import "../styles/components/status.css";
+
+/* First of the component layer: every other file that mentions a person only
+   places the face this one designs. */
+@import "../styles/components/avatar.css";
+@import "../styles/components/shell.css";
+@import "../styles/components/rail.css";
+@import "../styles/components/room.css";
+@import "../styles/components/transcript.css";
+/* After `room.css`, whose `.view` it lays out beside the panel. */
+@import "../styles/components/channel-panel.css";
+@import "../styles/components/composer.css";
+@import "../styles/components/voice.css";
+@import "../styles/components/roster.css";
+@import "../styles/components/settings.css";
+@import "../styles/components/overlays.css";
+/* After `overlays.css`: the palette is one more fixed surface over the
+   shell, and it sits at the top of that stack. */
+@import "../styles/components/chrome.css";
+@import "../styles/components/responsive.css";
+/* Last on purpose: the DM space collapses the roster track and has to outrank
+   both the redesign layer in `chrome.css` and the breakpoints above it. */
+@import "../styles/components/friends.css";
+/* After the redesign layer in `chrome.css` on purpose: the card sizes an avatar
+   that only the voice tile had geometry for, and its triggers restyle rows the
+   layers above already own. */
+@import "../styles/components/profile.css";
+/* The private inbox uses the shared anchored-card elevation and room toolbar. */
+@import "../styles/components/notifications.css";
+/* After `settings.css`, whose shell it reuses and whose panes it extends. */
+@import "../styles/components/account.css";
+/* After `composer.css` and `transcript.css`: the picker hangs off controls both
+   of them position, and the jumbo rule raises a `.msg-body` size set there. */
+@import "../styles/components/emoji.css";
+
+/* Tailwind scans these for class names; the ported component CSS lives outside
+   the JSX, so nothing here needs a safelist. */
+@source "../";

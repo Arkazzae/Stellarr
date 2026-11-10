@@ -1,0 +1,3 @@
+# Stellarr is a private instance. Nothing here is meant to be indexed.
+User-agent: *
+Disallow: /
