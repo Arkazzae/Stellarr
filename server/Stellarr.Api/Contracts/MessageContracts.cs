@@ -95,6 +95,26 @@ public sealed record MessageHistoryPageDto(
     string? NextCursor,
     string SyncCursor);
 
+/// <param name="Cursor">The journal position of this change, to resume from.</param>
+/// <param name="Kind">"upsert" with the message as it is now, or "delete" with none.</param>
+public sealed record MessageSyncChangeDto(
+    string Cursor,
+    string Kind,
+    string MessageId,
+    MessageDto? Message);
+
+/// <summary>Changes of one channel after a journal position, oldest first.</summary>
+/// <param name="NextCursor">Where to ask next; the position asked from when nothing changed.</param>
+/// <param name="ResetRequired">
+/// Set when the journal no longer reaches back far enough, and the client
+/// has to load the history again instead of replaying changes.
+/// </param>
+public sealed record MessageSyncPageDto(
+    IReadOnlyList<MessageSyncChangeDto> Changes,
+    string NextCursor,
+    bool HasMore,
+    bool ResetRequired);
+
 /// <summary>A person's read watermark in one text channel.</summary>
 public sealed record ChannelReadDto(string ChannelId, DateTime LastReadAt);
 

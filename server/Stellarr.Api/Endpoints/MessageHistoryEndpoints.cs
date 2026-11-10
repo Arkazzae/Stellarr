@@ -5,22 +5,26 @@ using Microsoft.EntityFrameworkCore;
 using Stellarr.Api.Auth;
 using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
+using Stellarr.Api.Domain;
 using Stellarr.Api.Messaging;
 
 namespace Stellarr.Api.Endpoints;
 
-/// <summary>Reads a channel's transcript back, page by page.</summary>
+/// <summary>Reads a channel's transcript back, page by page, and what changed in it since.</summary>
 public static class MessageHistoryEndpoints
 {
     private const int DefaultPageSize = 50;
     private const int MaxPageSize = 100;
+    private const int DefaultSyncPageSize = 200;
+    private const int MaxSyncPageSize = 500;
 
     public static IEndpointRouteBuilder MapMessageHistoryEndpoints(this IEndpointRouteBuilder endpoints)
     {
-        endpoints.MapGroup("/api")
+        var api = endpoints.MapGroup("/api")
             .RequireAuthorization()
-            .AddEndpointFilter<ServerMembershipFilter>()
-            .MapGet("/channels/{channelId:guid}/messages", GetHistoryAsync);
+            .AddEndpointFilter<ServerMembershipFilter>();
+        api.MapGet("/channels/{channelId:guid}/messages", GetHistoryAsync);
+        api.MapGet("/channels/{channelId:guid}/messages/sync", SyncAsync);
         return endpoints;
     }
 
@@ -80,6 +84,72 @@ public static class MessageHistoryEndpoints
             messages,
             hasMore ? (page with { Offset = page.Offset + pageSize }).Encode() : null,
             syncSequence.ToString(CultureInfo.InvariantCulture)));
+    }
+
+    /// <summary>
+    /// What happened in the channel after a journal position, for a client
+    /// that missed realtime events while it was disconnected. A change says
+    /// only which message was touched, and an upsert is answered with the
+    /// message as it is now, so replaying the page needs no ordering of edits.
+    /// </summary>
+    private static async Task<IResult> SyncAsync(
+        Guid channelId,
+        long? after,
+        int? limit,
+        HttpContext http,
+        AppDbContext db,
+        CancellationToken cancellationToken)
+    {
+        if (after is < 0 || limit is < 1 or > MaxSyncPageSize)
+        {
+            return Invalid("cursor", "Kursor synchronizacji lub limit jest nieprawidłowy.");
+        }
+
+        if (!await db.Channels.TextChannelOnServer(channelId, http.RequireActiveServerId())
+                .AnyAsync(cancellationToken))
+        {
+            return Results.NotFound();
+        }
+
+        var from = after ?? 0;
+        var pageSize = limit ?? DefaultSyncPageSize;
+        var rows = await db.MessageChanges.AsNoTracking()
+            .Where(x => x.ChannelId == channelId && x.Sequence > from)
+            .OrderBy(x => x.Sequence)
+            .Take(pageSize + 1)
+            .ToListAsync(cancellationToken);
+        var changes = rows.Take(pageSize).ToArray();
+
+        var touched = changes
+            .Where(x => x.Kind == MessageChangeKind.Upsert)
+            .Select(x => x.MessageId)
+            .Distinct()
+            .ToArray();
+        var current = touched.Length == 0
+            ? []
+            : await db.Messages.AsNoTracking()
+                .WithMessageDetails()
+                .Where(x => touched.Contains(x.Id))
+                .AsSplitQuery()
+                .ToDictionaryAsync(x => x.Id, cancellationToken);
+
+        var viewerId = http.User.RequireUserId();
+        var dtos = changes.Select(change =>
+        {
+            // A message that was upserted and removed since has nothing left to show.
+            var message = change.Kind == MessageChangeKind.Upsert ? current.GetValueOrDefault(change.MessageId) : null;
+            return new MessageSyncChangeDto(
+                change.Sequence.ToString(CultureInfo.InvariantCulture),
+                message is null ? "delete" : "upsert",
+                change.MessageId.ToString(),
+                message?.ToDto(viewerId));
+        }).ToArray();
+        var next = changes.Length == 0 ? from : changes[^1].Sequence;
+        return Results.Ok(new MessageSyncPageDto(
+            dtos,
+            next.ToString(CultureInfo.InvariantCulture),
+            rows.Count > pageSize,
+            changes.Any(x => x.Kind == MessageChangeKind.Reset)));
     }
 
     private static IResult Invalid(string field, string message) =>
