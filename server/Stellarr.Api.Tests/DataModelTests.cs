@@ -1,8 +1,7 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Stellarr.Api.Data;
 using Stellarr.Api.Domain;
+using static Stellarr.Api.Tests.DataModelSupport;
 
 namespace Stellarr.Api.Tests;
 
@@ -17,7 +16,7 @@ public sealed class DataModelTests(StellarrWebApplicationFactory factory)
     [Fact]
     public async Task OnlyOneMemberOfAServerHoldsTheOwnerSlot()
     {
-        await using var scope = Open(out var db);
+        await using var scope = factory.OpenScope(out var db);
         var extra = await AddUsersAsync(db, 3);
         var roleId = await db.ServerRoles.Select(x => x.Id).FirstAsync();
 
@@ -35,7 +34,7 @@ public sealed class DataModelTests(StellarrWebApplicationFactory factory)
     [Fact]
     public async Task SessionsRecoveryTokensAndLoginsAreStoredAndLeaveWithTheirUser()
     {
-        await using var scope = Open(out var db);
+        await using var scope = factory.OpenScope(out var db);
         var user = (await AddUsersAsync(db, 1))[0];
         var now = DateTime.UtcNow;
         db.UserSessions.Add(new UserSession
@@ -101,7 +100,7 @@ public sealed class DataModelTests(StellarrWebApplicationFactory factory)
     [Fact]
     public async Task AnExternalSubjectLinksToOneAccountAndAnAccountToOneSubjectPerIssuer()
     {
-        await using var scope = Open(out var db);
+        await using var scope = factory.OpenScope(out var db);
         var users = await AddUsersAsync(db, 2);
         db.ExternalIdentities.Add(Identity(users[0], "https://id.example", "subject-2"));
         await db.SaveChangesAsync();
@@ -125,7 +124,7 @@ public sealed class DataModelTests(StellarrWebApplicationFactory factory)
     [Fact]
     public async Task ARecoveryTokenDigestIsStoredOnce()
     {
-        await using var scope = Open(out var db);
+        await using var scope = factory.OpenScope(out var db);
         var user = (await AddUsersAsync(db, 1))[0];
         var digest = Hash();
         db.PasswordResetTokens.Add(RecoveryToken(user, digest));
@@ -138,7 +137,7 @@ public sealed class DataModelTests(StellarrWebApplicationFactory factory)
     [Fact]
     public async Task OnePendingFriendRequestExistsPerPairWhicheverWayItPoints()
     {
-        await using var scope = Open(out var db);
+        await using var scope = factory.OpenScope(out var db);
         var users = await AddUsersAsync(db, 2);
         db.FriendRequests.Add(Request(users[0], users[1]));
         await db.SaveChangesAsync();
@@ -150,7 +149,7 @@ public sealed class DataModelTests(StellarrWebApplicationFactory factory)
     [Fact]
     public async Task AFriendshipAndAConversationBelongToOnePairOfUsers()
     {
-        await using var scope = Open(out var db);
+        await using var scope = factory.OpenScope(out var db);
         var users = await AddUsersAsync(db, 3);
         db.Friendships.Add(Friendship(users[0], users[1]));
         db.DirectConversations.Add(Conversation(users[0], users[1]));
@@ -172,7 +171,7 @@ public sealed class DataModelTests(StellarrWebApplicationFactory factory)
     [Fact]
     public async Task DeletingAnAccountRemovesItsFriendshipsRequestsBlocksAndConversations()
     {
-        await using var scope = Open(out var db);
+        await using var scope = factory.OpenScope(out var db);
         var users = await AddUsersAsync(db, 3);
         var (leaving, friend, stranger) = (users[0], users[1], users[2]);
         var conversation = Conversation(leaving, friend);
@@ -205,7 +204,7 @@ public sealed class DataModelTests(StellarrWebApplicationFactory factory)
     [Fact]
     public async Task ADirectConversationOwnsItsMessagesAttachmentLinksAndReadMarks()
     {
-        await using var scope = Open(out var db);
+        await using var scope = factory.OpenScope(out var db);
         var users = await AddUsersAsync(db, 2);
         var conversation = Conversation(users[0], users[1]);
         var attachment = Upload(users[0]);
@@ -244,7 +243,7 @@ public sealed class DataModelTests(StellarrWebApplicationFactory factory)
     [Fact]
     public async Task DeletingAChannelDetachesItsInvitesAndRemovesItsReadMarks()
     {
-        await using var scope = Open(out var db);
+        await using var scope = factory.OpenScope(out var db);
         var user = (await AddUsersAsync(db, 1))[0];
         var channel = new Channel { Id = Guid.NewGuid(), ServerId = TestData.ServerId, Name = UniqueName() };
         var invite = Invite(user, channel.Id);
@@ -262,7 +261,7 @@ public sealed class DataModelTests(StellarrWebApplicationFactory factory)
     [Fact]
     public async Task AnInviteCodeIsUnique()
     {
-        await using var scope = Open(out var db);
+        await using var scope = factory.OpenScope(out var db);
         var user = (await AddUsersAsync(db, 1))[0];
         var first = Invite(user, channelId: null);
         db.ServerInvites.Add(first);
@@ -277,7 +276,7 @@ public sealed class DataModelTests(StellarrWebApplicationFactory factory)
     [Fact]
     public async Task AUserIsBannedFromAServerOnce()
     {
-        await using var scope = Open(out var db);
+        await using var scope = factory.OpenScope(out var db);
         var users = await AddUsersAsync(db, 2);
         db.ServerBans.Add(Ban(users[0], users[1]));
         await db.SaveChangesAsync();
@@ -290,7 +289,7 @@ public sealed class DataModelTests(StellarrWebApplicationFactory factory)
     [Fact]
     public async Task APersonWhoActedForAServerCannotBeDeletedWhileTheRecordStands()
     {
-        await using var scope = Open(out var db);
+        await using var scope = factory.OpenScope(out var db);
         var users = await AddUsersAsync(db, 3);
         db.ServerBans.Add(Ban(users[0], users[1]));
         db.ServerInvites.Add(Invite(users[2], channelId: null));
@@ -319,7 +318,7 @@ public sealed class DataModelTests(StellarrWebApplicationFactory factory)
     [Fact]
     public async Task ARoleHasAtMostOneOverridePerChannelOrSection()
     {
-        await using var scope = Open(out var db);
+        await using var scope = factory.OpenScope(out var db);
         var role = await db.ServerRoles.FirstAsync();
         var target = Guid.NewGuid();
         db.PermissionOverrides.Add(Override(role.Id, PermissionTargetType.Channel, target));
@@ -340,7 +339,7 @@ public sealed class DataModelTests(StellarrWebApplicationFactory factory)
     [Fact]
     public async Task OverridesKeepTheirPrivilegeMasks()
     {
-        await using var scope = Open(out var db);
+        await using var scope = factory.OpenScope(out var db);
         var role = await db.ServerRoles.FirstAsync();
         var saved = Override(role.Id, PermissionTargetType.Section, Guid.NewGuid());
         saved.AllowMask = ServerPrivileges.ManageMessages | ServerPrivileges.ManageBans;
@@ -358,7 +357,7 @@ public sealed class DataModelTests(StellarrWebApplicationFactory factory)
     [Fact]
     public async Task DeletingAServerRemovesItsAdministrativeRecords()
     {
-        await using var scope = Open(out var db);
+        await using var scope = factory.OpenScope(out var db);
         var users = await AddUsersAsync(db, 2);
         var server = new StellarrServer { Id = Guid.NewGuid(), Name = "Doomed", CreatedAt = DateTime.UtcNow };
         var role = new ServerRole
@@ -410,7 +409,7 @@ public sealed class DataModelTests(StellarrWebApplicationFactory factory)
     [Fact]
     public async Task DeletingARoleRemovesItsOverrides()
     {
-        await using var scope = Open(out var db);
+        await using var scope = factory.OpenScope(out var db);
         var role = new ServerRole
         {
             Id = Guid.NewGuid(),
@@ -426,37 +425,6 @@ public sealed class DataModelTests(StellarrWebApplicationFactory factory)
 
         Assert.False(await db.PermissionOverrides.AnyAsync(x => x.RoleId == role.Id));
     }
-
-    private AsyncServiceScope Open(out AppDbContext db)
-    {
-        var scope = factory.Services.CreateAsyncScope();
-        db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-        return scope;
-    }
-
-    /// <summary>Adds accounts that no other test knows about and returns them.</summary>
-    private static async Task<User[]> AddUsersAsync(AppDbContext db, int count)
-    {
-        var users = Enumerable.Range(0, count).Select(_ =>
-        {
-            var name = $"u{Guid.NewGuid():N}"[..20];
-            return new User
-            {
-                Id = Guid.NewGuid(),
-                Username = name,
-                NormalizedUsername = name.ToUpperInvariant(),
-                DisplayName = name,
-                PasswordHash = "hash",
-                AvatarColor = "#777777",
-                CreatedAt = DateTime.UtcNow,
-            };
-        }).ToArray();
-        db.Users.AddRange(users);
-        await db.SaveChangesAsync();
-        return users;
-    }
-
-    private static string Hash() => Convert.ToHexString(Guid.NewGuid().ToByteArray()).PadRight(64, '0');
 
     private static ServerMember Member(User user, Guid roleId, int? ownerSlot) => new()
     {
@@ -511,19 +479,6 @@ public sealed class DataModelTests(StellarrWebApplicationFactory factory)
 
     private static (Guid, Guid) Ordered(User first, User second) =>
         first.Id.CompareTo(second.Id) <= 0 ? (first.Id, second.Id) : (second.Id, first.Id);
-
-    private static ImageAttachment Upload(User uploader) => new()
-    {
-        Id = Guid.NewGuid(),
-        UploadedById = uploader.Id,
-        ObjectKey = $"uploads/{Guid.NewGuid():N}",
-        FileName = "note.txt",
-        ContentType = "text/plain",
-        SizeBytes = 12,
-        CreatedAt = DateTime.UtcNow,
-    };
-
-    private static string UniqueName() => $"n{Guid.NewGuid():N}"[..24];
 
     private static ServerInvite Invite(User creator, Guid? channelId) => new()
     {
