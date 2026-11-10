@@ -10,7 +10,7 @@ import { RemoteAudio } from "./webrtcRemoteAudio";
 let streamCounter = 0;
 
 function fakeStream(): MediaStream {
-  return { id: `stream-${streamCounter++}` } as MediaStream;
+  return { id: `stream-${streamCounter++}`, getAudioTracks: () => [] } as unknown as MediaStream;
 }
 
 function fakeTrack(): MediaStreamTrack {
@@ -343,6 +343,174 @@ describe("RemoteAudio stream lifecycle", () => {
   });
 });
 
+describe("RemoteAudio shared-screen sound", () => {
+  const announceScreen = (peer: Peer, streamId: string | null) =>
+    peer.media.announce({ screenStreamId: streamId, cameraStreamId: null });
+
+  function screenSinks(): HTMLAudioElement[] {
+    return [...document.querySelectorAll<HTMLAudioElement>("[data-stellarr-voice-audio] audio")];
+  }
+
+  it("plays a share's sound on sinks of its own and leaves the voice alone", () => {
+    const peer = addPeer();
+    const voice = fakeStream();
+    const share = fakeStream();
+    announceScreen(peer, share.id);
+
+    audio.receive(peer, voice, fakeTrack());
+    audio.receive(peer, share, fakeTrack());
+
+    expect(peer.voice.audio.srcObject).toBe(voice);
+    expect(peer.screenAudio).toMatchObject({ streamId: share.id });
+    expect(peer.screenAudio?.audio.srcObject).toBe(share);
+    expect(changed).toHaveBeenCalled();
+  });
+
+  it("takes a stream off the voice sink once video shows it is a share", () => {
+    const peer = addPeer();
+    const share = fakeStream();
+    audio.receive(peer, share, fakeTrack());
+    expect(peer.voice.audio.srcObject).toBe(share);
+
+    peer.media.addVideo(share);
+    audio.route(peer);
+
+    expect(peer.voice).toMatchObject({ streamId: null, processed: false });
+    expect(peer.voice.audio.srcObject).toBeNull();
+    expect(screenSinks().filter((sink) => sink.srcObject === share)).toHaveLength(1);
+    expect(speech.remove).toHaveBeenCalledWith("u-z");
+  });
+
+  it("sends a share's sound through a strip that is never gated or denoised", () => {
+    const mixer = withWebAudio();
+    const peer = addPeer();
+    peer.gated = true;
+    peer.suppressed = true;
+    const share = fakeStream();
+    announceScreen(peer, share.id);
+
+    audio.receive(peer, share, fakeTrack());
+
+    expect(mixer.attach).toHaveBeenCalledOnce();
+    expect(mixer.attach).toHaveBeenCalledWith("u-z", share, peer.screenAudio?.audio, 100, undefined);
+    expect(speech.add).not.toHaveBeenCalled();
+  });
+
+  it("applies the participant volume to it, and only that volume", () => {
+    const peer = addPeer();
+    peer.playbackVolume = 40;
+    const share = fakeStream();
+    announceScreen(peer, share.id);
+    audio.receive(peer, share, fakeTrack());
+
+    peer.playbackVolume = 25;
+    audio.applyVolume(peer);
+
+    expect(peer.screenAudio?.audio.volume).toBeCloseTo(0.25);
+  });
+
+  it("hands the volume of a processed share to its strip", () => {
+    const mixer = withWebAudio();
+    const peer = addPeer();
+    const share = fakeStream();
+    announceScreen(peer, share.id);
+    audio.receive(peer, share, fakeTrack());
+
+    peer.playbackVolume = 80;
+    audio.applyVolume(peer);
+
+    expect(mixer.setVolume).toHaveBeenCalledWith("u-z", 80);
+  });
+
+  it("mutes it when deafened, including a share that starts afterwards", () => {
+    const peer = addPeer();
+    const first = fakeStream();
+    announceScreen(peer, first.id);
+    audio.receive(peer, first, fakeTrack());
+
+    audio.setDeafened(true);
+    expect(peer.screenAudio?.audio.muted).toBe(true);
+
+    announceScreen(peer, null);
+    audio.route(peer);
+    const second = fakeStream();
+    announceScreen(peer, second.id);
+    audio.receive(peer, second, fakeTrack());
+    expect(peer.screenAudio?.audio.muted).toBe(true);
+
+    audio.setDeafened(false);
+    expect(peer.screenAudio?.audio.muted).toBe(false);
+  });
+
+  it("removes only the share's sinks when the share is withdrawn", () => {
+    const mixer = withWebAudio();
+    const peer = addPeer();
+    const voice = fakeStream();
+    const share = fakeStream();
+    announceScreen(peer, share.id);
+    audio.receive(peer, voice, fakeTrack());
+    audio.receive(peer, share, fakeTrack());
+    const sinks = peer.screenAudio!;
+
+    announceScreen(peer, null);
+    audio.route(peer);
+
+    expect(peer.screenAudio).toBeNull();
+    expect(sinks.audio.isConnected).toBe(false);
+    expect(sinks.decoder.isConnected).toBe(false);
+    expect(peer.voice.streamId).toBe(voice.id);
+    expect(mixer.remove).toHaveBeenCalledWith("u-z");
+  });
+
+  it("leaves the voice playing when only the share's audio track ends", () => {
+    const peer = addPeer();
+    const voice = fakeStream();
+    const shareTrack = fakeTrack();
+    const share = fakeStream();
+    announceScreen(peer, share.id);
+    audio.receive(peer, voice, fakeTrack());
+    audio.receive(peer, share, shareTrack);
+
+    endTrack(shareTrack);
+
+    expect(peer.screenAudio).toBeNull();
+    expect(peer.voice.audio.srcObject).toBe(voice);
+  });
+
+  it("moves the share's sinks to the chosen output device with the voice's", async () => {
+    const setSinkId = vi.fn(async () => undefined);
+    Object.defineProperty(HTMLMediaElement.prototype, "setSinkId", {
+      configurable: true,
+      value: setSinkId,
+    });
+    try {
+      const peer = addPeer();
+      const share = fakeStream();
+      announceScreen(peer, share.id);
+      audio.receive(peer, share, fakeTrack());
+      settings = { ...settings, outputDeviceId: "usb-headphones" };
+      setSinkId.mockClear();
+
+      await audio.refreshOutput();
+
+      expect(setSinkId).toHaveBeenCalledTimes(2);
+    } finally {
+      delete (HTMLMediaElement.prototype as { setSinkId?: unknown }).setSinkId;
+    }
+  });
+
+  it("frees the share's sinks and strip together with the peer", () => {
+    const peer = addPeer();
+    const share = fakeStream();
+    announceScreen(peer, share.id);
+    audio.receive(peer, share, fakeTrack());
+
+    audio.release(peer);
+
+    expect(screenSinks()).toHaveLength(0);
+  });
+});
+
 describe("RemoteAudio deafening", () => {
   it("mutes every audible sink and restores them, leaving the decoder muted", () => {
     const first = addPeer("u-x");
@@ -456,7 +624,8 @@ describe("RemoteAudio gesture and resume handling", () => {
 
     await audio.resume();
 
-    expect(order).toEqual(["resume", "play"]);
+    // The voice mixer and the shared-screen mixer, then playback.
+    expect(order).toEqual(["resume", "resume", "play"]);
   });
 
   it("forwards the playback profile to the mixer", () => {

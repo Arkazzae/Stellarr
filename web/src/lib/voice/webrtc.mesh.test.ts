@@ -708,15 +708,26 @@ describe("remote voice", () => {
     expect(audible.volume).toBeCloseTo(0.5);
   });
 
-  it("ignores video, which this client does not display", async () => {
+  it("shows a remote share and camera only once the person announced them", async () => {
     const client = build();
     const pc = await joinWith(client);
-    const video = { ...fakeTrack(), kind: "video" } as MediaStreamTrack;
+    const share = fakeStream();
+    const camera = fakeStream();
+    const arriveVideo = (stream: MediaStream) =>
+      pc.ontrack?.({ track: { ...fakeTrack(), kind: "video" } as MediaStreamTrack, streams: [stream] });
 
-    pc.ontrack?.({ track: video, streams: [fakeStream(video)] });
-
-    await vi.waitFor(() => expect(peerOf(client)).toBeDefined());
+    arriveVideo(share);
+    arriveVideo(camera);
     expect(peerOf(client)).toMatchObject({ screen: null, camera: null });
+
+    realtime.signal("u-z", "state", {
+      muted: false,
+      screenStreamId: share.id,
+      cameraStreamId: camera.id,
+    });
+
+    expect(peerOf(client)?.screen).toMatchObject({ streamId: share.id, stream: share });
+    expect(peerOf(client)?.camera).toMatchObject({ streamId: camera.id, stream: camera });
     expect(document.querySelector("video")).toBeNull();
   });
 

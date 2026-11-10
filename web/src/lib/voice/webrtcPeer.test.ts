@@ -68,17 +68,20 @@ let created: FakeConnection[];
 let settings: VoiceSettings;
 let sent: Array<{ type: string; sdp: string }>;
 let env: NegotiatorEnv;
+let learned: Peer[];
 
 beforeEach(() => {
   created = [];
   settings = { ...DEFAULT_SETTINGS };
   sent = [];
+  learned = [];
   env = {
     settings: () => settings,
     bitrate: () => 96_000,
     send: async (_peer, type, sdp) => {
       sent.push({ type, sdp });
     },
+    remoteMediaLearned: (peer) => learned.push(peer),
   };
   vi.stubGlobal(
     "RTCPeerConnection",
@@ -328,6 +331,25 @@ describe("Negotiator.receive", () => {
 
     await expect(new Negotiator(env).receive(peer, answer)).rejects.toThrow("bad sdp");
     expect(peer.settingRemoteAnswerPending).toBe(false);
+  });
+
+  it("learns which streams carry video from the description, before it answers", async () => {
+    const peer = newPeer("u-a", "u-z");
+    const withVideo = [
+      "v=0",
+      "m=video 9 UDP/TLS/RTP/SAVPF 96",
+      "a=mid:1",
+      "a=msid:share-stream share-track",
+      "",
+    ].join("\r\n");
+    env.send = async () => {
+      expect(learned).toEqual([peer]);
+    };
+
+    await new Negotiator(env).receive(peer, { type: "offer", sdp: withVideo });
+
+    expect(peer.media.roleOf("share-stream")).toBe("screen");
+    expect(peer.media.roleOf("mic-stream")).toBe("microphone");
   });
 
   it("applies queued candidates in order once the description is in", async () => {

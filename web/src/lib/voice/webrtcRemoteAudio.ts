@@ -4,6 +4,7 @@ import { RemoteVoiceMixer } from "./remoteMixer";
 import type { PlaybackProfileId, PlaybackTuning, VoiceSettings } from "./settings";
 import type { SpeechDetector } from "./vad";
 import type { Peer, RemoteVoice } from "./webrtcPeer";
+import type { AudioRole } from "./webrtcRemoteMedia";
 
 export interface RemoteAudioEnv {
   readonly peers: ReadonlyMap<UserId, Peer>;
@@ -16,29 +17,28 @@ export interface RemoteAudioEnv {
   changed(): void;
 }
 
-type RemoteAudioRole = "microphone";
-
-/**
- * What a remote audio stream is. Today every one is somebody's microphone;
- * this is the single place that decides, so another kind of stream can be told
- * apart here without touching the routing below.
- */
-function classify(_peer: Peer, _streamId: string): RemoteAudioRole {
-  return "microphone";
-}
+const ROLES: readonly AudioRole[] = ["microphone", "screen"];
 
 /**
  * Everything the other people sound like on this machine: the hidden audio
- * elements, the mixer that processes each voice, and deafening.
+ * elements, the mixers that process each voice, and deafening.
  *
- * Each voice gets two elements. The audible one carries the mixer's output, or
+ * A person can send two kinds of sound, their microphone and the sound of
+ * their shared screen, and each gets sinks of its own so that no stream is ever
+ * played through two elements. Which stream is which is decided by
+ * `peer.media`; `route` puts every stream where that says it belongs and can
+ * run after any event.
+ *
+ * Each source gets two elements. The audible one carries the mixer's output, or
  * the raw stream when Web Audio is unavailable. The muted one is attached to
  * the raw stream alone: Chromium and Brave may discard every RTP sample when
  * Web Audio is the only consumer of a remote track, and a muted direct element
- * keeps the jitter buffer decoding without playing the voice twice.
+ * keeps the jitter buffer decoding without playing the sound twice.
  */
 export class RemoteAudio {
   private readonly mixer: RemoteVoiceMixer;
+  /** Unity gain and no voice processing: shared sound is content, not speech. */
+  private readonly screenMixer = new RemoteVoiceMixer("off", undefined, 1);
   private host: HTMLElement | null = null;
   private deafened = false;
 
@@ -47,7 +47,7 @@ export class RemoteAudio {
     this.mixer = new RemoteVoiceMixer(playbackProfile, playbackTuning);
   }
 
-  /** Sinks for a new peer. The audible one is created first. */
+  /** Sinks for a new source. The audible one is created first. */
   createVoice(): RemoteVoice {
     const audio = this.createSink();
     audio.muted = this.deafened;
@@ -62,51 +62,54 @@ export class RemoteAudio {
 
   /** A remote audio track arrived. Only files it; `route` decides where it plays. */
   receive(peer: Peer, stream: MediaStream, track: MediaStreamTrack): void {
-    peer.audioStreams.set(stream.id, stream);
+    peer.media.addAudio(stream);
     track.onended = () => this.ended(peer, stream.id);
     this.route(peer);
   }
 
   /**
-   * Put the newest voice stream on the sinks, and only there.
+   * Put the newest stream of each kind on its sinks, and only there.
    *
-   * Idempotent, so it can run after any event without playing a stream twice.
+   * Idempotent, so it can run after any event: a stream that turned out to be
+   * a screen share's sound is taken off the voice sink before it is attached
+   * to the screen's.
    */
   route(peer: Peer): void {
-    const voices = [...peer.audioStreams].filter(
-      ([id]) => classify(peer, id) === "microphone",
-    );
-    const newest = voices.at(-1);
-    if (!newest || newest[0] === peer.voice.streamId) return;
-
-    this.attachVoice(peer, newest[0], newest[1]);
-    this.env.changed();
+    // No short-circuit: both kinds must be settled.
+    const voiceMoved = this.reconcile(peer, "microphone");
+    const screenMoved = this.reconcile(peer, "screen");
+    if (voiceMoved || screenMoved) this.env.changed();
   }
 
   /** Free a dropped peer's sinks and strips. */
   release(peer: Peer): void {
     this.env.speech.remove(peer.userId);
     this.mixer.remove(peer.userId);
-    for (const element of [peer.voice.audio, peer.voice.decoder]) {
-      element.srcObject = null;
-      element.remove();
-    }
+    this.screenMixer.remove(peer.userId);
+    for (const sinks of voicesOf(peer)) discard(sinks);
   }
 
   setDeafened(deafened: boolean): void {
     if (this.deafened === deafened) return;
     this.deafened = deafened;
-    for (const peer of this.env.peers.values()) peer.voice.audio.muted = deafened;
+    for (const peer of this.env.peers.values()) {
+      for (const sinks of voicesOf(peer)) sinks.audio.muted = deafened;
+    }
   }
 
   applyVolume(peer: Peer): void {
-    if (peer.voice.processed) this.mixer.setVolume(peer.userId, peer.playbackVolume);
-    else this.applyRawVolume(peer);
+    for (const role of ROLES) {
+      const sinks = this.sinksOf(peer, role);
+      if (!sinks) continue;
+      if (sinks.processed) this.mixerOf(role).setVolume(peer.userId, peer.playbackVolume);
+      else this.applyRawVolume(peer, role);
+    }
   }
 
   /**
    * Only a Web Audio strip can be gated or denoised; a raw `<audio>` fallback
    * has no graph to put either into, so the flag waits for the next attach.
+   * Both are for voices: shared sound is never gated or denoised.
    */
   applyGate(peer: Peer): void {
     if (!peer.voice.processed) return;
@@ -125,22 +128,27 @@ export class RemoteAudio {
   /** Move every audible sink to the chosen output device and volume. */
   async refreshOutput(): Promise<void> {
     const peers = [...this.env.peers.values()];
-    const failures = await Promise.all(peers.map((peer) => this.applyOutput(peer.voice.audio)));
+    const sinks = peers.flatMap(voicesOf);
+    const failures = await Promise.all(sinks.map((sink) => this.applyOutput(sink.audio)));
     if (failures.some(Boolean)) this.env.forgetOutputDevice();
     for (const peer of peers) {
-      if (!peer.voice.processed) this.applyRawVolume(peer);
+      for (const role of ROLES) {
+        if (this.sinksOf(peer, role)?.processed === false) this.applyRawVolume(peer, role);
+      }
     }
   }
 
   /** Synchronous by design: callers invoke it from an active user gesture. */
   prepare(): void {
     this.mixer.prepare();
+    this.screenMixer.prepare();
     this.playAll();
   }
 
   /** Bring playback back after the tab was backgrounded. */
   async resume(): Promise<void> {
     await this.mixer.resume();
+    await this.screenMixer.resume();
     this.playAll();
   }
 
@@ -152,41 +160,63 @@ export class RemoteAudio {
 
   dispose(): void {
     this.mixer.dispose();
+    this.screenMixer.dispose();
     this.removeHost();
   }
 
-  private attachVoice(peer: Peer, id: string, stream: MediaStream): void {
-    const { voice } = peer;
-    peer.speaking = false;
-    voice.audio.muted = this.deafened;
-    attachStream(voice.decoder, stream);
-    voice.processed = this.mixer.attach(
+  /** Make the sinks of one kind play what `peer.media` says they should. */
+  private reconcile(peer: Peer, role: AudioRole): boolean {
+    const wanted = peer.media.newestAudio(role);
+    const playing = this.sinksOf(peer, role)?.streamId ?? null;
+    if ((wanted?.id ?? null) === playing) return false;
+
+    if (wanted) this.attach(peer, role, wanted);
+    else this.detach(peer, role);
+    return true;
+  }
+
+  private attach(peer: Peer, role: AudioRole, stream: MediaStream): void {
+    const microphone = role === "microphone";
+    const sinks = microphone ? peer.voice : (peer.screenAudio ??= this.createVoice());
+    if (microphone) peer.speaking = false;
+
+    sinks.audio.muted = this.deafened;
+    attachStream(sinks.decoder, stream);
+    sinks.processed = this.mixerOf(role).attach(
       peer.userId,
       stream,
-      voice.audio,
+      sinks.audio,
       peer.playbackVolume,
-      { gated: peer.gated, suppressed: peer.suppressed },
+      microphone ? { gated: peer.gated, suppressed: peer.suppressed } : undefined,
     );
-    if (!voice.processed) this.playRaw(peer, stream);
-    voice.streamId = id;
-    void this.ensurePlayback(peer, stream);
-    void this.env.speech.add(peer.userId, stream);
+    if (!sinks.processed) this.playRaw(peer, role, stream);
+    sinks.streamId = stream.id;
+    void this.ensurePlayback(peer, role, stream);
+    if (microphone) void this.env.speech.add(peer.userId, stream);
+  }
+
+  /** Nothing of this kind is left to play. A voice keeps its sinks; a share's go. */
+  private detach(peer: Peer, role: AudioRole): void {
+    this.mixerOf(role).remove(peer.userId);
+    if (role === "screen") {
+      if (peer.screenAudio) discard(peer.screenAudio);
+      peer.screenAudio = null;
+      return;
+    }
+
+    this.env.speech.remove(peer.userId);
+    const { voice } = peer;
+    voice.audio.srcObject = null;
+    voice.decoder.srcObject = null;
+    voice.processed = false;
+    voice.streamId = null;
+    peer.speaking = false;
+    peer.level = 0;
   }
 
   private ended(peer: Peer, streamId: string): void {
     if (this.env.peers.get(peer.userId) !== peer) return;
-    if (!peer.audioStreams.delete(streamId)) return;
-
-    if (peer.voice.streamId === streamId) {
-      this.env.speech.remove(peer.userId);
-      this.mixer.remove(peer.userId);
-      peer.voice.audio.srcObject = null;
-      peer.voice.decoder.srcObject = null;
-      peer.voice.processed = false;
-      peer.voice.streamId = null;
-      peer.speaking = false;
-      peer.level = 0;
-    }
+    if (!peer.media.removeAudio(streamId)) return;
 
     // Another stream may be waiting to take over.
     this.route(peer);
@@ -198,49 +228,63 @@ export class RemoteAudio {
    * leaves both the sound and the speaking ring silent, so the raw stream is
    * the last resort on strict browsers.
    */
-  private async ensurePlayback(peer: Peer, stream: MediaStream): Promise<void> {
+  private async ensurePlayback(peer: Peer, role: AudioRole, stream: MediaStream): Promise<void> {
     // Whether the stream started out on the mixer, even if the resume check
     // below moves it to the raw sink: a play() rejection after that move still
     // gets one more attempt on the raw sink.
-    const processed = peer.voice.processed;
-    if (processed && !(await this.mixer.resume()) && !this.useRaw(peer, stream)) return;
+    const processed = this.sinksOf(peer, role)?.processed ?? false;
+    if (processed && !(await this.mixerOf(role).resume()) && !this.useRaw(peer, role, stream)) {
+      return;
+    }
 
     try {
-      await peer.voice.audio.play();
+      await this.sinksOf(peer, role)?.audio.play();
       return;
     } catch {
-      if (!processed || !this.useRaw(peer, stream)) return;
+      if (!processed || !this.useRaw(peer, role, stream)) return;
     }
     // The document-level gesture hook retries this exact element on the next
     // click or key press, without making the person leave the call.
-    await peer.voice.audio.play().catch(() => undefined);
+    await this.sinksOf(peer, role)?.audio.play().catch(() => undefined);
   }
 
   /** Switch to the raw stream, unless the peer or its stream moved on meanwhile. */
-  private useRaw(peer: Peer, stream: MediaStream): boolean {
+  private useRaw(peer: Peer, role: AudioRole, stream: MediaStream): boolean {
     if (
       this.env.peers.get(peer.userId) !== peer ||
-      peer.voice.streamId !== stream.id ||
-      !peer.audioStreams.has(stream.id)
+      this.sinksOf(peer, role)?.streamId !== stream.id ||
+      !peer.media.hasAudio(stream.id)
     ) {
       return false;
     }
-    this.playRaw(peer, stream);
+    this.playRaw(peer, role, stream);
     return true;
   }
 
-  private playRaw(peer: Peer, stream: MediaStream): void {
-    this.mixer.remove(peer.userId);
-    peer.voice.processed = false;
-    peer.voice.decoder.srcObject = null;
-    peer.voice.audio.srcObject = stream;
-    this.applyRawVolume(peer);
+  private playRaw(peer: Peer, role: AudioRole, stream: MediaStream): void {
+    const sinks = this.sinksOf(peer, role);
+    if (!sinks) return;
+    this.mixerOf(role).remove(peer.userId);
+    sinks.processed = false;
+    sinks.decoder.srcObject = null;
+    sinks.audio.srcObject = stream;
+    this.applyRawVolume(peer, role);
   }
 
-  private applyRawVolume(peer: Peer): void {
+  private applyRawVolume(peer: Peer, role: AudioRole): void {
+    const sinks = this.sinksOf(peer, role);
+    if (!sinks) return;
     const global = this.env.settings().outputVolume / 100;
     const participant = peer.playbackVolume / 100;
-    peer.voice.audio.volume = Math.min(1, Math.max(0, global * participant));
+    sinks.audio.volume = Math.min(1, Math.max(0, global * participant));
+  }
+
+  private sinksOf(peer: Peer, role: AudioRole): RemoteVoice | null {
+    return role === "microphone" ? peer.voice : peer.screenAudio;
+  }
+
+  private mixerOf(role: AudioRole): RemoteVoiceMixer {
+    return role === "microphone" ? this.mixer : this.screenMixer;
   }
 
   /** Resolves true when the chosen output device failed and the system route took over. */
@@ -261,9 +305,11 @@ export class RemoteAudio {
   }
 
   private playAll(): void {
-    for (const { voice } of this.env.peers.values()) {
-      voice.decoder.play().catch(() => undefined);
-      voice.audio.play().catch(() => undefined);
+    for (const peer of this.env.peers.values()) {
+      for (const { audio, decoder } of voicesOf(peer)) {
+        decoder.play().catch(() => undefined);
+        audio.play().catch(() => undefined);
+      }
     }
   }
 
@@ -294,6 +340,18 @@ export class RemoteAudio {
     document.body.appendChild(host);
     this.host = host;
     return host;
+  }
+}
+
+/** The sinks a peer has right now: always the voice, the share's sound when there is one. */
+function voicesOf(peer: Peer): RemoteVoice[] {
+  return peer.screenAudio ? [peer.voice, peer.screenAudio] : [peer.voice];
+}
+
+function discard(sinks: RemoteVoice): void {
+  for (const element of [sinks.audio, sinks.decoder]) {
+    element.srcObject = null;
+    element.remove();
   }
 }
 

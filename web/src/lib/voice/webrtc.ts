@@ -69,9 +69,10 @@ export interface WebRtcVoiceClientOptions {
  * Every person in the channel gets a direct connection to every other: a full
  * mesh, which suits a handful of friends on one instance. This class is the
  * facade the UI sees through `VoiceClient`; the work lives in its siblings:
- * `webrtcPeer` (connections and negotiation), `webrtcRemoteAudio` (what the
- * others sound like), `webrtcMicrophone` (what they hear), `webrtcSettings`
- * (live changes) and `webrtcHealth` (proof that audio flows, and recovery).
+ * `webrtcPeer` (connections and negotiation), `webrtcRemoteAudio` and
+ * `webrtcRemoteMedia` (what the others sound like and which of their streams
+ * is which), `webrtcMicrophone` (what they hear), `webrtcSettings` (live
+ * changes) and `webrtcHealth` (proof that audio flows, and recovery).
  */
 export class WebRtcVoiceClient implements VoiceClient {
   private readonly store = new VoiceStateStore();
@@ -138,6 +139,7 @@ export class WebRtcVoiceClient implements VoiceClient {
       bitrate: () => this.bitrate.getBitrate(),
       send: (peer, type, sdp) =>
         this.send({ kind: type, toUserId: peer.userId, payload: encodeRtcDescription(type, sdp) }),
+      remoteMediaLearned: (peer) => this.remoteAudio.route(peer),
     });
     this.remoteAudio = new RemoteAudio({
       peers: this.peers,
@@ -770,8 +772,8 @@ export class WebRtcVoiceClient implements VoiceClient {
           gated: peer.gated,
           suppressed: peer.suppressed,
           self: false,
-          screen: null,
-          camera: null,
+          screen: peer.media.screen,
+          camera: peer.media.camera,
         })),
       ],
     });

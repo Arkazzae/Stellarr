@@ -137,7 +137,8 @@ export class Mesh {
         const state = decodeRtcState(signal.payload);
         if (state) {
           peer.muted = state.muted;
-          this.deps.changed();
+          peer.media.announce(state);
+          this.mediaChanged(peer);
         }
       } else if (signal.kind === "candidate") {
         const candidate = decodeRtcCandidate(signal.payload);
@@ -149,6 +150,36 @@ export class Mesh {
     } catch {
       // A single bad frame must not tear down the session.
     }
+  }
+
+  /** A remote track arrived: file it, then let everything be placed again. */
+  private receiveTrack(peer: Peer, event: RTCTrackEvent): void {
+    const [stream] = event.streams;
+    if (!stream) return;
+
+    if (event.track.kind === "audio") {
+      this.deps.remoteAudio.receive(peer, stream, event.track);
+    } else if (event.track.kind === "video") {
+      peer.media.addVideo(stream);
+      event.track.onended = () => {
+        // Only an announced share takes its sound with it. The rest waits for
+        // the next pass, so a share nobody announced does not take the voice's
+        // sink the moment its picture stops.
+        if (peer.media.removeVideo(stream.id)) this.deps.remoteAudio.route(peer);
+        this.deps.changed();
+      };
+      this.mediaChanged(peer);
+    }
+  }
+
+  /**
+   * What a peer sends became clearer, or went away. Video can identify the
+   * sound of a share that arrived first, so the sinks are settled before the
+   * UI is told.
+   */
+  private mediaChanged(peer: Peer): void {
+    this.deps.remoteAudio.route(peer);
+    this.deps.changed();
   }
 
   private async create(participant: VoiceOccupant): Promise<void> {
@@ -176,12 +207,7 @@ export class Mesh {
     }
     negotiator.tuneMicSender(peer);
 
-    connection.ontrack = (event) => {
-      const [stream] = event.streams;
-      if (stream && event.track.kind === "audio") {
-        this.deps.remoteAudio.receive(peer, stream, event.track);
-      }
-    };
+    connection.ontrack = (event) => this.receiveTrack(peer, event);
     connection.onicecandidate = (event) => {
       void this.deps.send({
         kind: "candidate",

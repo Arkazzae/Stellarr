@@ -10,8 +10,12 @@ import {
   type AudioTuningPlan,
 } from "./sdp";
 import type { VoiceSettings } from "./settings";
+import { RemoteMedia } from "./webrtcRemoteMedia";
 
-/** What plays one remote microphone: an audible sink and a muted decoding sink. */
+/**
+ * What plays one remote audio source, a microphone or a screen share's sound:
+ * an audible sink and a muted decoding sink.
+ */
 export interface RemoteVoice {
   /** The audible element. Holds the mixer's output, or the raw stream as a fallback. */
   audio: HTMLAudioElement;
@@ -53,8 +57,10 @@ export interface Peer {
   suppressed: boolean;
   readonly connection: RTCPeerConnection;
   readonly voice: RemoteVoice;
-  /** Every remote audio stream seen, so routing can be re-evaluated at will. */
-  readonly audioStreams: Map<string, MediaStream>;
+  /** Sinks for their shared-screen sound, which never shares an element with the voice. */
+  screenAudio: RemoteVoice | null;
+  /** Every remote stream seen, so routing can be re-evaluated at will. */
+  readonly media: RemoteMedia;
   readonly candidates: RemoteCandidateQueue;
   micSender: RTCRtpSender | null;
   readonly watchdog: RecoveryWatchdog;
@@ -107,7 +113,8 @@ export function createPeer(init: PeerInit): Peer {
     suppressed: preference.suppressed,
     connection,
     voice: init.createVoice(),
-    audioStreams: new Map(),
+    screenAudio: null,
+    media: new RemoteMedia(),
     candidates: new RemoteCandidateQueue({
       hasRemoteDescription: () => connection.remoteDescription !== null,
       addIceCandidate: (candidate) => connection.addIceCandidate(candidate ?? undefined),
@@ -141,6 +148,8 @@ export interface NegotiatorEnv {
   bitrate(): number;
   /** Delivers a finished local description to the other side. */
   send(peer: Peer, type: "offer" | "answer", sdp: string): Promise<void>;
+  /** The remote description told more about what the peer's streams carry. */
+  remoteMediaLearned(peer: Peer): void;
 }
 
 /**
@@ -189,6 +198,11 @@ export class Negotiator {
     } finally {
       peer.settingRemoteAnswerPending = false;
     }
+
+    // The description names the msids that carry video and lands before any
+    // track event, so routing can be right the first time.
+    peer.media.learnFromSdp(connection.remoteDescription?.sdp);
+    this.env.remoteMediaLearned(peer);
 
     await peer.candidates.flush();
 
