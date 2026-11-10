@@ -2,6 +2,7 @@ using Amazon.Runtime;
 using Amazon.S3;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -25,6 +26,13 @@ if (!builder.Environment.IsDevelopment() &&
 
 var dataRoot = builder.Configuration["DataRoot"] ?? "data";
 var keysDirectory = Directory.CreateDirectory(Path.Combine(dataRoot, "keys"));
+
+// Kestrel's default request cap is below a useful video attachment. Each kind
+// of upload still has a limit of its own, checked once the form is parsed; this
+// is only the outer ceiling, form overhead included.
+const long MaxRequestBodyBytes = 128 * 1024 * 1024;
+builder.WebHost.ConfigureKestrel(options => options.Limits.MaxRequestBodySize = MaxRequestBodyBytes);
+builder.Services.Configure<FormOptions>(options => options.MultipartBodyLengthLimit = MaxRequestBodyBytes);
 
 builder.Services.AddProblemDetails();
 // The keys that protect the session cookie live on the data volume, so a
@@ -123,6 +131,7 @@ app.MapRegistrationEndpoints();
 app.MapDesktopBrowserLoginEndpoints();
 app.MapSessionEndpoints();
 app.MapBootstrapEndpoints();
+app.MapUploadEndpoints();
 app.MapHub<AppHub>("/hubs/app");
 
 await InitializeApplicationAsync(app);

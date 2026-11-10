@@ -4,14 +4,16 @@ using Microsoft.AspNetCore.RateLimiting;
 namespace Stellarr.Api.Auth;
 
 /// <summary>
-/// Named limits endpoints opt into. Each policy counts requests per client
-/// address in a window of its own.
+/// Named limits endpoints opt into. Each policy counts requests in a window of
+/// its own: per client address, except for uploads, which share one budget
+/// across the instance because their cost is bytes, not callers.
 /// </summary>
 public static class RateLimitPolicies
 {
     public const string Login = "login";
     public const string LoginPoll = "login-poll";
     public const string AuthWrite = "auth-write";
+    public const string Uploads = "uploads";
 
     public static IServiceCollection AddRateLimitPolicies(
         this IServiceCollection services,
@@ -29,6 +31,10 @@ public static class RateLimitPolicies
         // signing in within seconds, so polling counts apart and wider.
         var loginPoll = PermitLimit("LoginPoll", 120);
         var authWrite = PermitLimit("AuthWrite", 5);
+        var uploadsPerMinute = PermitLimit("Uploads", 30);
+        var concurrentUploads = environment.IsEnvironment("Testing")
+            ? 100
+            : Math.Clamp(configuration.GetValue<int?>("Uploads:MaxConcurrentUploads") ?? 4, 1, 32);
 
         return services.AddRateLimiter(options =>
         {
@@ -36,8 +42,32 @@ public static class RateLimitPolicies
             AddPerAddressPolicy(options, Login, login, TimeSpan.FromMinutes(1));
             AddPerAddressPolicy(options, LoginPoll, loginPoll, TimeSpan.FromMinutes(1));
             AddPerAddressPolicy(options, AuthWrite, authWrite, TimeSpan.FromMinutes(15));
+            AddInstanceUploadPolicy(options, concurrentUploads, uploadsPerMinute);
         });
     }
+
+    /// <summary>
+    /// Uploads that run at once, queued briefly, and uploads per minute, both
+    /// counted for the whole instance so that no number of callers adds up to
+    /// more than the disk and the network can take.
+    /// </summary>
+    private static void AddInstanceUploadPolicy(RateLimiterOptions options, int concurrent, int perMinute) =>
+        options.AddPolicy(Uploads, _ => RateLimitPartition.Get(
+            "instance",
+            _ => RateLimiter.CreateChained(
+                new ConcurrencyLimiter(new ConcurrencyLimiterOptions
+                {
+                    PermitLimit = concurrent,
+                    QueueLimit = concurrent * 4,
+                    QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
+                }),
+                new FixedWindowRateLimiter(new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit = perMinute,
+                    Window = TimeSpan.FromMinutes(1),
+                    QueueLimit = 0,
+                    AutoReplenishment = true,
+                }))));
 
     private static void AddPerAddressPolicy(RateLimiterOptions options, string name, int permitLimit, TimeSpan window) =>
         options.AddPolicy(name, context => RateLimitPartition.GetFixedWindowLimiter(

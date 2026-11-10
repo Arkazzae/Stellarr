@@ -1,3 +1,4 @@
+using System.Diagnostics.CodeAnalysis;
 using Microsoft.EntityFrameworkCore;
 using Stellarr.Api.Data;
 using Stellarr.Api.Domain;
@@ -17,6 +18,7 @@ public enum UploadFailure
 /// <param name="Spec">What the file claims to be, once its type is known and supported.</param>
 public sealed record UploadInspection(UploadFailure Failure, UploadSpec? Spec)
 {
+    [MemberNotNullWhen(true, nameof(Spec))]
     public bool Accepted => Failure == UploadFailure.None && Spec is not null;
 }
 
