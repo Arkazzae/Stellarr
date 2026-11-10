@@ -58,12 +58,19 @@ interface PaletteDefinition {
   accessibleFaint: string;
 }
 
+/**
+ * The accent of Midnight and Slate, and so of a fresh install. The fallback in
+ * `recipe.css` and the fill in `app/icon.svg` cannot import it and repeat the
+ * value; `themeAccent.test.ts` keeps the three in step.
+ */
+export const STELLARR_ACCENT = "#6f65d1";
+
 export const PALETTES = [
   {
     id: "midnight",
     label: "Midnight",
     colors: {
-      accent: "#5865f2",
+      accent: STELLARR_ACCENT,
       backgrounds: {
         darkest: "#09090b",
         dark: "#18181b",
@@ -93,7 +100,7 @@ export const PALETTES = [
     id: "slate",
     label: "Slate",
     colors: {
-      accent: "#5865f2",
+      accent: STELLARR_ACCENT,
       backgrounds: {
         darkest: "#111214",
         dark: "#1e1f22",
