@@ -148,6 +148,165 @@ public sealed class OidcSignInFlowTests(StellarrWebApplicationFactory factory)
         Assert.Equal($"/login?oidc_error={expected}", callback.Headers.Location!.OriginalString);
     }
 
+    [Fact]
+    public async Task DesktopLoginCannotBeStartedWithoutAProvider()
+    {
+        using var client = factory.CreateClient();
+
+        using var response = await client.PostAsync("/api/auth/desktop/browser/start", content: null);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task DesktopLoginPointsTheBrowserAtTheProviderAndBackToItsApproval()
+    {
+        using var provider = new FakeProvider();
+        using var host = Host(provider);
+        using var desktop = host.CreateClient();
+
+        var handle = await StartDesktopLoginAsync(desktop);
+
+        var verification = new Uri(new Uri("https://localhost"), handle.VerificationUrl);
+        Assert.Equal("/api/auth/oidc/login", verification.AbsolutePath);
+        Assert.Equal(
+            $"/api/auth/desktop/browser/verify/{handle.RequestId}",
+            QueryHelpers.ParseQuery(verification.Query)["returnUrl"].ToString());
+    }
+
+    [Fact]
+    public async Task ApprovalNeedsABrowserThatIsSignedIn()
+    {
+        using var provider = new FakeProvider();
+        using var host = Host(provider);
+        using var desktop = host.CreateClient();
+        var handle = await StartDesktopLoginAsync(desktop);
+        using var browser = BrowserClient(host);
+
+        using var response = await browser.GetAsync($"/api/auth/desktop/browser/verify/{handle.RequestId}");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task UnknownAndExpiredRequestsGetTheExpiredPageAndCannotBeExchanged()
+    {
+        using var provider = new FakeProvider();
+        using var host = Host(provider);
+        using var desktop = host.CreateClient();
+        using var browser = BrowserClient(host);
+        await CreateLinkedAccountAsync(provider);
+        (await SignInThroughProviderAsync(browser, provider, "/")).Dispose();
+        var handle = await StartDesktopLoginAsync(desktop);
+        await using (var scope = factory.OpenScope(out var db))
+        {
+            await db.DesktopBrowserLogins.Where(x => x.Id == handle.RequestId)
+                .ExecuteUpdateAsync(s => s.SetProperty(x => x.ExpiresAt, DateTime.UtcNow.AddSeconds(-1)));
+        }
+
+        foreach (var requestId in new[] { Guid.NewGuid(), handle.RequestId })
+        {
+            using var page = await browser.GetAsync($"/api/auth/desktop/browser/verify/{requestId}");
+            Assert.Equal(HttpStatusCode.Gone, page.StatusCode);
+            Assert.Contains("Link wygasł", await page.Content.ReadAsStringAsync());
+        }
+
+        using var exchange = await desktop.PostAsJsonAsync(
+            "/api/auth/desktop/browser/exchange",
+            new { requestId = handle.RequestId, secret = handle.Secret });
+        Assert.Equal(HttpStatusCode.BadRequest, exchange.StatusCode);
+    }
+
+    [Fact]
+    public async Task ExchangeWithoutAValidRequestIdIsRejected()
+    {
+        using var provider = new FakeProvider();
+        using var host = Host(provider);
+        using var desktop = host.CreateClient();
+
+        using var response = await desktop.PostAsJsonAsync(
+            "/api/auth/desktop/browser/exchange",
+            new { requestId = "not-a-guid", secret = new string('x', 43) });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task RequestApprovedByOneAccountCannotBeTakenOverByAnother()
+    {
+        using var provider = new FakeProvider();
+        using var host = Host(provider);
+        using var desktop = host.CreateClient();
+        var handle = await StartDesktopLoginAsync(desktop);
+        var approvalUrl = $"/api/auth/desktop/browser/verify/{handle.RequestId}";
+
+        using var first = BrowserClient(host);
+        await CreateLinkedAccountAsync(provider);
+        (await SignInThroughProviderAsync(first, provider, "/")).Dispose();
+        using var approved = await first.GetAsync(approvalUrl);
+        approved.EnsureSuccessStatusCode();
+
+        using var second = BrowserClient(host);
+        provider.Subject = $"subject-{Guid.NewGuid():N}";
+        await CreateLinkedAccountAsync(provider);
+        (await SignInThroughProviderAsync(second, provider, "/")).Dispose();
+        using var taken = await second.GetAsync(approvalUrl);
+
+        Assert.Equal(HttpStatusCode.Conflict, taken.StatusCode);
+    }
+
+    [Fact]
+    public async Task AccountDisabledAfterApprovalIsRefusedAtTheExchange()
+    {
+        using var provider = new FakeProvider();
+        using var host = Host(provider);
+        using var desktop = host.CreateClient();
+        using var browser = BrowserClient(host);
+        var account = await CreateLinkedAccountAsync(provider);
+        (await SignInThroughProviderAsync(browser, provider, "/")).Dispose();
+        var handle = await StartDesktopLoginAsync(desktop);
+        (await browser.GetAsync($"/api/auth/desktop/browser/verify/{handle.RequestId}")).Dispose();
+        await using (var scope = factory.OpenScope(out var db))
+        {
+            await db.Users.Where(x => x.Id == account.Id)
+                .ExecuteUpdateAsync(s => s.SetProperty(x => x.IsDisabled, true));
+        }
+
+        using var exchange = await desktop.PostAsJsonAsync(
+            "/api/auth/desktop/browser/exchange",
+            new { requestId = handle.RequestId, secret = handle.Secret });
+
+        Assert.Equal(HttpStatusCode.Forbidden, exchange.StatusCode);
+        var session = await desktop.GetFromJsonAsync<JsonElement>("/api/session");
+        Assert.Equal(JsonValueKind.Null, session.GetProperty("user").ValueKind);
+    }
+
+    [Fact]
+    public async Task StartingALoginClearsOutRequestsThatExpired()
+    {
+        using var provider = new FakeProvider();
+        using var host = Host(provider);
+        using var desktop = host.CreateClient();
+        var stale = Guid.NewGuid();
+        await using (var scope = factory.OpenScope(out var db))
+        {
+            db.DesktopBrowserLogins.Add(new DesktopBrowserLogin
+            {
+                Id = stale,
+                SecretHash = DataModelSupport.Hash(),
+                CreatedAt = DateTime.UtcNow.AddMinutes(-10),
+                ExpiresAt = DateTime.UtcNow.AddMinutes(-8),
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var handle = await StartDesktopLoginAsync(desktop);
+
+        await using var check = factory.OpenScope(out var checkDb);
+        Assert.False(await checkDb.DesktopBrowserLogins.AnyAsync(x => x.Id == stale));
+        Assert.True(await checkDb.DesktopBrowserLogins.AnyAsync(x => x.Id == handle.RequestId));
+    }
+
     /// <summary>The application with the provider configured and its endpoints pointed at <paramref name="provider"/>.</summary>
     private WebApplicationFactory<Program> Host(FakeProvider provider) => factory.WithWebHostBuilder(builder =>
     {
@@ -191,6 +350,18 @@ public sealed class OidcSignInFlowTests(StellarrWebApplicationFactory factory)
             $"/api/auth/oidc/callback?code=the-code&state={Uri.EscapeDataString(query["state"].ToString())}");
     }
 
+    private static async Task<(Guid RequestId, string Secret, string VerificationUrl)> StartDesktopLoginAsync(
+        HttpClient desktop)
+    {
+        using var response = await desktop.PostAsync("/api/auth/desktop/browser/start", content: null);
+        response.EnsureSuccessStatusCode();
+        var handle = await response.Content.ReadFromJsonAsync<JsonElement>();
+        return (
+            Guid.Parse(handle.GetProperty("requestId").GetString()!),
+            handle.GetProperty("secret").GetString()!,
+            handle.GetProperty("verificationUrl").GetString()!);
+    }
+
     private async Task<User> CreateLinkedAccountAsync(FakeProvider provider, bool disabled = false)
     {
         await using var scope = factory.OpenScope(out var db);
@@ -228,7 +399,7 @@ public sealed class OidcSignInFlowTests(StellarrWebApplicationFactory factory)
         public OpenIdConnectConfiguration Configuration { get; }
 
         /// <summary>Who the identity token says is signing in. Unique per test, so linked accounts never collide.</summary>
-        public string Subject { get; init; } = $"subject-{Guid.NewGuid():N}";
+        public string Subject { get; set; } = $"subject-{Guid.NewGuid():N}";
 
         /// <summary>The nonce of the sign-in under way, which the token must echo.</summary>
         public string Nonce { get; set; } = "";

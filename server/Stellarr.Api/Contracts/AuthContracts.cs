@@ -4,6 +4,8 @@ namespace Stellarr.Api.Contracts;
 
 public sealed record LoginRequest(string Username, string Password);
 
+public sealed record DesktopBrowserExchangeRequest(string RequestId, string Secret);
+
 public sealed record SessionDto(UserDto? User);
 
 public sealed record UserDto(

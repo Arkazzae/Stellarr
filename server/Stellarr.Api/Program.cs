@@ -94,6 +94,7 @@ app.MapGet("/health/ready", async (AppDbContext db, CancellationToken cancellati
         : Results.Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: "Database unavailable"));
 
 app.MapAuthEndpoints();
+app.MapDesktopBrowserLoginEndpoints();
 app.MapSessionEndpoints();
 
 await InitializeApplicationAsync(app);
