@@ -56,6 +56,35 @@ public sealed record MessageDto(
     MessageReferenceDto? ReplyTo = null,
     IReadOnlyList<MessageReactionDto>? Reactions = null);
 
+/// <param name="Content">Required; a null is answered like an empty text.</param>
+/// <param name="ReplyToMessageId">A message of the same channel this one answers.</param>
+/// <param name="ClientMessageId">
+/// The identity the client picked for the message, so that a retried send is
+/// recognised as the same send rather than posted twice.
+/// </param>
+public sealed record CreateMessageRequest(
+    string? Content,
+    IReadOnlyList<Guid>? AttachmentIds,
+    Guid? ReplyToMessageId = null,
+    Guid? ClientMessageId = null);
+
+/// <summary>
+/// One page of a channel's history, oldest message first, so that a client can
+/// prepend the whole array without reversing it.
+/// </summary>
+/// <param name="NextCursor">Opaque; null once the beginning of the channel has been reached.</param>
+/// <param name="SyncCursor">
+/// The journal position the page was read at, where a client resumes
+/// listening for changes.
+/// </param>
+public sealed record MessageHistoryPageDto(
+    IReadOnlyList<MessageDto> Messages,
+    string? NextCursor,
+    string SyncCursor);
+
+/// <summary>A person's read watermark in one text channel.</summary>
+public sealed record ChannelReadDto(string ChannelId, DateTime LastReadAt);
+
 public static class MessageContractMappings
 {
     private const int PreviewLength = 160;

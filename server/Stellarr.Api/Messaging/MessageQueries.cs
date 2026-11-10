@@ -19,4 +19,14 @@ public static class MessageQueries
             .Include(x => x.Reactions)
             .Include(x => x.ReplyToMessage).ThenInclude(x => x!.Author)
             .Include(x => x.ReplyToMessage).ThenInclude(x => x!.Attachments);
+
+    /// <summary>
+    /// The channel when it is a text channel of the given server, and nothing
+    /// otherwise. A channel of another server is as good as absent.
+    /// </summary>
+    public static IQueryable<Channel> TextChannelOnServer(
+        this IQueryable<Channel> channels,
+        Guid channelId,
+        Guid serverId) =>
+        channels.Where(x => x.Id == channelId && x.ServerId == serverId && x.Kind == ChannelKind.Text);
 }
