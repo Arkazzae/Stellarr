@@ -14,6 +14,15 @@ using Stellarr.Api.Storage;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Without a secret of its own the relay would accept credentials that anyone
+// can compute from the published development secret.
+if (!builder.Environment.IsDevelopment() &&
+    !builder.Environment.IsEnvironment("Testing") &&
+    string.IsNullOrWhiteSpace(builder.Configuration["Rtc:TurnSharedSecret"]))
+{
+    throw new InvalidOperationException("Rtc:TurnSharedSecret is required outside development.");
+}
+
 var dataRoot = builder.Configuration["DataRoot"] ?? "data";
 var keysDirectory = Directory.CreateDirectory(Path.Combine(dataRoot, "keys"));
 
@@ -29,6 +38,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddSingleton<PasswordService>();
 builder.Services.AddSingleton<RegistrationGate>();
 builder.Services.AddSingleton<PresenceTracker>();
+builder.Services.AddSingleton<TurnCredentialService>();
 builder.Services.AddSignalR(options =>
 {
     options.MaximumReceiveMessageSize = 160 * 1024;
@@ -108,6 +118,7 @@ app.MapAuthEndpoints();
 app.MapRegistrationEndpoints();
 app.MapDesktopBrowserLoginEndpoints();
 app.MapSessionEndpoints();
+app.MapBootstrapEndpoints();
 app.MapHub<AppHub>("/hubs/app");
 
 await InitializeApplicationAsync(app);
