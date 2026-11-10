@@ -1,0 +1,88 @@
+name: Docs
+
+# Builds the documentation site (docs/, built with VitePress) and publishes it
+# to GitHub Pages at https://arkazzae.github.io/Stellarr/. The build fails on a
+# link to a page that does not exist, so it doubles as the link check.
+#
+# Runs for pull requests into main and for pushes to main that change the
+# pages, the site configuration or the brand files the site reads; a push to
+# any other branch runs nothing. A draft pull request runs nothing until it is
+# marked ready for review. Only a run on main publishes (a push, or "Run
+# workflow" on the Actions tab), and only while the repository is public,
+# because a Pages site is public whatever the repository is. "Run workflow" on
+# another branch builds the site and stops.
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - "docs/**"
+      - "branding/logo/**"
+      - "branding/guidelines/fonts/**"
+      - ".github/workflows/docs.yml"
+  push:
+    branches: [main]
+    paths:
+      - "docs/**"
+      - "branding/logo/**"
+      - "branding/guidelines/fonts/**"
+      - ".github/workflows/docs.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docs-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    if: github.event.pull_request.draft != true
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: docs
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          # The "last updated" date of a page comes from the git history.
+          fetch-depth: 0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: docs/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run build
+      - if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: docs/.vitepress/dist
+
+  deploy:
+    needs: build
+    if: >-
+      github.event_name != 'pull_request'
+      && github.ref == 'refs/heads/main'
+      && github.event.repository.visibility == 'public'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      pages: write
+      id-token: write
+    # One deployment at a time, and a deployment that has started is never
+    # cancelled by a newer push.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      # Fails early when Pages is not set to publish from GitHub Actions.
+      - uses: actions/configure-pages@v6
+      - id: deployment
+        uses: actions/deploy-pages@v5
