@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
 import type { UserId } from "@/lib/api/types";
+import { polish } from "@/test/translators";
 import { AdaptiveBitrateController } from "./bitrate";
 import { TURN_SAFETY_MARGIN_MS, type VoiceIceProvider } from "./iceSession";
 import { DEFAULT_PARTICIPANT_PREFERENCE } from "./participantPreferences";
@@ -44,6 +45,7 @@ let health: CallHealth;
 
 function build(overrides: Partial<CallHealthEnv> = {}): CallHealth {
   return new CallHealth({
+    translate: polish,
     realtime: { getRtcClock },
     ice,
     store,

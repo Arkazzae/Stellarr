@@ -1,3 +1,4 @@
+import type { Translator } from "@/i18n";
 import type { UserId } from "@/lib/api/types";
 import { profileFor, usesWorkletSuppression } from "./audioProfiles";
 import { captureMicrophone, type MicCapture } from "./micPipeline";
@@ -9,6 +10,8 @@ import type { Peer } from "./webrtcPeer";
 
 export interface LocalMicrophoneEnv {
   readonly selfUserId: UserId;
+  /** Words what goes wrong, in the language the person has now. */
+  readonly translate: Translator;
   readonly store: VoiceStateStore;
   /** Lights the speaking ring from the audio before the input gate. */
   readonly speech: SpeechDetector;
@@ -56,6 +59,7 @@ export class LocalMicrophone {
       // "browser suppression took over" while the device is running with
       // suppression switched off would be worse than saying nothing.
       degraded: degradedNotice(
+        this.env.translate,
         settings.noiseSuppression,
         capture.noiseSuppression,
         { requested: settings.inputGate, active: capture.gateActive },
@@ -122,9 +126,9 @@ export class LocalMicrophone {
 
     let capture: MicCapture;
     try {
-      capture = await captureMicrophone(next);
+      capture = await captureMicrophone(next, { translate: this.env.translate });
     } catch (cause) {
-      this.env.store.set({ error: { ...micError(cause), recoverable: true } });
+      this.env.store.set({ error: { ...micError(this.env.translate, cause), recoverable: true } });
       return false;
     }
     if (superseded()) {
@@ -139,7 +143,7 @@ export class LocalMicrophone {
     capture.fadeIn();
     if (!(await this.moveAllPeers(capture.track, previous.track))) {
       capture.dispose();
-      this.env.store.set({ error: micSwapFailedError });
+      this.env.store.set({ error: micSwapFailedError(this.env.translate) });
       return false;
     }
 

@@ -1,3 +1,4 @@
+import type { Translator } from "@/i18n";
 import type { UserId } from "@/lib/api/types";
 import type { RealtimeClient } from "@/lib/realtime/types";
 import { classify, type AdaptiveBitrateController, type NetworkSample } from "./bitrate";
@@ -29,6 +30,8 @@ const SILENT_SAMPLE_LIMIT = 3;
 const MAX_TIMEOUT_MS = 2_000_000_000;
 
 export interface CallHealthEnv {
+  /** Words what goes wrong, in the language the person has now. */
+  readonly translate: Translator;
   readonly realtime: Pick<RealtimeClient, "getRtcClock">;
   readonly ice: VoiceIceProvider;
   readonly store: VoiceStateStore;
@@ -181,7 +184,7 @@ export class CallHealth {
     if (this.env.peers.get(peer.userId) !== peer) return;
     peer.flow.recoveryFailed = true;
     this.syncTransport();
-    this.env.store.set({ error: peerLostError(peer.displayName) });
+    this.env.store.set({ error: peerLostError(this.env.translate, peer.displayName) });
   }
 
   // ----------------------------------------------------------------- stats
@@ -242,10 +245,10 @@ export class CallHealth {
   }
 
   private reportStalledPeer(peers: readonly Peer[]): void {
-    const { store } = this.env;
+    const { store, translate } = this.env;
     const stalled = peers.find((peer) => isSilent(peer));
     if (stalled) {
-      store.set({ error: peerStalledError(stalled.displayName) });
+      store.set({ error: peerStalledError(translate, stalled.displayName) });
     } else if (
       store.getSnapshot().transport.media === "connected" &&
       store.getSnapshot().error?.kind === "transport"
@@ -347,7 +350,7 @@ export class CallHealth {
       servers = await this.env.ice.beginSession();
     } catch {
       if (this.env.activeSession() !== session) return;
-      store.set({ error: iceRefreshFailedError });
+      store.set({ error: iceRefreshFailedError(this.env.translate) });
       this.refreshTimer = setTimeout(() => {
         this.refreshTimer = null;
         void this.refreshIce(session);
@@ -369,7 +372,7 @@ export class CallHealth {
     }
 
     if (!appliedToEveryPeer) {
-      store.set({ error: iceRefreshPartialError });
+      store.set({ error: iceRefreshPartialError(this.env.translate) });
     } else if (store.getSnapshot().error?.kind === "ice-config") {
       store.set({ error: null });
     }

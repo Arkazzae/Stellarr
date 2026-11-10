@@ -18,6 +18,8 @@ export type * from "./session";
 export type * from "./soundboard";
 export * from "./voice";
 
+import type { Translator } from "@/i18n";
+
 import type { AccountPort } from "./account";
 import type { ChatPort, MessageActionsPort, TypingPort } from "./chat";
 import type { DesktopPort } from "./desktop";
@@ -56,4 +58,10 @@ export interface Ports {
 export interface CreateVoiceOptions {
   userId: string;
   displayName: string;
+  /**
+   * Words the failures the call reports. The client outlives a change of
+   * language, so this answers in the language the person has when it is
+   * called, not when the client was made.
+   */
+  translate: Translator;
 }

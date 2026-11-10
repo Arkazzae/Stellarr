@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
+import { polish } from "@/test/translators";
+
 import { DEFAULT_SETTINGS, type VoiceSettings } from "./settings";
 import { VoiceStateStore } from "./store";
 import { LocalCamera, LocalScreen, type LocalCameraEnv } from "./webrtcLocalVideo";
@@ -100,6 +102,7 @@ beforeEach(() => {
   vi.stubGlobal("navigator", { mediaDevices: { getUserMedia, getDisplayMedia } });
 
   const env: LocalCameraEnv = {
+    translate: polish,
     store,
     peers,
     settings: () => settings,

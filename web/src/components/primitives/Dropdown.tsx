@@ -12,6 +12,7 @@ import {
 import { createPortal } from "react-dom";
 
 import { Icon, type IconName } from "@/components/icons/Icon";
+import { useLanguage } from "@/state/hooks";
 
 /** Between the field and the list. */
 const GAP = 6;
@@ -124,10 +125,11 @@ export function Dropdown<T extends string>({
   label,
   id,
   disabled,
-  placeholder = "Wybierz…",
+  placeholder,
   variant = "field",
   className,
 }: DropdownProps<T>) {
+  const { t } = useLanguage();
   const [open, setOpen] = useState(false);
   const [placement, setPlacement] = useState<Placement | null>(null);
   const [cursor, setCursor] = useState(0);
@@ -317,7 +319,7 @@ export function Dropdown<T extends string>({
       >
         <span className="dd-value">
           {current === undefined ? (
-            <b className="dd-empty">{placeholder}</b>
+            <b className="dd-empty">{placeholder ?? t("common.choose")}</b>
           ) : (
             <>
               {current.icon === undefined ? null : (

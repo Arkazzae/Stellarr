@@ -50,7 +50,7 @@ const OPEN_AT_END = { index: "LAST", align: "end" } as const;
 
 export interface TranscriptProps {
   sections: TranscriptSectionVM[];
-  /** Region name, e.g. "Wiadomości na #ogólny". */
+  /** Region name, e.g. "Messages in #general". */
   label: string;
   /**
    * A thread already supplies the reply context around the whole transcript,
@@ -202,8 +202,8 @@ function ReadyTranscript({
    * The way back down belongs to being scrolled up, not to having missed
    * something: scrolling up is the only way to read anything older than a
    * screen, and the way back used to be the same drag in reverse. What
-   * arrivals change is what it says — an arrow while reading, "Nowe
-   * wiadomości" once something landed below, because the list deliberately
+   * arrivals change is what it says — an arrow while reading, "New
+   * messages" once something landed below, because the list deliberately
    * does not follow the end for a reader who is elsewhere.
    */
   const catchUp = () => {

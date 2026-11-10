@@ -6,7 +6,7 @@ import { useLanguage } from "@/state/hooks";
 
 export interface DangerPaneProps {
   supported: boolean;
-  /** The delete button spells the server out: "Usuń Orbit". */
+  /** The delete button spells the server out: "Delete Orbit". */
   serverName: string;
   onTransfer: () => Promise<void>;
   onDelete: () => Promise<void>;

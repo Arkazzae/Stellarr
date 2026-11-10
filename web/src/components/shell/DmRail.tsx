@@ -4,8 +4,8 @@ import { useId, useState, type ReactNode } from "react";
 
 import { Icon } from "@/components/icons/Icon";
 import { Avatar } from "@/components/primitives/Avatar";
-import type { DmConversationVM, PersonVM } from "@/components/view-models";
-import type { MessageKey } from "@/i18n";
+import type { DmConversationVM } from "@/components/view-models";
+import { PRESENCE_LABEL } from "@/ports";
 import { useLanguage } from "@/state/hooks";
 
 /**
@@ -13,13 +13,6 @@ import { useLanguage } from "@/state/hooks";
  * only sign of whether the person is around. It needs a word behind it for
  * anyone who cannot see the colour.
  */
-const PRESENCE_LABEL: Record<PersonVM["presence"], MessageKey> = {
-  online: "presence.online",
-  idle: "presence.idle",
-  dnd: "presence.dnd",
-  offline: "presence.offline",
-};
-
 export interface DmRailProps {
   /** Whether the servers / DM column is open; the switch reports it. */
   serversOpen: boolean;

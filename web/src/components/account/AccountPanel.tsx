@@ -7,20 +7,13 @@ import { AnchoredCard } from "@/components/primitives/AnchoredCard";
 import { PresenceDot } from "@/components/primitives/Avatar";
 import { EmojiPicker } from "@/components/room/EmojiPicker";
 import type { CustomEmoji, Presence } from "@/ports";
-import { PRESENCE_VALUES } from "@/ports";
+import { PRESENCE_VALUES, SELF_PRESENCE_LABEL } from "@/ports";
 import { useLanguage } from "@/state/hooks";
 
 /** A status stays a glanceable line; the longer text belongs to the bio. */
 const STATUS_MAX_LENGTH = 128;
 /** How long the save button keeps showing its tick. */
 const SAVED_FLASH_MS = 1500;
-
-const PRESENCE_LABEL_KEY = {
-  online: "account.presence.onlineLabel",
-  idle: "account.presence.idleLabel",
-  dnd: "account.presence.dndLabel",
-  offline: "account.presence.offlineLabel",
-} as const;
 
 /** One-tap openers for the status line. */
 const SUGGESTED_EMOJI = ["🎧", "🎮", "🛠️", "📚", "☕", "💤"] as const;
@@ -239,7 +232,7 @@ export function AccountPanel({
           >
             <PresenceDot presence={value} />
             <span className="acc-state-label">
-              {t(PRESENCE_LABEL_KEY[value])}
+              {t(SELF_PRESENCE_LABEL[value])}
             </span>
           </button>
         ))}

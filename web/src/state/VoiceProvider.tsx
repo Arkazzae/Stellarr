@@ -13,6 +13,7 @@ import {
 } from "react";
 
 import type { CallVM, PersonVM, ScreenShareVM } from "@/components/view-models";
+import type { Translator } from "@/i18n";
 import { playSystemFx } from "@/lib/audio/systemFx";
 import { triggerHaptic } from "@/lib/haptics";
 import { setAndroidCallActive } from "@/lib/voice/androidCallService";
@@ -109,15 +110,26 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
   const userId = user?.id ?? null;
   const displayName = user?.displayName ?? "";
 
+  // The client lives through a change of language, so it is given a function
+  // that looks the current translator up each time it speaks.
+  const latestTranslator = useRef(t);
+  useEffect(() => {
+    latestTranslator.current = t;
+  }, [t]);
+  const translate = useCallback<Translator>(
+    (key, values) => latestTranslator.current(key, values),
+    [],
+  );
+
   useEffect(() => {
     if (userId === null) return;
-    const client = ports.createVoice({ userId, displayName });
+    const client = ports.createVoice({ userId, displayName, translate });
     holder.attach(client);
     const queued = pendingJoin.current;
     pendingJoin.current = null;
     if (queued !== null) void client.join(queued).catch(() => {});
     return () => holder.detach();
-  }, [holder, ports, userId, displayName]);
+  }, [holder, ports, userId, displayName, translate]);
 
   const state = useSyncExternalStore(holder.subscribe, holder.getState, () => IDLE_VOICE_STATE);
   const startedAt = useSyncExternalStore(holder.subscribe, holder.getStartedAt, () => null);

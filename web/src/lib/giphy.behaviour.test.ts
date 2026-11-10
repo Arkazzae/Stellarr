@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { MessageKey } from "@/i18n";
+
 import {
   fetchGiphyGif,
   fetchGiphyPage,
@@ -10,6 +12,11 @@ import {
 } from "./giphy";
 
 const fetchMock = vi.fn();
+
+/** What a failed call throws: an error naming the catalog entry that words it. */
+function failure(messageKey: MessageKey) {
+  return expect.objectContaining({ messageKey });
+}
 
 function respond(body: unknown, init: { ok?: boolean; status?: number } = {}) {
   return { ok: init.ok ?? true, status: init.status ?? 200, json: async () => body };
@@ -68,9 +75,7 @@ describe("the runtime API key", () => {
     fetchMock.mockResolvedValueOnce(respond({}, { ok: false, status: 503 }));
     fetchMock.mockResolvedValueOnce(respond({ apiKey: "second-try" }));
 
-    await expect(resolveGiphyApiKey("")).rejects.toThrow(
-      "Nie udało się odczytać konfiguracji GIPHY.",
-    );
+    await expect(resolveGiphyApiKey("")).rejects.toThrow(failure("giphy.configUnreadable"));
     await expect(resolveGiphyApiKey("")).resolves.toBe("second-try");
   });
 
@@ -78,7 +83,7 @@ describe("the runtime API key", () => {
     const resolveGiphyApiKey = await loadResolver();
     fetchMock.mockResolvedValue(respond({ apiKey: "   " }));
 
-    await expect(resolveGiphyApiKey("")).rejects.toThrow("Brak klucza API GIPHY.");
+    await expect(resolveGiphyApiKey("")).rejects.toThrow(failure("giphy.keyMissing"));
   });
 });
 
@@ -139,9 +144,7 @@ describe("parsing a GIF", () => {
   });
 
   it("rejects a response without a data list", () => {
-    expect(() => parseGiphyPage({ data: "nope" })).toThrow(
-      "GIPHY zwróciło nieprawidłową odpowiedź.",
-    );
+    expect(() => parseGiphyPage({ data: "nope" })).toThrow(failure("giphy.badResponse"));
   });
 
   it("derives pagination from the items when the response has none", () => {
@@ -204,30 +207,22 @@ describe("fetching a page", () => {
   });
 
   it("does not call GIPHY without a key", async () => {
-    await expect(fetchGiphyPage({ apiKey: "", customerId })).rejects.toThrow(
-      "Brak klucza API GIPHY.",
-    );
+    await expect(fetchGiphyPage({ apiKey: "", customerId })).rejects.toThrow(failure("giphy.keyMissing"));
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it("tells a rate limit from any other failure", async () => {
     fetchMock.mockResolvedValueOnce(respond({}, { ok: false, status: 429 }));
-    await expect(fetchGiphyPage({ apiKey, customerId })).rejects.toThrow(
-      "Limit zapytań GIPHY został wyczerpany. Spróbuj później.",
-    );
+    await expect(fetchGiphyPage({ apiKey, customerId })).rejects.toThrow(failure("giphy.rateLimited"));
 
     fetchMock.mockResolvedValueOnce(respond({}, { ok: false, status: 500 }));
-    await expect(fetchGiphyPage({ apiKey, customerId })).rejects.toThrow(
-      "Nie udało się pobrać GIF-ów z GIPHY.",
-    );
+    await expect(fetchGiphyPage({ apiKey, customerId })).rejects.toThrow(failure("giphy.fetchFailed"));
   });
 });
 
 describe("fetching one GIF", () => {
   it("refuses an id that could change the request path", async () => {
-    await expect(fetchGiphyGif("key", "../trending", "customer")).rejects.toThrow(
-      "Nieprawidłowy identyfikator GIF-a.",
-    );
+    await expect(fetchGiphyGif("key", "../trending", "customer")).rejects.toThrow(failure("giphy.badId"));
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -245,14 +240,10 @@ describe("fetching one GIF", () => {
 
   it("reports a GIF that was removed and one that cannot be read", async () => {
     fetchMock.mockResolvedValueOnce(respond({}, { ok: false, status: 404 }));
-    await expect(fetchGiphyGif("key", "AbCd1234", "customer")).rejects.toThrow(
-      "GIF nie jest już dostępny w GIPHY.",
-    );
+    await expect(fetchGiphyGif("key", "AbCd1234", "customer")).rejects.toThrow(failure("giphy.gone"));
 
     fetchMock.mockResolvedValueOnce(respond({ data: { id: "AbCd1234" } }));
-    await expect(fetchGiphyGif("key", "AbCd1234", "customer")).rejects.toThrow(
-      "GIPHY zwróciło nieprawidłowy GIF.",
-    );
+    await expect(fetchGiphyGif("key", "AbCd1234", "customer")).rejects.toThrow(failure("giphy.badGif"));
   });
 });
 

@@ -1,6 +1,14 @@
 "use client";
 
-import type { OpusProfileId, ScreenShareQualityId, VoiceSettings } from "@/ports";
+import {
+  OPUS_PROFILE_HINT,
+  OPUS_PROFILE_LABEL,
+  SCREEN_SHARE_QUALITY_HINT,
+  SCREEN_SHARE_QUALITY_LABEL,
+  type OpusProfileId,
+  type ScreenShareQualityId,
+  type VoiceSettings,
+} from "@/ports";
 import { useLanguage } from "@/state/hooks";
 
 import { VoiceSection } from "./VoiceFields";
@@ -21,19 +29,31 @@ const OPUS_ORDER: readonly OpusProfileId[] = [
 
 /** The bottom is what a poor link can carry, the top what a studio would keep. */
 const OPUS_RUNGS: Record<OpusProfileId, Rung> = {
-  economy: { icon: "wifi", label: "voice.profile.economy", hint: "voice.profile.economyHint" },
+  economy: {
+    icon: "wifi",
+    label: OPUS_PROFILE_LABEL.economy,
+    hint: OPUS_PROFILE_HINT.economy,
+  },
   balanced: {
     icon: "signal",
-    label: "voice.profile.balanced",
-    hint: "voice.profile.balancedHint",
+    label: OPUS_PROFILE_LABEL.balanced,
+    hint: OPUS_PROFILE_HINT.balanced,
   },
-  clarity: { icon: "wave", label: "voice.profile.clarity", hint: "voice.profile.clarityHint" },
+  clarity: {
+    icon: "wave",
+    label: OPUS_PROFILE_LABEL.clarity,
+    hint: OPUS_PROFILE_HINT.clarity,
+  },
   premium: {
     icon: "sparkle",
-    label: "voice.profile.premium",
-    hint: "voice.profile.premiumHint",
+    label: OPUS_PROFILE_LABEL.premium,
+    hint: OPUS_PROFILE_HINT.premium,
   },
-  studio: { icon: "medal", label: "voice.profile.studio", hint: "voice.profile.studioHint" },
+  studio: {
+    icon: "medal",
+    label: OPUS_PROFILE_LABEL.studio,
+    hint: OPUS_PROFILE_HINT.studio,
+  },
 };
 
 const SCREEN_ORDER: readonly ScreenShareQualityId[] = [
@@ -44,14 +64,26 @@ const SCREEN_ORDER: readonly ScreenShareQualityId[] = [
 ];
 
 const SCREEN_RUNGS: Record<ScreenShareQualityId, Rung> = {
-  economy: { icon: "wifi", label: "voice.screen.economy", hint: "voice.screen.economyHint" },
+  economy: {
+    icon: "wifi",
+    label: SCREEN_SHARE_QUALITY_LABEL.economy,
+    hint: SCREEN_SHARE_QUALITY_HINT.economy,
+  },
   balanced: {
     icon: "signal",
-    label: "voice.screen.balanced",
-    hint: "voice.screen.balancedHint",
+    label: SCREEN_SHARE_QUALITY_LABEL.balanced,
+    hint: SCREEN_SHARE_QUALITY_HINT.balanced,
   },
-  sharp: { icon: "eye", label: "voice.screen.sharp", hint: "voice.screen.sharpHint" },
-  ultra: { icon: "sparkle", label: "voice.screen.ultra", hint: "voice.screen.ultraHint" },
+  sharp: {
+    icon: "eye",
+    label: SCREEN_SHARE_QUALITY_LABEL.sharp,
+    hint: SCREEN_SHARE_QUALITY_HINT.sharp,
+  },
+  ultra: {
+    icon: "sparkle",
+    label: SCREEN_SHARE_QUALITY_LABEL.ultra,
+    hint: SCREEN_SHARE_QUALITY_HINT.ultra,
+  },
 };
 
 /**
@@ -79,7 +111,7 @@ export function VoiceAudioQualitySection({ settings, onChange }: QualitySectionP
 }
 
 /**
- * The other half of "Głos i wideo". The control bar offers the same choice, but
+ * The other half of "Voice and video". The control bar offers the same choice, but
  * only mid-share, which is the worst moment to be reading about bitrates.
  */
 export function VoiceScreenSharingSection({ settings, onChange }: QualitySectionProps) {

@@ -10,7 +10,7 @@ import type { PersonVM } from "@/components/view-models";
 import { useLanguage } from "@/state/hooks";
 
 export interface InvitePersonVM extends PersonVM {
-  /** Presence as words ("Dostępny", "Nie przeszkadzać"), resolved by the container. */
+  /** Presence as words ("Online", "Do not disturb"), resolved by the container. */
   status: string;
   /** Already a member: the row states that instead of offering an invite. */
   member?: boolean;

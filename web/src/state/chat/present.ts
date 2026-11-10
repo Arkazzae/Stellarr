@@ -19,6 +19,8 @@ export interface PresentationContext {
   mentions: ReadonlyMap<string, MentionTarget>;
   pinnedIds: ReadonlySet<string>;
   reactionsOf: (messageId: string) => Reaction[];
+  /** The badge of a file with no extension, in the reader's language. */
+  extFallback: string;
 }
 
 /**
@@ -32,7 +34,7 @@ export function presentTranscript(
   transcript: readonly TranscriptSection[],
   context: PresentationContext,
 ): TranscriptSectionVM[] {
-  const { selfId, server, faces, customEmoji, mentions, pinnedIds, reactionsOf } =
+  const { selfId, server, faces, customEmoji, mentions, pinnedIds, reactionsOf, extFallback } =
     context;
   return transcript.map((section) => ({
     day: section.day,
@@ -61,6 +63,7 @@ export function presentTranscript(
               ...(system ? { system: true } : {}),
               emoji: customEmoji,
               mentions,
+              extFallback,
             }),
             ...(pinnedIds.has(message.id) ? { pinned: true } : {}),
             ...(reactions.length > 0 ? { reactions } : {}),

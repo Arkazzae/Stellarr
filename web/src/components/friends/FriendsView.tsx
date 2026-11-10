@@ -84,7 +84,7 @@ export function FriendsView({
 
         {/* Outside the tablist on purpose: it opens a form, not one more list.
             It is the app's primary button because it does the same kind of
-            thing as "Nowy link" or "Dodaj kanał"; below 768 only the icon
+            thing as "New link" or "Add channel"; below 768 only the icon
             survives and `aria-label` keeps the name. */}
         <button
           type="button"

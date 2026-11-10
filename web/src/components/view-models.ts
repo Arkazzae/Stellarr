@@ -108,7 +108,7 @@ export interface DmConversationVM {
   id: string;
   peer: PersonVM;
   /**
-   * The second line, already composed ("Ada: wrzucone", "Ty: dam znać", or the
+   * The second line, already composed ("Ada: uploaded", "You: will let you know", or the
    * invitation to start), so the rail never rebuilds a sentence from parts and
    * an empty thread is not a special case there.
    */
@@ -136,7 +136,7 @@ export interface FriendRequestVM {
   username: string;
   /** Incoming is answered, outgoing is withdrawn; the row differs. */
   direction: "incoming" | "outgoing";
-  /** "Wysłano 3 dni temu". */
+  /** "Sent 3 days ago". */
   when: string;
 }
 

@@ -281,8 +281,9 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       mentions,
       pinnedIds,
       reactionsOf: (messageId) => ports.messageActions.getReactions(messageId),
+      extFallback: t("attachment.extFallback"),
     };
-  }, [ports, reactionEpoch, user?.id, server, faces, customEmoji, mentions, pinnedIds]);
+  }, [ports, reactionEpoch, user?.id, server, faces, customEmoji, mentions, pinnedIds, t]);
 
   const sections = useMemo(
     () => presentTranscript(buildTranscript(messages, new Date(), locale), view),

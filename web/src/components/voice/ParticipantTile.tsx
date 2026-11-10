@@ -107,7 +107,7 @@ export function ParticipantTile({
           autoPlay
           playsInline
           muted={local}
-          aria-label={`Kamera: ${person.displayName}`}
+          aria-label={t("voice.cameraOf", { name: person.displayName })}
         />
       ) : (
         <Avatar

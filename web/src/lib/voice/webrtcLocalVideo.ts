@@ -1,3 +1,4 @@
+import type { Translator } from "@/i18n";
 import type { UserId } from "@/lib/api/types";
 import {
   cameraEncoding,
@@ -29,6 +30,8 @@ import { sendEncodings, type Peer } from "./webrtcPeer";
 
 /** What the camera and the screen share need from the call they are part of. */
 export interface LocalVideoEnv {
+  /** Words what goes wrong, in the language the person has now. */
+  readonly translate: Translator;
   readonly store: VoiceStateStore;
   readonly peers: ReadonlyMap<UserId, Peer>;
   settings(): VoiceSettings;
@@ -149,7 +152,7 @@ export class LocalCamera {
     const { env } = this;
     const settings = env.settings();
     try {
-      return await captureCamera(settings);
+      return await captureCamera(settings, undefined, env.translate);
     } catch (cause) {
       if (env.isStale(session)) return null;
       const retryable =
@@ -160,14 +163,14 @@ export class LocalCamera {
     }
 
     try {
-      return await captureCamera(env.useSystemCamera());
+      return await captureCamera(env.useSystemCamera(), undefined, env.translate);
     } catch (cause) {
       return env.isStale(session) ? null : this.fail(cause);
     }
   }
 
   private fail(cause: unknown): null {
-    this.env.store.set({ cameraPending: false, error: cameraError(cause) });
+    this.env.store.set({ cameraPending: false, error: cameraError(this.env.translate, cause) });
     return null;
   }
 
@@ -186,7 +189,7 @@ export class LocalCamera {
     // No other camera could be opened. The call stays up, and the dead sender
     // goes rather than publishing a frozen tile for good.
     await this.stop();
-    this.env.store.set({ error: cameraLostError });
+    this.env.store.set({ error: cameraLostError(this.env.translate) });
   }
 
   private async replace(settings: VoiceSettings): Promise<void> {
@@ -198,9 +201,9 @@ export class LocalCamera {
 
     let capture: CameraCapture;
     try {
-      capture = await captureCamera(settings);
+      capture = await captureCamera(settings, undefined, env.translate);
     } catch (cause) {
-      env.store.set({ error: cameraError(cause) });
+      env.store.set({ error: cameraError(env.translate, cause) });
       return;
     }
     if (superseded()) {
@@ -223,7 +226,7 @@ export class LocalCamera {
         ),
       );
       capture.dispose();
-      env.store.set({ error: cameraSwapFailedError });
+      env.store.set({ error: cameraSwapFailedError(env.translate) });
       return;
     }
 
@@ -270,9 +273,9 @@ export class LocalScreen {
     env.store.set({ screenSharePending: true, error: null });
     let capture: ScreenCapture;
     try {
-      capture = await captureScreen(undefined, env.settings().screenShareQuality);
+      capture = await captureScreen(undefined, env.settings().screenShareQuality, env.translate);
     } catch (cause) {
-      env.store.set({ screenSharePending: false, error: screenShareError(cause) });
+      env.store.set({ screenSharePending: false, error: screenShareError(env.translate, cause) });
       return;
     }
     if (env.isStale(session)) {
@@ -347,11 +350,11 @@ export class LocalScreen {
       [...this.env.peers.values()].map((peer) => this.tune(peer, quality)),
     );
 
-    const { store } = this.env;
+    const { store, translate } = this.env;
     if (captureUpdated && tuned.every(Boolean)) {
       if (store.getSnapshot().error?.kind === "screen-share") store.set({ error: null });
     } else {
-      store.set({ error: screenQualityPartialError });
+      store.set({ error: screenQualityPartialError(translate) });
     }
   }
 

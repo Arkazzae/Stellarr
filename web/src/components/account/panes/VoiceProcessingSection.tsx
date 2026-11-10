@@ -1,11 +1,13 @@
 "use client";
 
 import type { MessageKey } from "@/i18n";
-import type {
-  ActiveNoiseSuppression,
-  MicTest,
-  NoiseSuppressionMode,
-  VoiceSettings,
+import {
+  NOISE_MODE_HINT,
+  NOISE_MODE_LABEL,
+  type ActiveNoiseSuppression,
+  type MicTest,
+  type NoiseSuppressionMode,
+  type VoiceSettings,
 } from "@/ports";
 import { useLanguage } from "@/state/hooks";
 
@@ -24,23 +26,35 @@ const NOISE_ORDER: readonly NoiseSuppressionMode[] = [
 const NOISE_RUNGS: Record<NoiseSuppressionMode, Rung> = {
   browser: {
     icon: "noiseBrowser",
-    label: "voice.noise.browser",
-    hint: "voice.noise.browserHint",
+    label: NOISE_MODE_LABEL.browser,
+    hint: NOISE_MODE_HINT.browser,
   },
   rnnoise: {
     icon: "noiseRnnoise",
-    label: "voice.noise.rnnoise",
-    hint: "voice.noise.rnnoiseHint",
+    label: NOISE_MODE_LABEL.rnnoise,
+    hint: NOISE_MODE_HINT.rnnoise,
   },
-  gtcrn: { icon: "noiseGtcrn", label: "voice.noise.gtcrn", hint: "voice.noise.gtcrnHint" },
-  speex: { icon: "noiseSpeex", label: "voice.noise.speex", hint: "voice.noise.speexHint" },
-  off: { icon: "noiseOff", label: "voice.noise.off", hint: "voice.noise.offHint" },
+  gtcrn: {
+    icon: "noiseGtcrn",
+    label: NOISE_MODE_LABEL.gtcrn,
+    hint: NOISE_MODE_HINT.gtcrn,
+  },
+  speex: {
+    icon: "noiseSpeex",
+    label: NOISE_MODE_LABEL.speex,
+    hint: NOISE_MODE_HINT.speex,
+  },
+  off: {
+    icon: "noiseOff",
+    label: NOISE_MODE_LABEL.off,
+    hint: NOISE_MODE_HINT.off,
+  },
 };
 
 /**
  * What each suppressor is called once it is the one actually running.
  *
- * Separate from the rung labels, which name the choice: "Wyłączona" is a
+ * Separate from the rung labels, which name the choice: "Off" is a
  * sensible thing to pick and a strange thing to be told is happening.
  */
 const ACTIVE_NOISE_LABEL: Record<ActiveNoiseSuppression, MessageKey> = {

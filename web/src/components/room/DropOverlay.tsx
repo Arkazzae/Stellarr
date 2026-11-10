@@ -9,7 +9,7 @@ import { useLanguage } from "@/state/hooks";
 const MAX_FILES = 5;
 
 export interface DropOverlayProps {
-  /** Bare channel name; the card reads "Upuść, aby dodać do #ogólny". */
+  /** Bare channel name; the card reads "Drop to add to #general". */
   channelName: string;
   /**
    * False while the room shows something other than that channel's transcript,

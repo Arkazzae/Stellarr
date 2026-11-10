@@ -36,7 +36,7 @@ export interface ConfirmDialogProps {
   title: string;
   /** What the question does not say, usually the consequence. */
   description?: string;
-  /** Names the deed ("Usuń", "Zablokuj"), never "OK". */
+  /** Names the deed ("Delete", "Block"), never "OK". */
   confirmLabel?: string;
   cancelLabel?: string;
   /** The deed destroys something: red button, red glyph. */

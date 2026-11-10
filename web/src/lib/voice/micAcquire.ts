@@ -1,3 +1,5 @@
+import type { Translator } from "@/i18n";
+import { translateForDocument } from "@/i18n/defaultLocale";
 import { microphoneConstraints } from "./audioProfiles";
 import { MicCaptureError } from "./micCapture";
 import type { VoiceSettings } from "./settings";
@@ -9,29 +11,21 @@ export interface OpenedMicrophone {
   track: MediaStreamTrack;
 }
 
-const NO_MICROPHONE = "Brak dostępnego mikrofonu. Podłącz go i dołącz ponownie.";
-
 /** The browser's own `getUserMedia`, or null where there is none (insecure origin, old browser). */
 export function browserGetUserMedia(): GetUserMedia | null {
   if (typeof navigator === "undefined" || !navigator.mediaDevices?.getUserMedia) return null;
   return (constraints) => navigator.mediaDevices.getUserMedia(constraints);
 }
 
-function failureFor(cause: unknown): MicCaptureError {
+function failureFor(cause: unknown, t: Translator): MicCaptureError {
   const name = typeof cause === "object" && cause !== null && "name" in cause ? cause.name : "";
   if (name === "NotAllowedError" || name === "SecurityError") {
-    return new MicCaptureError(
-      "denied",
-      "Dostęp do mikrofonu został zablokowany. Zezwól na niego w ustawieniach przeglądarki i dołącz ponownie.",
-    );
+    return new MicCaptureError("denied", t("voiceClient.micDenied"));
   }
   if (name === "OverconstrainedError" || name === "NotFoundError") {
-    return new MicCaptureError(
-      "unavailable",
-      "Wybrany mikrofon jest niedostępny. Wybierz inny i spróbuj ponownie.",
-    );
+    return new MicCaptureError("unavailable", t("voiceClient.micGone"));
   }
-  return new MicCaptureError("unavailable", NO_MICROPHONE);
+  return new MicCaptureError("unavailable", t("voiceClient.micMissing"));
 }
 
 function stopAll(stream: MediaStream): void {
@@ -122,19 +116,21 @@ async function recaptureWithVoiceIsolation(
  * Open the device for these settings.
  *
  * Throws `MicCaptureError`, so the caller can tell "blocked" from "no device"
- * and say something useful. A stream that arrives without an audio track is
- * stopped before the error is thrown.
+ * and say something useful, worded by `t` (the page's language without one).
+ * A stream that arrives without an audio track is stopped before the error is
+ * thrown.
  */
 export async function openMicrophone(
   settings: VoiceSettings,
   getUserMedia: GetUserMedia,
+  t: Translator = translateForDocument,
 ): Promise<OpenedMicrophone> {
   const constraints = microphoneConstraints(settings);
   let stream: MediaStream;
   try {
     stream = await getUserMedia({ audio: constraints, video: false });
   } catch (cause) {
-    throw failureFor(cause);
+    throw failureFor(cause, t);
   }
 
   if (settings.echoCancellation) {
@@ -144,7 +140,7 @@ export async function openMicrophone(
   const track = stream.getAudioTracks()[0];
   if (!track) {
     stopAll(stream);
-    throw new MicCaptureError("unavailable", NO_MICROPHONE);
+    throw new MicCaptureError("unavailable", t("voiceClient.micMissing"));
   }
   return { stream, track };
 }

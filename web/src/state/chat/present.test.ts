@@ -24,6 +24,7 @@ const context = (overrides: Partial<PresentationContext> = {}): PresentationCont
   mentions: new Map(),
   pinnedIds: new Set(),
   reactionsOf: () => [],
+  extFallback: "FILE",
   ...overrides,
 });
 

@@ -103,7 +103,7 @@ export function createRuntime(options: RuntimeOptions = {}): Runtime {
   const readStore = new ChannelReadStore();
   let rtcConfig: RtcConfig | undefined;
 
-  const createVoice: Ports["createVoice"] = ({ userId, displayName }) => {
+  const createVoice: Ports["createVoice"] = ({ userId, displayName, translate }) => {
     const ice = new RuntimeIceProvider({
       // TURN credentials are per user and expire, so each join asks for fresh
       // ones: one request per join, however many peers the channel has.
@@ -117,6 +117,7 @@ export function createRuntime(options: RuntimeOptions = {}): Runtime {
       realtime,
       selfUserId: userId,
       selfDisplayName: displayName,
+      translate,
       ice,
       // How each other person sounds to this account outlives the call and the
       // tab, in this browser only.

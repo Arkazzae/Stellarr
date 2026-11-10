@@ -144,7 +144,7 @@ export function ServerSettingsDialog({ open, data, reload }: ServerSettingsDialo
           void soundboard.updateSettings({ rateLimited }).catch(() => {});
         },
         loading: voice.soundboard.loading,
-        error: voice.soundboard.error,
+        error: voice.soundboard.error === null ? null : t(voice.soundboard.error),
         onCreate: (input) => soundboard.create(input),
         onUpdate: (soundId, patch) => soundboard.update(soundId, patch),
         onDelete: (soundId) => soundboard.delete(soundId),

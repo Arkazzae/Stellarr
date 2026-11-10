@@ -169,7 +169,7 @@ function ParticipantAudio({
  * item, and block. Everything else about a person belongs on their profile
  * card, which is one item away. Moderation sits last, below its own rule,
  * because the items that end somebody's presence must not be within reach of a
- * hand aiming at "Wyślij wiadomość". Anything destructive asks first.
+ * hand aiming at "Send message". Anything destructive asks first.
  */
 export function UserMenu({
   at,

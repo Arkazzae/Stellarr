@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ApiClient } from "@/lib/api/client";
 import type { SoundboardSnapshot, SoundboardSound } from "@/lib/api/types";
 import type { RealtimeClient, RealtimeEventMap } from "@/lib/realtime/types";
+import { translateMessage, type MessageKey } from "@/i18n";
 import { DEFAULT_SETTINGS } from "@/lib/voice/settings";
 
 import { createSoundboardAdapter } from "./soundboard";
@@ -28,6 +29,12 @@ function snapshot(
     settings: { everyoneCanPlay: true, rateLimited },
     canManage: true,
   };
+}
+
+/** The failure the adapter reports, worded in Polish the way the interface shows it. */
+function polishError(adapter: { getSnapshot(): { error: MessageKey | null } }): string | null {
+  const { error } = adapter.getSnapshot();
+  return error === null ? null : translateMessage("pl", error);
 }
 
 function fakeRealtime() {
@@ -123,7 +130,8 @@ describe("soundboard loading", () => {
 
     expect(adapter.getSnapshot().sounds).toEqual([AIRHORN]);
     expect(adapter.getSnapshot().loading).toBe(false);
-    expect(adapter.getSnapshot().error).toBe("Nie udało się pobrać dźwięków serwera.");
+    expect(adapter.getSnapshot().error).toBe("soundboard.loadFailed");
+    expect(polishError(adapter)).toBe("Nie udało się pobrać dźwięków serwera.");
     adapter.dispose();
   });
 
@@ -206,7 +214,8 @@ describe("soundboard playback requests", () => {
     await adapter.play("airhorn", "channel-1");
 
     expect(adapter.cooldownRemaining()).toBe(0);
-    expect(adapter.getSnapshot().error).toBe("Serwer odrzucił odtworzenie dźwięku.");
+    expect(adapter.getSnapshot().error).toBe("soundboard.playRejected");
+    expect(polishError(adapter)).toBe("Serwer odrzucił odtworzenie dźwięku.");
     await adapter.play("airhorn", "channel-1");
     expect(realtime.playSoundboard).toHaveBeenCalledTimes(2);
     adapter.dispose();
@@ -314,7 +323,8 @@ describe("soundboard management", () => {
     await expect(adapter.updateSettings({ rateLimited: false })).rejects.toBe(failure);
 
     expect(adapter.getSnapshot().settings.rateLimited).toBe(true);
-    expect(adapter.getSnapshot().error).toBe("Nie udało się zapisać zasad soundboardu.");
+    expect(adapter.getSnapshot().error).toBe("soundboard.rulesFailed");
+    expect(polishError(adapter)).toBe("Nie udało się zapisać zasad soundboardu.");
     adapter.dispose();
   });
 });

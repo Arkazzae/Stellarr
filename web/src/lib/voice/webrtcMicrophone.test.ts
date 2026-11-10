@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi, type Mock } from "vitest";
 
+import { polish } from "@/test/translators";
+
 import { captureMicrophone, type MicCapture } from "./micPipeline";
 import type * as MicPipeline from "./micPipeline";
 import { DEFAULT_SETTINGS, type VoiceSettings } from "./settings";
@@ -46,6 +48,7 @@ beforeEach(() => {
   speech = { add: vi.fn(async () => true), remove: vi.fn() };
   onDeviceLost = vi.fn<() => void>();
   microphone = new LocalMicrophone({
+    translate: polish,
     selfUserId: "u-a",
     store,
     speech: speech as unknown as SpeechDetector,

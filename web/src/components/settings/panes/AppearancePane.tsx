@@ -254,10 +254,10 @@ export function AppearancePane({
     { value: "normal", label: t("theme.contrast.normal"), detail: t("theme.contrast.normalDetail") },
     { value: "high", label: t("theme.contrast.high"), detail: t("theme.contrast.highDetail") },
   ];
-  const sizeOptions: readonly SegmentedOption<SizePreference>[] = SIZES.map(({ id, detail }) => ({
+  const sizeOptions: readonly SegmentedOption<SizePreference>[] = SIZES.map(({ id }) => ({
     value: id,
     label: t(`theme.size.${id}`),
-    detail,
+    detail: t(`theme.size.${id}Detail`),
   }));
   const densityOptions: readonly SegmentedOption<DensityPreference>[] = DENSITIES.map(({ id }) => ({
     value: id,

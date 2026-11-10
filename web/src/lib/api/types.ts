@@ -1,5 +1,6 @@
 /** Wire types shared by the HTTP client, the realtime hub and the UI ports. */
 
+import type { MessageKey } from "@/i18n";
 import type { OpusProfileId } from "@/lib/voice/settings";
 
 export type UserId = string;
@@ -14,24 +15,24 @@ export type AttachmentId = string;
  */
 export type Presence = "online" | "idle" | "dnd" | "offline";
 
-/** Wording for someone else's presence. Gender-neutral, since it sits next to a name. */
-export const PRESENCE_LABEL: Record<Presence, string> = {
-  online: "W sieci",
-  idle: "Zaraz wracam",
-  dnd: "Nie przeszkadzać",
-  offline: "Poza siecią",
+/** Catalog keys for the wording of someone else's presence. Gender-neutral, since it sits next to a name. */
+export const PRESENCE_LABEL: Record<Presence, MessageKey> = {
+  online: "presence.online",
+  idle: "presence.idle",
+  dnd: "presence.dnd",
+  offline: "presence.offline",
 };
 
 /**
- * Wording for your own presence, phrased as a choice rather than an
- * observation: looking absent is "Niewidoczny", while "Poza siecią" is only
- * ever a fact about somebody else.
+ * Catalog keys for the wording of your own presence, phrased as a choice
+ * rather than an observation: looking absent is "Invisible", while "Offline"
+ * is only ever a fact about somebody else.
  */
-export const SELF_PRESENCE_LABEL: Record<Presence, string> = {
-  online: "Dostępny",
-  idle: "Zaraz wracam",
-  dnd: "Nie przeszkadzać",
-  offline: "Niewidoczny",
+export const SELF_PRESENCE_LABEL: Record<Presence, MessageKey> = {
+  online: "account.presence.onlineLabel",
+  idle: "account.presence.idleLabel",
+  dnd: "account.presence.dndLabel",
+  offline: "account.presence.offlineLabel",
 };
 
 export const PRESENCE_VALUES: readonly Presence[] = [
@@ -191,7 +192,7 @@ export interface NewServer {
   name: string;
   description?: string;
   isPublic?: boolean;
-  /** First text channel; the server names it "ogólny" when absent. */
+  /** First text channel; the server picks its own default name when absent. */
   textChannelName?: string;
   /** First voice channel; an empty string creates the server without one. */
   voiceChannelName?: string;

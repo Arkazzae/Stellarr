@@ -1,3 +1,5 @@
+import type { Translator } from "@/i18n";
+import { translateForDocument } from "@/i18n/defaultLocale";
 import type { ChannelId, RtcConfig, UserId } from "@/lib/api/types";
 import type { RealtimeClient, VoiceSignal } from "@/lib/realtime/types";
 import {
@@ -48,6 +50,12 @@ export interface WebRtcVoiceClientOptions {
    * channel with three people costs one `/api/bootstrap` call rather than three.
    */
   ice: VoiceIceProvider;
+  /**
+   * Words the failures the person is told about. Called when a failure
+   * happens, so it should answer in the language they have at that moment.
+   * Without one the client follows the page's language.
+   */
+  translate?: Translator;
   /** Current settings; read fresh on every capture. */
   getSettings?: () => VoiceSettings;
   /** Persists an automatic fallback after an input/output device disappears. */
@@ -95,6 +103,7 @@ export class WebRtcVoiceClient implements VoiceClient {
   private readonly health: CallHealth;
   private readonly mesh: Mesh;
   private readonly settingsQueue: SettingsQueue;
+  private readonly t: Translator;
 
   private channelId: ChannelId | null = null;
   private settings: VoiceSettings;
@@ -111,6 +120,7 @@ export class WebRtcVoiceClient implements VoiceClient {
   private session = 0;
 
   constructor(private readonly options: WebRtcVoiceClientOptions) {
+    this.t = options.translate ?? translateForDocument;
     this.settings = options.getSettings?.() ?? { ...DEFAULT_SETTINGS };
     const profile = profileFor(this.settings);
     this.bitrate = new AdaptiveBitrateController({
@@ -157,6 +167,7 @@ export class WebRtcVoiceClient implements VoiceClient {
       changed: () => this.publishPeers(),
     });
     this.microphone = new LocalMicrophone({
+      translate: this.t,
       selfUserId: options.selfUserId,
       store: this.store,
       speech: this.speech,
@@ -168,6 +179,7 @@ export class WebRtcVoiceClient implements VoiceClient {
       },
     });
     this.health = new CallHealth({
+      translate: this.t,
       realtime: options.realtime,
       ice: options.ice,
       store: this.store,
@@ -180,6 +192,7 @@ export class WebRtcVoiceClient implements VoiceClient {
       applyMicEncoding: () => this.mesh.applyMicEncoding(),
     });
     const video: LocalVideoEnv = {
+      translate: this.t,
       store: this.store,
       peers: this.peers,
       settings: () => this.settings,
@@ -238,7 +251,7 @@ export class WebRtcVoiceClient implements VoiceClient {
 
   async join(channelId: ChannelId): Promise<void> {
     if (this.disposed) return;
-    const incompatibility = rtcIncompatibility(this.options.rtc);
+    const incompatibility = rtcIncompatibility(this.t, this.options.rtc);
     if (incompatibility) {
       this.store.set({
         channelId,
@@ -302,7 +315,7 @@ export class WebRtcVoiceClient implements VoiceClient {
     try {
       iceServers = await this.options.ice.beginSession();
     } catch (cause) {
-      if (session === this.session) this.abortJoin(iceConfigError(cause));
+      if (session === this.session) this.abortJoin(iceConfigError(this.t, cause));
       return;
     }
     if (this.isStale(session)) return;
@@ -314,7 +327,7 @@ export class WebRtcVoiceClient implements VoiceClient {
     try {
       await this.options.realtime.joinVoice(channelId);
     } catch {
-      if (session === this.session) this.abortJoin(joinFailedError);
+      if (session === this.session) this.abortJoin(joinFailedError(this.t));
       return;
     }
     if (this.isStale(session)) return;
@@ -536,7 +549,7 @@ export class WebRtcVoiceClient implements VoiceClient {
   ): Promise<{ capture: MicCapture; settings: VoiceSettings } | null> {
     let settings = this.settings;
     try {
-      return { capture: await captureMicrophone(settings), settings };
+      return { capture: await captureMicrophone(settings, { translate: this.t }), settings };
     } catch (cause) {
       if (session !== this.session) return null;
       const retryable =
@@ -544,7 +557,7 @@ export class WebRtcVoiceClient implements VoiceClient {
         cause instanceof MicCaptureError &&
         cause.kind === "unavailable";
       if (!retryable) {
-        this.abortJoin(micError(cause));
+        this.abortJoin(micError(this.t, cause));
         return null;
       }
     }
@@ -553,9 +566,9 @@ export class WebRtcVoiceClient implements VoiceClient {
     this.settings = settings;
     this.options.updateSettings?.({ inputDeviceId: null });
     try {
-      return { capture: await captureMicrophone(settings), settings };
+      return { capture: await captureMicrophone(settings, { translate: this.t }), settings };
     } catch (cause) {
-      if (session === this.session) this.abortJoin(micError(cause));
+      if (session === this.session) this.abortJoin(micError(this.t, cause));
       return null;
     }
   }
@@ -638,7 +651,7 @@ export class WebRtcVoiceClient implements VoiceClient {
     try {
       await this.options.realtime.joinVoice(targetChannelId);
     } catch {
-      if (this.channelId === targetChannelId) await this.endWithError(moveFailedError);
+      if (this.channelId === targetChannelId) await this.endWithError(moveFailedError(this.t));
       return;
     }
     if (this.disposed || this.channelId !== targetChannelId) return;
@@ -676,7 +689,7 @@ export class WebRtcVoiceClient implements VoiceClient {
     try {
       await this.options.realtime.joinVoice(channelId);
     } catch {
-      if (session === this.session) this.store.set({ error: rejoinFailedError });
+      if (session === this.session) this.store.set({ error: rejoinFailedError(this.t) });
       return;
     }
     if (this.isStale(session)) return;
@@ -710,7 +723,7 @@ export class WebRtcVoiceClient implements VoiceClient {
         signal.toUserId === undefined &&
         this.options.realtime.getStatus() === "connected"
       ) {
-        this.store.set({ error: signalingFailedError });
+        this.store.set({ error: signalingFailedError(this.t) });
       }
     }
   }

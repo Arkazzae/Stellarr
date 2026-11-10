@@ -35,7 +35,7 @@ export interface ChannelMenuActions {
   onDelete?: (channelId: string) => void;
   /** Adds "Kopiuj identyfikator", as the preference in "Zaawansowane" promises. */
   developerMode?: boolean;
-  /** Every section this server has, offered as "Przenieś do…" targets. */
+  /** Every section this server has, offered as "Move to…" targets. */
   sections?: readonly { id: string; name: string }[];
   /** Managers only; needs both a section to offer and somewhere to send it. */
   onMoveToSection?: (channelId: string, sectionId: string | null) => void;

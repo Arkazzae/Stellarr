@@ -1,3 +1,5 @@
+import type { Translator } from "@/i18n";
+import { translateForDocument } from "@/i18n/defaultLocale";
 import { profileFor, usesWorkletSuppression } from "./audioProfiles";
 import { browserFallback } from "./browserProcessing";
 import { buildCaptureGraph, type GraphDeps } from "./captureGraph";
@@ -30,27 +32,27 @@ export {
 
 export interface CaptureDeps extends GraphDeps {
   getUserMedia?: GetUserMedia;
+  /** Words the failures. Without one they follow the page's language. */
+  translate?: Translator;
 }
 
 /**
  * Open the microphone and build the outgoing track for these settings.
  *
  * Throws `MicCaptureError` so the caller can tell "blocked" from "no device"
- * and say something useful in Polish.
+ * and say something useful in the person's language.
  */
 export async function captureMicrophone(
   settings: VoiceSettings,
   deps: CaptureDeps = {},
 ): Promise<MicCapture> {
   const getUserMedia = deps.getUserMedia ?? browserGetUserMedia();
+  const t = deps.translate ?? translateForDocument;
   if (!getUserMedia) {
-    throw new MicCaptureError(
-      "unsupported",
-      "Ta przeglądarka nie może nagrywać dźwięku. Rozmowa głosowa wymaga połączenia HTTPS.",
-    );
+    throw new MicCaptureError("unsupported", t("voiceClient.micUnsupported"));
   }
 
-  const { stream: raw, track: rawTrack } = await openMicrophone(settings, getUserMedia);
+  const { stream: raw, track: rawTrack } = await openMicrophone(settings, getUserMedia, t);
   const { contentHint } = profileFor(settings);
   rawTrack.contentHint = contentHint;
 

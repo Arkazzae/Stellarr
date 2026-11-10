@@ -53,7 +53,6 @@ export interface PaletteColors {
 interface PaletteDefinition {
   id: string;
   label: string;
-  description: string;
   colors: PaletteColors;
   /** Small metadata still needs AA contrast even when the raw "faint" swatch is decorative. */
   accessibleFaint: string;
@@ -63,7 +62,6 @@ export const PALETTES = [
   {
     id: "midnight",
     label: "Midnight",
-    description: "Domyślny motyw Stellarr: ciepły grafit i spokojne indygo.",
     colors: {
       accent: "#5865f2",
       backgrounds: {
@@ -94,7 +92,6 @@ export const PALETTES = [
   {
     id: "discord",
     label: "Discord",
-    description: "Blurple i chłodne grafity znane z Discorda.",
     colors: {
       accent: "#5865f2",
       backgrounds: {
@@ -125,7 +122,6 @@ export const PALETTES = [
   {
     id: "spotify",
     label: "Spotify",
-    description: "Zielony akcent i neutralne, niemal czarne tła.",
     colors: {
       accent: "#1db954",
       backgrounds: {
@@ -156,7 +152,6 @@ export const PALETTES = [
   {
     id: "steam",
     label: "Steam",
-    description: "Stalowy błękit i głębokie, granatowe powierzchnie.",
     colors: {
       accent: "#1a9fff",
       backgrounds: {
@@ -187,7 +182,6 @@ export const PALETTES = [
   {
     id: "twitch",
     label: "Twitch",
-    description: "Wyrazisty fiolet na neutralnych, czarnych powierzchniach.",
     colors: {
       accent: "#9146ff",
       backgrounds: {
@@ -218,7 +212,6 @@ export const PALETTES = [
   {
     id: "github-dark",
     label: "GitHub Dark",
-    description: "Grafitowy granat i niebieski akcent GitHuba.",
     colors: {
       accent: "#58a6ff",
       backgrounds: {
@@ -256,51 +249,44 @@ export type PaletteId = Palette["id"];
  * until it is used, so the browser only fetches the selected family.
  */
 export const FONTS = [
-  { id: "outfit", label: "Outfit", detail: "Geometryczny, domyślny" },
-  { id: "inter", label: "Inter", detail: "Neutralny, precyzyjny" },
-  { id: "geist-sans", label: "Geist Sans", detail: "Techniczny, zwarty" },
-  { id: "dm-sans", label: "DM Sans", detail: "Przyjazny, czytelny" },
-  { id: "plus-jakarta-sans", label: "Plus Jakarta Sans", detail: "Nowoczesny, miękki" },
-  { id: "manrope", label: "Manrope", detail: "Otwarty, geometryczny" },
-  { id: "figtree", label: "Figtree", detail: "Naturalny, ekranowy" },
-  { id: "ibm-plex-sans", label: "IBM Plex Sans", detail: "Techniczny, humanistyczny" },
-  { id: "source-sans-3", label: "Source Sans 3", detail: "Spokojny, użytkowy" },
-  { id: "noto-sans", label: "Noto Sans", detail: "Uniwersalny, wielojęzyczny" },
-  { id: "open-sans", label: "Open Sans", detail: "Otwarty, znajomy" },
-  { id: "lato", label: "Lato", detail: "Humanistyczny, polski" },
-  { id: "poppins", label: "Poppins", detail: "Geometryczny, wyrazisty" },
-  { id: "montserrat", label: "Montserrat", detail: "Szeroki, miejski" },
-  { id: "raleway", label: "Raleway", detail: "Lekki, elegancki" },
-  { id: "nunito", label: "Nunito", detail: "Miękki, zaokrąglony" },
-  { id: "rubik", label: "Rubik", detail: "Zwarty, lekko zaokrąglony" },
-  { id: "quicksand", label: "Quicksand", detail: "Lekki, przyjazny" },
-  { id: "baloo-2", label: "Baloo 2", detail: "Pełny, swobodny" },
-  { id: "varela-round", label: "Varela Round", detail: "Prosty, obły" },
-  { id: "comfortaa", label: "Comfortaa", detail: "Miękki, geometryczny" },
-  { id: "fira-code", label: "Fira Code", detail: "Mono, programistyczny" },
-  { id: "jetbrains-mono", label: "JetBrains Mono", detail: "Mono, czytelny" },
-  { id: "source-code-pro", label: "Source Code Pro", detail: "Mono, neutralny" },
-  { id: "ibm-plex-mono", label: "IBM Plex Mono", detail: "Mono, techniczny" },
-  { id: "space-grotesk", label: "Space Grotesk", detail: "Charakterny, ekranowy" },
-  { id: "sora", label: "Sora", detail: "Cyfrowy, geometryczny" },
-  { id: "lexend", label: "Lexend", detail: "Czytelny, przestronny" },
+  { id: "outfit", label: "Outfit" },
+  { id: "inter", label: "Inter" },
+  { id: "geist-sans", label: "Geist Sans" },
+  { id: "dm-sans", label: "DM Sans" },
+  { id: "plus-jakarta-sans", label: "Plus Jakarta Sans" },
+  { id: "manrope", label: "Manrope" },
+  { id: "figtree", label: "Figtree" },
+  { id: "ibm-plex-sans", label: "IBM Plex Sans" },
+  { id: "source-sans-3", label: "Source Sans 3" },
+  { id: "noto-sans", label: "Noto Sans" },
+  { id: "open-sans", label: "Open Sans" },
+  { id: "lato", label: "Lato" },
+  { id: "poppins", label: "Poppins" },
+  { id: "montserrat", label: "Montserrat" },
+  { id: "raleway", label: "Raleway" },
+  { id: "nunito", label: "Nunito" },
+  { id: "rubik", label: "Rubik" },
+  { id: "quicksand", label: "Quicksand" },
+  { id: "baloo-2", label: "Baloo 2" },
+  { id: "varela-round", label: "Varela Round" },
+  { id: "comfortaa", label: "Comfortaa" },
+  { id: "fira-code", label: "Fira Code" },
+  { id: "jetbrains-mono", label: "JetBrains Mono" },
+  { id: "source-code-pro", label: "Source Code Pro" },
+  { id: "ibm-plex-mono", label: "IBM Plex Mono" },
+  { id: "space-grotesk", label: "Space Grotesk" },
+  { id: "sora", label: "Sora" },
+  { id: "lexend", label: "Lexend" },
 ] as const;
 
 export type FontId = (typeof FONTS)[number]["id"];
 
 /** Only message text and the composer move; the chrome keeps its own scale. */
-export const SIZES = [
-  { id: "sm", label: "Mniejszy", detail: "13,5 px" },
-  { id: "md", label: "Normalny", detail: "15 px" },
-  { id: "lg", label: "Większy", detail: "16,5 px" },
-] as const;
+export const SIZES = [{ id: "sm" }, { id: "md" }, { id: "lg" }] as const;
 
 export type SizePreference = (typeof SIZES)[number]["id"];
 
-export const DENSITIES = [
-  { id: "cozy", label: "Swobodna", detail: "Powietrze między wiadomościami" },
-  { id: "compact", label: "Zwarta", detail: "Więcej rozmowy na ekranie" },
-] as const;
+export const DENSITIES = [{ id: "cozy" }, { id: "compact" }] as const;
 
 export type DensityPreference = (typeof DENSITIES)[number]["id"];
 

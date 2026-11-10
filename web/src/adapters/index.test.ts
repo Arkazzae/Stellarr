@@ -4,6 +4,7 @@ import type { Bootstrap, Channel, User } from "@/lib/api/types";
 import type { DesktopPort } from "@/ports/desktop";
 import { BOOTSTRAP, fakeApi, FakeRealtimeClient, SELF, SERVER, TEXT_CHANNEL } from "@/test/fakes";
 import { fullApi, type FullApi } from "@/test/runtime";
+import { polish } from "@/test/translators";
 
 import { __resetRuntime, createRuntime, getRuntime, type Runtime } from "./index";
 
@@ -216,7 +217,11 @@ describe("voice", () => {
   it("creates an idle voice client for the signed-in person", async () => {
     const { runtime } = await hydrated();
 
-    const voice = runtime.ports.createVoice({ userId: SELF.id, displayName: SELF.displayName });
+    const voice = runtime.ports.createVoice({
+      userId: SELF.id,
+      displayName: SELF.displayName,
+      translate: polish,
+    });
 
     expect(voice.getSnapshot().channelId).toBeNull();
     voice.dispose();

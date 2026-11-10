@@ -36,7 +36,7 @@ describe("formatAgo", () => {
     [1 * DAY + HOUR, "wczoraj"],
     [6 * DAY, "6 dni temu"],
   ])("says %i seconds in Polish as %s", (seconds, expected) => {
-    expect(formatAgo(secondsBefore(seconds), NOW)).toBe(expected);
+    expect(formatAgo(secondsBefore(seconds), NOW, "pl")).toBe(expected);
   });
 
   it.each<[number, string]>([
@@ -53,16 +53,16 @@ describe("formatAgo", () => {
 
   it("falls back to the calendar date after a month", () => {
     const old = new Date(2026, 5, 1, 12, 0, 0).toISOString();
-    expect(formatAgo(old, NOW)).toBe(formatDate(old));
+    expect(formatAgo(old, NOW, "pl")).toBe(formatDate(old, "pl"));
     expect(formatAgo(old, NOW, "en")).toBe(formatDate(old, "en"));
   });
 
   it("treats a timestamp from the future as just now", () => {
-    expect(formatAgo(secondsBefore(-90), NOW)).toBe("przed chwilą");
+    expect(formatAgo(secondsBefore(-90), NOW, "pl")).toBe("przed chwilą");
   });
 
   it("survives an unparseable timestamp", () => {
-    expect(formatAgo("nope", NOW)).toBe("");
+    expect(formatAgo("nope", NOW, "pl")).toBe("");
   });
 });
 
@@ -70,18 +70,18 @@ describe("formatTime and formatDate", () => {
   const local = new Date(2025, 2, 12, 9, 5).toISOString();
 
   it("prints a 24 hour clock in the reader's time zone", () => {
-    expect(formatTime(local)).toBe("09:05");
+    expect(formatTime(local, "pl")).toBe("09:05");
     expect(formatTime(local, "en")).toBe("09:05");
   });
 
   it("spells the month out in the language of the interface", () => {
-    expect(formatDate(local)).toBe("12 marca 2025");
+    expect(formatDate(local, "pl")).toBe("12 marca 2025");
     expect(formatDate(local, "en")).toBe("12 March 2025");
   });
 
   it("returns an empty string for an unparseable timestamp", () => {
-    expect(formatTime("nope")).toBe("");
-    expect(formatDate("nope")).toBe("");
+    expect(formatTime("nope", "pl")).toBe("");
+    expect(formatDate("nope", "pl")).toBe("");
   });
 });
 

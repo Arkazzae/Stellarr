@@ -11,15 +11,8 @@ import { IconButton } from "@/components/primitives/IconButton";
 import { Popover } from "@/components/primitives/Popover";
 import { CustomStatusText } from "@/components/profile/ProfileBio";
 import type { PersonVM } from "@/components/view-models";
-import type { MessageKey } from "@/i18n";
+import { SELF_PRESENCE_LABEL } from "@/ports";
 import { useLanguage } from "@/state/hooks";
-
-const PRESENCE_LABEL: Record<PersonVM["presence"], MessageKey> = {
-  online: "account.presence.onlineLabel",
-  idle: "account.presence.idleLabel",
-  dnd: "account.presence.dndLabel",
-  offline: "account.presence.offlineLabel",
-};
 
 export interface AccountRowProps {
   user: PersonVM;
@@ -50,7 +43,7 @@ export function AccountRow({
     setOpen(false);
   };
 
-  const presenceLabel = t(PRESENCE_LABEL[user.presence]);
+  const presenceLabel = t(SELF_PRESENCE_LABEL[user.presence]);
   const hasCustomStatus = panel.customStatus.trim().length > 0;
   const messagesLabel =
     onOpenMessages === undefined ? t("shell.dmUnavailable") : t("shell.dm");

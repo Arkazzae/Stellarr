@@ -7,6 +7,9 @@
  * result is read back rather than assumed.
  */
 
+import type { MessageKey, Translator } from "@/i18n";
+import { translateForDocument } from "@/i18n/defaultLocale";
+
 export type ScreenShareQualityId = "economy" | "balanced" | "sharp" | "ultra";
 
 export interface ScreenShareProfile {
@@ -42,18 +45,19 @@ export const SCREEN_SHARE_PROFILES: Readonly<
   ultra: profile(2160, 60, 12_000_000, "L1T3"),
 });
 
-export const SCREEN_SHARE_QUALITY_LABEL: Record<ScreenShareQualityId, string> = {
-  economy: "Oszczędna",
-  balanced: "Zrównoważona",
-  sharp: "Wyraźna",
-  ultra: "Ultra",
+/** Catalog keys for what each quality is called and what it costs. */
+export const SCREEN_SHARE_QUALITY_LABEL: Record<ScreenShareQualityId, MessageKey> = {
+  economy: "voice.screen.economy",
+  balanced: "voice.screen.balanced",
+  sharp: "voice.screen.sharp",
+  ultra: "voice.screen.ultra",
 };
 
-export const SCREEN_SHARE_QUALITY_HINT: Record<ScreenShareQualityId, string> = {
-  economy: "Do 720p i 15 kl./s, około 1 Mb/s. Dobra przy słabszym wysyłaniu.",
-  balanced: "Do 1080p i 30 kl./s, około 2,5 Mb/s. Najlepszy wybór na co dzień.",
-  sharp: "Do 1440p i 30 kl./s, około 5 Mb/s. Czytelniejszy tekst i interfejsy.",
-  ultra: "Do 2160p i 60 kl./s, około 12 Mb/s na każdą osobę w rozmowie.",
+export const SCREEN_SHARE_QUALITY_HINT: Record<ScreenShareQualityId, MessageKey> = {
+  economy: "voice.screen.economyHint",
+  balanced: "voice.screen.balancedHint",
+  sharp: "voice.screen.sharpHint",
+  ultra: "voice.screen.ultraHint",
 };
 
 /** The default profile's limits, for callers that do not take a quality. */
@@ -131,32 +135,29 @@ function browserGetDisplayMedia(): GetDisplayMedia | null {
 /**
  * Must be called synchronously from the click that asked for it, or the browser
  * discards the user gesture and rejects.
+ *
+ * Failures are worded by `t`; without one they follow the page's language.
  */
 export async function captureScreen(
   getDisplayMedia: GetDisplayMedia | null = browserGetDisplayMedia(),
   quality: ScreenShareQualityId = DEFAULT_SCREEN_SHARE_QUALITY,
+  t: Translator = translateForDocument,
 ): Promise<ScreenCapture> {
   if (!getDisplayMedia) {
-    throw new ScreenShareError(
-      "unsupported",
-      "Ta przeglądarka nie potrafi udostępnić ekranu. Wymagane jest połączenie HTTPS.",
-    );
+    throw new ScreenShareError("unsupported", t("voiceClient.screenUnsupported"));
   }
 
   let stream: MediaStream;
   try {
     stream = await getDisplayMedia(displayMediaConstraints(quality));
   } catch (cause) {
-    throw classifyScreenError(cause);
+    throw classifyScreenError(cause, t);
   }
 
   const video = stream.getVideoTracks()[0];
   if (!video) {
     for (const track of stream.getTracks()) track.stop();
-    throw new ScreenShareError(
-      "unavailable",
-      "Nie udało się pobrać obrazu ekranu. Spróbuj ponownie.",
-    );
+    throw new ScreenShareError("unavailable", t("voiceClient.screenNoPicture"));
   }
 
   // Desktop content is text and sharp edges, not motion: the hint tells the
@@ -174,7 +175,10 @@ export async function captureScreen(
  * `NotAllowedError`. They are told apart by the message, because saying
  * "access was blocked" to someone who pressed Escape is wrong.
  */
-export function classifyScreenError(cause: unknown): ScreenShareError {
+export function classifyScreenError(
+  cause: unknown,
+  t: Translator = translateForDocument,
+): ScreenShareError {
   const name = cause instanceof DOMException ? cause.name : "";
   // The message is read structurally: DOMException does not extend Error in
   // every environment, so an `instanceof Error` check would lose it.
@@ -184,28 +188,16 @@ export function classifyScreenError(cause: unknown): ScreenShareError {
   switch (name) {
     case "NotAllowedError":
       return message.includes("permission denied by system") || message.includes("disallowed")
-        ? new ScreenShareError(
-            "denied",
-            "System zablokował udostępnianie ekranu. Sprawdź uprawnienia i spróbuj ponownie.",
-          )
-        : new ScreenShareError("cancelled", "Udostępnianie ekranu anulowane.");
+        ? new ScreenShareError("denied", t("voiceClient.screenDenied"))
+        : new ScreenShareError("cancelled", t("voiceClient.screenCancelled"));
     case "NotFoundError":
     case "NotReadableError":
     case "AbortError":
-      return new ScreenShareError(
-        "unavailable",
-        "Nie udało się pobrać obrazu ekranu. Spróbuj ponownie.",
-      );
+      return new ScreenShareError("unavailable", t("voiceClient.screenNoPicture"));
     case "NotSupportedError":
-      return new ScreenShareError(
-        "unsupported",
-        "Ta przeglądarka nie potrafi udostępnić ekranu. Wymagane jest połączenie HTTPS.",
-      );
+      return new ScreenShareError("unsupported", t("voiceClient.screenUnsupported"));
     default:
-      return new ScreenShareError(
-        "unavailable",
-        "Nie udało się udostępnić ekranu. Spróbuj ponownie.",
-      );
+      return new ScreenShareError("unavailable", t("voiceClient.screenFailed"));
   }
 }
 

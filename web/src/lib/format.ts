@@ -1,6 +1,11 @@
-import type { InterfaceLocale } from "@/i18n";
+import { translateMessage, type InterfaceLocale } from "@/i18n";
 import { documentLocale } from "@/i18n/defaultLocale";
 import type { Message, MessageReference } from "@/lib/api/types";
+
+// Every formatter takes the locale to speak in, and the app always passes the
+// provider's. Only the four that put words into a transcript (`formatDay`,
+// `messageReference`, `buildTranscript`, `buildThreadTranscript`) fall back to
+// the page's language, for a caller with no provider to ask.
 
 const LOCALE_TAG: Record<InterfaceLocale, string> = {
   pl: "pl-PL",
@@ -18,7 +23,7 @@ function formatWith(
   return new Intl.DateTimeFormat(LOCALE_TAG[locale], options).format(date);
 }
 
-export function formatTime(iso: string, locale: InterfaceLocale = documentLocale()): string {
+export function formatTime(iso: string, locale: InterfaceLocale): string {
   return formatWith(iso, locale, {
     hour: "2-digit",
     minute: "2-digit",
@@ -26,12 +31,12 @@ export function formatTime(iso: string, locale: InterfaceLocale = documentLocale
   });
 }
 
-export function formatFull(iso: string, locale: InterfaceLocale = documentLocale()): string {
+export function formatFull(iso: string, locale: InterfaceLocale): string {
   return formatWith(iso, locale, { dateStyle: "medium", timeStyle: "short" });
 }
 
-/** A calendar date without a time: "12 marca 2025". */
-export function formatDate(iso: string, locale: InterfaceLocale = documentLocale()): string {
+/** A calendar date without a time: "12 March 2025". */
+export function formatDate(iso: string, locale: InterfaceLocale): string {
   return formatWith(iso, locale, {
     day: "numeric",
     month: "long",
@@ -47,7 +52,7 @@ export function isSameDay(a: Date, b: Date): boolean {
   );
 }
 
-/** A day heading: "Dziś", "Wczoraj", or the weekday and date. */
+/** A day heading: "Today", "Yesterday", or the weekday and date. */
 export function formatDay(
   iso: string,
   now = new Date(),
@@ -55,11 +60,11 @@ export function formatDay(
 ): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "";
-  if (isSameDay(date, now)) return locale === "en" ? "Today" : "Dziś";
+  if (isSameDay(date, now)) return translateMessage(locale, "format.today");
 
   const yesterday = new Date(now);
   yesterday.setDate(now.getDate() - 1);
-  if (isSameDay(date, yesterday)) return locale === "en" ? "Yesterday" : "Wczoraj";
+  if (isSameDay(date, yesterday)) return translateMessage(locale, "format.yesterday");
 
   return formatWith(iso, locale, {
     weekday: "long",
@@ -69,28 +74,22 @@ export function formatDay(
 }
 
 /**
- * A count with its Polish noun. Polish declines three ways, so the forms are
- * listed rather than derived: [1, 2-4, 5+], where 12-14 take the last form
- * even though they end in 2-4.
+ * Which `.one`, `.few` or `.many` form of a counted message the locale's
+ * plural rules pick. Every category but `one` and `few` reads as `many`, which
+ * also covers English, where only `one` and `other` exist.
  */
-function polishCount(n: number, forms: [string, string, string]): string {
-  if (n === 1) return `${n} ${forms[0]}`;
-  const teens = n % 100 >= 12 && n % 100 <= 14;
-  const few = n % 10 >= 2 && n % 10 <= 4 && !teens;
-  return `${n} ${few ? forms[1] : forms[2]}`;
+export function pluralForm(locale: InterfaceLocale, count: number): "one" | "few" | "many" {
+  const category = new Intl.PluralRules(locale).select(count);
+  return category === "one" || category === "few" ? category : "many";
 }
 
 /**
- * How long ago, in words: "przed chwilą", "6 minut temu", "wczoraj".
+ * How long ago, in words: "just now", "6 minutes ago", "yesterday".
  *
  * Deliberately coarse and never live-updating: it sits under a name in a list,
  * where "yesterday" is all the reader wants.
  */
-export function formatAgo(
-  iso: string,
-  now = new Date(),
-  locale: InterfaceLocale = documentLocale(),
-): string {
+export function formatAgo(iso: string, now: Date, locale: InterfaceLocale): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "";
 
@@ -98,21 +97,20 @@ export function formatAgo(
   const minutes = Math.floor(seconds / 60);
   const hours = Math.floor(minutes / 60);
   const days = Math.floor(hours / 24);
-  const english = locale === "en";
 
-  if (seconds < 60) return english ? "just now" : "przed chwilą";
+  if (seconds < 60) return translateMessage(locale, "format.agoJustNow");
   if (minutes < 60) {
-    return english
-      ? `${minutes} ${minutes === 1 ? "minute" : "minutes"} ago`
-      : `${polishCount(minutes, ["minutę", "minuty", "minut"])} temu`;
+    return translateMessage(locale, `format.agoMinutes.${pluralForm(locale, minutes)}`, {
+      count: minutes,
+    });
   }
   if (hours < 24) {
-    return english
-      ? `${hours} ${hours === 1 ? "hour" : "hours"} ago`
-      : `${polishCount(hours, ["godzinę", "godziny", "godzin"])} temu`;
+    return translateMessage(locale, `format.agoHours.${pluralForm(locale, hours)}`, {
+      count: hours,
+    });
   }
-  if (days === 1) return english ? "yesterday" : "wczoraj";
-  if (days < 30) return english ? `${days} days ago` : `${days} dni temu`;
+  if (days === 1) return translateMessage(locale, "format.agoYesterday");
+  if (days < 30) return translateMessage(locale, "format.agoDays", { count: days });
   return formatDate(iso, locale);
 }
 
@@ -148,10 +146,7 @@ export function messageReference(
   if (content.length > PREVIEW_CHARS) {
     preview = `${content.slice(0, PREVIEW_CHARS - 1)}…`;
   } else if (content.length === 0 && hasAttachment) {
-    preview =
-      locale === "en"
-        ? "Open to view the attachment"
-        : "Kliknij, aby zobaczyć załącznik";
+    preview = translateMessage(locale, "format.attachmentPreview");
   }
 
   return {
@@ -175,7 +170,7 @@ export interface MessageGroup {
 }
 
 export interface TranscriptSection {
-  /** The day heading, e.g. "Dziś". */
+  /** The day heading, e.g. "Today". */
   day: string;
   groups: MessageGroup[];
 }

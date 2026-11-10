@@ -122,7 +122,7 @@ export interface MicTest {
   peak: number;
   /** What the call would decide right now: speech, or the room. */
   speaking: boolean;
-  /** A whole Polish sentence, already chosen by `MicCaptureError`. */
+  /** A whole sentence in the person's language, already worded by `MicCaptureError`. */
   error: string | null;
   /**
    * What is actually cleaning the microphone, which is not always what was
@@ -141,7 +141,7 @@ export interface MicTest {
   autoGain: ActiveAutoGain | null;
   /**
    * The device the microphone actually opened on. Worth showing for
-   * "Domyślny systemowy", which names a rule rather than a microphone.
+   * "System default", which names a rule rather than a microphone.
    */
   activeDeviceLabel: string | null;
   start: () => void;

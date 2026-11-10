@@ -40,7 +40,7 @@ export interface AccountPatch {
   bannerUrl?: string | null;
 }
 
-/** What "zmień hasło" can answer; each maps to one sentence in the UI. */
+/** What "change password" can answer; each maps to one sentence in the UI. */
 export type PasswordChangeResult =
   | "changed"
   | "wrong-current"
@@ -57,23 +57,23 @@ export type ImageKind = "avatar" | "banner";
  * and listing it here would give one setting two owners.
  */
 export interface UserPreferences {
-  /** Powiadomienia */
+  /** Notifications */
   desktopNotifications: boolean;
   emailNotifications: boolean;
   pushNotifications: boolean;
   mentionsOnly: boolean;
   messageSound: boolean;
   joinLeaveSound: boolean;
-  /** Prywatność */
+  /** Privacy */
   allowDirectMessages: boolean;
   allowFriendRequests: boolean;
   showPresence: boolean;
-  /** Zaawansowane */
+  /** Advanced */
   developerMode: boolean;
   reducedMotion: boolean;
   /** Text channels whose incoming messages stay silent for this user. */
   mutedChannelIds: string[];
-  /** Czułość VAD, synchronizowana między urządzeniami. */
+  /** Voice-activity sensitivity, synced between devices. */
   vadSensitivity: number;
   /**
    * The soundboard sound a voice room hears when this person walks in; `null`
@@ -120,8 +120,8 @@ export interface AccountPort {
   readonly supported: AccountSupport;
 }
 
-/** What the pane tells the reader an image may be. */
-export const IMAGE_LIMITS: Record<ImageKind, { maxBytes: number; hint: string }> = {
-  avatar: { maxBytes: 4 * 1024 * 1024, hint: "Zalecane 512×512. Maksymalnie 4 MB." },
-  banner: { maxBytes: 8 * 1024 * 1024, hint: "Zalecane 960×320. Maksymalnie 8 MB." },
+/** The largest image the server accepts for each kind. */
+export const IMAGE_LIMITS: Record<ImageKind, { maxBytes: number }> = {
+  avatar: { maxBytes: 4 * 1024 * 1024 },
+  banner: { maxBytes: 8 * 1024 * 1024 },
 };

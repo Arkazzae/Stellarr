@@ -10,16 +10,8 @@ import type { MessageTranslationOptions } from "@/components/room/attachments/Tr
 import { Transcript, type TranscriptSectionVM } from "@/components/room/Transcript";
 import { ParticipantTiles } from "@/components/voice/ParticipantTiles";
 import type { OpenProfile, PersonVM } from "@/components/view-models";
-import { type MessageKey } from "@/i18n";
 import { translateForDocument } from "@/i18n/defaultLocale";
-import type { CustomEmoji } from "@/ports";
-
-const PRESENCE_WORD: Record<PersonVM["presence"], MessageKey> = {
-  online: "presence.online",
-  idle: "presence.idle",
-  dnd: "presence.dnd",
-  offline: "presence.offline",
-};
+import { PRESENCE_LABEL, type CustomEmoji } from "@/ports";
 
 export interface DmRoomProps {
   peer: PersonVM;
@@ -143,7 +135,7 @@ export function DmRoom({
             stands for beside it. */}
         <span className="dm-presence">
           <PresenceDot presence={peer.presence} />
-          {t(PRESENCE_WORD[peer.presence])}
+          {t(PRESENCE_LABEL[peer.presence])}
         </span>
 
         <div className="pill-bar auto" role="toolbar" aria-label={t("dm.toolbar")}>

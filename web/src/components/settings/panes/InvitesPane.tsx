@@ -13,7 +13,7 @@ const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
 
-/** "wygasa nigdy", "wygasło", "wygasa za 6 dni": counts in the coarsest unit that fits. */
+/** "never expires", "expired", "expires in 6 days": counts in the coarsest unit that fits. */
 function expiry(expiresAt: string | null, now: number, t: Translator, locale: InterfaceLocale): string {
   if (expiresAt === null) return t("settings.expiresNever");
   const remaining = new Date(expiresAt).getTime() - now;

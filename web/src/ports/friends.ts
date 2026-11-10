@@ -26,7 +26,7 @@ export interface FriendRequest {
   id: string;
   user: User;
   direction: RequestDirection;
-  /** ISO 8601, shown as "wysłano 3 dni temu". */
+  /** ISO 8601, shown as "sent 3 days ago". */
   sentAt: string;
 }
 

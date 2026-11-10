@@ -3,6 +3,7 @@ import type { CSSProperties } from "react";
 import type { PersonVM } from "@/components/view-models";
 import { defaultIdentityArt, identityVars } from "@/design/identity";
 import { initials as toInitials } from "@/lib/format";
+import { useLanguage } from "@/state/hooks";
 
 /** Taken from the view model so components never import `@/lib/api`. */
 export type Presence = PersonVM["presence"];
@@ -84,6 +85,7 @@ export function Avatar({
   className,
   title,
 }: AvatarProps) {
+  const { t } = useLanguage();
   const hasUpload = avatarUrl !== undefined && avatarUrl !== "";
   const pictureUrl = hasUpload
     ? avatarUrl
@@ -137,7 +139,7 @@ export function Avatar({
         style={style}
         title={title}
         aria-haspopup="dialog"
-        aria-label={label ?? `Profil: ${displayName}`}
+        aria-label={label ?? t("profile.label", { name: displayName })}
         onClick={(event) => onOpen(event.currentTarget)}
       >
         {face}

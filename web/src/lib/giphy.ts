@@ -1,3 +1,5 @@
+import type { MessageKey } from "@/i18n";
+
 const API_ROOT = "https://api.giphy.com/v1/gifs";
 const PAGE_HOSTS: ReadonlySet<string> = new Set(["giphy.com", "www.giphy.com"]);
 const ANALYTICS_HOSTS: ReadonlySet<string> = new Set(["giphy-analytics.giphy.com"]);
@@ -41,6 +43,18 @@ export interface GiphySearchOptions {
   signal?: AbortSignal;
 }
 
+/**
+ * Why a GIPHY request failed. It names a catalog entry instead of holding a
+ * sentence, because this module cannot know which language the reader wants;
+ * whoever shows the failure translates the key.
+ */
+export class GiphyError extends Error {
+  constructor(readonly messageKey: MessageKey) {
+    super(messageKey);
+    this.name = "GiphyError";
+  }
+}
+
 type JsonRecord = Record<string, unknown>;
 
 function isRecord(value: unknown): value is JsonRecord {
@@ -79,11 +93,11 @@ async function requestRuntimeKey(): Promise<string> {
     method: "GET",
     headers: { Accept: "application/json" },
   });
-  if (!response.ok) throw new Error("Nie udało się odczytać konfiguracji GIPHY.");
+  if (!response.ok) throw new GiphyError("giphy.configUnreadable");
 
   const payload = (await response.json()) as unknown;
   const apiKey = isRecord(payload) ? nonEmptyString(payload["apiKey"])?.trim() : undefined;
-  if (!apiKey) throw new Error("Brak klucza API GIPHY.");
+  if (!apiKey) throw new GiphyError("giphy.keyMissing");
   return apiKey;
 }
 
@@ -179,7 +193,7 @@ export function parseGiphyGif(value: unknown): GiphyGif | null {
 /** Parses a search or trending response, dropping the items that are unusable. */
 export function parseGiphyPage(value: unknown): GiphyPage {
   if (!isRecord(value) || !Array.isArray(value["data"])) {
-    throw new Error("GIPHY zwróciło nieprawidłową odpowiedź.");
+    throw new GiphyError("giphy.badResponse");
   }
 
   const data: unknown[] = value["data"];
@@ -217,7 +231,7 @@ export async function fetchGiphyPage({
   limit = 24,
   signal,
 }: GiphySearchOptions): Promise<GiphyPage> {
-  if (apiKey === "") throw new Error("Brak klucza API GIPHY.");
+  if (apiKey === "") throw new GiphyError("giphy.keyMissing");
 
   const term = query.trim().slice(0, MAX_QUERY_LENGTH);
   const params: Record<string, string> = {
@@ -234,11 +248,7 @@ export async function fetchGiphyPage({
 
   const response = await getFromGiphy(term === "" ? "trending" : "search", params, signal);
   if (!response.ok) {
-    throw new Error(
-      response.status === 429
-        ? "Limit zapytań GIPHY został wyczerpany. Spróbuj później."
-        : "Nie udało się pobrać GIF-ów z GIPHY.",
-    );
+    throw new GiphyError(response.status === 429 ? "giphy.rateLimited" : "giphy.fetchFailed");
   }
   return parseGiphyPage((await response.json()) as unknown);
 }
@@ -249,18 +259,18 @@ export async function fetchGiphyGif(
   customerId: string,
   signal?: AbortSignal,
 ): Promise<GiphyGif> {
-  if (!ID_PATTERN.test(id)) throw new Error("Nieprawidłowy identyfikator GIF-a.");
+  if (!ID_PATTERN.test(id)) throw new GiphyError("giphy.badId");
 
   const response = await getFromGiphy(
     id,
     { api_key: apiKey, customer_id: customerId, rating: "pg-13" },
     signal,
   );
-  if (!response.ok) throw new Error("GIF nie jest już dostępny w GIPHY.");
+  if (!response.ok) throw new GiphyError("giphy.gone");
 
   const payload = (await response.json()) as unknown;
   const gif = isRecord(payload) ? parseGiphyGif(payload["data"]) : null;
-  if (gif === null) throw new Error("GIPHY zwróciło nieprawidłowy GIF.");
+  if (gif === null) throw new GiphyError("giphy.badGif");
   return gif;
 }
 

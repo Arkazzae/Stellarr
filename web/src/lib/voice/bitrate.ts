@@ -197,10 +197,3 @@ function smooth(previous: number, next: number, weight: number): number {
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
-
-export const NETWORK_QUALITY_LABEL: Record<NetworkQuality, string> = {
-  unknown: "Nieznana",
-  good: "Dobra",
-  fair: "Przeciętna",
-  poor: "Słaba",
-};

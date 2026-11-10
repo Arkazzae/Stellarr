@@ -7,6 +7,7 @@
  * to talk about message bodies.
  */
 
+import { translateForDocument } from "@/i18n/defaultLocale";
 import { formatBytes } from "@/lib/format";
 import { giphyIdFromUrl } from "@/lib/giphy";
 import type { Attachment, Message, MessageEmbed } from "@/ports";
@@ -53,7 +54,10 @@ function defined<T extends Record<string, unknown>>(fields: T): Partial<T> {
 /* ------------------------------------------------------------- attachments */
 
 /** `"raport.pdf"` becomes `"PDF"`. Four characters is what the badge fits. */
-export function fileExt(name: string, fallback = "PLIK"): string {
+export function fileExt(
+  name: string,
+  fallback = translateForDocument("attachment.extFallback"),
+): string {
   const dot = name.lastIndexOf(".");
   if (dot <= 0 || dot === name.length - 1) return fallback;
   return name.slice(dot + 1).toUpperCase().slice(0, 4);
@@ -69,7 +73,10 @@ function isImage(attachment: Attachment): boolean {
   return attachment.contentType.startsWith("image/");
 }
 
-function mediaOrFilePart(attachment: Attachment): AudioPart | VideoPart | FilePart {
+function mediaOrFilePart(
+  attachment: Attachment,
+  extFallback: string | undefined,
+): AudioPart | VideoPart | FilePart {
   const { contentType, name, url, size } = attachment;
   const duration =
     attachment.durationSeconds === undefined ? undefined : mediaDuration(attachment.durationSeconds);
@@ -96,7 +103,7 @@ function mediaOrFilePart(attachment: Attachment): AudioPart | VideoPart | FilePa
       }),
     };
   }
-  return { kind: "file", name, ext: fileExt(name), size: formatBytes(size), url };
+  return { kind: "file", name, ext: fileExt(name, extFallback), size: formatBytes(size), url };
 }
 
 /** One picture is shown as it is; several in a row become a gallery. */
@@ -114,7 +121,10 @@ function imageRunPart(run: readonly Attachment[]): MessagePart {
 }
 
 /** Attachments in order, with consecutive images collapsed into one gallery. */
-function attachmentParts(attachments: readonly Attachment[]): MessagePart[] {
+function attachmentParts(
+  attachments: readonly Attachment[],
+  extFallback: string | undefined,
+): MessagePart[] {
   const parts: MessagePart[] = [];
   let images: Attachment[] = [];
   const flushImages = () => {
@@ -127,7 +137,7 @@ function attachmentParts(attachments: readonly Attachment[]): MessagePart[] {
       images.push(attachment);
     } else {
       flushImages();
-      parts.push(mediaOrFilePart(attachment));
+      parts.push(mediaOrFilePart(attachment, extFallback));
     }
   }
   flushImages();
@@ -182,6 +192,8 @@ export interface ToPartsOptions {
   emoji?: ReadonlyMap<string, string>;
   /** Lower-cased username to the member a mention resolves to. */
   mentions?: ReadonlyMap<string, MentionTarget>;
+  /** What the badge of a file with no extension says. Without one, the page's language decides. */
+  extFallback?: string;
 }
 
 /**
@@ -222,7 +234,7 @@ export function toParts(message: Message, options: ToPartsOptions = {}): Message
   }
 
   markEdited(parts, message.editedAt);
-  parts.push(...attachmentParts(message.attachments));
+  parts.push(...attachmentParts(message.attachments, options.extFallback));
   return parts;
 }
 

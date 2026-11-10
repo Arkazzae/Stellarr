@@ -123,7 +123,7 @@ export function useMicTest(settings: VoiceSettings): MicTest {
 
     void (async () => {
       try {
-        const opened = await captureMicrophone(applied.current);
+        const opened = await captureMicrophone(applied.current, { translate: t });
         if (token !== run.current) {
           opened.dispose();
           return;

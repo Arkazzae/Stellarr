@@ -1,3 +1,4 @@
+import type { MessageKey } from "@/i18n";
 import { ChangeNotifier } from "@/lib/realtime/emitter";
 import { usesWorkletSuppression } from "./audioProfiles";
 import {
@@ -149,36 +150,37 @@ export const DEFAULT_SETTINGS: VoiceSettings = Object.freeze({
   inputGate: true,
 });
 
-export const OPUS_PROFILE_LABEL: Record<OpusProfileId, string> = {
-  economy: "Oszczędny",
-  balanced: "Zrównoważony",
-  clarity: "Wyrazisty",
-  premium: "Premium",
-  studio: "Studio",
+/** Catalog keys for what each choice is called and what it means. */
+export const OPUS_PROFILE_LABEL: Record<OpusProfileId, MessageKey> = {
+  economy: "voice.profile.economy",
+  balanced: "voice.profile.balanced",
+  clarity: "voice.profile.clarity",
+  premium: "voice.profile.premium",
+  studio: "voice.profile.studio",
 };
 
-export const OPUS_PROFILE_HINT: Record<OpusProfileId, string> = {
-  economy: "Około 32 kb/s. Dla słabego łącza.",
-  balanced: "Około 64 kb/s. Ciągła transmisja bez ucinania początku.",
-  clarity: "Około 96 kb/s. Więcej szczegółów i ciągła transmisja.",
-  premium: "128 kb/s, FEC i ciągła transmisja. Bardzo wysoka jakość mowy.",
-  studio: "256 kb/s, pełne pasmo i FEC. Maksimum praktyczne dla głosu mono.",
+export const OPUS_PROFILE_HINT: Record<OpusProfileId, MessageKey> = {
+  economy: "voice.profile.economyHint",
+  balanced: "voice.profile.balancedHint",
+  clarity: "voice.profile.clarityHint",
+  premium: "voice.profile.premiumHint",
+  studio: "voice.profile.studioHint",
 };
 
-export const NOISE_MODE_LABEL: Record<NoiseSuppressionMode, string> = {
-  browser: "Przeglądarki",
-  rnnoise: "RNNoise",
-  gtcrn: "GTCRN",
-  speex: "Speex",
-  off: "Wyłączona",
+export const NOISE_MODE_LABEL: Record<NoiseSuppressionMode, MessageKey> = {
+  browser: "voice.noise.browser",
+  rnnoise: "voice.noise.rnnoise",
+  gtcrn: "voice.noise.gtcrn",
+  speex: "voice.noise.speex",
+  off: "voice.noise.off",
 };
 
-export const NOISE_MODE_HINT: Record<NoiseSuppressionMode, string> = {
-  browser: "Wbudowana redukcja szumu. Zawsze dostępna.",
-  rnnoise: "Sieć neuronowa działająca lokalnie. Mocniejsza przy szumie tła.",
-  gtcrn: "Nowsza sieć neuronowa. Lepsza na klawiaturę, jedzenie i nagłe dźwięki; więcej CPU.",
-  speex: "Klasyczny filtr DSP. Najlżejszy, najsłabszy.",
-  off: "Surowy dźwięk z mikrofonu.",
+export const NOISE_MODE_HINT: Record<NoiseSuppressionMode, MessageKey> = {
+  browser: "voice.noise.browserHint",
+  rnnoise: "voice.noise.rnnoiseHint",
+  gtcrn: "voice.noise.gtcrnHint",
+  speex: "voice.noise.speexHint",
+  off: "voice.noise.offHint",
 };
 
 const SCREEN_QUALITY_IDS = Object.keys(SCREEN_SHARE_PROFILES) as ScreenShareQualityId[];

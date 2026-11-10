@@ -23,7 +23,7 @@ export interface VoicePaneProps {
 }
 
 /**
- * Głos i wideo: the device's settings, not the server's.
+ * Voice and video: the device's settings, not the server's.
  *
  * Ordered by what goes wrong. The microphone comes first, because a call on the
  * wrong one is not a quality problem but silence, then what is heard, then the

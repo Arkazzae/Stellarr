@@ -79,7 +79,7 @@ export function createSoundboardAdapter(
       audio.preload(snapshot.sounds);
       void syncClock();
     } catch {
-      patchState({ loading: false, error: "Nie udało się pobrać dźwięków serwera." });
+      patchState({ loading: false, error: "soundboard.loadFailed" });
     }
   };
 
@@ -119,7 +119,7 @@ export function createSoundboardAdapter(
         patchState({ sounds: [...state.sounds, event.sound] });
       }
       audio.schedule(event, serverOffsetMs).catch(() => {
-        patchState({ error: "Nie udało się odtworzyć dźwięku." });
+        patchState({ error: "soundboard.playFailed" });
       });
     }),
 
@@ -185,7 +185,7 @@ export function createSoundboardAdapter(
       } catch {
         readyAt = 0;
         stopCooldownTimer();
-        patchState({ error: "Serwer odrzucił odtworzenie dźwięku." });
+        patchState({ error: "soundboard.playRejected" });
       }
     },
 
@@ -236,7 +236,7 @@ export function createSoundboardAdapter(
       try {
         patchState({ settings: await api.updateSoundboardSettings(patch), error: null });
       } catch (cause) {
-        patchState({ error: "Nie udało się zapisać zasad soundboardu." });
+        patchState({ error: "soundboard.rulesFailed" });
         throw cause;
       }
     },

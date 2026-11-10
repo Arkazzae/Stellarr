@@ -28,7 +28,7 @@ let registryRequest: Promise<Record<string, PairEntry>> | null = null;
 
 async function fetchRegistry(): Promise<Record<string, PairEntry>> {
   const response = await fetch(`${BUNDLED_MODELS}/registry.json`);
-  if (!response.ok) throw new Error(`Nie udało się pobrać rejestru modeli (${response.status}).`);
+  if (!response.ok) throw new Error(`Could not fetch the model registry (${response.status}).`);
   return response.json();
 }
 
@@ -103,7 +103,7 @@ async function downloadFile(
 ): Promise<ArrayBuffer> {
   let response = await fetch(`${BUNDLED_MODELS}/${pair}/${file.name}`);
   if (!response.ok) response = await fetch(`${MODEL_PROXY}/${pair}/${file.name}`);
-  if (!response.ok) throw new Error(`Nie udało się pobrać pliku modelu ${file.name}.`);
+  if (!response.ok) throw new Error(`Could not fetch the model file ${file.name}.`);
 
   if (response.body === null) {
     const buffer = await response.arrayBuffer();
@@ -142,7 +142,7 @@ export async function downloadModel(
 ): Promise<void> {
   const pair = primaryPair(targetLanguage);
   const files = await pairFiles(pair);
-  if (files === null) throw new Error(`Brak modelu ${pair}.`);
+  if (files === null) throw new Error(`No model for the language pair ${pair}.`);
 
   const total = totalSize(files);
   let finished = 0;
@@ -164,7 +164,7 @@ export async function downloadModel(
       });
       // A listed size of 0 means the size is unknown, so there is nothing to compare.
       if (file.size > 0 && content.byteLength !== file.size) {
-        throw new Error(`Pobrany plik modelu ${file.name} jest niekompletny.`);
+        throw new Error(`The downloaded model file ${file.name} is incomplete.`);
       }
       await store(database, key, content);
     }

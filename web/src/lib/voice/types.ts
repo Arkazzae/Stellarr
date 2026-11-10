@@ -206,12 +206,3 @@ export interface VoiceClient {
   stopCamera(): Promise<void>;
   dispose(): void;
 }
-
-export const VOICE_CONNECTION_LABEL: Record<VoiceConnectionState, string> = {
-  idle: "Rozłączono",
-  "requesting-mic": "Czekam na mikrofon",
-  connecting: "Łączenie",
-  connected: "Połączono",
-  reconnecting: "Ponowne łączenie",
-  failed: "Połączenie nieudane",
-};

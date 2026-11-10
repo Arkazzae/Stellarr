@@ -44,7 +44,7 @@ export function RoomComposer({ channelName, threadRootId }: RoomComposerProps) {
 
   const openVoiceMessageMicrophone = useCallback(async () => {
     try {
-      const capture = await captureMicrophone(voiceSettings);
+      const capture = await captureMicrophone(voiceSettings, { translate: t });
       return {
         stream: capture.stream,
         inputTrack: capture.rawTrack,

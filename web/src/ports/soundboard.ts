@@ -1,3 +1,4 @@
+import type { MessageKey } from "@/i18n";
 import type {
   ChannelId,
   SoundboardSettings,
@@ -53,7 +54,8 @@ export interface SoundboardState {
   canManage: boolean;
   supported: boolean;
   loading: boolean;
-  error: string | null;
+  /** What went wrong, as a catalog key for the reader to translate. */
+  error: MessageKey | null;
 }
 
 export type Sound = SoundboardSound;

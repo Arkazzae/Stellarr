@@ -36,7 +36,6 @@ export type EmojiCategoryId =
 
 export interface EmojiCategory {
   id: EmojiCategoryId;
-  label: string;
   /** What the rail shows. A glyph, because an icon set has no "🐾". */
   mark: string;
 }
@@ -59,17 +58,17 @@ export interface EmojiEntry {
  * the rail and the scroller agree on the order.
  */
 export const EMOJI_CATEGORIES: readonly EmojiCategory[] = [
-  { id: "recent", label: "Często używane", mark: "🕘" },
-  { id: "server", label: "Emoji serwera", mark: "🧩" },
-  { id: "smileys", label: "Miny i emocje", mark: "😀" },
-  { id: "people", label: "Ludzie i gesty", mark: "👋" },
-  { id: "nature", label: "Zwierzęta i natura", mark: "🐾" },
-  { id: "food", label: "Jedzenie i picie", mark: "🍔" },
-  { id: "activity", label: "Aktywność", mark: "⚽" },
-  { id: "travel", label: "Podróże i miejsca", mark: "✈️" },
-  { id: "objects", label: "Przedmioty", mark: "💡" },
-  { id: "symbols", label: "Symbole", mark: "💠" },
-  { id: "flags", label: "Flagi", mark: "🏳️" },
+  { id: "recent", mark: "🕘" },
+  { id: "server", mark: "🧩" },
+  { id: "smileys", mark: "😀" },
+  { id: "people", mark: "👋" },
+  { id: "nature", mark: "🐾" },
+  { id: "food", mark: "🍔" },
+  { id: "activity", mark: "⚽" },
+  { id: "travel", mark: "✈️" },
+  { id: "objects", mark: "💡" },
+  { id: "symbols", mark: "💠" },
+  { id: "flags", mark: "🏳️" },
 ];
 
 const TABLES: readonly (readonly [EmojiCategoryId, readonly Seed[]])[] = [
@@ -98,8 +97,8 @@ export const EMOJI: readonly EmojiEntry[] = TABLES.flatMap(([category, seeds]) =
 
 /**
  * Reduces a query to the form `terms` are written in: no case, no colons, no
- * diacritics. "Żaba", "zaba" and ":zaba:" are the same search, because Polish
- * is typed with and without diacritics depending on the keyboard.
+ * diacritics. "zaba" and ":zaba:" are the same search with or without the
+ * Polish letters, because Polish is typed both ways depending on the keyboard.
  */
 export function foldQuery(raw: string): string {
   return (
@@ -109,7 +108,8 @@ export function foldQuery(raw: string): string {
       .replace(/^:+|:+$/g, "")
       .normalize("NFD")
       .replace(/[̀-ͯ]/g, "")
-      // `ł` is a letter of its own, not an l plus a mark, so NFD leaves it.
+      // The Polish l with a stroke is a letter of its own, not an l plus a
+      // mark, so NFD leaves it.
       .replaceAll("ł", "l")
   );
 }

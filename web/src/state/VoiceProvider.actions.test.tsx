@@ -91,6 +91,7 @@ describe("VoiceProvider client lifecycle", () => {
     expect(harness.ports.createVoice).toHaveBeenCalledWith({
       userId: "self",
       displayName: "Self",
+      translate: expect.any(Function),
     });
 
     view.unmount();

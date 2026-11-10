@@ -15,6 +15,7 @@ import {
 import type { ComposerChip } from "@/components/room/ComposerChips";
 import { toParts } from "@/components/room/parts";
 import type { TranscriptSectionVM } from "@/components/room/Transcript";
+import { translateMessage } from "@/i18n";
 import { buildTranscript, initials } from "@/lib/format";
 import type {
   AddFriendResult,
@@ -189,7 +190,7 @@ function useAttachments(port: FriendsPort) {
  * (`buildTranscript` and `toParts`), called here rather than inherited.
  */
 export function FriendsProvider({ children }: { children: ReactNode }) {
-  const { locale } = useLanguage();
+  const { locale, t } = useLanguage();
   const { friends: port } = usePorts();
   const { byShortcode: customEmoji } = useEmoji();
   const { user } = useSessionContext();
@@ -261,6 +262,7 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
     for (const person of [user, active?.peer]) {
       if (person?.avatarUrl !== undefined) avatars.set(person.id, person.avatarUrl);
     }
+    const extFallback = t("attachment.extFallback");
     return buildTranscript(messages, new Date(), locale).map((section) => ({
       day: section.day,
       groups: section.groups.map((group) => {
@@ -274,12 +276,12 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
           timestamp: group.startedAt,
           bodies: group.messages.map((message) => ({
             id: message.id,
-            parts: toParts(message, { emoji: customEmoji }),
+            parts: toParts(message, { emoji: customEmoji, extFallback }),
           })),
         };
       }),
     }));
-  }, [activeDmId, messages, user, active, customEmoji, locale]);
+  }, [activeDmId, messages, user, active, customEmoji, locale, t]);
 
   const messagePerson = useCallback(
     (userId: string, text?: string) => {
@@ -338,7 +340,10 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
   const joinConversationCall = useCallback(
     (id: string, peer: User | undefined) => {
       joinVoice(id, {
-        label: peer === undefined ? "Rozmowa prywatna" : `Rozmowa z ${peer.displayName}`,
+        label:
+          peer === undefined
+            ? translateMessage(locale, "dm.callPrivate")
+            : translateMessage(locale, "dm.callWith", { name: peer.displayName }),
         privateCall: true,
         ...(peer === undefined
           ? {}
@@ -356,7 +361,7 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
       });
       openDm(id);
     },
-    [joinVoice, openDm],
+    [joinVoice, openDm, locale],
   );
 
   const callConversation = useCallback(

@@ -1,3 +1,4 @@
+import type { Translator } from "@/i18n";
 import type { RtcConfig } from "@/lib/api/types";
 import { RTC_PROTOCOL_VERSION } from "@/lib/rtc/protocol";
 import { usesWorkletSuppression, type WorkletSuppressor } from "./audioProfiles";
@@ -14,23 +15,30 @@ import type { VoiceError } from "./types";
 
 /**
  * Everything the WebRTC client tells the person when something goes wrong.
- * The wording lives here, away from the logic that decides when to say it.
+ * The wording lives in the catalog and the choice of sentence here, away from
+ * the logic that decides when to say it. A sentence is composed when the
+ * failure happens, by the translator the client was given, so these are
+ * functions of it rather than constants.
  */
 
 /** Why this client cannot speak the server's RTC contract, or null when it can. */
 export function rtcIncompatibility(
+  t: Translator,
   config: Pick<RtcConfig, "protocolVersion" | "topology">,
 ): string | null {
   if (config.protocolVersion !== RTC_PROTOCOL_VERSION) {
-    return `Serwer używa nieobsługiwanej wersji RTC (${config.protocolVersion}); klient obsługuje v${RTC_PROTOCOL_VERSION}.`;
+    return t("voiceClient.rtcVersion", {
+      version: config.protocolVersion,
+      supported: RTC_PROTOCOL_VERSION,
+    });
   }
   if (config.topology !== "mesh") {
-    return `Ta wersja klienta nie obsługuje jeszcze topologii RTC: ${config.topology}.`;
+    return t("voiceClient.rtcTopology", { topology: config.topology });
   }
   return null;
 }
 
-export function micError(cause: unknown): VoiceError {
+export function micError(t: Translator, cause: unknown): VoiceError {
   if (cause instanceof MicCaptureError) {
     const kind =
       cause.kind === "denied"
@@ -40,44 +48,39 @@ export function micError(cause: unknown): VoiceError {
           : "mic-unavailable";
     return { kind, message: cause.message };
   }
-  return {
-    kind: "mic-unavailable",
-    message: "Brak dostępnego mikrofonu. Podłącz go i dołącz ponownie.",
-  };
+  return { kind: "mic-unavailable", message: t("voiceClient.micMissing") };
 }
 
 /** Expired credentials and an unreachable server call for different retries. */
-export function iceConfigError(cause: unknown): VoiceError {
+export function iceConfigError(t: Translator, cause: unknown): VoiceError {
   const expired = cause instanceof IceConfigError && cause.kind === "expired";
   return {
     kind: "ice-config",
-    message: expired
-      ? "Konfiguracja połączenia głosowego wygasła i nie udało się jej odświeżyć. Spróbuj dołączyć ponownie."
-      : "Nie udało się pobrać konfiguracji połączenia głosowego. Spróbuj dołączyć ponownie.",
+    message: expired ? t("voiceClient.iceExpired") : t("voiceClient.iceUnavailable"),
   };
 }
 
-export const joinFailedError: VoiceError = {
+export const joinFailedError = (t: Translator): VoiceError => ({
   kind: "signaling",
-  message: "Nie udało się dołączyć do rozmowy głosowej. Spróbuj ponownie.",
-};
+  message: t("voiceClient.joinFailed"),
+});
 
-export const moveFailedError: VoiceError = {
+export const moveFailedError = (t: Translator): VoiceError => ({
   kind: "signaling",
-  message: "Nie udało się przełączyć kanału głosowego. Dołącz ponownie.",
-};
+  message: t("voiceClient.moveFailed"),
+});
 
-export const rejoinFailedError: VoiceError = {
+export const rejoinFailedError = (t: Translator): VoiceError => ({
   kind: "signaling",
-  message: "Nie udało się wrócić do kanału głosowego. Spróbuj dołączyć ponownie.",
+  message: t("voiceClient.rejoinFailed"),
   recoverable: true,
-};
+});
 
-export const signalingFailedError: VoiceError = {
+export const signalingFailedError = (t: Translator): VoiceError => ({
   kind: "signaling",
-  message: "Sygnalizacja głosowa zawiodła. Sprawdź połączenie i dołącz ponownie.",
+  message: t("voiceClient.signalingFailed"),
   recoverable: true,
-};
+});
 
 export const sessionReplacedError: VoiceError = {
   kind: "session-replaced",
@@ -89,77 +92,74 @@ export const channelKickedError: VoiceError = {
   message: "A moderator disconnected this voice session from the channel.",
 };
 
-export const micSwapFailedError: VoiceError = {
+export const micSwapFailedError = (t: Translator): VoiceError => ({
   kind: "mic-unavailable",
-  message:
-    "Nie udało się przełączyć mikrofonu u wszystkich rozmówców. Poprzedni mikrofon nadal działa.",
+  message: t("voiceClient.micSwapFailed"),
   recoverable: true,
-};
+});
 
 /** A camera that would not open leaves the call untouched, so it is recoverable. */
-export function cameraError(cause: unknown): VoiceError {
+export function cameraError(t: Translator, cause: unknown): VoiceError {
   const message =
     cause instanceof CameraCaptureError
       ? cause.message
-      : "Nie udało się włączyć kamery. Sprawdź urządzenie i spróbuj ponownie.";
+      : t("voiceClient.cameraFailed");
   return { kind: "camera", message, recoverable: true };
 }
 
-export const cameraLostError: VoiceError = {
+export const cameraLostError = (t: Translator): VoiceError => ({
   kind: "camera",
-  message:
-    "Kamera została odłączona i nie znaleziono urządzenia zastępczego. Podłącz kamerę i włącz obraz ponownie.",
+  message: t("voiceClient.cameraLost"),
   recoverable: true,
-};
+});
 
-export const cameraSwapFailedError: VoiceError = {
+export const cameraSwapFailedError = (t: Translator): VoiceError => ({
   kind: "camera",
-  message: "Nie udało się przełączyć kamery. Poprzedni obraz pozostaje aktywny.",
+  message: t("voiceClient.cameraSwapFailed"),
   recoverable: true,
-};
+});
 
 /** What a failed share says. Cancelling the picker is a decision, so it has no error. */
-export function screenShareError(cause: unknown): VoiceError | null {
+export function screenShareError(t: Translator, cause: unknown): VoiceError | null {
   const failure = cause instanceof ScreenShareError ? cause : null;
   if (failure?.kind === "cancelled") return null;
   return {
     kind: "screen-share",
-    message: failure?.message ?? "Nie udało się udostępnić ekranu.",
+    message: failure?.message ?? t("voiceClient.screenShareFailed"),
     recoverable: true,
   };
 }
 
-export const screenQualityPartialError: VoiceError = {
+export const screenQualityPartialError = (t: Translator): VoiceError => ({
   kind: "screen-share",
-  message:
-    "Przeglądarka nie zastosowała pełnego profilu obrazu. Udostępnianie działa dalej z poprzednimi parametrami.",
+  message: t("voiceClient.screenQualityPartial"),
   recoverable: true,
-};
+});
 
-export const iceRefreshFailedError: VoiceError = {
+export const iceRefreshFailedError = (t: Translator): VoiceError => ({
   kind: "ice-config",
-  message: "Nie udało się odświeżyć konfiguracji TURN. Ponawiam próbę.",
+  message: t("voiceClient.iceRefreshFailed"),
   recoverable: true,
-};
+});
 
-export const iceRefreshPartialError: VoiceError = {
+export const iceRefreshPartialError = (t: Translator): VoiceError => ({
   kind: "ice-config",
-  message: "Nie wszystkie połączenia przyjęły odświeżoną konfigurację TURN.",
+  message: t("voiceClient.iceRefreshPartial"),
   recoverable: true,
-};
+});
 
-export function peerStalledError(displayName: string): VoiceError {
+export function peerStalledError(t: Translator, displayName: string): VoiceError {
   return {
     kind: "transport",
-    message: `Połączenie z ${displayName} nie przesyła pakietów audio.`,
+    message: t("voiceClient.peerStalled", { name: displayName }),
     recoverable: true,
   };
 }
 
-export function peerLostError(displayName: string): VoiceError {
+export function peerLostError(t: Translator, displayName: string): VoiceError {
   return {
     kind: "transport",
-    message: `Utracono połączenie audio z: ${displayName}.`,
+    message: t("voiceClient.peerLost", { name: displayName }),
     recoverable: true,
   };
 }
@@ -177,6 +177,7 @@ const SUPPRESSOR_NAME: Record<WorkletSuppressor, string> = {
  * choice rather than a degradation.
  */
 export function degradedNotice(
+  t: Translator,
   requested: VoiceSettings["noiseSuppression"],
   actual: ActiveNoiseSuppression,
   gate: { requested: boolean; active: boolean } = { requested: false, active: false },
@@ -190,31 +191,27 @@ export function degradedNotice(
   if (usesWorkletSuppression(requested) && actual !== requested) {
     const name = SUPPRESSOR_NAME[requested];
     if (actual === "browser") {
-      notices.push(`Nie udało się uruchomić ${name}. Działa redukcja szumu przeglądarki.`);
+      notices.push(t("voiceClient.suppressorFellBackToBrowser", { name }));
     } else if (usesWorkletSuppression(actual)) {
-      notices.push(`Nie udało się uruchomić ${name}. Działa ${SUPPRESSOR_NAME[actual]}.`);
-    } else {
       notices.push(
-        `Nie udało się uruchomić ${name} ani redukcji szumu przeglądarki. Dźwięk jest nieprzetworzony.`,
+        t("voiceClient.suppressorFellBackToOther", { name, other: SUPPRESSOR_NAME[actual] }),
       );
+    } else {
+      notices.push(t("voiceClient.suppressorFailed", { name }));
     }
   }
 
   if (gate.requested && !gate.active) {
-    notices.push(
-      "Bramka mikrofonu nie działa w tej przeglądarce. Rozmówcy słyszą wszystko, co zbiera mikrofon.",
-    );
+    notices.push(t("voiceClient.gateMissing"));
   }
 
   // The browser's own AGC taking over is a quieter downgrade, since the level
   // is still kept, only by a leveller that also turns the room up. Losing
   // automatic volume altogether gets a plainer sentence.
   if (autoGain.requested && autoGain.active === "browser") {
-    notices.push(
-      "Automatyczna głośność działa w wersji przeglądarki, która podbija też tło między zdaniami.",
-    );
+    notices.push(t("voiceClient.autoGainBrowser"));
   } else if (autoGain.requested && autoGain.active === "none") {
-    notices.push("Automatyczna głośność nie działa w tej przeglądarce.");
+    notices.push(t("voiceClient.autoGainMissing"));
   }
 
   return notices.length > 0 ? notices.join(" ") : null;
