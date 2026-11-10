@@ -12,6 +12,7 @@ using Stellarr.Api.Embeds;
 using Stellarr.Api.Endpoints;
 using Stellarr.Api.Logging;
 using Stellarr.Api.Mail;
+using Stellarr.Api.Maintenance;
 using Stellarr.Api.Realtime;
 using Stellarr.Api.Storage;
 
@@ -84,6 +85,9 @@ builder.Services.AddSingleton<IObjectStorage, S3ObjectStorage>();
 builder.Services.Configure<UploadOptions>(builder.Configuration.GetSection(UploadOptions.SectionName));
 builder.Services.AddSingleton<UploadAdmissionGate>();
 builder.Services.AddScoped<MediaStorage>();
+
+builder.Services.Configure<MaintenanceOptions>(builder.Configuration.GetSection(MaintenanceOptions.SectionName));
+builder.Services.AddScoped<InstanceMaintenance>();
 
 builder.Services.Configure<MailOptions>(builder.Configuration.GetSection(MailOptions.SectionName));
 builder.Services.AddHttpClient<IEmailDelivery, ResendEmailDelivery>(http =>
