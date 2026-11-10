@@ -5,11 +5,12 @@ import { ApiError } from "./errors";
 import {
   ACTIVE_SERVER_STORAGE_KEY,
   fail,
-  failProblem,
+  forgetActiveServerId,
   JSON_HEADERS,
   problemDetail,
   readActiveServerId,
   readJson,
+  rememberActiveServerId,
   request,
 } from "./transport";
 
@@ -167,6 +168,28 @@ describe("request", () => {
   });
 });
 
+describe("remembering the active server", () => {
+  it("keeps the server for the next read and forgets it on request", () => {
+    rememberActiveServerId("srv-orbit");
+    expect(readActiveServerId()).toBe("srv-orbit");
+
+    forgetActiveServerId();
+    expect(readActiveServerId()).toBeUndefined();
+  });
+
+  it("carries on when storage refuses to be written", () => {
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => {
+      throw new DOMException("full", "QuotaExceededError");
+    });
+    vi.spyOn(Storage.prototype, "removeItem").mockImplementation(() => {
+      throw new DOMException("blocked", "SecurityError");
+    });
+
+    expect(() => rememberActiveServerId("srv-orbit")).not.toThrow();
+    expect(() => forgetActiveServerId()).not.toThrow();
+  });
+});
+
 describe("readJson", () => {
   it("parses a JSON body", async () => {
     const body = await readJson(new Response('{"ok":true}'), "/api/x");
@@ -205,54 +228,6 @@ describe("fail", () => {
     expect((thrown as ApiError).status).toBe(status);
     expect((thrown as ApiError).message).toBe(`/api/x responded ${status}`);
     expect((thrown as ApiError).code).toBeUndefined();
-  });
-});
-
-describe("failProblem", () => {
-  it("carries the machine-readable reason from the title and the details", async () => {
-    const error = await caught(
-      failProblem(
-        problem({ title: "rate_window_open", details: { channelId: "c-1" } }, 429),
-        "/api/x",
-      ),
-    );
-
-    expect(error.kind).toBe("rate-limited");
-    expect(error.status).toBe(429);
-    expect(error.code).toBe("rate_window_open");
-    expect(error.details).toEqual({ channelId: "c-1" });
-  });
-
-  it("finds the details under extensions as well", async () => {
-    const error = await caught(
-      failProblem(
-        problem({ title: "pin_limit_reached", extensions: { details: { limit: 50 } } }),
-        "/api/x",
-      ),
-    );
-
-    expect(error.code).toBe("pin_limit_reached");
-    expect(error.details).toEqual({ limit: 50 });
-  });
-
-  it("ignores a title that is a sentence rather than a reason", async () => {
-    const error = await caught(
-      failProblem(problem({ title: "Bad Request", status: 400 }), "/api/x"),
-    );
-
-    expect(error.kind).toBe("invalid");
-    expect(error.code).toBeUndefined();
-    expect(error.details).toBeUndefined();
-  });
-
-  it("still fails by status when the body is not JSON", async () => {
-    const error = await caught(
-      failProblem(new Response("gateway timeout", { status: 504 }), "/api/x"),
-    );
-
-    expect(error.kind).toBe("server");
-    expect(error.status).toBe(504);
-    expect(error.code).toBeUndefined();
   });
 });
 

@@ -31,6 +31,23 @@ export function readActiveServerId(): string | undefined {
   }
 }
 
+/** Remembers the server the account is working in; best effort, like the read. */
+export function rememberActiveServerId(serverId: string): void {
+  try {
+    window.localStorage.setItem(ACTIVE_SERVER_STORAGE_KEY, serverId);
+  } catch {
+    // Without storage the server falls back to the account's default.
+  }
+}
+
+export function forgetActiveServerId(): void {
+  try {
+    window.localStorage.removeItem(ACTIVE_SERVER_STORAGE_KEY);
+  } catch {
+    // Nothing was remembered if nothing can be stored.
+  }
+}
+
 /**
  * Sends one same-origin request, identified as this client.
  *
@@ -88,76 +105,32 @@ export function fail(response: Response, path: string): never {
   );
 }
 
-interface Problem {
-  code?: string;
-  details?: Record<string, unknown>;
-  /** The sentence the server wrote for the reader. */
-  message?: string;
-}
-
 /**
- * Reads what an ASP.NET problem document says about a failure.
+ * The first sentence out of an ASP.NET problem document, or null.
  *
- * `title` carries a machine-readable reason when it looks like one
- * (`pin_limit_reached`), `details` is an extension serialised at the root of the
- * document, `errors` is the shape of a validation problem, and `detail` is
- * free text. A body that is missing or not JSON yields an empty problem: the
- * status still says enough to fail on.
+ * `errors` is the shape of a validation problem (`{ errors: { field: ["…"] } }`)
+ * and `detail` is free text. Only the first validation message is taken: these
+ * endpoints check one rule at a time, and a list joined into a paragraph reads
+ * worse than the rule that matters. A body that is missing or not JSON yields
+ * null, and the caller has a fallback.
  */
-async function readProblem(response: Response): Promise<Problem> {
+export async function problemDetail(response: Response): Promise<string | null> {
   let payload: unknown;
   try {
     payload = await response.json();
   } catch {
-    return {};
+    return null;
   }
-  if (!isRecord(payload)) return {};
+  if (!isRecord(payload)) return null;
 
-  const problem: Problem = {};
-  const title = payload["title"];
-  if (typeof title === "string" && /^[a-z][a-z0-9_]*$/.test(title)) {
-    problem.code = title;
-  }
-  const extensions = payload["extensions"];
-  const details = isRecord(payload["details"])
-    ? payload["details"]
-    : isRecord(extensions)
-      ? extensions["details"]
-      : undefined;
-  if (isRecord(details)) problem.details = details;
-
-  // Only the first validation message is taken: these endpoints check one rule
-  // at a time, and a list joined into a paragraph reads worse than the rule
-  // that matters.
   const errors = payload["errors"];
   if (isRecord(errors)) {
     for (const messages of Object.values(errors)) {
       if (Array.isArray(messages) && typeof messages[0] === "string") {
-        problem.message = messages[0];
-        return problem;
+        return messages[0];
       }
     }
   }
   const detail = payload["detail"];
-  if (typeof detail === "string" && detail.length > 0) problem.message = detail;
-  return problem;
-}
-
-/**
- * Like `fail`, but carries the reason and facts the server gave, so a caller
- * can answer the reason rather than the status code.
- */
-export async function failProblem(response: Response, path: string): Promise<never> {
-  const { code, details } = await readProblem(response);
-  throw new ApiError(
-    statusToKind(response.status),
-    `${path} responded ${response.status}`,
-    response.status,
-    { code, details },
-  );
-}
-
-/** The server's own sentence for a refused request, or null when it sent none. */
-export async function problemDetail(response: Response): Promise<string | null> {
-  return (await readProblem(response)).message ?? null;
+  return typeof detail === "string" && detail.length > 0 ? detail : null;
 }
