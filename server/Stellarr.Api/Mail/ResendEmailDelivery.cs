@@ -15,7 +15,7 @@ public sealed class ResendEmailDelivery(HttpClient http, IOptions<MailOptions> o
         var apiKey = options.Value.ResendApiKey;
         if (string.IsNullOrWhiteSpace(apiKey))
         {
-            throw new InvalidOperationException("Klucz API Resend nie jest skonfigurowany.");
+            throw new InvalidOperationException("The Resend API key is not configured.");
         }
 
         using var request = new HttpRequestMessage(HttpMethod.Post, "emails")
@@ -38,7 +38,7 @@ public sealed class ResendEmailDelivery(HttpClient http, IOptions<MailOptions> o
         {
             var detail = await response.Content.ReadAsStringAsync(cancellationToken);
             throw new HttpRequestException(
-                $"Resend odrzucił wiadomość ({(int)response.StatusCode}): {detail}",
+                $"Resend rejected the message ({(int)response.StatusCode}): {detail}",
                 null,
                 response.StatusCode);
         }
@@ -47,7 +47,7 @@ public sealed class ResendEmailDelivery(HttpClient http, IOptions<MailOptions> o
         using var payload = await JsonDocument.ParseAsync(body, cancellationToken: cancellationToken);
         if (!payload.RootElement.TryGetProperty("id", out var id) || id.ValueKind != JsonValueKind.String)
         {
-            throw new HttpRequestException("Resend nie zwrócił identyfikatora wiadomości.");
+            throw new HttpRequestException("Resend did not return a message id.");
         }
 
         return id.GetString()!;

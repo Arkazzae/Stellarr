@@ -25,7 +25,7 @@ public static partial class PasswordRecoveryEndpoints
 
     [LoggerMessage(
         Level = LogLevel.Error,
-        Message = "Nie udało się wysłać wiadomości resetu hasła dla tokenu {TokenId}")]
+        Message = "Sending the password reset mail for token {TokenId} failed.")]
     private static partial void PasswordResetMailFailed(ILogger logger, Guid tokenId, Exception exception);
 
     public static IEndpointRouteBuilder MapPasswordRecoveryEndpoints(this IEndpointRouteBuilder endpoints)
@@ -42,6 +42,7 @@ public static partial class PasswordRecoveryEndpoints
         IEmailDelivery delivery,
         IOptions<MailOptions> mailOptions,
         IConfiguration configuration,
+        Messages messages,
         ILoggerFactory loggers,
         CancellationToken cancellationToken)
     {
@@ -83,7 +84,7 @@ public static partial class PasswordRecoveryEndpoints
         try
         {
             await delivery.SendAsync(
-                AccountEmail.PasswordReset(mailing.Sender, user.Email!, user.DisplayName, server.Name, link, token.Id),
+                AccountEmail.PasswordReset(mailing.Sender, user.Email!, user.DisplayName, server.Name, link, token.Id, messages),
                 cancellationToken);
         }
         catch (Exception exception) when (IsDeliveryFailure(exception, cancellationToken))

@@ -106,7 +106,9 @@ public static class ServerAdministrationEndpoints
         await StageAuditAsync(
             db,
             actor,
-            channel is null ? "utworzył(a) zaproszenie" : $"utworzył(a) zaproszenie na kanał #{channel.Name}",
+            channel is null
+                ? messages.Get(MessageKey.AuditInviteCreated)
+                : messages.Get(MessageKey.AuditInviteCreatedForChannel, ("channel", channel.Name)),
             cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
 
@@ -119,6 +121,7 @@ public static class ServerAdministrationEndpoints
         HttpContext http,
         AppDbContext db,
         IHubContext<AppHub> hub,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         if (await AuthorizeAsync(http, db, ServerPrivileges.ManageServer, cancellationToken) is not { } actor)
@@ -139,7 +142,7 @@ public static class ServerAdministrationEndpoints
             .ToListAsync(cancellationToken);
         db.UserNotifications.RemoveRange(sent);
         db.ServerInvites.Remove(invite);
-        await StageAuditAsync(db, actor, "unieważnił(a) zaproszenie", cancellationToken);
+        await StageAuditAsync(db, actor, messages.Get(MessageKey.AuditInviteRevoked), cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
 
         foreach (var recipientId in sent.Select(x => x.UserId).Distinct())
@@ -327,7 +330,7 @@ public static class ServerAdministrationEndpoints
 
         successor.RoleId = ownerRoleId;
         successor.OwnerSlot = 1;
-        await StageAuditAsync(db, actor, "przekazał(a) własność serwera", cancellationToken);
+        await StageAuditAsync(db, actor, messages.Get(MessageKey.AuditOwnershipTransferred), cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         return Results.NoContent();

@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Stellarr.Api.Auth;
 using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
+using Stellarr.Api.Localization;
 using Stellarr.Api.Messaging;
 
 namespace Stellarr.Api.Endpoints;
@@ -28,6 +29,7 @@ public static class MessageThreadEndpoints
         Guid channelId,
         HttpContext http,
         AppDbContext db,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         if (!await db.Channels.TextChannelOnServer(channelId, http.RequireActiveServerId())
@@ -59,7 +61,7 @@ public static class MessageThreadEndpoints
             .Where(x => roots.ContainsKey(x.RootId))
             .Select(x => new ThreadSummaryDto(
                 channelId.ToString(),
-                roots[x.RootId].ToReferenceDto(),
+                roots[x.RootId].ToReferenceDto(messages),
                 x.ReplyCount,
                 x.LastReplyAt.AsUtc()))
             .ToArray());
@@ -74,6 +76,7 @@ public static class MessageThreadEndpoints
         Guid rootId,
         HttpContext http,
         AppDbContext db,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         if (!await db.Channels.TextChannelOnServer(channelId, http.RequireActiveServerId())
@@ -82,19 +85,19 @@ public static class MessageThreadEndpoints
             return Results.NotFound();
         }
 
-        var messages = await db.Messages.AsNoTracking()
+        var thread = await db.Messages.AsNoTracking()
             .WithMessageDetails()
             .Where(x => x.ChannelId == channelId && (x.Id == rootId || x.ReplyToMessageId == rootId))
             .OrderBy(x => x.CreatedAt)
             .ThenBy(x => x.Id)
             .AsSplitQuery()
             .ToListAsync(cancellationToken);
-        if (messages.All(x => x.Id != rootId))
+        if (thread.All(x => x.Id != rootId))
         {
             return Results.NotFound();
         }
 
         var viewerId = http.User.RequireUserId();
-        return Results.Ok(new ThreadMessagesDto(messages.Select(x => x.ToDto(viewerId)).ToArray()));
+        return Results.Ok(new ThreadMessagesDto(thread.Select(x => x.ToDto(messages, viewerId)).ToArray()));
     }
 }

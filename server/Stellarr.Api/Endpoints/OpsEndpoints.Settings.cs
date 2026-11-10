@@ -59,7 +59,11 @@ public static partial class OpsEndpoints
         settings.AutomaticCleanupEnabled = request.AutomaticCleanupEnabled;
         settings.UpdatedAt = DateTime.UtcNow;
         await StageAuditAsync(
-            db, server.Id, http.User.RequireUserId(), "zaktualizował(a) ustawienia OPs", cancellationToken);
+            db,
+            server.Id,
+            http.User.RequireUserId(),
+            messages.Get(MessageKey.AuditSettingsUpdated),
+            cancellationToken);
         if (!await db.TrySaveChangesAsync(cancellationToken))
         {
             return Results.Conflict();
@@ -124,7 +128,7 @@ public static partial class OpsEndpoints
             db,
             server.Id,
             http.User.RequireUserId(),
-            $"ustawił(a) wersje desktopu: minimum {minimum}, zalecana {recommended}",
+            messages.Get(MessageKey.AuditDesktopVersionsSet, ("minimum", minimum), ("recommended", recommended)),
             cancellationToken);
         if (!await db.TrySaveChangesAsync(cancellationToken))
         {
@@ -178,7 +182,7 @@ public static partial class OpsEndpoints
             ? fromAddress
             : $"{options.FromName.Trim()} <{fromAddress}>";
         var messageId = await delivery.SendAsync(
-            AccountEmail.DeliveryTest(from, recipient, server.Name),
+            AccountEmail.DeliveryTest(from, recipient, server.Name, messages),
             cancellationToken);
         return Results.Ok(new { id = messageId });
     }

@@ -15,17 +15,15 @@ public static class ServerDirectoryEndpoints
     private const int MaxNameLength = 80;
     private const int MaxDescriptionLength = 280;
     private const int DiscoverPageSize = 100;
-    private const string DefaultTextChannelName = "ogólny";
-    private const string DefaultVoiceChannelName = "rozmowa";
 
     /// <summary>What a new server starts with.</summary>
     /// <param name="VoiceChannelName">The first voice channel; none when null.</param>
     internal sealed record StarterServer(
         string Name,
+        string TextChannelName,
+        string? VoiceChannelName,
         string Description = "",
         bool IsPublic = false,
-        string TextChannelName = DefaultTextChannelName,
-        string? VoiceChannelName = DefaultVoiceChannelName,
         bool MentionsOnly = true,
         bool VoiceJoinSound = true);
 
@@ -52,6 +50,7 @@ public static class ServerDirectoryEndpoints
     internal static (StellarrServer Server, ServerRole OwnerRole) AddServer(
         AppDbContext db,
         StarterServer starter,
+        Messages messages,
         DateTime now)
     {
         var server = new StellarrServer
@@ -66,7 +65,7 @@ public static class ServerDirectoryEndpoints
         {
             Id = Guid.NewGuid(),
             ServerId = server.Id,
-            Name = "Właściciel",
+            Name = messages.Get(MessageKey.OwnerRoleName),
             Color = "oklch(0.72 0.16 15)",
             Permissions = ServerPrivileges.All,
             Position = 0,
@@ -77,7 +76,7 @@ public static class ServerDirectoryEndpoints
         {
             Id = Guid.NewGuid(),
             ServerId = server.Id,
-            Name = "Członek",
+            Name = messages.Get(MessageKey.MemberRoleName),
             Color = "oklch(0.70 0.02 277)",
             Permissions = ServerPrivileges.None,
             Position = 1,
@@ -164,8 +163,8 @@ public static class ServerDirectoryEndpoints
 
         // An omitted channel name keeps the usual start. A voice name that is
         // given but empty is how a server is created without a voice channel.
-        var textChannelName = ChannelEndpoints.Normalize(request.TextChannelName ?? DefaultTextChannelName);
-        var voiceChannelName = ChannelEndpoints.Normalize(request.VoiceChannelName ?? DefaultVoiceChannelName);
+        var textChannelName = ChannelEndpoints.Normalize(request.TextChannelName ?? messages.Get(MessageKey.DefaultTextChannelName));
+        var voiceChannelName = ChannelEndpoints.Normalize(request.VoiceChannelName ?? messages.Get(MessageKey.DefaultVoiceChannelName));
         var wantsVoice = voiceChannelName.Length > 0;
         if (!ChannelEndpoints.IsValidName(textChannelName) ||
             (wantsVoice && !ChannelEndpoints.IsValidName(voiceChannelName)))
@@ -183,12 +182,13 @@ public static class ServerDirectoryEndpoints
             db,
             new StarterServer(
                 name,
-                description,
-                request.IsPublic,
                 textChannelName,
                 wantsVoice ? voiceChannelName : null,
+                description,
+                request.IsPublic,
                 request.MentionsOnly ?? true,
                 request.VoiceJoinSound ?? true),
+            messages,
             now);
         var ownerId = http.User.RequireUserId();
         db.ServerMembers.Add(new ServerMember
@@ -200,10 +200,10 @@ public static class ServerDirectoryEndpoints
             JoinedAt = now,
         });
         var owner = await db.Users.SingleAsync(x => x.Id == ownerId, cancellationToken);
-        var welcome = await ServerWelcome.CreateAsync(db, server.Id, owner, now, cancellationToken);
+        var welcome = await ServerWelcome.CreateAsync(db, server.Id, owner, now, messages, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
 
-        await ServerWelcome.PublishAsync(hub, server.Id, welcome, CancellationToken.None);
+        await ServerWelcome.PublishAsync(hub, server.Id, welcome, messages, CancellationToken.None);
         return Results.Created($"/api/servers/{server.Id}", server.ToDto());
     }
 
@@ -228,7 +228,7 @@ public static class ServerDirectoryEndpoints
             return refusal;
         }
 
-        await FinishJoinAsync(db, hub, server, userId, admission, invite: null, cancellationToken);
+        await FinishJoinAsync(db, hub, server, userId, admission, invite: null, messages, cancellationToken);
         return Results.Ok(server.ToDto());
     }
 
@@ -262,7 +262,7 @@ public static class ServerDirectoryEndpoints
             return refusal;
         }
 
-        await FinishJoinAsync(db, hub, server, userId, admission, invite, cancellationToken);
+        await FinishJoinAsync(db, hub, server, userId, admission, invite, messages, cancellationToken);
         return Results.Ok(server.ToJoinResponse(invite));
     }
 
@@ -303,7 +303,7 @@ public static class ServerDirectoryEndpoints
             JoinedAt = joinedAt,
         });
         var user = await db.Users.SingleAsync(x => x.Id == userId, cancellationToken);
-        var welcome = await ServerWelcome.CreateAsync(db, server.Id, user, joinedAt, cancellationToken);
+        var welcome = await ServerWelcome.CreateAsync(db, server.Id, user, joinedAt, messages, cancellationToken);
         return new Admission(Refusal: null, Added: true, welcome);
     }
 
@@ -320,6 +320,7 @@ public static class ServerDirectoryEndpoints
         Guid userId,
         Admission admission,
         ServerInvite? invite,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         if (admission.Added && invite is not null)
@@ -339,7 +340,7 @@ public static class ServerDirectoryEndpoints
             return;
         }
 
-        await ServerWelcome.PublishAsync(hub, server.Id, admission.Welcome, CancellationToken.None);
+        await ServerWelcome.PublishAsync(hub, server.Id, admission.Welcome, messages, CancellationToken.None);
         if (invitations.Count > 0)
         {
             await NotificationEndpoints.InvitationsChangedAsync(hub, userId, server.Id, CancellationToken.None);

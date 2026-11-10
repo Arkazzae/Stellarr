@@ -147,7 +147,7 @@ public static class DesktopBrowserLoginEndpoints
             return Results.Forbid();
         }
 
-        var session = SessionAuthentication.CreateSession(context, user.Id);
+        var session = SessionAuthentication.CreateSession(context, user.Id, messages);
         db.UserSessions.Add(session);
         await db.SaveChangesAsync(cancellationToken);
         await SessionAuthentication.SignInAsync(context, user, session.Id);

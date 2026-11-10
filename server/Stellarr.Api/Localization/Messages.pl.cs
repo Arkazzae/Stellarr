@@ -170,6 +170,46 @@ public sealed partial class Messages
         MessageKey.BrowserLoginDoneHeading => "Zalogowano do Stellarr",
         MessageKey.BrowserLoginDoneBody => "Możesz zamknąć tę kartę i wrócić do aplikacji desktopowej.",
         MessageKey.BrowserLoginLinkInvalid => "Link logowania jest nieprawidłowy albo wygasł.",
+
+        // Audit trail
+        MessageKey.AuditInviteCreated => "utworzył(a) zaproszenie",
+        MessageKey.AuditInviteCreatedForChannel => "utworzył(a) zaproszenie na kanał #{channel}",
+        MessageKey.AuditInviteRevoked => "unieważnił(a) zaproszenie",
+        MessageKey.AuditOwnershipTransferred => "przekazał(a) własność serwera",
+        MessageKey.AuditBackupCreated => "utworzył(a) backup {id}",
+        MessageKey.AuditBackupVerified => "zweryfikował(a) backup {id}",
+        MessageKey.AuditSettingsUpdated => "zaktualizował(a) ustawienia OPs",
+        MessageKey.AuditDesktopVersionsSet => "ustawił(a) wersje desktopu: minimum {minimum}, zalecana {recommended}",
+        MessageKey.AuditAccountCreated => "utworzył(a) konto {name}",
+        MessageKey.AuditRoleChanged => "zmienił(a) rolę {name} na {role}",
+        MessageKey.AuditAccountDisabled => "wyłączył(a) konto {name}",
+        MessageKey.AuditAccountEnabled => "włączył(a) konto {name}",
+        MessageKey.AuditRoleCreated => "utworzył(a) rolę {name}",
+        MessageKey.AuditRoleUpdated => "zaktualizował(a) rolę {name}",
+        MessageKey.AuditSessionRevoked => "unieważnił(a) sesję {name}",
+
+        // Notices and defaults
+        MessageKey.ServerWelcomeNotice => "<b>{name}</b> dołącza do serwera. Przywitajcie się!",
+        MessageKey.OwnerRoleName => "Właściciel",
+        MessageKey.MemberRoleName => "Członek",
+        MessageKey.DefaultTextChannelName => "ogólny",
+        MessageKey.DefaultVoiceChannelName => "rozmowa",
+        MessageKey.UnknownDevice => "Nieznane urządzenie",
+        MessageKey.NoBanReason => "Bez podanego powodu",
+        MessageKey.AttachmentPreview => "Załącznik",
+        MessageKey.OidcDefaultName => "Konto główne",
+
+        // Mail
+        MessageKey.PasswordResetSubject => "Zmień hasło w {instance}",
+        MessageKey.PasswordResetGreeting => "Cześć {name},",
+        MessageKey.PasswordResetInstruction => "Otwórz ten link, aby ustawić nowe hasło w {instance}:",
+        MessageKey.PasswordResetValidity => "Link wygasa za 60 minut i działa tylko raz. Jeśli to nie Ty, zignoruj tę wiadomość.",
+        MessageKey.PasswordResetHeading => "Ustaw nowe hasło",
+        MessageKey.PasswordResetIntro => "Cześć {name}. Otrzymaliśmy prośbę o zmianę hasła. Link wygasa za 60 minut i działa tylko raz.",
+        MessageKey.PasswordResetButton => "Ustaw nowe hasło",
+        MessageKey.PasswordResetIgnore => "Jeśli to nie Ty, zignoruj tę wiadomość. Twoje obecne hasło pozostanie bez zmian.",
+        MessageKey.DeliveryTestSubject => "Test poczty z {instance}",
+        MessageKey.DeliveryTestBody => "Resend poprawnie przyjął wiadomość testową z {instance}.",
     };
 #pragma warning restore CS8524
 }

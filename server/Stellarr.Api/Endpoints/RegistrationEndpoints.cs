@@ -85,8 +85,11 @@ public static partial class RegistrationEndpoints
         ServerRole role;
         if (server is null)
         {
-            (server, role) = ServerDirectoryEndpoints.AddServer(
-                db, new ServerDirectoryEndpoints.StarterServer("Stellarr"), now);
+            var starter = new ServerDirectoryEndpoints.StarterServer(
+                "Stellarr",
+                messages.Get(MessageKey.DefaultTextChannelName),
+                messages.Get(MessageKey.DefaultVoiceChannelName));
+            (server, role) = ServerDirectoryEndpoints.AddServer(db, starter, messages, now);
         }
         else if (await ServerAccess.FindMemberRoleAsync(db, server.Id, cancellationToken) is { } memberRole)
         {
@@ -121,13 +124,13 @@ public static partial class RegistrationEndpoints
             OwnerSlot = role.IsOwner ? 1 : null,
             JoinedAt = now,
         });
-        var welcome = await ServerWelcome.CreateAsync(db, server.Id, user, now, cancellationToken);
+        var welcome = await ServerWelcome.CreateAsync(db, server.Id, user, now, messages, cancellationToken);
         if (invite is not null)
         {
             invite.Uses++;
         }
 
-        var session = SessionAuthentication.CreateSession(context, id);
+        var session = SessionAuthentication.CreateSession(context, id, messages);
         db.UserSessions.Add(session);
 
         try
@@ -149,7 +152,7 @@ public static partial class RegistrationEndpoints
         }
 
         await SessionAuthentication.SignInAsync(context, user, session.Id);
-        await ServerWelcome.PublishAsync(hub, server.Id, welcome, CancellationToken.None);
+        await ServerWelcome.PublishAsync(hub, server.Id, welcome, messages, CancellationToken.None);
         return Results.Created("/api/me", user.ToDto("online"));
     }
 

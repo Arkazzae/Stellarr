@@ -66,7 +66,7 @@ public static class MessageIndexEndpoints
             cancellationToken);
         var viewerId = http.User.RequireUserId();
         var ordered = await LoadInOrderAsync(db, found.MessageIds, cancellationToken);
-        return Results.Ok(ordered.Select(x => x.ToDto(viewerId)).ToArray());
+        return Results.Ok(ordered.Select(x => x.ToDto(messages, viewerId)).ToArray());
     }
 
     /// <summary>
@@ -136,7 +136,7 @@ public static class MessageIndexEndpoints
         var viewerId = http.User.RequireUserId();
         var ordered = await LoadInOrderAsync(db, found.MessageIds, cancellationToken);
         return Results.Ok(new MessageIndexPageDto(
-            ordered.Select(x => x.ToDto(viewerId)).ToArray(),
+            ordered.Select(x => x.ToDto(messages, viewerId)).ToArray(),
             found.HasMore ? (page with { Offset = page.Offset + found.MessageIds.Count }).Encode() : null));
     }
 

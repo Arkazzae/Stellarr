@@ -45,7 +45,7 @@ public static class AuthEndpoints
                 title: messages.Get(MessageKey.SignInFailed));
         }
 
-        var session = SessionAuthentication.CreateSession(context, user.Id);
+        var session = SessionAuthentication.CreateSession(context, user.Id, messages);
         db.UserSessions.Add(session);
         await db.SaveChangesAsync(cancellationToken);
         await SessionAuthentication.SignInAsync(context, user, session.Id);
@@ -53,8 +53,14 @@ public static class AuthEndpoints
     }
 
     /// <summary>Whether the sign-in page should offer the provider, and under what name.</summary>
-    private static IResult GetOidcStatus(ExternalOidcOptions options) =>
-        Results.Ok(new { enabled = options.IsConfigured, displayName = options.DisplayName });
+    private static IResult GetOidcStatus(ExternalOidcOptions options, Messages messages) =>
+        Results.Ok(new
+        {
+            enabled = options.IsConfigured,
+            displayName = string.IsNullOrWhiteSpace(options.DisplayName)
+                ? messages.Get(MessageKey.OidcDefaultName)
+                : options.DisplayName,
+        });
 
     private static IResult ChallengeOidc(string? returnUrl, ExternalOidcOptions options) =>
         options.IsConfigured

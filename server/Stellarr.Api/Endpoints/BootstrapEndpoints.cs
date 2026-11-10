@@ -3,6 +3,7 @@ using Stellarr.Api.Auth;
 using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
 using Stellarr.Api.Domain;
+using Stellarr.Api.Localization;
 using Stellarr.Api.Messaging;
 using Stellarr.Api.Realtime;
 
@@ -36,6 +37,7 @@ public static class BootstrapEndpoints
         AppDbContext db,
         PresenceTracker presence,
         TurnCredentialService turnCredentials,
+        Messages messages,
         IConfiguration configuration,
         CancellationToken cancellationToken)
     {
@@ -66,7 +68,7 @@ public static class BootstrapEndpoints
 
         var textChannels = channels.Where(x => x.Kind == ChannelKind.Text).ToList();
         var reads = await LoadReadMarkersAsync(db, userId, textChannels, cancellationToken);
-        var messages = textChannels.Count == 0
+        var recent = textChannels.Count == 0
             ? []
             : await db.Messages.AsNoTracking()
                 .WithMessageDetails()
@@ -96,7 +98,7 @@ public static class BootstrapEndpoints
             channels.Select(x => x.ToDto()).ToArray(),
             sections.Select(x => x.ToDto()).ToArray(),
             members.Select(x => x.ToDto(presence.PublicPresenceOf(x.Id, userId))).ToArray(),
-            messages.OrderBy(x => x.CreatedAt).Select(x => x.ToDto(userId)).ToArray(),
+            recent.OrderBy(x => x.CreatedAt).Select(x => x.ToDto(messages, userId)).ToArray(),
             reads,
             voice,
             BuildRtcConfiguration(configuration, turnCredentials.Create(userId)),

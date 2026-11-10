@@ -17,7 +17,6 @@ namespace Stellarr.Api.Endpoints;
 public static class ModerationEndpoints
 {
     private const int MaximumReasonLength = 500;
-    private const string DefaultReason = "Bez podanego powodu";
 
     public static IEndpointRouteBuilder MapModerationEndpoints(this IEndpointRouteBuilder endpoints)
     {
@@ -139,7 +138,7 @@ public static class ModerationEndpoints
             ServerId = serverId,
             UserId = userId,
             BannedById = lookup.Actor.UserId,
-            Reason = reason.Length == 0 ? DefaultReason : reason,
+            Reason = reason.Length == 0 ? messages.Get(MessageKey.NoBanReason) : reason,
             BannedAt = DateTime.UtcNow,
             User = lookup.Target.User,
             BannedBy = lookup.Actor.User,

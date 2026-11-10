@@ -36,6 +36,7 @@ public static partial class OpsEndpoints
         HttpContext http,
         AppDbContext db,
         IConfiguration configuration,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         var server = http.RequireInstanceServer();
@@ -48,7 +49,8 @@ public static partial class OpsEndpoints
         // was configured with, so that a backup is always of the live data.
         await CopyDatabaseAsync(db.Database.GetDbConnection().ConnectionString, path, cancellationToken);
 
-        await StageAuditAsync(db, server.Id, http.User.RequireUserId(), $"utworzył(a) backup {id}", cancellationToken);
+        await StageAuditAsync(
+            db, server.Id, http.User.RequireUserId(), messages.Get(MessageKey.AuditBackupCreated, ("id", id)), cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
         var file = new FileInfo(path);
         return Results.Created(
@@ -85,7 +87,11 @@ public static partial class OpsEndpoints
             verifiedAt.ToString("O", CultureInfo.InvariantCulture),
             cancellationToken);
         await StageAuditAsync(
-            db, server.Id, http.User.RequireUserId(), $"zweryfikował(a) backup {backupId}", cancellationToken);
+            db,
+            server.Id,
+            http.User.RequireUserId(),
+            messages.Get(MessageKey.AuditBackupVerified, ("id", backupId)),
+            cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
         var file = new FileInfo(path);
         return Results.Ok(new OpsBackupDto(backupId, file.Length, file.CreationTimeUtc, verifiedAt));

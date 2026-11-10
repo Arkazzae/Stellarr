@@ -40,6 +40,7 @@ public static class MessagePinEndpoints
         Guid channelId,
         HttpContext http,
         AppDbContext db,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         if (!await db.Channels.TextChannelOnServer(channelId, http.RequireActiveServerId())
@@ -56,7 +57,7 @@ public static class MessagePinEndpoints
             .AsSplitQuery()
             .ToListAsync(cancellationToken);
         var viewerId = http.User.RequireUserId();
-        return Results.Ok(new PinnedMessagesDto(pinned.Select(x => x.ToDto(viewerId)).ToArray()));
+        return Results.Ok(new PinnedMessagesDto(pinned.Select(x => x.ToDto(messages, viewerId)).ToArray()));
     }
 
     private static Task<IResult> PinAsync(
@@ -137,7 +138,7 @@ public static class MessagePinEndpoints
         // The event is shared by everyone, so it cannot say which reactions
         // are the viewer's own.
         await hub.Clients.Group(AppHub.ServerGroup(serverId))
-            .SendAsync("MessageUpdated", message.ToDto(), CancellationToken.None);
-        return Results.Ok(message.ToDto(userId));
+            .SendAsync("MessageUpdated", message.ToDto(messages), CancellationToken.None);
+        return Results.Ok(message.ToDto(messages, userId));
     }
 }

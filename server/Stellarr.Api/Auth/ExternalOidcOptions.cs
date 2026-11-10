@@ -17,7 +17,8 @@ public sealed class ExternalOidcOptions
     /// <summary>A file holding the secret, for deployments that mount secrets instead of passing them.</summary>
     public string ClientSecretFile { get; init; } = "";
 
-    public string DisplayName { get; init; } = "Konto główne";
+    /// <summary>The name of the sign-in button; blank shows a default in the language of the instance.</summary>
+    public string DisplayName { get; init; } = "";
     public string CallbackPath { get; init; } = "/api/auth/oidc/callback";
 
     /// <summary>

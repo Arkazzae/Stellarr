@@ -42,8 +42,8 @@ public sealed record ServerIconDto(string? IconUrl);
 /// Everything after the description is optional and falls back to the usual
 /// start, so a client that sends only a name still gets a working server.
 /// </summary>
-/// <param name="TextChannelName">The first text channel; "ogólny" when omitted.</param>
-/// <param name="VoiceChannelName">The first voice channel; "rozmowa" when omitted, none when empty.</param>
+/// <param name="TextChannelName">The first text channel; named in the instance language when omitted.</param>
+/// <param name="VoiceChannelName">The first voice channel; named in the instance language when omitted, none when empty.</param>
 /// <param name="MentionsOnly">False makes every message notify by default.</param>
 public sealed record CreateServerRequest(
     string Name,

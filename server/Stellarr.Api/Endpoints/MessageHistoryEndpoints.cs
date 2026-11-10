@@ -79,7 +79,7 @@ public static class MessageHistoryEndpoints
 
         var hasMore = rows.Count > pageSize;
         var viewerId = http.User.RequireUserId();
-        var items = rows.Take(pageSize).Reverse().Select(x => x.ToDto(viewerId)).ToArray();
+        var items = rows.Take(pageSize).Reverse().Select(x => x.ToDto(messages, viewerId)).ToArray();
         return Results.Ok(new MessageHistoryPageDto(
             items,
             hasMore ? (page with { Offset = page.Offset + pageSize }).Encode() : null,
@@ -143,7 +143,7 @@ public static class MessageHistoryEndpoints
                 change.Sequence.ToString(CultureInfo.InvariantCulture),
                 message is null ? "delete" : "upsert",
                 change.MessageId.ToString(),
-                message?.ToDto(viewerId));
+                message?.ToDto(messages, viewerId));
         }).ToArray();
         var next = changes.Length == 0 ? from : changes[^1].Sequence;
         return Results.Ok(new MessageSyncPageDto(

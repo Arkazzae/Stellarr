@@ -172,6 +172,46 @@ public sealed partial class Messages
         MessageKey.BrowserLoginDoneHeading => "Signed in to Stellarr",
         MessageKey.BrowserLoginDoneBody => "You can close this tab and return to the desktop app.",
         MessageKey.BrowserLoginLinkInvalid => "The sign-in link is invalid or has expired.",
+
+        // Audit trail
+        MessageKey.AuditInviteCreated => "created an invite",
+        MessageKey.AuditInviteCreatedForChannel => "created an invite to channel #{channel}",
+        MessageKey.AuditInviteRevoked => "revoked an invite",
+        MessageKey.AuditOwnershipTransferred => "transferred ownership of the server",
+        MessageKey.AuditBackupCreated => "created backup {id}",
+        MessageKey.AuditBackupVerified => "verified backup {id}",
+        MessageKey.AuditSettingsUpdated => "updated the operator panel settings",
+        MessageKey.AuditDesktopVersionsSet => "set the desktop versions: minimum {minimum}, recommended {recommended}",
+        MessageKey.AuditAccountCreated => "created the account {name}",
+        MessageKey.AuditRoleChanged => "changed the role of {name} to {role}",
+        MessageKey.AuditAccountDisabled => "disabled the account {name}",
+        MessageKey.AuditAccountEnabled => "enabled the account {name}",
+        MessageKey.AuditRoleCreated => "created the role {name}",
+        MessageKey.AuditRoleUpdated => "updated the role {name}",
+        MessageKey.AuditSessionRevoked => "revoked the session of {name}",
+
+        // Notices and defaults
+        MessageKey.ServerWelcomeNotice => "<b>{name}</b> has joined the server. Say hello!",
+        MessageKey.OwnerRoleName => "Owner",
+        MessageKey.MemberRoleName => "Member",
+        MessageKey.DefaultTextChannelName => "general",
+        MessageKey.DefaultVoiceChannelName => "voice",
+        MessageKey.UnknownDevice => "Unknown device",
+        MessageKey.NoBanReason => "No reason given",
+        MessageKey.AttachmentPreview => "Attachment",
+        MessageKey.OidcDefaultName => "Main account",
+
+        // Mail
+        MessageKey.PasswordResetSubject => "Reset your password on {instance}",
+        MessageKey.PasswordResetGreeting => "Hi {name},",
+        MessageKey.PasswordResetInstruction => "Open this link to set a new password on {instance}:",
+        MessageKey.PasswordResetValidity => "The link expires in 60 minutes and works only once. If this was not you, ignore this message.",
+        MessageKey.PasswordResetHeading => "Set a new password",
+        MessageKey.PasswordResetIntro => "Hi {name}. We received a request to change your password. The link expires in 60 minutes and works only once.",
+        MessageKey.PasswordResetButton => "Set a new password",
+        MessageKey.PasswordResetIgnore => "If this was not you, ignore this message. Your current password will stay the same.",
+        MessageKey.DeliveryTestSubject => "Mail test from {instance}",
+        MessageKey.DeliveryTestBody => "Resend accepted the test message from {instance}.",
     };
 #pragma warning restore CS8524
 }

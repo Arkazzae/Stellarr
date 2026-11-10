@@ -95,7 +95,7 @@ public static class MessageEndpoints
         // A retry of a send that went through must not wait behind slow mode
         // or be refused for the attachments it already used, so it is
         // recognised first.
-        if (await ReplayAsync(db, submission, cancellationToken) is { } replay)
+        if (await ReplayAsync(db, submission, messages, cancellationToken) is { } replay)
         {
             return replay;
         }
@@ -170,7 +170,7 @@ public static class MessageEndpoints
                 // Another request with the same client id stored it between
                 // the check above and the insert.
                 db.ChangeTracker.Clear();
-                if (await ReplayAsync(db, submission, cancellationToken) is { } raced)
+                if (await ReplayAsync(db, submission, messages, cancellationToken) is { } raced)
                 {
                     return raced;
                 }
@@ -179,7 +179,7 @@ public static class MessageEndpoints
             }
         }
 
-        var response = message.ToDto(userId);
+        var response = message.ToDto(messages, userId);
         // The message is stored by now, so a client that hangs up must not
         // keep the others from hearing about it.
         await hub.Clients.Group(AppHub.ServerGroup(serverId))
@@ -203,6 +203,7 @@ public static class MessageEndpoints
     private static async Task<IResult?> ReplayAsync(
         AppDbContext db,
         Submission submission,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         if (submission.ClientMessageId is not { } clientMessageId)
@@ -219,7 +220,7 @@ public static class MessageEndpoints
             return null;
         }
 
-        return submission.Produced(existing) ? Results.Ok(existing.ToDto(submission.AuthorId)) : Results.Conflict();
+        return submission.Produced(existing) ? Results.Ok(existing.ToDto(messages, submission.AuthorId)) : Results.Conflict();
     }
 
     /// <summary>
@@ -315,7 +316,7 @@ public static class MessageEndpoints
         // The event is shared by everyone, so it cannot say which reactions
         // are the viewer's own; clients keep that from history.
         await hub.Clients.Group(AppHub.ServerGroup(serverId))
-            .SendAsync("MessageUpdated", message.ToDto(), CancellationToken.None);
+            .SendAsync("MessageUpdated", message.ToDto(messages), CancellationToken.None);
 
         // The new text may have gained links, or lost the ones it had cards for.
         if (changed)
@@ -323,7 +324,7 @@ public static class MessageEndpoints
             embeds.Enqueue(new EmbedRequest(message.ChannelId, message.Id));
         }
 
-        return Results.Ok(message.ToDto(userId));
+        return Results.Ok(message.ToDto(messages, userId));
     }
 
     /// <summary>

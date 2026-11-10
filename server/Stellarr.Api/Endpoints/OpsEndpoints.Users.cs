@@ -120,7 +120,11 @@ public static partial class OpsEndpoints
             JoinedAt = now,
         });
         await StageAuditAsync(
-            db, server.Id, http.User.RequireUserId(), $"utworzył(a) konto {displayName}", cancellationToken);
+            db,
+            server.Id,
+            http.User.RequireUserId(),
+            messages.Get(MessageKey.AuditAccountCreated, ("name", displayName)),
+            cancellationToken);
         if (!await db.TrySaveChangesAsync(cancellationToken))
         {
             return Results.Conflict();
@@ -135,6 +139,7 @@ public static partial class OpsEndpoints
         HttpContext http,
         AppDbContext db,
         IHubContext<AppHub> hub,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         var server = http.RequireInstanceServer();
@@ -161,7 +166,11 @@ public static partial class OpsEndpoints
 
         member.RoleId = role.Id;
         await StageAuditAsync(
-            db, server.Id, actorId, $"zmienił(a) rolę {member.User.DisplayName} na {role.Name}", cancellationToken);
+            db,
+            server.Id,
+            actorId,
+            messages.Get(MessageKey.AuditRoleChanged, ("name", member.User.DisplayName), ("role", role.Name)),
+            cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
         await RoleEndpoints.NotifyAsync(hub, server.Id, [userId], role.Permissions, cancellationToken);
         return Results.NoContent();
@@ -223,7 +232,9 @@ public static partial class OpsEndpoints
             db,
             server.Id,
             actorId,
-            $"{(request.Disabled ? "wyłączył(a)" : "włączył(a)")} konto {member.User.DisplayName}",
+            messages.Get(
+                request.Disabled ? MessageKey.AuditAccountDisabled : MessageKey.AuditAccountEnabled,
+                ("name", member.User.DisplayName)),
             cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
         return Results.NoContent();
@@ -261,7 +272,11 @@ public static partial class OpsEndpoints
         };
         db.ServerRoles.Add(role);
         await StageAuditAsync(
-            db, server.Id, http.User.RequireUserId(), $"utworzył(a) rolę {role.Name}", cancellationToken);
+            db,
+            server.Id,
+            http.User.RequireUserId(),
+            messages.Get(MessageKey.AuditRoleCreated, ("name", role.Name)),
+            cancellationToken);
         if (!await db.TrySaveChangesAsync(cancellationToken))
         {
             return Results.Conflict();
@@ -311,7 +326,11 @@ public static partial class OpsEndpoints
         role.Color = draft.Color;
         role.Permissions = draft.Permissions;
         await StageAuditAsync(
-            db, server.Id, http.User.RequireUserId(), $"zaktualizował(a) rolę {role.Name}", cancellationToken);
+            db,
+            server.Id,
+            http.User.RequireUserId(),
+            messages.Get(MessageKey.AuditRoleUpdated, ("name", role.Name)),
+            cancellationToken);
         if (!await db.TrySaveChangesAsync(cancellationToken))
         {
             return Results.Conflict();

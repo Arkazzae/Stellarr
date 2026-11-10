@@ -21,6 +21,8 @@ public sealed record MessageIndexResult(IReadOnlyList<Guid> MessageIds, bool Has
 public static partial class MessageSearchIndex
 {
     private const int MaxTerms = 16;
+    private const char LowerStrokeL = '\u0142';
+    private const char UpperStrokeL = '\u0141';
 
     /// <summary>
     /// Turns what somebody typed into an FTS5 expression that cannot contain
@@ -40,10 +42,10 @@ public static partial class MessageSearchIndex
     }
 
     /// <summary>
-    /// A word as a prefix match. The tokenizer folds the accents of Polish
-    /// letters but not ł, which is a letter of its own, so a word is also
-    /// searched with its l and ł exchanged: that is how "zolw" finds "żółw"
-    /// on a keyboard without Polish letters.
+    /// A word as a prefix match. The tokenizer folds accented letters but not
+    /// the Polish l with a stroke, which counts as a letter of its own, so a
+    /// word is also searched with the two l letters exchanged: that is how a
+    /// Polish word typed on a keyboard without Polish letters is still found.
     /// </summary>
     private static string PrefixTerm(string word)
     {
@@ -53,12 +55,14 @@ public static partial class MessageSearchIndex
 
     private static string? ExchangeL(string word)
     {
-        if (word.Contains('ł') || word.Contains('Ł'))
+        if (word.Contains(LowerStrokeL) || word.Contains(UpperStrokeL))
         {
-            return word.Replace('ł', 'l').Replace('Ł', 'L');
+            return word.Replace(LowerStrokeL, 'l').Replace(UpperStrokeL, 'L');
         }
 
-        return word.Contains('l') || word.Contains('L') ? word.Replace('l', 'ł').Replace('L', 'Ł') : null;
+        return word.Contains('l') || word.Contains('L')
+            ? word.Replace('l', LowerStrokeL).Replace('L', UpperStrokeL)
+            : null;
     }
 
     /// <summary>
