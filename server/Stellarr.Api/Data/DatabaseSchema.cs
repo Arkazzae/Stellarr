@@ -25,6 +25,7 @@ public static class DatabaseSchema
         NotificationSchema.UpgradeAsync,
         EmbedSchema.UpgradeAsync,
         MessageReactionSchema.UpgradeAsync,
+        MessageIndexSchema.UpgradeAsync,
     ];
 
     public static async Task UpgradeAsync(AppDbContext db, CancellationToken cancellationToken)

@@ -138,6 +138,13 @@ public sealed record MessageSyncPageDto(
     bool ResetRequired);
 
 /// <summary>
+/// One page of a channel's index. A search is ordered by relevance, the media
+/// and links by recency.
+/// </summary>
+/// <param name="NextCursor">Opaque; null on the last page.</param>
+public sealed record MessageIndexPageDto(IReadOnlyList<MessageDto> Messages, string? NextCursor);
+
+/// <summary>
 /// One conversation rooted in a channel message. The list only needs a short
 /// reference to the root; opening a thread is a read of its own.
 /// </summary>
