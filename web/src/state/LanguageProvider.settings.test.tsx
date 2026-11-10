@@ -245,6 +245,9 @@ describe("LanguageProvider settings", () => {
         <Probe actions={{ english: (language) => language.update({ locale: "en" }) }} />
       </LanguageProvider>,
     );
+    // With nothing stored, a hydration frame that lands after the click would
+    // read the defaults and replace the change.
+    await hydrated();
 
     await user.click(screen.getByRole("button", { name: "english" }));
 
