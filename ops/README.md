@@ -1,26 +1,44 @@
 # Stellarr OPs
 
-Osobny frontend panelu właściciela instancji: przegląd, użytkownicy z sesjami i
-rolami, metryki działającego procesu, logi i audyt, kopie zapasowe, wydania
-aplikacji oraz ustawienia instancji.
+A separate front end for the instance owner's panel: an overview, users with their
+sessions and roles, metrics of the running process, logs and audit, backups, app
+releases and instance settings.
 
-## Uruchomienie
+## Running it
 
 ```bash
 npm install
 npm run dev
 ```
 
-Aplikacja działa na `http://localhost:3001`. W trybie developerskim żądania do
-`/api` i `/health` są przekazywane do `STELLARR_API_ORIGIN` (domyślnie
-`http://127.0.0.1:5000`; wzór w `.env.example`).
+The app runs at `http://localhost:3001`. In development, requests to `/api` and
+`/health` are forwarded to `STELLARR_API_ORIGIN` (by default
+`http://127.0.0.1:5000`; see `.env.example`).
 
-W produkcyjnym obrazie statyczny build jest dostępny pod `/ops/` na tym samym
-originie co główny klient. Endpointy `/api/ops/*` wymagają zalogowania kontem z
-systemową rolą właściciela. Panel korzysta z trwałego rejestru sesji i audytu,
-metryk działającego procesu, bufora logów oraz kopii SQLite tworzonych online.
+In the production image the static build is served under `/ops/` on the same origin
+as the main client. The `/api/ops/*` endpoints require a login with an account that
+holds the built-in owner role. The panel relies on the persistent session and audit
+registry, metrics of the running process, the log buffer and SQLite backups taken
+online.
 
-## Sprawdzenie
+## Language
+
+The panel is in English by default, with Polish as a translation. The language is
+chosen in the browser each time the panel loads, never at build time, in this order:
+
+1. the `stellarr_locale` cookie, which the main client writes (`pl` or `en`) when you
+   change its language setting;
+2. the first of the browser's preferred languages that is Polish or English;
+3. English.
+
+The `lang` attribute of the page follows the chosen language, and so do dates and
+numbers. There is no language switcher here: change the language in the main client.
+
+The panel's text lives in `src/i18n/en.ts` and `src/i18n/pl.ts`, which must have the
+same keys. Components read it with `t("some.key", { name: value })`,
+where `{name}` marks a placeholder in the message.
+
+## Checks
 
 ```bash
 npm run typecheck
@@ -29,5 +47,5 @@ npm test
 npm run build
 ```
 
-`npm run build` sprawdza typy i zapisuje build w `dist/`; `npm run preview`
-serwuje go lokalnie na porcie 4174.
+`npm run build` checks the types and writes the build to `dist/`; `npm run preview`
+serves it locally on port 4174.
