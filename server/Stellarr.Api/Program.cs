@@ -132,6 +132,7 @@ app.MapDesktopBrowserLoginEndpoints();
 app.MapSessionEndpoints();
 app.MapBootstrapEndpoints();
 app.MapUploadEndpoints();
+app.MapAssetEndpoints();
 app.MapHub<AppHub>("/hubs/app");
 
 await InitializeApplicationAsync(app);
