@@ -18,6 +18,10 @@ export {
 } from "./DirectoryProvider";
 export { useEmoji, type EmojiValue } from "./EmojiProvider";
 export {
+  useKeybindContext as useKeybinds,
+  type KeybindValue,
+} from "./KeybindProvider";
+export {
   useLanguage,
   type InterfaceLocale,
   type LanguageSettings,
