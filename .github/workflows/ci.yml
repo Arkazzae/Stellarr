@@ -1,0 +1,93 @@
+name: CI
+
+on:
+  pull_request:
+    # "edited" re-checks the title of the pull request after it is renamed.
+    types: [opened, synchronize, reopened, edited]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  server:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: "**/packages.lock.json"
+      # NuGet audit is on by default and the build treats warnings as errors,
+      # so a restore that finds a known vulnerable package fails here.
+      - run: dotnet restore Stellarr.slnx --locked-mode
+      - run: dotnet build Stellarr.slnx --no-restore --configuration Release
+      - run: dotnet test Stellarr.slnx --no-build --configuration Release
+
+  web:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  ops:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: ops
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: ops/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  # Pull requests are squash-merged and the title becomes the commit subject,
+  # so the title has to follow the format that .githooks/commit-msg checks.
+  commits:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check the pull request title
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+        run: |
+          pattern='^(feat|fix|refactor|test|docs|build|ci|chore|perf)(\([a-z0-9][a-z0-9-]*\))?: [a-z0-9].*[^.[:space:]]$'
+          if [[ ! $TITLE =~ $pattern ]]; then
+            echo "::error::The title must look like 'type(scope): subject' in lower case, with no trailing period. Types: feat, fix, refactor, test, docs, build, ci, chore, perf."
+            exit 1
+          fi
+          if (( ${#TITLE} > 72 )); then
+            echo "::error::The title is ${#TITLE} characters long, the limit is 72."
+            exit 1
+          fi
