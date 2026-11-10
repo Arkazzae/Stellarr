@@ -1,0 +1,36 @@
+# Template: the entrypoint substitutes the placeholders below and writes the
+# result to /etc/turnserver.conf.
+listening-port=3478
+tls-listening-port=5349
+# Each of these lines is a comment, or no-tcp / no-tls / no-dtls when the
+# matching transport is switched off (Rtc__TurnTcpEnabled, Rtc__TurnsEnabled).
+__TURN_TCP_LINE__
+__TURN_TLS_LINE__
+__TURN_DTLS_LINE__
+listening-ip=0.0.0.0
+relay-ip=0.0.0.0
+min-port=49160
+max-port=49200
+fingerprint
+
+# The API hands out time-limited credentials derived from this shared secret.
+use-auth-secret
+static-auth-secret=__TURN_SHARED_SECRET__
+realm=__PUBLIC_HOST__
+# external-ip=<PUBLIC_IP>, or a comment while PUBLIC_IP is empty.
+__EXTERNAL_IP_LINE__
+
+cert=/data/stellarr/tls/fullchain.pem
+pkey=/data/stellarr/tls/privkey.pem
+no-tlsv1
+no-tlsv1_1
+
+no-cli
+stale-nonce=600
+max-allocate-lifetime=300
+no-multicast-peers
+response-origin-only-with-rfc5780
+
+log-file=stdout
+simple-log
+verbose
