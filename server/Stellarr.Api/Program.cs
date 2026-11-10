@@ -1,13 +1,23 @@
 using Amazon.Runtime;
 using Amazon.S3;
 using Microsoft.AspNetCore.HttpOverrides;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using Stellarr.Api.Auth;
+using Stellarr.Api.Data;
 using Stellarr.Api.Logging;
 using Stellarr.Api.Storage;
 
 var builder = WebApplication.CreateBuilder(args);
 
+var dataRoot = builder.Configuration["DataRoot"] ?? "data";
+Directory.CreateDirectory(dataRoot);
+
 builder.Services.AddProblemDetails();
+
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlite(builder.Configuration.GetConnectionString("Database")));
+builder.Services.AddSingleton<PasswordService>();
 
 builder.Services.Configure<StorageOptions>(builder.Configuration.GetSection(StorageOptions.SectionName));
 builder.Services.AddSingleton<IAmazonS3>(services =>
@@ -53,14 +63,24 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapGet("/health/live", () => Results.Ok(new { status = "live" }));
+app.MapGet("/health/ready", async (AppDbContext db, CancellationToken cancellationToken) =>
+    await db.Database.CanConnectAsync(cancellationToken)
+        ? Results.Ok(new { status = "ready" })
+        : Results.Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: "Database unavailable"));
 
 await InitializeApplicationAsync(app);
 await app.RunAsync();
 
 // Runs before the host starts serving, so hosted services and requests only
-// ever see a store that is ready.
+// ever see a database and an object store that are ready.
 static async Task InitializeApplicationAsync(WebApplication app)
 {
+    var stopping = app.Lifetime.ApplicationStopping;
+    await using (var scope = app.Services.CreateAsyncScope())
+    {
+        await DatabaseSchema.UpgradeAsync(scope.ServiceProvider.GetRequiredService<AppDbContext>(), stopping);
+    }
+
     if (app.Configuration.GetValue<bool>("Storage:SkipInitialization"))
     {
         return;
@@ -69,7 +89,6 @@ static async Task InitializeApplicationAsync(WebApplication app)
     // The object store usually starts next to this process and needs a moment.
     const int maxAttempts = 30;
     var storage = app.Services.GetRequiredService<IObjectStorage>();
-    var stopping = app.Lifetime.ApplicationStopping;
     for (var attempt = 1; ; attempt++)
     {
         try
