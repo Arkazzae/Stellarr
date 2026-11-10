@@ -6,6 +6,7 @@ import type {
   DirectoryValue,
   LanguageValue,
   UiValue,
+  VoiceValue,
 } from "@/state/hooks";
 
 /**
@@ -109,4 +110,35 @@ export function fakeUi(overrides: Partial<UiValue> = {}): UiValue {
     leaveCall: vi.fn(),
     ...overrides,
   } as unknown as UiValue;
+}
+
+export function fakeVoice(overrides: Partial<VoiceValue> = {}): VoiceValue {
+  return {
+    state: { connection: "idle", muted: false, cameraPending: false },
+    call: null,
+    channelId: null,
+    problem: null,
+    people: [],
+    share: null,
+    localShare: false,
+    cameraStreams: new Map(),
+    participantVolumes: new Map(),
+    participantGates: new Map(),
+    participantSuppressions: new Map(),
+    cameraSupported: true,
+    sounds: [],
+    soundboardEnabled: false,
+    join: vi.fn(),
+    leave: vi.fn(async () => {}),
+    toggleMute: vi.fn(),
+    toggleCamera: vi.fn(),
+    toggleShare: vi.fn(),
+    watchShare: vi.fn(),
+    stopWatchingShare: vi.fn(),
+    playSound: vi.fn(),
+    setParticipantVolume: vi.fn(),
+    setParticipantGate: vi.fn(),
+    setParticipantSuppression: vi.fn(),
+    ...overrides,
+  } as unknown as VoiceValue;
 }

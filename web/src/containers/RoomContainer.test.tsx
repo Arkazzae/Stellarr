@@ -11,12 +11,14 @@ import type {
   DirectoryValue,
   LanguageValue,
   UiValue,
+  VoiceValue,
 } from "@/state/hooks";
 import {
   fakeChat,
   fakeDirectory,
   fakeLanguage,
   fakeUi,
+  fakeVoice,
   t,
 } from "@/test/roomFakes";
 
@@ -37,6 +39,7 @@ const mocks = vi.hoisted(() => {
     chat: null as unknown as ChatValue,
     ui: null as unknown as UiValue,
     language: null as unknown as LanguageValue,
+    voice: null as unknown as VoiceValue,
     preferences: { developerMode: false },
     profile: { toggle: vi.fn() },
     ports: {
@@ -58,12 +61,15 @@ vi.mock("@/state/hooks", () => ({
   useSession: () => ({ user: { id: "u-maja" } }),
   useUi: () => mocks.ui,
   useChat: () => mocks.chat,
+  useVoice: () => mocks.voice,
   useEmoji: () => ({ emoji: [] }),
   useLanguage: () => mocks.language,
   useAccount: () => ({ preferences: mocks.preferences }),
   useProfile: () => mocks.profile,
   usePorts: () => mocks.ports,
 }));
+
+vi.mock("./CallStage", () => ({ CallStage: () => null }));
 
 vi.mock("./NotificationInboxContainer", () => ({
   NotificationInboxButton: () => <button type="button">inbox</button>,
@@ -126,6 +132,7 @@ beforeEach(() => {
   mocks.chat = fakeChat();
   mocks.ui = fakeUi();
   mocks.language = fakeLanguage();
+  mocks.voice = fakeVoice();
   mocks.preferences = { developerMode: false };
   mocks.profile = { toggle: vi.fn() };
   mocks.seen.transcript = null;

@@ -17,8 +17,11 @@ import {
   useProfile,
   useSession,
   useUi,
+  useVoice,
 } from "@/state/hooks";
 
+import { useJoinFromPopoutLink } from "./callPopout";
+import { CallStage } from "./CallStage";
 import { ChannelPanelContainer } from "./ChannelPanelContainer";
 import { NotificationInboxButton } from "./NotificationInboxContainer";
 import { RoomComposer } from "./RoomComposer";
@@ -28,12 +31,17 @@ import { useThreadLayout } from "./useThreadLayout";
 
 /**
  * The main column of the server view: the open channel's transcript and
- * composer, with its thread and its materials beside it.
+ * composer, with its thread and its materials beside it, or the call's stage
+ * when one is on screen.
+ *
+ * Both views stay mounted and swap `.active`, so the transcript keeps its
+ * scroll position across a call.
  */
 export function RoomContainer() {
-  const { textChannels, canManageMessages } = useDirectory();
+  const { channels, textChannels, channelName, canManageMessages } = useDirectory();
   const { user } = useSession();
   const ui = useUi();
+  const voice = useVoice();
   const chat = useChat();
   const { emoji: customEmoji } = useEmoji();
   const { t } = useLanguage();
@@ -42,6 +50,10 @@ export function RoomContainer() {
   const translation = useChatTranslation(chat.channelId);
   const viewer = useAttachmentViewer(user?.id ?? "stellarr");
   const threadLayout = useThreadLayout(chat.thread);
+  useJoinFromPopoutLink(ui.joinVoiceChannel);
+
+  const room = useRef<HTMLElement>(null);
+  const fullscreenTarget = useCallback(() => room.current, []);
 
   /*
    * The transcript's "go to this message", lent to the channel panel. Only the
@@ -57,8 +69,19 @@ export function RoomContainer() {
 
   const activeText = textChannels.find((channel) => channel.id === ui.activeTextChannelId);
   const textName = activeText?.name ?? "";
-  const channelPanelOpen = ui.channelPanel !== null;
-  const threadPanelOpen = chat.thread !== null;
+
+  // A call has the stage; the panels belong to the transcript.
+  const inVoice = ui.roomView === "voice";
+  const joinedVoiceChannel = channels.find(
+    (channel) => channel.id === voice.channelId && channel.kind === "voice",
+  );
+  const title = inVoice
+    ? (voice.call?.channelName ?? (channelName(voice.channelId) || textName))
+    : textName;
+  const topic = inVoice ? (joinedVoiceChannel?.topic ?? "") : (activeText?.topic ?? "");
+
+  const channelPanelOpen = ui.channelPanel !== null && !inVoice;
+  const threadPanelOpen = chat.thread !== null && !inVoice;
   const threadRootId = chat.thread?.rootId ?? null;
   const threadExpanded = threadPanelOpen && threadLayout.expanded;
 
@@ -66,7 +89,7 @@ export function RoomContainer() {
     <RoomComposer
       key={threadPanelOpen ? `thread-${threadRootId}` : "channel"}
       channelName={textName}
-      threadRootId={threadRootId}
+      threadRootId={threadPanelOpen ? threadRootId : null}
     />
   );
 
@@ -94,17 +117,19 @@ export function RoomContainer() {
     <main
       className={[
         "room",
+        inVoice && "in-voice",
         channelPanelOpen && "channel-panel-open",
         threadPanelOpen && "thread-panel-open",
         threadExpanded && "thread-panel-expanded",
       ]
         .filter(Boolean)
         .join(" ")}
+      ref={room}
     >
       <RoomHeader
-        view="text"
-        title={textName}
-        topic={activeText?.topic ?? ""}
+        view={ui.roomView}
+        title={title}
+        topic={topic}
         rosterOpen={ui.rosterOpen}
         onToggleRoster={ui.toggleRoster}
         railOpen={ui.railOpen}
@@ -119,7 +144,7 @@ export function RoomContainer() {
       />
 
       <div className="room-body">
-        <div className="view active">
+        <div className={inVoice ? "view" : "view active"}>
           <Transcript
             {...messageProps}
             key={chat.channelId ?? "no-channel"}
@@ -134,6 +159,10 @@ export function RoomContainer() {
           />
           <Typing names={chat.typingNames} />
           {threadPanelOpen ? null : composer}
+        </div>
+
+        <div className={inVoice ? "view active" : "view"}>
+          <CallStage fullscreenTarget={fullscreenTarget} />
         </div>
       </div>
 
@@ -160,7 +189,10 @@ export function RoomContainer() {
 
       <DropOverlay
         channelName={textName}
-        enabled={activeText !== undefined}
+        // Armed only where a drop has a visible home: behind a call the
+        // transcript is hidden, and a file dropped there would land unseen in
+        // whichever text channel was last open.
+        enabled={!inVoice && activeText !== undefined}
         onDropFiles={chat.attach}
       />
       <MediaViewer target={viewer.target} onClose={viewer.close} />
