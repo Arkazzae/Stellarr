@@ -1,8 +1,21 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
-import { afterEach, vi } from "vitest";
+import { afterEach, beforeEach, vi } from "vitest";
 
 afterEach(cleanup);
+
+// The suite asserts Polish text, and most tests render without a language
+// provider. Such components follow the page's language, so each test starts on
+// a Polish page, as the server's `<html lang="pl">` would make it. This is a
+// reset per test because a provider that switches to English rewrites the
+// attribute, and that must not reach the next test.
+function showPolishPage(): void {
+  document.documentElement.lang = "pl";
+  document.documentElement.dataset.locale = "pl";
+}
+
+showPolishPage();
+beforeEach(showPolishPage);
 
 /**
  * jsdom has no `matchMedia`. This answers `min-width` and `max-width` queries

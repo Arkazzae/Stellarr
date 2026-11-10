@@ -5,7 +5,8 @@ import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } fr
 
 import { AuthField } from "@/components/auth/AuthField";
 import { AuthFrame, authStyles as styles } from "@/components/auth/AuthFrame";
-import { translateMessage, type Translator } from "@/i18n";
+import { type Translator } from "@/i18n";
+import { translateForDocument } from "@/i18n/defaultLocale";
 
 export interface LoginScreenProps {
   onSubmit: (username: string, password: string) => void;
@@ -35,7 +36,7 @@ export function LoginScreen({
   pending = false,
   error = null,
   checking = false,
-  t = (key, values) => translateMessage("pl", key, values),
+  t = translateForDocument,
   passwordAutoComplete = "current-password",
   nativeCredentialBroker = false,
   headingAction,

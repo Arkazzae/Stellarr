@@ -31,12 +31,12 @@ export interface PinnedTabProps {
  * finds the thing again, and the order of the list already carries the pin time.
  */
 function PinBody({ item }: { item: PinnedMessageVM }) {
-  const { t } = useLanguage();
+  const { locale, t } = useLanguage();
   return (
     <>
       <span className="cp-pin-head">
         <b>{item.authorName}</b>
-        <time dateTime={item.timestamp}>{formatFull(item.timestamp)}</time>
+        <time dateTime={item.timestamp}>{formatFull(item.timestamp, locale)}</time>
       </span>
       <span className="cp-pin-text">
         {item.preview.length === 0 ? t("room.emptyMessage") : item.preview}

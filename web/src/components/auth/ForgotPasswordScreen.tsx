@@ -3,14 +3,15 @@
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 
-import { translateMessage, type Translator } from "@/i18n";
+import { type Translator } from "@/i18n";
+import { translateForDocument } from "@/i18n/defaultLocale";
 
 import { AuthField } from "./AuthField";
 import { AuthFrame, authStyles as styles } from "./AuthFrame";
 
 export function ForgotPasswordScreen({
   onSubmit,
-  t = (key, values) => translateMessage("pl", key, values),
+  t = translateForDocument,
 }: {
   onSubmit: (email: string) => Promise<void>;
   t?: Translator;

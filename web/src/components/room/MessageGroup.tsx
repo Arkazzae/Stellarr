@@ -1,5 +1,6 @@
 "use client";
 
+import { documentLocale, translateForDocument } from "@/i18n/defaultLocale";
 import { useState, type MouseEvent } from "react";
 
 import { Icon } from "@/components/icons/Icon";
@@ -7,7 +8,6 @@ import { Avatar } from "@/components/primitives/Avatar";
 import { useConfirm } from "@/components/primitives/ConfirmDialog";
 import { ContextMenu, useContextMenu } from "@/components/primitives/ContextMenu";
 import { identityVars } from "@/design/identity";
-import { translateMessage, type Translator } from "@/i18n";
 import { formatFull } from "@/lib/format";
 import type {
   CustomEmoji,
@@ -110,8 +110,6 @@ export interface MessageGroupProps extends MessageGroupVM {
   highlight?: boolean;
 }
 
-const polish: Translator = (key, values) => translateMessage("pl", key, values);
-
 /** The index a data attribute on the nearest matching ancestor carries, if it is one. */
 function indexFrom(origin: Element | null, selector: string, attribute: string): number | null {
   const value = Number(origin?.closest<HTMLElement>(selector)?.dataset[attribute]);
@@ -195,8 +193,8 @@ export function MessageGroup({
   const [menuTarget, setMenuTarget] = useState<{ bodyId: string; pointed: PointedAt } | null>(
     null,
   );
-  const locale = translation?.locale ?? "pl";
-  const t = translation?.t ?? polish;
+  const locale = translation?.locale ?? documentLocale();
+  const t = translation?.t ?? translateForDocument;
 
   // A notice from the server is not a person, so nothing about it opens a
   // profile — the server avatar and name stay inert.

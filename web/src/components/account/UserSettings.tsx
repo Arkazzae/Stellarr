@@ -34,7 +34,8 @@ import {
   AppearancePane,
   type AppearancePaneProps,
 } from "@/components/settings/panes/AppearancePane";
-import { translateMessage, type Translator } from "@/i18n";
+import { type Translator } from "@/i18n";
+import { translateForDocument } from "@/i18n/defaultLocale";
 import type { Account } from "@/ports";
 
 import {
@@ -45,8 +46,6 @@ import {
 } from "./settingsNav";
 
 export type { UserSettingsPaneKey } from "./settingsNav";
-
-const polish: Translator = (key, values) => translateMessage("pl", key, values);
 
 export interface UserSettingsProps {
   open: boolean;
@@ -96,7 +95,7 @@ export function UserSettings({
   appearance,
   voice,
   language,
-  t = polish,
+  t = translateForDocument,
   onLogout,
 }: UserSettingsProps) {
   const titleId = useId();

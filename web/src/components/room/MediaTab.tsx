@@ -81,7 +81,7 @@ function VideoTile({
 
 /** An uploaded file or a voice note: a row that downloads, never a tile. */
 function FileRow({ item }: { item: RowItem }) {
-  const { t } = useLanguage();
+  const { locale, t } = useLanguage();
   const { part } = item;
   const detail =
     part.kind === "file" ? part.size : (part.duration ?? t("room.voiceRecording"));
@@ -94,7 +94,7 @@ function FileRow({ item }: { item: RowItem }) {
         <b>{part.name}</b>
         <span>{detail}</span>
         <span>
-          {item.authorName} · {formatFull(item.timestamp)}
+          {item.authorName} · {formatFull(item.timestamp, locale)}
         </span>
       </span>
     </>
@@ -132,7 +132,7 @@ export function MediaTab({
   status: IndexStatus;
   callbacks?: AttachmentCallbacks;
 }) {
-  const { t } = useLanguage();
+  const { locale, t } = useLanguage();
   const tiles = media.filter(isTile);
   const rows = media.filter(isRow);
   const images = tiles.flatMap(({ id, part }) =>
@@ -150,7 +150,7 @@ export function MediaTab({
         <div className="cp-grid">
           {tiles.map((item) => {
             const { part } = item;
-            const when = `${item.authorName} · ${formatFull(item.timestamp)}`;
+            const when = `${item.authorName} · ${formatFull(item.timestamp, locale)}`;
             return part.kind === "image" ? (
               <ImageTile
                 key={item.id}

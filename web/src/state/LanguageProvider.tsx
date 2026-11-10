@@ -19,6 +19,7 @@ import {
   type MessageKey,
   type MessageValues,
 } from "@/i18n";
+import { documentLocale, LOCALE_COOKIE } from "@/i18n/defaultLocale";
 
 export type { InterfaceLocale, LanguageSettings, TranslationTargetLanguage } from "@/i18n";
 
@@ -31,16 +32,14 @@ export interface LanguageValue extends LanguageSettings {
 }
 
 const STORAGE_KEY = "stellarr_language_settings";
-/** The server layout reads this cookie, so the first paint is already in the right language. */
-const COOKIE_KEY = "stellarr_locale";
 const ONE_YEAR_SECONDS = 365 * 24 * 60 * 60;
 
-const DEFAULTS: LanguageSettings = {
-  locale: "pl",
+/** Everything but the locale, which comes from the request and not from a default. */
+const DEFAULTS = {
   chatTranslationEnabled: false,
   chatAutoTranslateEnabled: false,
   chatTranslationTargetLanguage: "en",
-};
+} as const satisfies Omit<LanguageSettings, "locale">;
 
 function readStored(fallbackLocale: InterfaceLocale): LanguageSettings {
   try {
@@ -61,17 +60,40 @@ function readStored(fallbackLocale: InterfaceLocale): LanguageSettings {
   }
 }
 
-function persist(settings: LanguageSettings): void {
+/**
+ * Stores the device's language settings. The locale goes in only when the
+ * person picked one, now or before: what the provider shows when nobody chose
+ * is the instance default, and storing it would pin the person to that default
+ * after the operator changes it.
+ */
+function persist(settings: LanguageSettings, localeChosen: boolean): void {
   try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
+    const { locale, ...device } = settings;
+    const kept = localeChosen ? locale : readStoredLocale();
+    window.localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify(kept === undefined ? device : { ...device, locale: kept }),
+    );
   } catch {
     // A private or locked-down browser may refuse storage. The choice still
     // holds for this tab, and translation keeps working.
   }
 }
 
+/** The language the person chose on an earlier visit, if they ever did. */
+function readStoredLocale(): InterfaceLocale | undefined {
+  const raw = window.localStorage.getItem(STORAGE_KEY);
+  if (raw === null) return undefined;
+  try {
+    const locale = (JSON.parse(raw) as { locale?: unknown } | null)?.locale;
+    return isSupportedLocale(locale) ? locale : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function rememberLocale(locale: InterfaceLocale): void {
-  document.cookie = `${COOKIE_KEY}=${locale}; path=/; max-age=${ONE_YEAR_SECONDS}; SameSite=Lax`;
+  document.cookie = `${LOCALE_COOKIE}=${locale}; path=/; max-age=${ONE_YEAR_SECONDS}; SameSite=Lax`;
 }
 
 function applyPatch(current: LanguageSettings, patch: Partial<LanguageSettings>): LanguageSettings {
@@ -85,30 +107,44 @@ function applyPatch(current: LanguageSettings, patch: Partial<LanguageSettings>)
   return next;
 }
 
+function standaloneValue(locale: InterfaceLocale): LanguageValue {
+  return {
+    ...DEFAULTS,
+    locale,
+    update: () => undefined,
+    text: (polish, english) => (locale === "en" ? english : polish),
+    t: (key, values) => translateMessage(locale, key, values),
+  };
+}
+
 // What a component sees when no provider is mounted, as in most component
-// tests: Polish, and changes go nowhere.
-const fallback: LanguageValue = {
-  ...DEFAULTS,
-  update: () => undefined,
-  text: (polish) => polish,
-  t: (key, values) => translateMessage("pl", key, values),
+// tests: the page's language, and changes go nowhere. One value per locale, so
+// the identity of `t` stays stable between renders.
+const STANDALONE: Record<InterfaceLocale, LanguageValue> = {
+  pl: standaloneValue("pl"),
+  en: standaloneValue("en"),
 };
 
-const LanguageContext = createContext<LanguageValue>(fallback);
+const LanguageContext = createContext<LanguageValue | null>(null);
 
 export function LanguageProvider({
   children,
-  initialLocale = "pl",
+  initialLocale,
 }: {
   children: ReactNode;
+  /** The server's choice for this request. Without one, the page's own language. */
   initialLocale?: InterfaceLocale;
 }) {
+  // Read once: the provider itself rewrites `<html lang>` when the locale
+  // changes, and that must not look like a new starting point.
+  const [pageLocale] = useState(documentLocale);
+  const startLocale = initialLocale ?? pageLocale;
   // The locale from the cookie is the same on the server and in the first
   // client render. Translation preferences live only on this device, so they
   // are read after hydration.
   const [settings, setSettings] = useState<LanguageSettings>({
     ...DEFAULTS,
-    locale: initialLocale,
+    locale: startLocale,
   });
   // Lets `update` see changes made earlier in the same tick, before React
   // has re-rendered with them.
@@ -121,12 +157,12 @@ export function LanguageProvider({
 
   useEffect(() => {
     const frame = requestAnimationFrame(() => {
-      const stored = readStored(initialLocale);
+      const stored = readStored(startLocale);
       commit(stored);
-      if (stored.locale !== initialLocale) rememberLocale(stored.locale);
+      if (stored.locale !== startLocale) rememberLocale(stored.locale);
     });
     return () => cancelAnimationFrame(frame);
-  }, [initialLocale, commit]);
+  }, [startLocale, commit]);
 
   useEffect(() => {
     document.documentElement.lang = settings.locale;
@@ -138,7 +174,7 @@ export function LanguageProvider({
       const current = latest.current;
       const next = applyPatch(current, patch);
       commit(next);
-      persist(next);
+      persist(next, patch.locale !== undefined);
       if (next.locale !== current.locale) rememberLocale(next.locale);
     },
     [commit],
@@ -163,5 +199,5 @@ export function LanguageProvider({
 }
 
 export function useLanguage(): LanguageValue {
-  return useContext(LanguageContext);
+  return useContext(LanguageContext) ?? STANDALONE[documentLocale()];
 }

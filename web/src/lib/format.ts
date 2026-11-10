@@ -1,4 +1,5 @@
 import type { InterfaceLocale } from "@/i18n";
+import { documentLocale } from "@/i18n/defaultLocale";
 import type { Message, MessageReference } from "@/lib/api/types";
 
 const LOCALE_TAG: Record<InterfaceLocale, string> = {
@@ -17,7 +18,7 @@ function formatWith(
   return new Intl.DateTimeFormat(LOCALE_TAG[locale], options).format(date);
 }
 
-export function formatTime(iso: string, locale: InterfaceLocale = "pl"): string {
+export function formatTime(iso: string, locale: InterfaceLocale = documentLocale()): string {
   return formatWith(iso, locale, {
     hour: "2-digit",
     minute: "2-digit",
@@ -25,12 +26,12 @@ export function formatTime(iso: string, locale: InterfaceLocale = "pl"): string 
   });
 }
 
-export function formatFull(iso: string, locale: InterfaceLocale = "pl"): string {
+export function formatFull(iso: string, locale: InterfaceLocale = documentLocale()): string {
   return formatWith(iso, locale, { dateStyle: "medium", timeStyle: "short" });
 }
 
 /** A calendar date without a time: "12 marca 2025". */
-export function formatDate(iso: string, locale: InterfaceLocale = "pl"): string {
+export function formatDate(iso: string, locale: InterfaceLocale = documentLocale()): string {
   return formatWith(iso, locale, {
     day: "numeric",
     month: "long",
@@ -50,7 +51,7 @@ export function isSameDay(a: Date, b: Date): boolean {
 export function formatDay(
   iso: string,
   now = new Date(),
-  locale: InterfaceLocale = "pl",
+  locale: InterfaceLocale = documentLocale(),
 ): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "";
@@ -88,7 +89,7 @@ function polishCount(n: number, forms: [string, string, string]): string {
 export function formatAgo(
   iso: string,
   now = new Date(),
-  locale: InterfaceLocale = "pl",
+  locale: InterfaceLocale = documentLocale(),
 ): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return "";
@@ -138,7 +139,7 @@ const PREVIEW_CHARS = 140;
  */
 export function messageReference(
   message: Message,
-  locale: InterfaceLocale = "pl",
+  locale: InterfaceLocale = documentLocale(),
 ): MessageReference {
   const content = message.content.replace(/\s+/g, " ").trim();
   const hasAttachment = message.attachments.length > 0;
@@ -183,7 +184,7 @@ export interface TranscriptSection {
 export function buildTranscript(
   messages: Message[],
   now = new Date(),
-  locale: InterfaceLocale = "pl",
+  locale: InterfaceLocale = documentLocale(),
 ): TranscriptSection[] {
   const sections: TranscriptSection[] = [];
 
@@ -241,7 +242,7 @@ export function buildThreadTranscript(
   messages: Message[],
   rootId: string,
   now = new Date(),
-  locale: InterfaceLocale = "pl",
+  locale: InterfaceLocale = documentLocale(),
 ): TranscriptSection[] {
   const root = messages.find((message) => message.id === rootId);
   if (root === undefined) return [];

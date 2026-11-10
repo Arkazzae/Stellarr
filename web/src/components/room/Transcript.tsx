@@ -1,5 +1,6 @@
 "use client";
 
+import { translateForDocument } from "@/i18n/defaultLocale";
 import {
   useMemo,
   useRef,
@@ -10,7 +11,6 @@ import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 
 import { Icon } from "@/components/icons/Icon";
 import type { OpenProfile } from "@/components/view-models";
-import { translateMessage, type Translator } from "@/i18n";
 import type { CustomEmoji, MessageActionSupport } from "@/ports";
 
 import { useHistoryWindow } from "./historyWindow";
@@ -47,8 +47,6 @@ const OVERSCAN_PX = 900;
  * messages below the fold.
  */
 const OPEN_AT_END = { index: "LAST", align: "end" } as const;
-
-const polish: Translator = (key, values) => translateMessage("pl", key, values);
 
 export interface TranscriptProps {
   sections: TranscriptSectionVM[];
@@ -174,7 +172,7 @@ function ReadyTranscript({
   loadingOlder = false,
   onJumpReady,
 }: Omit<TranscriptProps, "loading">) {
-  const t = translation?.t ?? polish;
+  const t = translation?.t ?? translateForDocument;
   const rows = useMemo(
     () => toRows(sections, firstUnreadGroupId),
     [sections, firstUnreadGroupId],

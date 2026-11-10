@@ -1516,4 +1516,6 @@ export const pl = {
   "voice.mediaSessionPrivate": "Rozmowa prywatna",
   "voice.mediaSessionChannel": "Kanał głosowy",
   "media.previous": "Poprzedni",
+
+  "app.description": "Małe, samodzielnie hostowane miejsce na rozmowy.",
 } as const;

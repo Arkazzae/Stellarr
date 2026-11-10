@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useId, useState, type ChangeEvent, type FormEvent } from "react";
 
-import { translateMessage, type Translator } from "@/i18n";
+import { type Translator } from "@/i18n";
+import { translateForDocument } from "@/i18n/defaultLocale";
 import type { RegistrationInput } from "@/ports";
 
 import { AuthField } from "./AuthField";
@@ -54,7 +55,7 @@ function focusField(form: HTMLFormElement, field: Field): void {
 
 export function RegisterScreen({
   onSubmit,
-  t = (key, values) => translateMessage("pl", key, values),
+  t = translateForDocument,
 }: {
   /** Resolves to whether the account was created. */
   onSubmit: (input: RegistrationInput) => Promise<boolean>;

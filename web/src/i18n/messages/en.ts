@@ -1518,4 +1518,6 @@ export const en = {
   "voice.mediaSessionPrivate": "Private call",
   "voice.mediaSessionChannel": "Voice channel",
   "media.previous": "Previous",
+
+  "app.description": "A small, self-hosted place to talk.",
 } satisfies Record<keyof typeof pl, string>;

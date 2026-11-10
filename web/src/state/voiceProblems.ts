@@ -1,4 +1,5 @@
-import { translateMessage, type MessageKey, type Translator } from "@/i18n";
+import type { MessageKey, Translator } from "@/i18n";
+import { translateForDocument } from "@/i18n/defaultLocale";
 import type { VoiceError } from "@/lib/voice/types";
 
 export interface VoiceProblem {
@@ -35,13 +36,10 @@ const TITLE_KEY: Record<VoiceError["kind"], MessageKey> = {
   "screen-share": "voiceError.titleScreenShare",
 };
 
-const defaultTranslator: Translator = (key, values) =>
-  translateMessage("pl", key, values);
-
 /** The sentence the room shows for an RTC failure, or null when there is none. */
 export function voiceErrorForUi(
   error: VoiceError | null,
-  t: Translator = defaultTranslator,
+  t: Translator = translateForDocument,
 ): string | null {
   if (error === null) return null;
   // A recoverable failure already names the participant, device or permission
@@ -54,7 +52,7 @@ export function voiceErrorForUi(
 
 export function voiceProblemForUi(
   error: VoiceError | null,
-  t: Translator = defaultTranslator,
+  t: Translator = translateForDocument,
 ): VoiceProblem | null {
   const message = voiceErrorForUi(error, t);
   if (error === null || message === null) return null;

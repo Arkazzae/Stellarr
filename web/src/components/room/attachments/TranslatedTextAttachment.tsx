@@ -3,12 +3,8 @@
 import { useMemo, useState } from "react";
 
 import { Icon } from "@/components/icons/Icon";
-import {
-  translateMessage,
-  type InterfaceLocale,
-  type TranslationTargetLanguage,
-  type Translator,
-} from "@/i18n";
+import { type InterfaceLocale, type TranslationTargetLanguage, type Translator } from "@/i18n";
+import { documentLocale, translateForDocument } from "@/i18n/defaultLocale";
 import { useTranslatedContent } from "@/lib/chatTranslation/useTranslatedContent";
 
 import {
@@ -106,8 +102,6 @@ function translatedNodesOf(
   return edit === undefined ? parsed : [...parsed, edit];
 }
 
-const defaultTranslator: Translator = (key, values) => translateMessage("pl", key, values);
-
 export function TranslatedTextAttachment({
   nodes,
   translation,
@@ -116,8 +110,8 @@ export function TranslatedTextAttachment({
   const enabled = translation?.enabled === true;
   const autoTranslate = translation?.autoTranslate === true;
   const targetLanguage = translation?.targetLanguage ?? "en";
-  const locale = translation?.locale ?? "pl";
-  const t = translation?.t ?? defaultTranslator;
+  const locale = translation?.locale ?? documentLocale();
+  const t = translation?.t ?? translateForDocument;
 
   const [requested, setRequested] = useState(false);
   const [retryKey, setRetryKey] = useState(0);

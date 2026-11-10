@@ -14,7 +14,7 @@ export function LinksTab({
   links: LinkItemVM[];
   status: IndexStatus;
 }) {
-  const { t } = useLanguage();
+  const { locale, t } = useLanguage();
 
   return (
     <IndexedTab
@@ -42,7 +42,7 @@ export function LinksTab({
                 <b>{link.title}</b>
                 <span>{link.domain}</span>
                 <span>
-                  {link.authorName} · {formatFull(link.timestamp)}
+                  {link.authorName} · {formatFull(link.timestamp, locale)}
                 </span>
               </span>
             </a>

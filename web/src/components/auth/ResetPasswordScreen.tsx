@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useState, type FormEvent } from "react";
 
-import { translateMessage, type Translator } from "@/i18n";
+import { type Translator } from "@/i18n";
+import { translateForDocument } from "@/i18n/defaultLocale";
 
 import { AuthField } from "./AuthField";
 import { AuthFrame, authStyles as styles } from "./AuthFrame";
@@ -11,7 +12,7 @@ import { AuthFrame, authStyles as styles } from "./AuthFrame";
 export function ResetPasswordScreen({
   token,
   onSubmit,
-  t = (key, values) => translateMessage("pl", key, values),
+  t = translateForDocument,
 }: {
   token: string;
   onSubmit: (token: string, password: string) => Promise<void>;

@@ -3,11 +3,8 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 
 import { Icon } from "@/components/icons/Icon";
-import {
-  translateMessage,
-  type InterfaceLocale,
-  type Translator,
-} from "@/i18n";
+import { type InterfaceLocale, type Translator } from "@/i18n";
+import { documentLocale, translateForDocument } from "@/i18n/defaultLocale";
 import type { CustomEmoji, OpenVoiceMessageCapture } from "@/ports";
 
 import { ComposerChips, type ComposerChip } from "./ComposerChips";
@@ -112,8 +109,8 @@ export function Composer({
   mentionCandidates = [],
   openVoiceMessageMicrophone,
   onSendVoice,
-  locale = "pl",
-  t = (key, values) => translateMessage("pl", key, values),
+  locale = documentLocale(),
+  t = translateForDocument,
 }: ComposerProps) {
   const [voiceOpen, setVoiceOpen] = useState(false);
   const [observedScope, setObservedScope] = useState(recordingScope);

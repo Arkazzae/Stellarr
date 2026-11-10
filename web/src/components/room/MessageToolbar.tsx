@@ -5,7 +5,8 @@ import { useRef, useState } from "react";
 import { deleteMessageConfirmation } from "@/components/confirmations";
 import { Icon, type IconName } from "@/components/icons/Icon";
 import { useConfirm } from "@/components/primitives/ConfirmDialog";
-import { translateMessage, type MessageKey, type Translator } from "@/i18n";
+import { type MessageKey, type Translator } from "@/i18n";
+import { translateForDocument } from "@/i18n/defaultLocale";
 import type { CustomEmoji, MessageActionSupport } from "@/ports";
 
 import { MessageActionSheet, type SheetItem } from "./MessageActionSheet";
@@ -112,7 +113,7 @@ export function MessageToolbar({
   own = false,
   canModerate = false,
   pinned = false,
-  t = (key, values) => translateMessage("pl", key, values),
+  t = translateForDocument,
 }: MessageToolbarProps) {
   const confirm = useConfirm();
   const [picker, setPicker] = useState<OpenPicker | null>(null);

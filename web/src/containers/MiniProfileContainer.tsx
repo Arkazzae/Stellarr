@@ -10,6 +10,7 @@ import {
   useDirectory,
   useEmoji,
   useFriends,
+  useLanguage,
   usePorts,
   useProfile,
   useSession,
@@ -82,6 +83,7 @@ export function MiniProfileContainer() {
   const { user } = useSession();
   const profile = useProfile();
   const ui = useUi();
+  const { locale } = useLanguage();
 
   const userId = profile.open?.userId ?? null;
   const membership = useMembership(userId !== null);
@@ -123,8 +125,8 @@ export function MiniProfileContainer() {
       ...(known.bio === undefined ? {} : { bio: known.bio }),
       ...(known.pronouns === undefined ? {} : { pronouns: known.pronouns }),
       ...(call === undefined ? {} : { voiceChannelName: call.name }),
-      ...(member === undefined ? {} : { joinedAt: formatDate(member.joinedAt) }),
-      ...(friend === undefined ? {} : { friendsSince: formatDate(friend.since) }),
+      ...(member === undefined ? {} : { joinedAt: formatDate(member.joinedAt, locale) }),
+      ...(friend === undefined ? {} : { friendsSince: formatDate(friend.since, locale) }),
       ...(request === undefined ? {} : { requestId: request.id }),
     };
   }, [
@@ -136,6 +138,7 @@ export function MiniProfileContainer() {
     blocked,
     membership,
     user,
+    locale,
   ]);
 
   const anchor = profile.open?.anchor ?? null;

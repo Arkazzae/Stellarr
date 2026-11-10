@@ -4,7 +4,8 @@ import type { ReactNode } from "react";
 
 import { Icon } from "@/components/icons/Icon";
 import type { RoomView } from "@/components/view-models";
-import { translateMessage, type Translator } from "@/i18n";
+import { type Translator } from "@/i18n";
+import { translateForDocument } from "@/i18n/defaultLocale";
 
 export interface RoomHeaderProps {
   /** Text or voice: decides the glyph, and the CSS hides the channel tools. */
@@ -37,7 +38,7 @@ export function RoomHeader({
   panelOpen,
   onTogglePanel,
   notifications,
-  t = (key, values) => translateMessage("pl", key, values),
+  t = translateForDocument,
 }: RoomHeaderProps) {
   return (
     <header className="room-header">

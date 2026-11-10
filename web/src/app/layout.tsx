@@ -1,22 +1,25 @@
 import type { Metadata, Viewport } from "next";
-import { cookies } from "next/headers";
 import type { ReactNode } from "react";
 
 import { LegacyPwaCleanup } from "@/components/platform/LegacyPwaCleanup";
 import { ThemeScript } from "@/design/themeScript";
-import { LanguageProvider, type InterfaceLocale } from "@/state/LanguageProvider";
+import { translateMessage } from "@/i18n";
+import { requestLocale } from "@/i18n/requestLocale";
+import { LanguageProvider } from "@/state/LanguageProvider";
 import { PortsProvider } from "@/state/PortsProvider";
 import { SessionProvider } from "@/state/SessionProvider";
 import { ThemeProvider } from "@/state/ThemeProvider";
 
 import "./globals.css";
 
-export const metadata: Metadata = {
-  title: "Stellarr",
-  description: "Małe, samodzielnie hostowane miejsce na rozmowy.",
-  applicationName: "Stellarr",
-  robots: { index: false, follow: false },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+    title: "Stellarr",
+    description: translateMessage(await requestLocale(), "app.description"),
+    applicationName: "Stellarr",
+    robots: { index: false, follow: false },
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: "#111111",
@@ -33,10 +36,13 @@ export const viewport: Viewport = {
  *
  * Ports and the session wrap every route, /login included, because signing in
  * needs both. The app's own providers start further down, at `AppContainer`.
+ *
+ * The language is resolved per request (see `requestLocale`), which is what
+ * keeps every route out of static rendering. It goes to the client through
+ * `<html lang>` and the provider, so both agree with the server's render.
  */
 export default async function RootLayout({ children }: { children: ReactNode }) {
-  const storedLocale = (await cookies()).get("stellarr_locale")?.value;
-  const locale: InterfaceLocale = storedLocale === "en" ? "en" : "pl";
+  const locale = await requestLocale();
 
   return (
     // ThemeScript writes data-theme, -scheme and -contrast onto <html> before

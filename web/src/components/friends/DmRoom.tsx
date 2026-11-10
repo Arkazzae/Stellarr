@@ -10,7 +10,8 @@ import type { MessageTranslationOptions } from "@/components/room/attachments/Tr
 import { Transcript, type TranscriptSectionVM } from "@/components/room/Transcript";
 import { ParticipantTiles } from "@/components/voice/ParticipantTiles";
 import type { OpenProfile, PersonVM } from "@/components/view-models";
-import { translateMessage, type MessageKey, type Translator } from "@/i18n";
+import { type MessageKey } from "@/i18n";
+import { translateForDocument } from "@/i18n/defaultLocale";
 import type { CustomEmoji } from "@/ports";
 
 const PRESENCE_WORD: Record<PersonVM["presence"], MessageKey> = {
@@ -19,8 +20,6 @@ const PRESENCE_WORD: Record<PersonVM["presence"], MessageKey> = {
   dnd: "presence.dnd",
   offline: "presence.offline",
 };
-
-const polish: Translator = (key, values) => translateMessage("pl", key, values);
 
 export interface DmRoomProps {
   peer: PersonVM;
@@ -102,7 +101,7 @@ export function DmRoom({
   translation,
   notificationButton,
 }: DmRoomProps) {
-  const t = translation?.t ?? polish;
+  const t = translation?.t ?? translateForDocument;
   const name = peer.displayName;
 
   // The transcript rebuilds its scroller when the intro changes identity, so
