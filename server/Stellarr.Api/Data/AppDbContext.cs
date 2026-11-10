@@ -11,7 +11,11 @@ namespace Stellarr.Api.Data;
 public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
 {
     public DbSet<User> Users => Set<User>();
+    public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
+    public DbSet<ExternalIdentity> ExternalIdentities => Set<ExternalIdentity>();
     public DbSet<UserPreferenceSettings> UserPreferences => Set<UserPreferenceSettings>();
+    public DbSet<UserSession> UserSessions => Set<UserSession>();
+    public DbSet<DesktopBrowserLogin> DesktopBrowserLogins => Set<DesktopBrowserLogin>();
     public DbSet<StellarrServer> Servers => Set<StellarrServer>();
     public DbSet<ServerRole> ServerRoles => Set<ServerRole>();
     public DbSet<ServerMember> ServerMembers => Set<ServerMember>();
