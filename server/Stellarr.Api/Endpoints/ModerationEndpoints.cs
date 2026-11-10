@@ -5,6 +5,7 @@ using Stellarr.Api.Auth;
 using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
 using Stellarr.Api.Domain;
+using Stellarr.Api.Localization;
 using Stellarr.Api.Realtime;
 
 namespace Stellarr.Api.Endpoints;
@@ -113,6 +114,7 @@ public static class ModerationEndpoints
         AppDbContext db,
         PresenceTracker presence,
         IHubContext<AppHub> hub,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         var reason = request.Reason?.Trim() ?? "";
@@ -120,7 +122,7 @@ public static class ModerationEndpoints
         {
             return Results.ValidationProblem(new Dictionary<string, string[]>
             {
-                ["reason"] = [$"Powód bana może mieć najwyżej {MaximumReasonLength} znaków."],
+                ["reason"] = [messages.Get(MessageKey.BanReasonTooLong, ("max", MaximumReasonLength))],
             });
         }
 

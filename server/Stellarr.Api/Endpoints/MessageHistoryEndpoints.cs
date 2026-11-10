@@ -4,6 +4,7 @@ using Stellarr.Api.Auth;
 using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
 using Stellarr.Api.Domain;
+using Stellarr.Api.Localization;
 using Stellarr.Api.Messaging;
 
 namespace Stellarr.Api.Endpoints;
@@ -32,11 +33,12 @@ public static class MessageHistoryEndpoints
         int? limit,
         HttpContext http,
         AppDbContext db,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         if (limit is < 1 or > MaxPageSize)
         {
-            return Invalid("limit", $"Limit musi mieścić się w zakresie 1–{MaxPageSize}.");
+            return Invalid("limit", messages.Get(MessageKey.PageLimitRange, ("max", MaxPageSize)));
         }
 
         if (!await db.Channels.TextChannelOnServer(channelId, http.RequireActiveServerId())
@@ -55,7 +57,7 @@ public static class MessageHistoryEndpoints
         }
         else if (!HistoryCursor.TryDecode(cursor, out page) || page.ScopeId != channelId)
         {
-            return Invalid("cursor", "Kursor historii wiadomości jest nieprawidłowy.");
+            return Invalid("cursor", messages.Get(MessageKey.HistoryCursorInvalid));
         }
 
         var pageSize = limit ?? DefaultPageSize;
@@ -77,9 +79,9 @@ public static class MessageHistoryEndpoints
 
         var hasMore = rows.Count > pageSize;
         var viewerId = http.User.RequireUserId();
-        var messages = rows.Take(pageSize).Reverse().Select(x => x.ToDto(viewerId)).ToArray();
+        var items = rows.Take(pageSize).Reverse().Select(x => x.ToDto(viewerId)).ToArray();
         return Results.Ok(new MessageHistoryPageDto(
-            messages,
+            items,
             hasMore ? (page with { Offset = page.Offset + pageSize }).Encode() : null,
             syncSequence.ToString(CultureInfo.InvariantCulture)));
     }
@@ -96,11 +98,12 @@ public static class MessageHistoryEndpoints
         int? limit,
         HttpContext http,
         AppDbContext db,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         if (after is < 0 || limit is < 1 or > MaxSyncPageSize)
         {
-            return Invalid("cursor", "Kursor synchronizacji lub limit jest nieprawidłowy.");
+            return Invalid("cursor", messages.Get(MessageKey.SyncCursorInvalid));
         }
 
         if (!await db.Channels.TextChannelOnServer(channelId, http.RequireActiveServerId())

@@ -4,6 +4,7 @@ using Stellarr.Api.Auth;
 using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
 using Stellarr.Api.Domain;
+using Stellarr.Api.Localization;
 using Stellarr.Api.Messaging;
 using Stellarr.Api.Realtime;
 
@@ -63,16 +64,18 @@ public static class MessagePinEndpoints
         HttpContext http,
         AppDbContext db,
         IHubContext<AppHub> hub,
+        Messages messages,
         CancellationToken cancellationToken) =>
-        SetAsync(messageId, pinned: true, http, db, hub, cancellationToken);
+        SetAsync(messageId, pinned: true, http, db, hub, messages, cancellationToken);
 
     private static Task<IResult> UnpinAsync(
         Guid messageId,
         HttpContext http,
         AppDbContext db,
         IHubContext<AppHub> hub,
+        Messages messages,
         CancellationToken cancellationToken) =>
-        SetAsync(messageId, pinned: false, http, db, hub, cancellationToken);
+        SetAsync(messageId, pinned: false, http, db, hub, messages, cancellationToken);
 
     /// <summary>
     /// Pins or unpins a message, for whoever can manage messages in its
@@ -88,6 +91,7 @@ public static class MessagePinEndpoints
         HttpContext http,
         AppDbContext db,
         IHubContext<AppHub> hub,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         var serverId = http.RequireActiveServerId();
@@ -122,10 +126,7 @@ public static class MessagePinEndpoints
                 return Results.ValidationProblem(new Dictionary<string, string[]>
                 {
                     ["pins"] =
-                    [
-                        $"Kanał może mieć najwyżej {MaxPinsPerChannel} przypiętych wiadomości. " +
-                        "Odepnij coś, aby zrobić miejsce.",
-                    ],
+                    [messages.Get(MessageKey.PinLimitReached, ("max", MaxPinsPerChannel))],
                 });
             }
 

@@ -5,6 +5,7 @@ using Stellarr.Api.Auth;
 using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
 using Stellarr.Api.Domain;
+using Stellarr.Api.Localization;
 using Stellarr.Api.Realtime;
 
 namespace Stellarr.Api.Endpoints;
@@ -56,6 +57,7 @@ public static partial class OpsEndpoints
         HttpContext http,
         AppDbContext db,
         PasswordService passwords,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         var server = http.RequireInstanceServer();
@@ -71,7 +73,7 @@ public static partial class OpsEndpoints
         {
             return Results.ValidationProblem(new Dictionary<string, string[]>
             {
-                ["user"] = ["Sprawdź login, nazwę, e-mail i hasło (minimum 8 znaków)."],
+                ["user"] = [messages.Get(MessageKey.OpsUserInvalid)],
             });
         }
 
@@ -92,7 +94,7 @@ public static partial class OpsEndpoints
         {
             return Results.ValidationProblem(new Dictionary<string, string[]>
             {
-                ["roleId"] = ["Wybierz rolę inną niż właściciel."],
+                ["roleId"] = [messages.Get(MessageKey.OpsRoleMustNotBeOwner)],
             });
         }
 
@@ -170,6 +172,7 @@ public static partial class OpsEndpoints
         SetOpsUserStatusRequest request,
         HttpContext http,
         AppDbContext db,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         var server = http.RequireInstanceServer();
@@ -178,7 +181,7 @@ public static partial class OpsEndpoints
         {
             return Results.Problem(
                 statusCode: StatusCodes.Status409Conflict,
-                title: "Nie możesz wyłączyć własnego konta.");
+                title: messages.Get(MessageKey.OpsCannotDisableSelf));
         }
 
         var member = await db.ServerMembers.Include(x => x.User).Include(x => x.Role)
@@ -192,7 +195,7 @@ public static partial class OpsEndpoints
         {
             return Results.Problem(
                 statusCode: StatusCodes.Status409Conflict,
-                title: "Konta właściciela nie można wyłączyć.");
+                title: messages.Get(MessageKey.OpsCannotDisableOwner));
         }
 
         if (member.User.IsDisabled == request.Disabled)
@@ -230,12 +233,13 @@ public static partial class OpsEndpoints
         CreateRoleRequest request,
         HttpContext http,
         AppDbContext db,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         var server = http.RequireInstanceServer();
         if (RoleEndpoints.Validate(request.Name, request.Color, request.Permissions) is not { } draft)
         {
-            return RoleEndpoints.InvalidRole();
+            return RoleEndpoints.InvalidRole(messages);
         }
 
         if (await db.ServerRoles.AnyAsync(
@@ -272,6 +276,7 @@ public static partial class OpsEndpoints
         HttpContext http,
         AppDbContext db,
         IHubContext<AppHub> hub,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         var server = http.RequireInstanceServer();
@@ -293,7 +298,7 @@ public static partial class OpsEndpoints
             request.Permissions ?? ServerAccess.ToNames(role.Permissions));
         if (draft is null)
         {
-            return RoleEndpoints.InvalidRole();
+            return RoleEndpoints.InvalidRole(messages);
         }
 
         if (await db.ServerRoles.AnyAsync(
@@ -324,6 +329,7 @@ public static partial class OpsEndpoints
         username.Length is >= 2 and <= 32 &&
         username.All(character => char.IsLetterOrDigit(character) || "_.-".Contains(character)) &&
         displayName.Length is >= 1 and <= 64 &&
-        PasswordPolicy.Violation(password) is null &&
+        !PasswordPolicy.IsTooShort(password) &&
+        !PasswordPolicy.IsTooLong(password) &&
         (email is null || MailAddress.TryCreate(email, out _));
 }

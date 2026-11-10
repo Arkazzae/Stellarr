@@ -1,4 +1,5 @@
 using Stellarr.Api.Contracts;
+using Stellarr.Api.Localization;
 
 namespace Stellarr.Api.Endpoints;
 
@@ -15,7 +16,7 @@ public sealed class AndroidReleaseCatalogue(IConfiguration configuration) : Clie
         Architecture: "arm64-v8a",
         DownloadPath: AndroidReleaseEndpoints.ApkDownloadPath,
         ContentType: "application/vnd.android.package-archive",
-        UnavailableTitle: "Wydanie Android jest chwilowo niedostępne."));
+        Unavailable: MessageKey.AndroidReleaseUnavailable));
 
 public static class AndroidReleaseEndpoints
 {
@@ -25,10 +26,12 @@ public static class AndroidReleaseEndpoints
     {
         endpoints.MapGet(
             "/api/android/release",
-            (HttpContext http, AndroidReleaseCatalogue catalogue) => ClientReleaseResults.Describe(http, catalogue));
+            (HttpContext http, AndroidReleaseCatalogue catalogue, Messages messages) =>
+                ClientReleaseResults.Describe(http, catalogue, messages));
         endpoints.MapGet(
             ApkDownloadPath,
-            (HttpContext http, AndroidReleaseCatalogue catalogue) => ClientReleaseResults.Download(http, catalogue));
+            (HttpContext http, AndroidReleaseCatalogue catalogue, Messages messages) =>
+                ClientReleaseResults.Download(http, catalogue, messages));
         endpoints.MapGet("/api/client/releases", ListReleases);
         return endpoints;
     }
@@ -41,7 +44,8 @@ public static class AndroidReleaseEndpoints
     private static IResult ListReleases(
         HttpContext http,
         AndroidReleaseCatalogue android,
-        DesktopReleaseCatalogue desktop)
+        DesktopReleaseCatalogue desktop,
+        Messages messages)
     {
         var releases = new List<ClientReleaseDto>(2);
         var anyBroken = false;
@@ -62,7 +66,7 @@ public static class AndroidReleaseEndpoints
 
         if (releases.Count == 0 && anyBroken)
         {
-            return ClientReleaseResults.Unavailable("Lista wydań aplikacji jest chwilowo niedostępna.");
+            return ClientReleaseResults.Unavailable(messages, MessageKey.ReleaseListUnavailable);
         }
 
         http.Response.Headers.CacheControl = ClientReleaseResults.CacheControl;

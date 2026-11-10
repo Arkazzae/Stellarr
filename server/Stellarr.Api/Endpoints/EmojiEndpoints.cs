@@ -8,6 +8,7 @@ using Stellarr.Api.Auth;
 using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
 using Stellarr.Api.Domain;
+using Stellarr.Api.Localization;
 using Stellarr.Api.Realtime;
 using Stellarr.Api.Storage;
 
@@ -56,6 +57,7 @@ public static partial class EmojiEndpoints
         AppDbContext db,
         MediaStorage mediaStorage,
         IHubContext<AppHub> hub,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         var serverId = http.RequireActiveServerId();
@@ -70,14 +72,14 @@ public static partial class EmojiEndpoints
         {
             return Results.ValidationProblem(new Dictionary<string, string[]>
             {
-                ["shortcode"] = ["Nazwa musi mieć 2–32 znaki: małe litery, cyfry lub podkreślenie."],
+                ["shortcode"] = [messages.Get(MessageKey.EmojiShortcodeInvalid)],
             });
         }
 
         var inspection = await mediaStorage.InspectImageAsync(file, MaxEmojiBytes, cancellationToken);
         if (inspection.Failure is not (UploadFailure.None or UploadFailure.SignatureMismatch))
         {
-            return Refusal(inspection);
+            return Refusal(inspection, messages);
         }
 
         if (await db.ServerEmoji.AnyAsync(x => x.ServerId == serverId && x.Shortcode == code, cancellationToken))
@@ -89,15 +91,15 @@ public static partial class EmojiEndpoints
         {
             return Results.Problem(
                 statusCode: StatusCodes.Status409Conflict,
-                title: "Limit emoji został osiągnięty",
-                detail: $"Serwer może mieć najwyżej {MaxEmojiPerServer} własnych emoji.");
+                title: messages.Get(MessageKey.EmojiLimitReached),
+                detail: messages.Get(MessageKey.EmojiLimitDetail, ("max", MaxEmojiPerServer)));
         }
 
         // A file whose bytes do not match its type is reported after the checks
         // on the shortcode and the limit, as it always was.
         if (!inspection.Accepted)
         {
-            return Refusal(inspection);
+            return Refusal(inspection, messages);
         }
 
         var id = Guid.NewGuid();
@@ -203,21 +205,21 @@ public static partial class EmojiEndpoints
     private static Task NotifyChangedAsync(IHubContext<AppHub> hub, Guid serverId, CancellationToken cancellationToken) =>
         hub.Clients.Group(AppHub.ServerGroup(serverId)).SendAsync("EmojiChanged", new { }, cancellationToken);
 
-    private static IResult Refusal(UploadInspection inspection) => inspection.Failure switch
+    private static IResult Refusal(UploadInspection inspection, Messages messages) => inspection.Failure switch
     {
         // An empty file is reported like an oversized one, as it always was.
         UploadFailure.Empty or UploadFailure.TooLarge => Results.Problem(
             statusCode: StatusCodes.Status413PayloadTooLarge,
-            title: "Emoji jest za duże",
-            detail: "Maksymalny rozmiar pliku emoji to 512 KB."),
+            title: messages.Get(MessageKey.EmojiTooLarge),
+            detail: messages.Get(MessageKey.EmojiMaximum)),
         UploadFailure.UnsupportedType => Results.Problem(
             statusCode: StatusCodes.Status415UnsupportedMediaType,
-            title: "Nieobsługiwany format emoji",
-            detail: "Dozwolone są obrazy JPEG, PNG, GIF i WebP."),
+            title: messages.Get(MessageKey.EmojiTypeUnsupported),
+            detail: messages.Get(MessageKey.ImageTypesAllowed)),
         _ => Results.Problem(
             statusCode: StatusCodes.Status415UnsupportedMediaType,
-            title: "Nieprawidłowy format emoji",
-            detail: "Zawartość pliku nie odpowiada zadeklarowanemu typowi."),
+            title: messages.Get(MessageKey.EmojiTypeMismatch),
+            detail: messages.Get(MessageKey.FileContentMismatch)),
     };
 
     [GeneratedRegex("^[a-z0-9_]{2,32}$", RegexOptions.CultureInvariant)]

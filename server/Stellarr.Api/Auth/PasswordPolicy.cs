@@ -1,3 +1,5 @@
+using Stellarr.Api.Localization;
+
 namespace Stellarr.Api.Auth;
 
 /// <summary>
@@ -14,13 +16,13 @@ public static class PasswordPolicy
     public static bool IsTooLong(string? password) => password is { Length: > MaxLength };
 
     /// <summary>The text shown for a password the policy refuses, or null when it is acceptable.</summary>
-    public static string? Violation(string? password)
+    public static string? Violation(string? password, Messages messages)
     {
         if (IsTooShort(password))
         {
-            return $"Hasło musi mieć co najmniej {MinLength} znaków.";
+            return messages.Get(MessageKey.PasswordTooShort, ("min", MinLength));
         }
 
-        return IsTooLong(password) ? $"Hasło może mieć najwyżej {MaxLength} znaków." : null;
+        return IsTooLong(password) ? messages.Get(MessageKey.PasswordTooLong, ("max", MaxLength)) : null;
     }
 }

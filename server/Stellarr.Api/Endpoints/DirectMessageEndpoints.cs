@@ -5,6 +5,7 @@ using Stellarr.Api.Auth;
 using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
 using Stellarr.Api.Domain;
+using Stellarr.Api.Localization;
 using Stellarr.Api.Messaging;
 using Stellarr.Api.Realtime;
 
@@ -100,11 +101,12 @@ public static class DirectMessageEndpoints
         int? limit,
         ClaimsPrincipal principal,
         AppDbContext db,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         if (limit is < 1 or > MaxPageSize)
         {
-            return Invalid("limit", $"Limit musi mieścić się w zakresie 1–{MaxPageSize}.");
+            return Invalid("limit", messages.Get(MessageKey.PageLimitRange, ("max", MaxPageSize)));
         }
 
         var selfId = principal.RequireUserId();
@@ -122,7 +124,7 @@ public static class DirectMessageEndpoints
         }
         else if (!HistoryCursor.TryDecode(cursor, out page) || page.ScopeId != conversationId)
         {
-            return Invalid("cursor", "Kursor historii wiadomości prywatnych jest nieprawidłowy.");
+            return Invalid("cursor", messages.Get(MessageKey.DirectHistoryCursorInvalid));
         }
 
         var pageSize = limit ?? DefaultPageSize;
@@ -147,6 +149,7 @@ public static class DirectMessageEndpoints
         ClaimsPrincipal principal,
         AppDbContext db,
         IHubContext<AppHub> hub,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         var selfId = principal.RequireUserId();
@@ -164,12 +167,12 @@ public static class DirectMessageEndpoints
 
         if (request.AttachmentIds is { Count: > MaxAttachments })
         {
-            return Invalid("attachmentIds", $"Wiadomość może zawierać najwyżej {MaxAttachments} załączników.");
+            return Invalid("attachmentIds", messages.Get(MessageKey.AttachmentLimit, ("max", MaxAttachments)));
         }
 
         if (request.ClientMessageId == Guid.Empty)
         {
-            return Invalid("clientMessageId", "Identyfikator wiadomości jest nieprawidłowy.");
+            return Invalid("clientMessageId", messages.Get(MessageKey.MessageIdInvalid));
         }
 
         var submission = new Submission(
@@ -182,8 +185,7 @@ public static class DirectMessageEndpoints
         {
             return Invalid(
                 "content",
-                "Wiadomość musi zawierać tekst lub załącznik i mieć najwyżej " +
-                $"{MessageLimits.MaxContentLength} znaków.");
+                messages.Get(MessageKey.MessageContentInvalid, ("max", MessageLimits.MaxContentLength)));
         }
 
         // A retry of a send that went through is answered before anything that
@@ -200,9 +202,7 @@ public static class DirectMessageEndpoints
                 .ToListAsync(cancellationToken);
         if (attachments.Count != submission.AttachmentIds.Length)
         {
-            return Invalid(
-                "attachmentIds",
-                "Co najmniej jeden załącznik nie istnieje albo należy do innego użytkownika.");
+            return Invalid("attachmentIds", messages.Get(MessageKey.AttachmentsNotFound));
         }
 
         if (!await PeerTakesMessagesFromAsync(db, selfId, peerId, cancellationToken))

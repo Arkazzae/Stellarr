@@ -7,6 +7,7 @@ using Stellarr.Api.Auth;
 using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
 using Stellarr.Api.Domain;
+using Stellarr.Api.Localization;
 using Stellarr.Api.Messaging;
 
 namespace Stellarr.Api.Endpoints;
@@ -22,8 +23,6 @@ public static class MessageIndexEndpoints
     private const int MaxPageSize = 100;
     private const int MinQueryLength = 2;
     private const int MaxQueryLength = 200;
-
-    private const string QueryLengthMessage = "Wyszukiwana fraza musi mieć od 2 do 200 znaków.";
 
     public static IEndpointRouteBuilder MapMessageIndexEndpoints(this IEndpointRouteBuilder endpoints)
     {
@@ -41,12 +40,13 @@ public static class MessageIndexEndpoints
         string? query,
         HttpContext http,
         AppDbContext db,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         var needle = query?.Trim() ?? "";
         if (needle.Length is < MinQueryLength or > MaxQueryLength)
         {
-            return Invalid("query", QueryLengthMessage);
+            return Invalid("query", messages.Get(MessageKey.SearchQueryLength, ("min", MinQueryLength), ("max", MaxQueryLength)));
         }
 
         if (!await db.Channels.TextChannelOnServer(channelId, http.RequireActiveServerId())
@@ -65,8 +65,8 @@ public static class MessageIndexEndpoints
             SearchResultCount,
             cancellationToken);
         var viewerId = http.User.RequireUserId();
-        var messages = await LoadInOrderAsync(db, found.MessageIds, cancellationToken);
-        return Results.Ok(messages.Select(x => x.ToDto(viewerId)).ToArray());
+        var ordered = await LoadInOrderAsync(db, found.MessageIds, cancellationToken);
+        return Results.Ok(ordered.Select(x => x.ToDto(viewerId)).ToArray());
     }
 
     /// <summary>
@@ -83,22 +83,23 @@ public static class MessageIndexEndpoints
         int? limit,
         HttpContext http,
         AppDbContext db,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         if (limit is < 1 or > MaxPageSize)
         {
-            return Invalid("limit", $"Limit musi mieścić się w zakresie 1–{MaxPageSize}.");
+            return Invalid("limit", messages.Get(MessageKey.PageLimitRange, ("max", MaxPageSize)));
         }
 
         if (!TryParseKind(kind, out var indexKind))
         {
-            return Invalid("kind", "Rodzaj indeksu musi mieć wartość all, media albo links.");
+            return Invalid("kind", messages.Get(MessageKey.IndexKindInvalid));
         }
 
         var needle = string.IsNullOrWhiteSpace(query) ? null : query.Trim();
         if (needle is { Length: < MinQueryLength or > MaxQueryLength })
         {
-            return Invalid("query", QueryLengthMessage);
+            return Invalid("query", messages.Get(MessageKey.SearchQueryLength, ("min", MinQueryLength), ("max", MaxQueryLength)));
         }
 
         if (!await db.Channels.TextChannelOnServer(channelId, http.RequireActiveServerId())
@@ -120,7 +121,7 @@ public static class MessageIndexEndpoints
         {
             // A cursor says where in one result it stands, so it means
             // nothing next to another channel, kind or text.
-            return Invalid("cursor", "Kursor indeksu wiadomości jest nieprawidłowy.");
+            return Invalid("cursor", messages.Get(MessageKey.IndexCursorInvalid));
         }
 
         var found = await MessageSearchIndex.ReadAsync(
@@ -133,9 +134,9 @@ public static class MessageIndexEndpoints
             limit ?? DefaultPageSize,
             cancellationToken);
         var viewerId = http.User.RequireUserId();
-        var messages = await LoadInOrderAsync(db, found.MessageIds, cancellationToken);
+        var ordered = await LoadInOrderAsync(db, found.MessageIds, cancellationToken);
         return Results.Ok(new MessageIndexPageDto(
-            messages.Select(x => x.ToDto(viewerId)).ToArray(),
+            ordered.Select(x => x.ToDto(viewerId)).ToArray(),
             found.HasMore ? (page with { Offset = page.Offset + found.MessageIds.Count }).Encode() : null));
     }
 

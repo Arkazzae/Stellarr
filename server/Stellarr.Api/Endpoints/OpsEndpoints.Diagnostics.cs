@@ -6,6 +6,7 @@ using Stellarr.Api.Auth;
 using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
 using Stellarr.Api.Domain;
+using Stellarr.Api.Localization;
 using Stellarr.Api.Logging;
 using Stellarr.Api.Realtime;
 
@@ -22,6 +23,7 @@ public static partial class OpsEndpoints
         AppDbContext db,
         PresenceTracker presence,
         IConfiguration configuration,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         var serverId = http.RequireInstanceServer().Id;
@@ -49,16 +51,16 @@ public static partial class OpsEndpoints
             new(
                 "SQLite",
                 databaseReady ? "healthy" : "error",
-                databaseReady ? "Połączenie i zapytanie kontrolne działają." : "Baza nie odpowiada."),
-            new("SignalR", "healthy", $"{realtimeConnections} aktywnych połączeń"),
+                messages.Get(databaseReady ? MessageKey.OpsDatabaseHealthy : MessageKey.OpsDatabaseDown)),
+            new("SignalR", "healthy", messages.Get(MessageKey.OpsRealtimeConnections, ("count", realtimeConnections))),
             new(
                 "Maintenance worker",
                 maintenance ? "healthy" : "inactive",
-                maintenance ? "Retencja jest uruchomiona." : "Wyłączony w konfiguracji."),
+                messages.Get(maintenance ? MessageKey.OpsMaintenanceRunning : MessageKey.OpsMaintenanceOff)),
             new(
                 "Object storage",
                 storageInactive ? "inactive" : "healthy",
-                storageInactive ? "Inicjalizacja wyłączona." : "Bucket został sprawdzony podczas startu."),
+                messages.Get(storageInactive ? MessageKey.OpsStorageInitializationOff : MessageKey.OpsStorageChecked)),
         ];
 
         return Results.Ok(new OpsRuntimeDto(

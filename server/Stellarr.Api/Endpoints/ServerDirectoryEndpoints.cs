@@ -4,6 +4,7 @@ using Stellarr.Api.Auth;
 using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
 using Stellarr.Api.Domain;
+using Stellarr.Api.Localization;
 using Stellarr.Api.Realtime;
 
 namespace Stellarr.Api.Endpoints;
@@ -151,13 +152,14 @@ public static class ServerDirectoryEndpoints
         HttpContext http,
         AppDbContext db,
         IHubContext<AppHub> hub,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         var name = request.Name?.Trim() ?? "";
         var description = request.Description?.Trim() ?? "";
         if (name.Length is < 1 or > MaxNameLength || description.Length > MaxDescriptionLength)
         {
-            return Invalid("server", "Nazwa musi mieć 1–80 znaków, a opis najwyżej 280.");
+            return Invalid("server", messages.Get(MessageKey.ServerNameOrDescriptionInvalid));
         }
 
         // An omitted channel name keeps the usual start. A voice name that is
@@ -168,12 +170,12 @@ public static class ServerDirectoryEndpoints
         if (!ChannelEndpoints.IsValidName(textChannelName) ||
             (wantsVoice && !ChannelEndpoints.IsValidName(voiceChannelName)))
         {
-            return Invalid("channels", "Nazwa kanału startowego jest nieprawidłowa.");
+            return Invalid("channels", messages.Get(MessageKey.StarterChannelNameInvalid));
         }
 
         if (wantsVoice && textChannelName == voiceChannelName)
         {
-            return Invalid("channels", "Kanały startowe muszą mieć różne nazwy.");
+            return Invalid("channels", messages.Get(MessageKey.StarterChannelNamesCollide));
         }
 
         var now = DateTime.UtcNow;
@@ -210,6 +212,7 @@ public static class ServerDirectoryEndpoints
         HttpContext http,
         AppDbContext db,
         IHubContext<AppHub> hub,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         var server = await db.Servers.FirstOrDefaultAsync(x => x.Id == serverId && x.IsPublic, cancellationToken);
@@ -219,7 +222,7 @@ public static class ServerDirectoryEndpoints
         }
 
         var userId = http.User.RequireUserId();
-        var admission = await AdmitAsync(db, server, userId, cancellationToken);
+        var admission = await AdmitAsync(db, server, userId, messages, cancellationToken);
         if (admission.Refusal is { } refusal)
         {
             return refusal;
@@ -234,6 +237,7 @@ public static class ServerDirectoryEndpoints
         HttpContext http,
         AppDbContext db,
         IHubContext<AppHub> hub,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         var normalized = code.Trim().ToLowerInvariant();
@@ -252,7 +256,7 @@ public static class ServerDirectoryEndpoints
         }
 
         var userId = http.User.RequireUserId();
-        var admission = await AdmitAsync(db, server, userId, cancellationToken);
+        var admission = await AdmitAsync(db, server, userId, messages, cancellationToken);
         if (admission.Refusal is { } refusal)
         {
             return refusal;
@@ -267,6 +271,7 @@ public static class ServerDirectoryEndpoints
         AppDbContext db,
         StellarrServer server,
         Guid userId,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         if (await db.ServerBans.AnyAsync(x => x.ServerId == server.Id && x.UserId == userId, cancellationToken))
@@ -284,7 +289,7 @@ public static class ServerDirectoryEndpoints
             return new Admission(
                 Results.Problem(
                     statusCode: StatusCodes.Status503ServiceUnavailable,
-                    title: "Serwer nie ma roli dla nowych członków."),
+                    title: messages.Get(MessageKey.ServerHasNoMemberRole)),
                 Added: false,
                 Welcome: null);
         }

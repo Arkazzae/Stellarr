@@ -12,6 +12,9 @@ public sealed class LocalizationTests
 
     private static Messages Catalog(string language) => new(new LanguageOptions { Language = language });
 
+    private static StellarrWebApplicationFactory EnglishHost() =>
+        new(loadTestData: false, new Dictionary<string, string?> { [LanguageOptions.SettingName] = "en" });
+
     private static string[] PlaceholdersOf(string template) =>
         Messages.Placeholder().Matches(template).Select(x => x.Groups[1].Value).Order().ToArray();
 
@@ -105,9 +108,7 @@ public sealed class LocalizationTests
     [Fact]
     public async Task AHostSetToEnglishAnswersInEnglishWhateverTheEnvironmentSays()
     {
-        using var factory = new StellarrWebApplicationFactory(
-            loadTestData: false,
-            new Dictionary<string, string?> { [LanguageOptions.SettingName] = "en" });
+        using var factory = EnglishHost();
         using var client = factory.CreateClient();
         client.DefaultRequestHeaders.Remove(Auth.ClientGate.KindHeader);
 
@@ -118,5 +119,53 @@ public sealed class LocalizationTests
         Assert.Equal(
             "This app is no longer supported. Download the current Stellarr client.",
             problem.GetProperty("title").GetString());
+    }
+
+    [Fact]
+    public async Task AValidationFailureIsPhrasedInTheLanguageOfTheHost()
+    {
+        using var factory = EnglishHost();
+        using var client = factory.CreateClient();
+
+        using var response = await client.PostAsJsonAsync(
+            "/api/auth/register",
+            new { username = "ab", displayName = "Ab", email = "ab@example.test", password = "long enough password" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal(
+            "Username must be 3–32 characters: letters, digits, dot, hyphen or underscore.",
+            problem.GetProperty("errors").GetProperty("username")[0].GetString());
+    }
+
+    [Fact]
+    public async Task AFailedSignInIsAnsweredInTheLanguageOfTheHost()
+    {
+        using var factory = EnglishHost();
+        using var client = factory.CreateClient();
+
+        using var response = await client.PostAsJsonAsync("/api/auth/login", new { username = "nobody", password = "wrong password" });
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        Assert.Equal("Invalid username or password.", problem.GetProperty("title").GetString());
+    }
+
+    [Fact]
+    public async Task HostsOfDifferentLanguagesDoNotInfluenceEachOther()
+    {
+        using var english = EnglishHost();
+        using var polish = new StellarrWebApplicationFactory(
+            loadTestData: false,
+            new Dictionary<string, string?> { [LanguageOptions.SettingName] = "pl" });
+        using var englishClient = english.CreateClient();
+        using var polishClient = polish.CreateClient();
+
+        var login = new { username = "nobody", password = "wrong password" };
+        using var inEnglish = await englishClient.PostAsJsonAsync("/api/auth/login", login);
+        using var inPolish = await polishClient.PostAsJsonAsync("/api/auth/login", login);
+
+        Assert.Equal("Invalid username or password.", (await inEnglish.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("title").GetString());
+        Assert.Equal("Nieprawidłowy login lub hasło.", (await inPolish.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("title").GetString());
     }
 }

@@ -5,6 +5,7 @@ using Stellarr.Api.Auth;
 using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
 using Stellarr.Api.Domain;
+using Stellarr.Api.Localization;
 using Stellarr.Api.Mail;
 
 namespace Stellarr.Api.Endpoints;
@@ -33,10 +34,11 @@ public static partial class OpsEndpoints
         AppDbContext db,
         IConfiguration configuration,
         IOptions<MailOptions> mail,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         var server = http.RequireInstanceServer();
-        var problems = ValidateSettings(request);
+        var problems = ValidateSettings(request, messages);
         if (problems.Count > 0)
         {
             return Results.ValidationProblem(problems);
@@ -72,11 +74,12 @@ public static partial class OpsEndpoints
         IConfiguration configuration,
         DesktopReleaseCatalogue desktop,
         AndroidReleaseCatalogue android,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         var settings = await LoadSettingsAsync(db, http.RequireInstanceServer(), configuration, cancellationToken);
         return DescribeReleases(
-            settings, configuration, desktop, android, "Manifest wydania aplikacji wymaga naprawy.");
+            settings, configuration, desktop, android, messages.Get(MessageKey.OpsReleaseManifestBroken));
     }
 
     private static async Task<IResult> UpdateDesktopReleaseAsync(
@@ -86,6 +89,7 @@ public static partial class OpsEndpoints
         IConfiguration configuration,
         DesktopReleaseCatalogue desktop,
         AndroidReleaseCatalogue android,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         var server = http.RequireInstanceServer();
@@ -94,17 +98,17 @@ public static partial class OpsEndpoints
         var problems = new Dictionary<string, string[]>(StringComparer.Ordinal);
         if (!DesktopReleaseEndpoints.TryParseStableVersion(minimum, out var minimumVersion))
         {
-            problems["minimumVersion"] = ["Podaj stabilną wersję w formacie major.minor.patch."];
+            problems["minimumVersion"] = [messages.Get(MessageKey.OpsVersionInvalid)];
         }
 
         if (!DesktopReleaseEndpoints.TryParseStableVersion(recommended, out var recommendedVersion))
         {
-            problems["recommendedVersion"] = ["Podaj stabilną wersję w formacie major.minor.patch."];
+            problems["recommendedVersion"] = [messages.Get(MessageKey.OpsVersionInvalid)];
         }
 
         if (problems.Count == 0 && minimumVersion > recommendedVersion)
         {
-            problems["recommendedVersion"] = ["Wersja zalecana nie może być niższa od minimalnej."];
+            problems["recommendedVersion"] = [messages.Get(MessageKey.OpsRecommendedBelowMinimum)];
         }
 
         if (problems.Count > 0)
@@ -132,7 +136,7 @@ public static partial class OpsEndpoints
             configuration,
             desktop,
             android,
-            "Wersje zapisano, ale manifest wydania aplikacji wymaga naprawy.");
+            messages.Get(MessageKey.OpsVersionsSavedManifestBroken));
     }
 
     private static async Task<IResult> SendTestMailAsync(
@@ -142,6 +146,7 @@ public static partial class OpsEndpoints
         IEmailDelivery delivery,
         IOptions<MailOptions> mail,
         IConfiguration configuration,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         var server = http.RequireInstanceServer();
@@ -152,7 +157,7 @@ public static partial class OpsEndpoints
         {
             return Results.ValidationProblem(new Dictionary<string, string[]>
             {
-                ["to"] = ["Podaj poprawny adres odbiorcy."],
+                ["to"] = [messages.Get(MessageKey.OpsTestMailRecipientInvalid)],
             });
         }
 
@@ -165,8 +170,8 @@ public static partial class OpsEndpoints
         {
             return Results.Problem(
                 statusCode: StatusCodes.Status409Conflict,
-                title: "Resend nie jest gotowy",
-                detail: "Włącz mailing, ustaw adres nadawcy i dodaj Mail__ResendApiKey w środowisku backendu.");
+                title: messages.Get(MessageKey.OpsMailNotReadyTitle),
+                detail: messages.Get(MessageKey.OpsMailNotReadyDetail));
         }
 
         var from = string.IsNullOrWhiteSpace(options.FromName)
@@ -246,12 +251,12 @@ public static partial class OpsEndpoints
     /// <summary>The key itself is never read back; whether one is set is all the panel learns.</summary>
     private static bool HasResendApiKey(MailOptions options) => !string.IsNullOrWhiteSpace(options.ResendApiKey);
 
-    private static Dictionary<string, string[]> ValidateSettings(UpdateOpsSettingsRequest request)
+    private static Dictionary<string, string[]> ValidateSettings(UpdateOpsSettingsRequest request, Messages messages)
     {
         var problems = new Dictionary<string, string[]>(StringComparer.Ordinal);
         if ((request.InstanceName?.Trim() ?? "").Length is < 1 or > 80)
         {
-            problems["instanceName"] = ["Nazwa instancji musi mieć od 1 do 80 znaków."];
+            problems["instanceName"] = [messages.Get(MessageKey.OpsInstanceNameLength)];
         }
 
         var publicUrl = request.PublicUrl?.Trim() ?? "";
@@ -259,7 +264,7 @@ public static partial class OpsEndpoints
             (uri.Scheme != Uri.UriSchemeHttps && !(uri.Scheme == Uri.UriSchemeHttp && uri.IsLoopback)) ||
             uri.UserInfo.Length > 0)
         {
-            problems["publicUrl"] = ["Podaj bezwzględny adres HTTPS. HTTP jest dozwolone tylko dla localhost."];
+            problems["publicUrl"] = [messages.Get(MessageKey.OpsPublicUrlInvalid)];
         }
 
         try
@@ -268,33 +273,33 @@ public static partial class OpsEndpoints
         }
         catch (TimeZoneNotFoundException)
         {
-            problems["timeZone"] = ["Ta strefa czasowa nie jest dostępna na serwerze."];
+            problems["timeZone"] = [messages.Get(MessageKey.OpsTimeZoneUnavailable)];
         }
         catch (InvalidTimeZoneException)
         {
-            problems["timeZone"] = ["Konfiguracja strefy czasowej na serwerze jest nieprawidłowa."];
+            problems["timeZone"] = [messages.Get(MessageKey.OpsTimeZoneBroken)];
         }
 
         var fromAddress = request.MailFromAddress?.Trim() ?? "";
         if (fromAddress.Length > MaxMailAddressLength ||
             (request.MailingEnabled && !MailAddress.TryCreate(fromAddress, out _)))
         {
-            problems["mailFromAddress"] = ["Włączony mailing wymaga poprawnego adresu nadawcy."];
+            problems["mailFromAddress"] = [messages.Get(MessageKey.OpsMailFromRequired)];
         }
 
         if (request.BackupRetentionDays is < 1 or > MaxRetentionDays)
         {
-            problems["backupRetentionDays"] = ["Retencja backupów musi wynosić od 1 do 3650 dni."];
+            problems["backupRetentionDays"] = [messages.Get(MessageKey.OpsBackupRetentionRange, ("max", MaxRetentionDays))];
         }
 
         if (request.LogRetentionDays is < 1 or > MaxRetentionDays)
         {
-            problems["logRetentionDays"] = ["Retencja logów musi wynosić od 1 do 3650 dni."];
+            problems["logRetentionDays"] = [messages.Get(MessageKey.OpsLogRetentionRange, ("max", MaxRetentionDays))];
         }
 
         if (request.OrphanObjectRetentionDays is < 1 or > MaxRetentionDays)
         {
-            problems["orphanObjectRetentionDays"] = ["Retencja osieroconych obiektów musi wynosić od 1 do 3650 dni."];
+            problems["orphanObjectRetentionDays"] = [messages.Get(MessageKey.OpsOrphanRetentionRange, ("max", MaxRetentionDays))];
         }
 
         return problems;

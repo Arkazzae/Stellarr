@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Stellarr.Api.Auth;
 using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
+using Stellarr.Api.Localization;
 
 namespace Stellarr.Api.Endpoints;
 
@@ -60,6 +61,7 @@ public static partial class OpsEndpoints
         HttpContext http,
         AppDbContext db,
         IConfiguration configuration,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         var server = http.RequireInstanceServer();
@@ -73,7 +75,7 @@ public static partial class OpsEndpoints
         {
             return Results.Problem(
                 statusCode: StatusCodes.Status409Conflict,
-                title: "Backup nie przeszedł kontroli integralności.",
+                title: messages.Get(MessageKey.OpsBackupFailedIntegrity),
                 detail: verdict);
         }
 

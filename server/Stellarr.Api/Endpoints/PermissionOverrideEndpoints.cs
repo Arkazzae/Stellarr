@@ -3,6 +3,7 @@ using Stellarr.Api.Auth;
 using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
 using Stellarr.Api.Domain;
+using Stellarr.Api.Localization;
 
 namespace Stellarr.Api.Endpoints;
 
@@ -30,8 +31,8 @@ public static class PermissionOverrideEndpoints
             ListAsync(targetType, targetId, http, db, cancellationToken));
         overrides.MapPut("/{roleId:guid}", (
             Guid targetId, Guid roleId, SetPermissionOverrideRequest request,
-            HttpContext http, AppDbContext db, CancellationToken cancellationToken) =>
-            SetAsync(targetType, targetId, roleId, request, http, db, cancellationToken));
+            HttpContext http, AppDbContext db, Messages messages, CancellationToken cancellationToken) =>
+            SetAsync(targetType, targetId, roleId, request, http, db, messages, cancellationToken));
         overrides.MapDelete("/{roleId:guid}", (
             Guid targetId, Guid roleId, HttpContext http, AppDbContext db, CancellationToken cancellationToken) =>
             ClearAsync(targetType, targetId, roleId, http, db, cancellationToken));
@@ -62,6 +63,7 @@ public static class PermissionOverrideEndpoints
         SetPermissionOverrideRequest request,
         HttpContext http,
         AppDbContext db,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         if (await RefuseAsync(targetType, targetId, http, db, cancellationToken) is { } refusal)
@@ -77,12 +79,12 @@ public static class PermissionOverrideEndpoints
 
         if (!ServerAccess.TryParse(request.Allow, out var allow) || !ServerAccess.TryParse(request.Deny, out var deny))
         {
-            return Invalid("Co najmniej jedno uprawnienie jest nieznane.");
+            return Invalid(messages.Get(MessageKey.PermissionUnknown));
         }
 
         if ((allow & deny) != ServerPrivileges.None)
         {
-            return Invalid("To samo uprawnienie nie może być jednocześnie dozwolone i zabronione.");
+            return Invalid(messages.Get(MessageKey.PermissionAllowedAndDenied));
         }
 
         var current = await db.PermissionOverrides.FirstOrDefaultAsync(

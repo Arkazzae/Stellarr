@@ -6,6 +6,7 @@ using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
 using Stellarr.Api.Domain;
 using Stellarr.Api.Embeds;
+using Stellarr.Api.Localization;
 using Stellarr.Api.Messaging;
 using Stellarr.Api.Realtime;
 
@@ -51,18 +52,19 @@ public static class MessageEndpoints
         HttpContext http,
         AppDbContext db,
         IHubContext<AppHub> hub,
+        Messages messages,
         SlowModeGate slowMode,
         EmbedInbox embeds,
         CancellationToken cancellationToken)
     {
         if (request.AttachmentIds is { Count: > MaxAttachments })
         {
-            return Invalid("attachmentIds", $"Wiadomość może zawierać najwyżej {MaxAttachments} załączników.");
+            return Invalid("attachmentIds", messages.Get(MessageKey.AttachmentLimit, ("max", MaxAttachments)));
         }
 
         if (request.ClientMessageId == Guid.Empty)
         {
-            return Invalid("clientMessageId", "Identyfikator wiadomości jest nieprawidłowy.");
+            return Invalid("clientMessageId", messages.Get(MessageKey.MessageIdInvalid));
         }
 
         var userId = http.User.RequireUserId();
@@ -78,8 +80,7 @@ public static class MessageEndpoints
         {
             return Invalid(
                 "content",
-                "Wiadomość musi zawierać tekst lub załącznik i mieć najwyżej " +
-                $"{MessageLimits.MaxContentLength} znaków.");
+                messages.Get(MessageKey.MessageContentInvalid, ("max", MessageLimits.MaxContentLength)));
         }
 
         var serverId = http.RequireActiveServerId();
@@ -108,9 +109,7 @@ public static class MessageEndpoints
                 .FirstOrDefaultAsync(x => x.Id == replyToId && x.ChannelId == channelId, cancellationToken);
             if (replyTo is null)
             {
-                return Invalid(
-                    "replyToMessageId",
-                    "Odpowiedź musi wskazywać istniejącą wiadomość z tego samego kanału.");
+                return Invalid("replyToMessageId", messages.Get(MessageKey.ReplyTargetInvalid));
             }
         }
 
@@ -121,9 +120,7 @@ public static class MessageEndpoints
                 .ToListAsync(cancellationToken);
         if (attachments.Count != submission.AttachmentIds.Length)
         {
-            return Invalid(
-                "attachmentIds",
-                "Co najmniej jeden załącznik nie istnieje albo należy do innego użytkownika.");
+            return Invalid("attachmentIds", messages.Get(MessageKey.AttachmentsNotFound));
         }
 
         var enforceSlowMode = channel.SlowModeSeconds > 0 &&
@@ -139,16 +136,14 @@ public static class MessageEndpoints
                 http.Response.Headers.RetryAfter = retryAfter.ToString(CultureInfo.InvariantCulture);
                 return Results.Problem(
                     statusCode: StatusCodes.Status429TooManyRequests,
-                    title: "Tryb powolny jest aktywny",
-                    detail: $"Następną wiadomość możesz wysłać za {retryAfter} s.");
+                    title: messages.Get(MessageKey.SlowModeActive),
+                    detail: messages.Get(MessageKey.SlowModeWait, ("seconds", retryAfter)));
             }
 
             // A recording is a message of its own: no text and nothing beside it.
             if (attachments.Any(x => x.IsVoiceMessage) && (attachments.Count > 1 || submission.Content.Length > 0))
             {
-                return Invalid(
-                    "attachmentIds",
-                    "Wiadomość głosowa musi być wysłana samodzielnie, bez tekstu i innych załączników.");
+                return Invalid("attachmentIds", messages.Get(MessageKey.VoiceMessageAlone));
             }
 
             message = new Message
@@ -285,6 +280,7 @@ public static class MessageEndpoints
         AppDbContext db,
         IHubContext<AppHub> hub,
         EmbedInbox embeds,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         var content = request.Content?.Trim() ?? "";
@@ -292,7 +288,7 @@ public static class MessageEndpoints
         {
             return Invalid(
                 "content",
-                $"Wiadomość musi zawierać tekst i mieć najwyżej {MessageLimits.MaxContentLength} znaków.");
+                messages.Get(MessageKey.MessageEditContentInvalid, ("max", MessageLimits.MaxContentLength)));
         }
 
         var serverId = http.RequireActiveServerId();

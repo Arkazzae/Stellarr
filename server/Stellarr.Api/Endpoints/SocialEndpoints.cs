@@ -5,6 +5,7 @@ using Stellarr.Api.Auth;
 using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
 using Stellarr.Api.Domain;
+using Stellarr.Api.Localization;
 using Stellarr.Api.Messaging;
 using Stellarr.Api.Realtime;
 
@@ -152,6 +153,7 @@ public static class SocialEndpoints
         ClaimsPrincipal principal,
         AppDbContext db,
         IHubContext<AppHub> hub,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         var userId = principal.RequireUserId();
@@ -160,7 +162,7 @@ public static class SocialEndpoints
         {
             return Results.ValidationProblem(new Dictionary<string, string[]>
             {
-                ["username"] = ["Podaj nazwę użytkownika."],
+                ["username"] = [messages.Get(MessageKey.FriendUsernameRequired)],
             });
         }
 

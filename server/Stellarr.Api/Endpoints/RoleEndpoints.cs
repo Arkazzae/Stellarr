@@ -4,6 +4,7 @@ using Stellarr.Api.Auth;
 using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
 using Stellarr.Api.Domain;
+using Stellarr.Api.Localization;
 using Stellarr.Api.Realtime;
 
 namespace Stellarr.Api.Endpoints;
@@ -67,6 +68,7 @@ public static class RoleEndpoints
         CreateRoleRequest request,
         HttpContext http,
         AppDbContext db,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         var serverId = http.RequireActiveServerId();
@@ -78,7 +80,7 @@ public static class RoleEndpoints
 
         if (Validate(request.Name, request.Color, request.Permissions) is not { } draft)
         {
-            return InvalidRole();
+            return InvalidRole(messages);
         }
 
         if (await db.ServerRoles.AnyAsync(x => x.ServerId == serverId && x.Name == draft.Name, cancellationToken))
@@ -117,6 +119,7 @@ public static class RoleEndpoints
         HttpContext http,
         AppDbContext db,
         IHubContext<AppHub> hub,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         var serverId = http.RequireActiveServerId();
@@ -144,7 +147,7 @@ public static class RoleEndpoints
             request.Permissions ?? ServerAccess.ToNames(role.Permissions));
         if (draft is null)
         {
-            return InvalidRole();
+            return InvalidRole(messages);
         }
 
         if (await db.ServerRoles.AnyAsync(
@@ -276,10 +279,10 @@ public static class RoleEndpoints
             : null;
     }
 
-    internal static IResult InvalidRole() =>
+    internal static IResult InvalidRole(Messages messages) =>
         Results.ValidationProblem(new Dictionary<string, string[]>
         {
-            ["role"] = ["Nazwa, kolor lub lista uprawnień roli jest nieprawidłowa."],
+            ["role"] = [messages.Get(MessageKey.RoleInvalid)],
         });
 
     internal static async Task NotifyAsync(
