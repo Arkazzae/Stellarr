@@ -11,6 +11,7 @@ using Stellarr.Api.Data;
 using Stellarr.Api.Embeds;
 using Stellarr.Api.Endpoints;
 using Stellarr.Api.Logging;
+using Stellarr.Api.Mail;
 using Stellarr.Api.Realtime;
 using Stellarr.Api.Storage;
 
@@ -73,6 +74,15 @@ builder.Services.AddSingleton<IObjectStorage, S3ObjectStorage>();
 builder.Services.Configure<UploadOptions>(builder.Configuration.GetSection(UploadOptions.SectionName));
 builder.Services.AddSingleton<UploadAdmissionGate>();
 builder.Services.AddScoped<MediaStorage>();
+
+builder.Services.Configure<MailOptions>(builder.Configuration.GetSection(MailOptions.SectionName));
+builder.Services.AddHttpClient<IEmailDelivery, ResendEmailDelivery>(http =>
+{
+    http.BaseAddress = new Uri("https://api.resend.com/");
+    http.Timeout = TimeSpan.FromSeconds(15);
+    http.DefaultRequestHeaders.UserAgent.ParseAdd("Stellarr/2.0");
+    http.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+});
 
 builder.Services.Configure<EmbedOptions>(builder.Configuration.GetSection(EmbedOptions.SectionName));
 builder.Services.AddSingleton<EmbedInbox>();
@@ -145,6 +155,7 @@ app.MapGet("/health/ready", async (AppDbContext db, CancellationToken cancellati
         : Results.Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: "Database unavailable"));
 
 app.MapAuthEndpoints();
+app.MapPasswordRecoveryEndpoints();
 app.MapRegistrationEndpoints();
 app.MapDesktopBrowserLoginEndpoints();
 app.MapSessionEndpoints();
