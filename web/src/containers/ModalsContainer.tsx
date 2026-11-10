@@ -2,6 +2,10 @@
 
 import { useDirectory, useUi } from "@/state/hooks";
 
+import { ChannelCreateDialog, ChannelSettingsDialog } from "./ChannelDialogs";
+import { InviteDialog } from "./InviteDialog";
+import { SectionCreateDialog, SectionSettingsDialog } from "./SectionDialogs";
+import { ServerDirectoryDialogs } from "./ServerDirectoryDialogs";
 import { ServerSettingsDialog } from "./ServerSettingsDialog";
 import { useServerAdmin } from "./useServerAdmin";
 
@@ -11,7 +15,21 @@ export function ModalsContainer() {
   const ui = useUi();
 
   const settingsOpen = ui.modal === "settings" && directory.canAccessServerSettings;
-  const { data, reload } = useServerAdmin(settingsOpen);
+  const inviteOpen = ui.modal === "invite" && directory.canManageServer;
+  // Fetched when a dialog that shows any of it opens, not at boot.
+  const admin = useServerAdmin(
+    settingsOpen || inviteOpen || ui.modal === "channel" || ui.modal === "section",
+  );
 
-  return <ServerSettingsDialog open={settingsOpen} data={data} reload={reload} />;
+  return (
+    <>
+      <ServerDirectoryDialogs />
+      <ServerSettingsDialog open={settingsOpen} {...admin} />
+      <InviteDialog open={inviteOpen} {...admin} />
+      <ChannelSettingsDialog roles={admin.data.roles} />
+      <ChannelCreateDialog />
+      <SectionSettingsDialog roles={admin.data.roles} />
+      <SectionCreateDialog />
+    </>
+  );
 }
