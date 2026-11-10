@@ -47,6 +47,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("Database")));
 builder.Services.AddSingleton<PasswordService>();
 builder.Services.AddSingleton<RegistrationGate>();
+builder.Services.AddSingleton<ServerMutationGate>();
 builder.Services.AddSingleton<PresenceTracker>();
 builder.Services.AddSingleton<TurnCredentialService>();
 builder.Services.AddSingleton<SlowModeGate>();
@@ -176,6 +177,7 @@ app.MapSectionEndpoints();
 app.MapRoleEndpoints();
 app.MapPermissionOverrideEndpoints();
 app.MapServerEndpoints();
+app.MapServerAdministrationEndpoints();
 app.MapNotificationEndpoints();
 app.MapHub<AppHub>("/hubs/app");
 

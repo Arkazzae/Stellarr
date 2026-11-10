@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Stellarr.Api.Domain;
 
 namespace Stellarr.Api.Contracts;
@@ -36,6 +37,38 @@ public sealed record UpdateServerRequest(string? Name, string? Description, bool
 
 public sealed record ServerIconDto(string? IconUrl);
 
+public sealed record ServerInviteDto(
+    string Id,
+    string Url,
+    string CreatedByName,
+    int Uses,
+    int? MaxUses,
+    DateTime? ExpiresAt,
+    string? ChannelId,
+    string? ChannelName);
+
+/// <param name="ChannelId">The channel a new member lands in; without one the invite is server-wide.</param>
+public sealed record CreateInviteRequest(Guid? ChannelId);
+
+public sealed record AuditEntryDto(string Id, string Summary, DateTime At);
+
+public sealed record NotificationSettingsDto(
+    bool AllMessages,
+    bool MentionsOnly,
+    bool VoiceJoinSound,
+    IReadOnlyList<string> MutedChannelIds,
+    bool ServerMuted);
+
+/// <summary>A change to the notification defaults; a property left out stays as it is.</summary>
+public sealed record UpdateNotificationSettingsRequest(
+    bool? AllMessages,
+    bool? MentionsOnly,
+    bool? VoiceJoinSound,
+    IReadOnlyList<Guid>? MutedChannelIds,
+    bool? ServerMuted);
+
+public sealed record TransferServerRequest(Guid UserId);
+
 public static class ServerContractMappings
 {
     public static ServerDto ToDto(this StellarrServer server) => new(
@@ -62,4 +95,40 @@ public static class ServerContractMappings
         section.Id.ToString(),
         section.Name,
         section.Position);
+
+    /// <remarks>The invite's author and channel must be loaded.</remarks>
+    public static ServerInviteDto ToDto(this ServerInvite invite, string origin) => new(
+        invite.Id.ToString(),
+        $"{origin}/invite/{invite.Code}",
+        invite.CreatedBy.DisplayName,
+        invite.Uses,
+        invite.MaxUses,
+        invite.ExpiresAt,
+        invite.ChannelId?.ToString(),
+        invite.Channel?.Name);
+
+    public static AuditEntryDto ToDto(this ServerAuditEntry entry) => new(
+        entry.Id.ToString(),
+        entry.Summary,
+        entry.CreatedAt);
+
+    public static NotificationSettingsDto ToDto(this ServerAdminSettings settings) => new(
+        settings.AllMessages,
+        settings.MentionsOnly,
+        settings.VoiceJoinSound,
+        ReadMutedChannelIds(settings),
+        settings.ServerMuted);
+
+    private static string[] ReadMutedChannelIds(ServerAdminSettings settings)
+    {
+        try
+        {
+            return JsonSerializer.Deserialize<string[]>(settings.MutedChannelIdsJson) ?? [];
+        }
+        catch (JsonException)
+        {
+            // A damaged list must not make the settings unreadable.
+            return [];
+        }
+    }
 }

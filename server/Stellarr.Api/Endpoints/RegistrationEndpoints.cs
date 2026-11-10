@@ -85,7 +85,7 @@ public static partial class RegistrationEndpoints
         {
             (server, role) = AddInstance(db, now);
         }
-        else if (await FindNewMemberRoleAsync(db, server.Id, cancellationToken) is { } memberRole)
+        else if (await ServerAccess.FindMemberRoleAsync(db, server.Id, cancellationToken) is { } memberRole)
         {
             role = memberRole;
         }
@@ -220,16 +220,6 @@ public static partial class RegistrationEndpoints
 
     private static IResult InviteProblem(string message) =>
         Results.ValidationProblem(new Dictionary<string, string[]> { ["inviteCode"] = [message] });
-
-    /// <summary>The role people get when they join: the system role below the owner's that ranks last.</summary>
-    private static async Task<ServerRole?> FindNewMemberRoleAsync(
-        AppDbContext db,
-        Guid serverId,
-        CancellationToken cancellationToken) =>
-        await db.ServerRoles
-            .Where(x => x.ServerId == serverId && x.IsSystem && !x.IsOwner)
-            .OrderByDescending(x => x.Position)
-            .FirstOrDefaultAsync(cancellationToken);
 
     /// <summary>Stages the first server with its roles, channels and settings; the registering account will own it.</summary>
     private static (StellarrServer Server, ServerRole OwnerRole) AddInstance(AppDbContext db, DateTime now)

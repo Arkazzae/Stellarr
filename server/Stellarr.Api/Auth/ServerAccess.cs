@@ -131,6 +131,16 @@ public static class ServerAccess
         return (effective & privilege) == privilege;
     }
 
+    /// <summary>The role people get when they join: the system role below the owner's that ranks last.</summary>
+    public static async Task<ServerRole?> FindMemberRoleAsync(
+        AppDbContext db,
+        Guid serverId,
+        CancellationToken cancellationToken = default) =>
+        await db.ServerRoles.AsNoTracking()
+            .Where(x => x.ServerId == serverId && x.IsSystem && !x.IsOwner)
+            .OrderByDescending(x => x.Position)
+            .FirstOrDefaultAsync(cancellationToken);
+
     /// <summary>The server the request is about; only available behind <see cref="ServerMembershipFilter"/>.</summary>
     public static Guid RequireActiveServerId(this HttpContext context) =>
         context.Items.TryGetValue(ContextItemKey, out var value) && value is Guid serverId

@@ -173,7 +173,7 @@ public static class NotificationEndpoints
             (notification.ServerId == serverId ||
                 (notification.Source == "system" && notification.TargetInviteCode != null)));
 
-    private static Task ChangedAsync(
+    internal static Task ChangedAsync(
         IHubContext<AppHub> hub,
         Guid userId,
         UserNotification notification,
@@ -184,5 +184,21 @@ public static class NotificationEndpoints
                 notification.ServerId.ToString(),
                 notification.Sequence,
                 Global: notification.TargetInviteCode is not null),
+            cancellationToken);
+
+    /// <summary>
+    /// Tells a person's connections to reload the inbox they see on every
+    /// server, after invitations to <paramref name="serverId"/> came or went.
+    /// The payload has no <c>sequence</c> at all: no single entry changed, and
+    /// clients tell an absent property from a null one.
+    /// </summary>
+    internal static Task InvitationsChangedAsync(
+        IHubContext<AppHub> hub,
+        Guid userId,
+        Guid serverId,
+        CancellationToken cancellationToken) =>
+        hub.Clients.Group(AppHub.UserGroup(userId)).SendAsync(
+            "NotificationInboxChanged",
+            new { serverId = serverId.ToString(), global = true },
             cancellationToken);
 }
