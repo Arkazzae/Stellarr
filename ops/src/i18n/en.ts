@@ -7,6 +7,7 @@ import type { pl } from "./pl";
 export const en = {
   "app.name": "Stellarr OPs",
 
+  "common.close": "Close",
   "common.creating": "Creating",
   "common.done": "Done",
   "common.error": "Error",

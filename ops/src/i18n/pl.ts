@@ -2,6 +2,7 @@
 export const pl = {
   "app.name": "Stellarr OPs",
 
+  "common.close": "Zamknij",
   "common.creating": "Tworzenie",
   "common.done": "Gotowe",
   "common.error": "Błąd",
