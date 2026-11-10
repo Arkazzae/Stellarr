@@ -1,0 +1,98 @@
+# ---------------------------------------------------------------------------
+# Local configuration and secrets
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+!**/.env.example
+*.local
+
+*.key
+*.pem
+*.p12
+*.pfx
+*.crt
+*.cer
+secrets/
+certs/
+
+# Local Compose overrides may contain host paths, ports and credentials.
+compose.override.yml
+compose.override.yaml
+docker-compose.override.yml
+docker-compose.override.yaml
+
+# ---------------------------------------------------------------------------
+# Runtime data — the real deployment mounts this outside the repository
+# ---------------------------------------------------------------------------
+/data/
+/uploads/
+/storage/
+*.db
+*.db-journal
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+*.sqlite-journal
+*.sqlite-shm
+*.sqlite-wal
+*.log
+*.pid
+
+# ---------------------------------------------------------------------------
+# .NET
+# ---------------------------------------------------------------------------
+**/bin/
+**/obj/
+**/TestResults/
+**/artifacts/
+/.artifacts/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+coverage.cobertura.xml
+
+# ---------------------------------------------------------------------------
+# Node / Next.js / test runners
+# ---------------------------------------------------------------------------
+**/node_modules/
+**/.next/
+**/.turbo/
+**/dist/
+**/out/
+**/coverage/
+**/.nyc_output/
+**/playwright-report/
+**/test-results/
+**/blob-report/
+*.tsbuildinfo
+.eslintcache
+.stylelintcache
+
+# RNNoise is copied deterministically from the locked npm package by
+# web/scripts/copy-audio-assets.mjs. Keep our own VAD worklet tracked.
+/web/public/audio/rnnoise-worklet.js
+/web/public/audio/rnnoise.wasm
+/web/public/audio/rnnoise_simd.wasm
+/web/public/audio/gtcrn-worklet.js
+/web/public/audio/gtcrn.wasm
+/web/public/audio/speex-worklet.js
+/web/public/audio/speex.wasm
+
+# ---------------------------------------------------------------------------
+# Editors, operating systems and temporary files
+# ---------------------------------------------------------------------------
+.vs/
+.idea/
+.vscode/
+.fleet/
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.swp
+*.swo
+*~
+*.tmp
+*.temp

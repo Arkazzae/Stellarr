@@ -1,0 +1,15 @@
+# Container entrypoints must keep LF endings on Windows checkouts.
+*.sh text eol=lf
+
+*.wasm binary
+*.woff2 binary
+*.wav binary
+*.mp3 binary
+*.png binary
+
+# Emscripten glue and WASM binary of the Bergamot translator: the only
+# third-party code committed to the tree.
+web/public/codecs/bergamot/** linguist-vendored
+
+package-lock.json linguist-generated
+packages.lock.json linguist-generated
