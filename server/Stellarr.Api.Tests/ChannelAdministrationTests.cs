@@ -1,6 +1,9 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.AspNetCore.Http.Connections;
+using Microsoft.AspNetCore.Mvc.Testing;
+using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Stellarr.Api.Data;
@@ -10,10 +13,22 @@ namespace Stellarr.Api.Tests;
 
 /// <summary>
 /// The rules of channel administration that the flow tests leave alone: the
-/// shape of an order, the names, the ranges, and the last channel of a kind.
+/// shape of an order, the names, the ranges, the last channel of a kind, and
+/// what a role may carry and who may hand it to whom.
 /// </summary>
 public sealed class ChannelAdministrationTests : IClassFixture<StellarrWebApplicationFactory>
 {
+    private static readonly Guid MajaId = Guid.Parse("30000000-0000-0000-0000-000000000001");
+    private static readonly Guid AdaId = Guid.Parse("30000000-0000-0000-0000-000000000002");
+    private static readonly Guid JoId = Guid.Parse("30000000-0000-0000-0000-000000000005");
+    private static readonly Guid OwnerRoleId = Guid.Parse("60000000-0000-0000-0000-000000000001");
+    private static readonly Guid ModeratorRoleId = Guid.Parse("60000000-0000-0000-0000-000000000002");
+    private static readonly Guid MemberRoleId = Guid.Parse("60000000-0000-0000-0000-000000000003");
+
+    private static readonly string[] ManageMessages = ["manageMessages"];
+    private static readonly string[] ManageMembersAndMessages = ["manageMembers", "manageMessages"];
+    private static readonly string[] MemberNames = ["Ada", "Ilya", "Jo", "Maja", "Nils"];
+
     private readonly StellarrWebApplicationFactory _factory;
 
     public ChannelAdministrationTests(StellarrWebApplicationFactory factory) => _factory = factory;
@@ -222,6 +237,186 @@ public sealed class ChannelAdministrationTests : IClassFixture<StellarrWebApplic
         var assigned = await owner.PatchAsJsonAsync(
             $"/api/admin/channels/{TestData.GeneralChannelId}/section", new { sectionId });
         Assert.Equal(HttpStatusCode.NoContent, assigned.StatusCode);
+    }
+
+    [Fact]
+    public async Task ASystemRoleCannotBeDeletedAndTheOwnerRoleCannotBeEdited()
+    {
+        using var owner = await SignedInAsync(_factory, "maja", "Aurora!2026");
+
+        Assert.Equal(HttpStatusCode.Conflict, (await owner.DeleteAsync($"/api/admin/roles/{MemberRoleId}")).StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, (await owner.DeleteAsync($"/api/admin/roles/{OwnerRoleId}")).StatusCode);
+        Assert.Equal(
+            HttpStatusCode.Conflict,
+            (await owner.PatchAsJsonAsync($"/api/admin/roles/{OwnerRoleId}", new { name = "Szef" })).StatusCode);
+
+        var roles = (await RolesAsync(owner)).Select(x => x.GetProperty("id").GetString()).ToArray();
+        Assert.Contains(OwnerRoleId.ToString(), roles);
+        Assert.Contains(MemberRoleId.ToString(), roles);
+    }
+
+    [Fact]
+    public async Task ARoleCannotCarryAPermissionItsEditorDoesNotHold()
+    {
+        using var factory = new StellarrWebApplicationFactory();
+        using var owner = await SignedInAsync(factory, "maja", "Aurora!2026");
+        using var steward = await SignedInAsync(factory, "jo", "Corona!2026");
+        var board = await CreateRoleAsync(owner, "Zarząd", "manageRoles", "manageMembers");
+        var admins = await CreateRoleAsync(owner, "Administracja", "manageServer");
+        await AssignAsync(owner, JoId, board);
+
+        Assert.Equal(HttpStatusCode.Forbidden, (await PostRoleAsync(steward, "Wyżej", "manageServer")).StatusCode);
+        var below = await IdOfAsync(await PostRoleAsync(steward, "Niżej", "manageMembers"));
+
+        var raised = await steward.PatchAsJsonAsync(
+            $"/api/admin/roles/{below}", new { permissions = ManageMembersAndMessages });
+        Assert.Equal(HttpStatusCode.Forbidden, raised.StatusCode);
+        var renamed = await steward.PatchAsJsonAsync($"/api/admin/roles/{below}", new { name = "Niżej bis" });
+        Assert.Equal(HttpStatusCode.OK, renamed.StatusCode);
+
+        // A role that carries what the editor lacks can be neither deleted, renamed nor handed out.
+        Assert.Equal(HttpStatusCode.Forbidden, (await steward.DeleteAsync($"/api/admin/roles/{ModeratorRoleId}")).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await steward.PatchAsJsonAsync($"/api/admin/roles/{admins}", new { name = "Inna" })).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await AssignAsync(steward, AdaId, admins)).StatusCode);
+    }
+
+    [Fact]
+    public async Task AssigningARoleNeverInvolvesTheOwnerOrTheAssigner()
+    {
+        using var factory = new StellarrWebApplicationFactory();
+        using var owner = await SignedInAsync(factory, "maja", "Aurora!2026");
+        using var steward = await SignedInAsync(factory, "jo", "Corona!2026");
+        using var moderator = await SignedInAsync(factory, "ada", "Quasar!2026");
+        await AssignAsync(owner, JoId, await CreateRoleAsync(owner, "Opiekunowie", "manageMembers"));
+
+        Assert.Equal(HttpStatusCode.Forbidden, (await AssignAsync(owner, MajaId, MemberRoleId)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await AssignAsync(steward, JoId, MemberRoleId)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await AssignAsync(moderator, JoId, MemberRoleId)).StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, (await AssignAsync(steward, MajaId, MemberRoleId)).StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, (await AssignAsync(steward, AdaId, OwnerRoleId)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await AssignAsync(steward, AdaId, Guid.NewGuid())).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await AssignAsync(steward, Guid.NewGuid(), MemberRoleId)).StatusCode);
+        Assert.Equal(HttpStatusCode.NoContent, (await AssignAsync(steward, AdaId, MemberRoleId)).StatusCode);
+    }
+
+    [Fact]
+    public async Task DeletingARoleMovesItsMembersToTheMemberRoleAndTellsThem()
+    {
+        using var factory = new StellarrWebApplicationFactory();
+        using var owner = await SignedInAsync(factory, "maja", "Aurora!2026");
+        var duty = await CreateRoleAsync(owner, "Dyżurni", "manageMessages");
+        await using var listener = await PermissionListenerAsync(factory, "jo", "Corona!2026");
+
+        Assert.Equal(HttpStatusCode.NoContent, (await AssignAsync(owner, JoId, duty)).StatusCode);
+        var granted = await listener.NextAsync();
+        Assert.Equal(TestData.ServerId.ToString(), granted.GetProperty("serverId").GetString());
+        Assert.Equal(ManageMessages, granted.GetProperty("permissions").EnumerateArray().Select(x => x.GetString()));
+
+        Assert.Equal(HttpStatusCode.NoContent, (await owner.DeleteAsync($"/api/admin/roles/{duty}")).StatusCode);
+        Assert.Empty((await listener.NextAsync()).GetProperty("permissions").EnumerateArray());
+
+        var members = JsonDocument.Parse(await owner.GetStringAsync("/api/admin/members")).RootElement;
+        Assert.Equal(
+            MemberRoleId.ToString(),
+            members.EnumerateArray().Single(x => x.GetProperty("user").GetProperty("id").GetString() == JoId.ToString())
+                .GetProperty("roleId").GetString());
+        Assert.DoesNotContain((await RolesAsync(owner)), x => x.GetProperty("id").GetString() == duty);
+    }
+
+    [Theory]
+    [InlineData(null, "#fff", null)]
+    [InlineData("  ", "#fff", null)]
+    [InlineData("Za długa nazwa roli, która nie mieści się w sześćdziesięciu czterech znakach", "#fff", null)]
+    [InlineData("Bez koloru", null, null)]
+    [InlineData("Pusty kolor", " ", null)]
+    [InlineData("Nieznane uprawnienie", "#fff", "flyToTheMoon")]
+    [InlineData("Moderacja", "#fff", null)]
+    public async Task ARoleNeedsAUniqueNameAColourAndKnownPermissions(string? name, string? color, string? permission)
+    {
+        using var owner = await SignedInAsync(_factory, "maja", "Aurora!2026");
+
+        var response = await owner.PostAsJsonAsync(
+            "/api/admin/roles",
+            new { name, color, permissions = permission is null ? Array.Empty<string>() : [permission] });
+
+        Assert.Equal(
+            name == "Moderacja" ? HttpStatusCode.Conflict : HttpStatusCode.BadRequest,
+            response.StatusCode);
+    }
+
+    [Fact]
+    public async Task EveryMemberCanListTheRolesWithTheirHoldersAndTheMembers()
+    {
+        using var member = await SignedInAsync(_factory, "jo", "Corona!2026");
+
+        var roles = await RolesAsync(member);
+        var memberRole = roles.Single(x => x.GetProperty("id").GetString() == MemberRoleId.ToString());
+        Assert.True(memberRole.GetProperty("isSystem").GetBoolean());
+        Assert.False(memberRole.GetProperty("isOwner").GetBoolean());
+        Assert.True(memberRole.GetProperty("memberCount").GetInt32() >= 1);
+
+        using var members = JsonDocument.Parse(await member.GetStringAsync("/api/admin/members"));
+        Assert.All(
+            members.RootElement.EnumerateArray(),
+            x => Assert.True(DateTime.TryParse(x.GetProperty("joinedAt").GetString(), out _)));
+        Assert.Equal(
+            MemberNames,
+            members.RootElement.EnumerateArray().Select(x => x.GetProperty("user").GetProperty("displayName").GetString()));
+    }
+
+    private static async Task<JsonElement[]> RolesAsync(HttpClient client) =>
+        JsonDocument.Parse(await client.GetStringAsync("/api/admin/roles")).RootElement.EnumerateArray().ToArray();
+
+    private static Task<HttpResponseMessage> PostRoleAsync(HttpClient client, string name, params string[] permissions) =>
+        client.PostAsJsonAsync("/api/admin/roles", new { name, color = "#7c6ff0", permissions });
+
+    private static async Task<string> CreateRoleAsync(HttpClient client, string name, params string[] permissions) =>
+        await IdOfAsync(await PostRoleAsync(client, name, permissions));
+
+    private static Task<HttpResponseMessage> AssignAsync(HttpClient client, Guid userId, object roleId) =>
+        client.PatchAsJsonAsync($"/api/admin/members/{userId}/role", new { roleId });
+
+    /// <summary>A hub connection of one account that keeps every PermissionsChanged it is sent.</summary>
+    private static async Task<PermissionListener> PermissionListenerAsync(
+        StellarrWebApplicationFactory factory, string username, string password)
+    {
+        using var client = factory.CreateClient(new WebApplicationFactoryClientOptions { HandleCookies = false });
+        using var login = await client.PostAsJsonAsync("/api/auth/login", new { username, password });
+        login.EnsureSuccessStatusCode();
+        var cookie = string.Join("; ", login.Headers.GetValues("Set-Cookie").Select(x => x.Split(';', 2)[0]));
+        var connection = new HubConnectionBuilder()
+            .WithUrl("https://localhost/hubs/app", options =>
+            {
+                options.Headers["Cookie"] = cookie;
+                options.Transports = HttpTransportType.LongPolling;
+                options.HttpMessageHandlerFactory = _ => factory.Server.CreateHandler();
+            })
+            .Build();
+        var listener = new PermissionListener(connection);
+
+        // The hub speaks first once the connection has joined its groups.
+        var joined = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var subscription = connection.On<JsonElement>("PresenceChanged", _ => joined.TrySetResult());
+        await connection.StartAsync();
+        await joined.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        return listener;
+    }
+
+    private sealed class PermissionListener : IAsyncDisposable
+    {
+        private readonly HubConnection _connection;
+        private readonly System.Threading.Channels.Channel<JsonElement> _events = System.Threading.Channels.Channel.CreateUnbounded<JsonElement>();
+
+        public PermissionListener(HubConnection connection)
+        {
+            _connection = connection;
+            connection.On<JsonElement>("PermissionsChanged", payload => _events.Writer.TryWrite(payload));
+        }
+
+        public async Task<JsonElement> NextAsync() =>
+            await _events.Reader.ReadAsync().AsTask().WaitAsync(TimeSpan.FromSeconds(10));
+
+        public ValueTask DisposeAsync() => _connection.DisposeAsync();
     }
 
     private static Task<HttpResponseMessage> ReorderAsync(HttpClient client, IEnumerable<Guid> ids) =>
