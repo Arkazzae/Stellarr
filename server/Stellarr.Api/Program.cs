@@ -148,6 +148,8 @@ app.MapAuthEndpoints();
 app.MapRegistrationEndpoints();
 app.MapDesktopBrowserLoginEndpoints();
 app.MapSessionEndpoints();
+app.MapAccountEndpoints();
+app.MapProfileImageEndpoints();
 app.MapBootstrapEndpoints();
 app.MapUploadEndpoints();
 app.MapAssetEndpoints();

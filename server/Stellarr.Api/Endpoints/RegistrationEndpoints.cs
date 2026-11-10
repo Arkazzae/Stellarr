@@ -17,9 +17,6 @@ namespace Stellarr.Api.Endpoints;
 /// </summary>
 public static partial class RegistrationEndpoints
 {
-    private const int PasswordMinLength = 8;
-    private const int PasswordMaxLength = 256;
-
     [GeneratedRegex(@"^[\p{L}\p{N}_.-]+$", RegexOptions.CultureInvariant)]
     private static partial Regex UsernameShape();
 
@@ -156,14 +153,9 @@ public static partial class RegistrationEndpoints
     private static Dictionary<string, string[]> Validate(RegisterRequest request)
     {
         var errors = new Dictionary<string, string[]>(StringComparer.Ordinal);
-        var password = request.Password;
-        if (password is null || password.Length < PasswordMinLength)
+        if (PasswordPolicy.Violation(request.Password) is { } passwordProblem)
         {
-            errors["password"] = [$"Hasło musi mieć co najmniej {PasswordMinLength} znaków."];
-        }
-        else if (password.Length > PasswordMaxLength)
-        {
-            errors["password"] = [$"Hasło może mieć najwyżej {PasswordMaxLength} znaków."];
+            errors["password"] = [passwordProblem];
         }
 
         var username = request.Username?.Trim() ?? "";
