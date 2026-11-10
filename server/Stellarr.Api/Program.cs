@@ -51,6 +51,7 @@ builder.Services.AddSingleton<ServerMutationGate>();
 builder.Services.AddSingleton<PresenceTracker>();
 builder.Services.AddSingleton<TurnCredentialService>();
 builder.Services.AddSingleton<SlowModeGate>();
+builder.Services.AddSingleton<SoundboardPlaybackGate>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSignalR(options =>
 {
@@ -185,6 +186,7 @@ app.MapNotificationEndpoints();
 app.MapSocialEndpoints();
 app.MapDirectMessageEndpoints();
 app.MapEmojiEndpoints();
+app.MapSoundboardEndpoints();
 app.MapHub<AppHub>("/hubs/app");
 
 await InitializeApplicationAsync(app);

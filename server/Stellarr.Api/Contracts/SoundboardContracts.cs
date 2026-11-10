@@ -11,6 +11,39 @@ public sealed record SoundboardSoundDto(
     double TrimStartSeconds,
     double TrimEndSeconds);
 
+public sealed record SoundboardSettingsDto(bool EveryoneCanPlay, bool RateLimited);
+
+public sealed record SoundboardSnapshotDto(
+    IReadOnlyList<SoundboardSoundDto> Sounds,
+    SoundboardSettingsDto Settings,
+    bool CanManage);
+
+/// <param name="StartsAtUnixMs">
+/// The moment every client starts the clip against the RTC clock, so that the
+/// room hears it together whatever each connection's latency.
+/// </param>
+public sealed record SoundboardPlayedDto(
+    string PlaybackId,
+    string ChannelId,
+    string TriggeredByUserId,
+    long StartsAtUnixMs,
+    SoundboardSoundDto Sound);
+
+public sealed record CreateSoundboardSoundRequest(
+    Guid AttachmentId,
+    string? Name,
+    string? Glyph,
+    double TrimStartSeconds,
+    double TrimEndSeconds);
+
+public sealed record UpdateSoundboardSoundRequest(
+    string? Name,
+    string? Glyph,
+    double? TrimStartSeconds,
+    double? TrimEndSeconds);
+
+public sealed record UpdateSoundboardSettingsRequest(bool? EveryoneCanPlay, bool? RateLimited);
+
 public static class SoundboardContractMappings
 {
     /// <remarks>The sound's attachment must be loaded.</remarks>

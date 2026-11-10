@@ -32,6 +32,7 @@ public static class DatabaseSchema
         ModerationSchema.UpgradeAsync,
         SocialSchema.UpgradeAsync,
         EmojiSchema.UpgradeAsync,
+        SoundboardSchema.UpgradeAsync,
     ];
 
     public static async Task UpgradeAsync(AppDbContext db, CancellationToken cancellationToken)

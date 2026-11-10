@@ -14,7 +14,10 @@ namespace Stellarr.Api.Realtime;
 /// per server and one per text channel a client opened.
 /// </summary>
 [Authorize]
-public sealed partial class AppHub(AppDbContext db, PresenceTracker presence) : Hub
+public sealed partial class AppHub(
+    AppDbContext db,
+    PresenceTracker presence,
+    SoundboardPlaybackGate soundboardGate) : Hub
 {
     private static readonly TimeSpan TypingLifetime = TimeSpan.FromSeconds(6);
 
