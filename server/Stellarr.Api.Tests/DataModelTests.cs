@@ -241,6 +241,192 @@ public sealed class DataModelTests(StellarrWebApplicationFactory factory)
         Assert.True(await db.ImageAttachments.AnyAsync(x => x.Id == attachment.Id));
     }
 
+    [Fact]
+    public async Task DeletingAChannelDetachesItsInvitesAndRemovesItsReadMarks()
+    {
+        await using var scope = Open(out var db);
+        var user = (await AddUsersAsync(db, 1))[0];
+        var channel = new Channel { Id = Guid.NewGuid(), ServerId = TestData.ServerId, Name = UniqueName() };
+        var invite = Invite(user, channel.Id);
+        db.Channels.Add(channel);
+        db.ServerInvites.Add(invite);
+        db.ChannelReads.Add(new ChannelRead { ChannelId = channel.Id, UserId = user.Id, LastReadAt = DateTime.UtcNow });
+        await db.SaveChangesAsync();
+
+        await db.Channels.Where(x => x.Id == channel.Id).ExecuteDeleteAsync();
+
+        Assert.Null(await db.ServerInvites.Where(x => x.Id == invite.Id).Select(x => x.ChannelId).SingleAsync());
+        Assert.False(await db.ChannelReads.AnyAsync(x => x.ChannelId == channel.Id));
+    }
+
+    [Fact]
+    public async Task AnInviteCodeIsUnique()
+    {
+        await using var scope = Open(out var db);
+        var user = (await AddUsersAsync(db, 1))[0];
+        var first = Invite(user, channelId: null);
+        db.ServerInvites.Add(first);
+        await db.SaveChangesAsync();
+
+        var copy = Invite(user, channelId: null);
+        copy.Code = first.Code;
+        db.ServerInvites.Add(copy);
+        await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+    }
+
+    [Fact]
+    public async Task AUserIsBannedFromAServerOnce()
+    {
+        await using var scope = Open(out var db);
+        var users = await AddUsersAsync(db, 2);
+        db.ServerBans.Add(Ban(users[0], users[1]));
+        await db.SaveChangesAsync();
+        db.ChangeTracker.Clear();
+
+        db.ServerBans.Add(Ban(users[0], users[1]));
+        await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+    }
+
+    [Fact]
+    public async Task APersonWhoActedForAServerCannotBeDeletedWhileTheRecordStands()
+    {
+        await using var scope = Open(out var db);
+        var users = await AddUsersAsync(db, 3);
+        db.ServerBans.Add(Ban(users[0], users[1]));
+        db.ServerInvites.Add(Invite(users[2], channelId: null));
+        await db.SaveChangesAsync();
+        db.ServerAuditEntries.Add(new ServerAuditEntry
+        {
+            Id = Guid.NewGuid(),
+            ServerId = TestData.ServerId,
+            ActorId = users[0].Id,
+            Summary = "banned someone",
+            CreatedAt = DateTime.UtcNow,
+        });
+        await db.SaveChangesAsync();
+
+        // The moderator, the audit actor and the inviter are all kept by Restrict.
+        await Assert.ThrowsAsync<SqliteException>(
+            () => db.Users.Where(x => x.Id == users[0].Id).ExecuteDeleteAsync());
+        await Assert.ThrowsAsync<SqliteException>(
+            () => db.Users.Where(x => x.Id == users[2].Id).ExecuteDeleteAsync());
+
+        // Being the one who was banned is not a reason to keep the account.
+        await db.Users.Where(x => x.Id == users[1].Id).ExecuteDeleteAsync();
+        Assert.False(await db.ServerBans.AnyAsync(x => x.UserId == users[1].Id));
+    }
+
+    [Fact]
+    public async Task ARoleHasAtMostOneOverridePerChannelOrSection()
+    {
+        await using var scope = Open(out var db);
+        var role = await db.ServerRoles.FirstAsync();
+        var target = Guid.NewGuid();
+        db.PermissionOverrides.Add(Override(role.Id, PermissionTargetType.Channel, target));
+        await db.SaveChangesAsync();
+
+        // The same id as a section is another target, and so is another role.
+        db.PermissionOverrides.Add(Override(role.Id, PermissionTargetType.Section, target));
+        db.PermissionOverrides.Add(Override(
+            await db.ServerRoles.Where(x => x.Id != role.Id).Select(x => x.Id).FirstAsync(),
+            PermissionTargetType.Channel,
+            target));
+        await db.SaveChangesAsync();
+
+        db.PermissionOverrides.Add(Override(role.Id, PermissionTargetType.Channel, target));
+        await Assert.ThrowsAsync<DbUpdateException>(() => db.SaveChangesAsync());
+    }
+
+    [Fact]
+    public async Task OverridesKeepTheirPrivilegeMasks()
+    {
+        await using var scope = Open(out var db);
+        var role = await db.ServerRoles.FirstAsync();
+        var saved = Override(role.Id, PermissionTargetType.Section, Guid.NewGuid());
+        saved.AllowMask = ServerPrivileges.ManageMessages | ServerPrivileges.ManageBans;
+        saved.DenyMask = ServerPrivileges.ManageChannels;
+        db.PermissionOverrides.Add(saved);
+        await db.SaveChangesAsync();
+
+        var loaded = await db.PermissionOverrides.AsNoTracking().SingleAsync(x => x.Id == saved.Id);
+
+        Assert.Equal(PermissionTargetType.Section, loaded.TargetType);
+        Assert.Equal(ServerPrivileges.ManageMessages | ServerPrivileges.ManageBans, loaded.AllowMask);
+        Assert.Equal(ServerPrivileges.ManageChannels, loaded.DenyMask);
+    }
+
+    [Fact]
+    public async Task DeletingAServerRemovesItsAdministrativeRecords()
+    {
+        await using var scope = Open(out var db);
+        var users = await AddUsersAsync(db, 2);
+        var server = new StellarrServer { Id = Guid.NewGuid(), Name = "Doomed", CreatedAt = DateTime.UtcNow };
+        var role = new ServerRole
+        {
+            Id = Guid.NewGuid(),
+            ServerId = server.Id,
+            Name = "Helper",
+            Color = "#777777",
+        };
+        db.Servers.Add(server);
+        db.ServerRoles.Add(role);
+        db.ServerBans.Add(new ServerBan
+        {
+            ServerId = server.Id,
+            UserId = users[1].Id,
+            BannedById = users[0].Id,
+            Reason = "spam",
+            BannedAt = DateTime.UtcNow,
+        });
+        db.ServerInvites.Add(new ServerInvite
+        {
+            Id = Guid.NewGuid(),
+            ServerId = server.Id,
+            CreatedById = users[0].Id,
+            Code = UniqueName(),
+            CreatedAt = DateTime.UtcNow,
+        });
+        db.ServerAuditEntries.Add(new ServerAuditEntry
+        {
+            Id = Guid.NewGuid(),
+            ServerId = server.Id,
+            ActorId = users[0].Id,
+            Summary = "created the server",
+            CreatedAt = DateTime.UtcNow,
+        });
+        db.Sections.Add(new Section { Id = Guid.NewGuid(), ServerId = server.Id, Name = "Voice" });
+        db.PermissionOverrides.Add(Override(role.Id, PermissionTargetType.Section, Guid.NewGuid(), server.Id));
+        await db.SaveChangesAsync();
+
+        await db.Servers.Where(x => x.Id == server.Id).ExecuteDeleteAsync();
+
+        Assert.False(await db.ServerBans.AnyAsync(x => x.ServerId == server.Id));
+        Assert.False(await db.ServerInvites.AnyAsync(x => x.ServerId == server.Id));
+        Assert.False(await db.ServerAuditEntries.AnyAsync(x => x.ServerId == server.Id));
+        Assert.False(await db.Sections.AnyAsync(x => x.ServerId == server.Id));
+        Assert.False(await db.PermissionOverrides.AnyAsync(x => x.ServerId == server.Id));
+    }
+
+    [Fact]
+    public async Task DeletingARoleRemovesItsOverrides()
+    {
+        await using var scope = Open(out var db);
+        var role = new ServerRole
+        {
+            Id = Guid.NewGuid(),
+            ServerId = TestData.ServerId,
+            Name = UniqueName(),
+            Color = "#777777",
+        };
+        db.ServerRoles.Add(role);
+        db.PermissionOverrides.Add(Override(role.Id, PermissionTargetType.Channel, TestData.GeneralChannelId));
+        await db.SaveChangesAsync();
+
+        await db.ServerRoles.Where(x => x.Id == role.Id).ExecuteDeleteAsync();
+
+        Assert.False(await db.PermissionOverrides.AnyAsync(x => x.RoleId == role.Id));
+    }
+
     private AsyncServiceScope Open(out AppDbContext db)
     {
         var scope = factory.Services.CreateAsyncScope();
@@ -335,5 +521,41 @@ public sealed class DataModelTests(StellarrWebApplicationFactory factory)
         ContentType = "text/plain",
         SizeBytes = 12,
         CreatedAt = DateTime.UtcNow,
+    };
+
+    private static string UniqueName() => $"n{Guid.NewGuid():N}"[..24];
+
+    private static ServerInvite Invite(User creator, Guid? channelId) => new()
+    {
+        Id = Guid.NewGuid(),
+        ServerId = TestData.ServerId,
+        CreatedById = creator.Id,
+        ChannelId = channelId,
+        Code = UniqueName(),
+        CreatedAt = DateTime.UtcNow,
+    };
+
+    private static ServerBan Ban(User moderator, User banned) => new()
+    {
+        ServerId = TestData.ServerId,
+        UserId = banned.Id,
+        BannedById = moderator.Id,
+        Reason = "spam",
+        BannedAt = DateTime.UtcNow,
+    };
+
+    private static PermissionOverride Override(
+        Guid roleId,
+        PermissionTargetType type,
+        Guid targetId,
+        Guid? serverId = null) => new()
+    {
+        Id = Guid.NewGuid(),
+        ServerId = serverId ?? TestData.ServerId,
+        TargetType = type,
+        TargetId = targetId,
+        RoleId = roleId,
+        AllowMask = ServerPrivileges.None,
+        DenyMask = ServerPrivileges.None,
     };
 }

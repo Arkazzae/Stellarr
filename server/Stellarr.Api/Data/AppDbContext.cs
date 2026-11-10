@@ -19,8 +19,14 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<StellarrServer> Servers => Set<StellarrServer>();
     public DbSet<ServerRole> ServerRoles => Set<ServerRole>();
     public DbSet<ServerMember> ServerMembers => Set<ServerMember>();
+    public DbSet<ServerBan> ServerBans => Set<ServerBan>();
+    public DbSet<ServerInvite> ServerInvites => Set<ServerInvite>();
+    public DbSet<ServerAuditEntry> ServerAuditEntries => Set<ServerAuditEntry>();
     public DbSet<ServerAdminSettings> ServerAdminSettings => Set<ServerAdminSettings>();
     public DbSet<Channel> Channels => Set<Channel>();
+    public DbSet<ChannelRead> ChannelReads => Set<ChannelRead>();
+    public DbSet<Section> Sections => Set<Section>();
+    public DbSet<PermissionOverride> PermissionOverrides => Set<PermissionOverride>();
     public DbSet<Message> Messages => Set<Message>();
     public DbSet<MessageReaction> MessageReactions => Set<MessageReaction>();
     public DbSet<ImageAttachment> ImageAttachments => Set<ImageAttachment>();
