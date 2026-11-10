@@ -39,4 +39,10 @@ export {
   type SessionValue,
 } from "./SessionProvider";
 export { useTheme } from "./ThemeProvider";
+export {
+  useUiContext as useUi,
+  type ModalKey,
+  type Space,
+  type UiValue,
+} from "./UiProvider";
 export { useVoiceContext as useVoice, type VoiceValue } from "./VoiceProvider";
