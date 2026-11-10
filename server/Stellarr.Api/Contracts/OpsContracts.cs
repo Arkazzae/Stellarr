@@ -100,6 +100,16 @@ public sealed record OpsLogsDto(
     IReadOnlyList<OpsLogEntryDto> Logs,
     IReadOnlyList<OpsAuditEntryDto> Audit);
 
+public sealed record OpsBackupDto(
+    string Id,
+    long SizeBytes,
+    DateTime CreatedAt,
+    DateTime? VerifiedAt);
+
+public sealed record OpsBackupsDto(
+    IReadOnlyList<OpsBackupDto> Backups,
+    int RetentionDays);
+
 public sealed record CreateOpsUserRequest(
     string? Username,
     string? DisplayName,

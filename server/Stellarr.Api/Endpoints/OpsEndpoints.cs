@@ -33,6 +33,10 @@ public static partial class OpsEndpoints
         ops.MapGet("/runtime", GetRuntimeAsync);
         ops.MapGet("/logs", GetLogsAsync);
         ops.MapGet("/logs/export", ExportLogs);
+        ops.MapGet("/backups", GetBackupsAsync);
+        ops.MapPost("/backups", CreateBackupAsync);
+        ops.MapPost("/backups/{backupId}/verify", VerifyBackupAsync);
+        ops.MapGet("/backups/{backupId}/download", DownloadBackup);
         return endpoints;
     }
 
