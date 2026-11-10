@@ -42,6 +42,19 @@ public sealed record MessageEmbedsDto(
 
 public sealed record MessageReactionDto(string Emoji, int Count, bool Mine);
 
+/// <summary>
+/// Pushed when somebody adds or removes a reaction, and answered to the one
+/// who did. The count is the total for that emoji after the change.
+/// </summary>
+/// <param name="Added">False when the reaction was taken back.</param>
+public sealed record MessageReactionChangedDto(
+    string MessageId,
+    string ChannelId,
+    string Emoji,
+    int Count,
+    string UserId,
+    bool Added);
+
 public sealed record MessageReferenceDto(
     string Id,
     string AuthorId,

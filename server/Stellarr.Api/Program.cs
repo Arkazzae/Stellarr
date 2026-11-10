@@ -153,6 +153,7 @@ app.MapUploadEndpoints();
 app.MapAssetEndpoints();
 app.MapMessageEndpoints();
 app.MapMessageHistoryEndpoints();
+app.MapMessageReactionEndpoints();
 app.MapChannelReadEndpoints();
 app.MapNotificationEndpoints();
 app.MapHub<AppHub>("/hubs/app");
