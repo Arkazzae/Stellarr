@@ -83,7 +83,8 @@ public static partial class RegistrationEndpoints
         ServerRole role;
         if (server is null)
         {
-            (server, role) = AddInstance(db, now);
+            (server, role) = ServerDirectoryEndpoints.AddServer(
+                db, new ServerDirectoryEndpoints.StarterServer("Stellarr"), now);
         }
         else if (await ServerAccess.FindMemberRoleAsync(db, server.Id, cancellationToken) is { } memberRole)
         {
@@ -220,39 +221,4 @@ public static partial class RegistrationEndpoints
 
     private static IResult InviteProblem(string message) =>
         Results.ValidationProblem(new Dictionary<string, string[]> { ["inviteCode"] = [message] });
-
-    /// <summary>Stages the first server with its roles, channels and settings; the registering account will own it.</summary>
-    private static (StellarrServer Server, ServerRole OwnerRole) AddInstance(AppDbContext db, DateTime now)
-    {
-        var server = new StellarrServer { Id = Guid.NewGuid(), Name = "Stellarr", CreatedAt = now };
-        var ownerRole = new ServerRole
-        {
-            Id = Guid.NewGuid(),
-            ServerId = server.Id,
-            Name = "Właściciel",
-            Color = "oklch(0.72 0.16 15)",
-            Permissions = ServerPrivileges.All,
-            Position = 0,
-            IsSystem = true,
-            IsOwner = true,
-        };
-        var memberRole = new ServerRole
-        {
-            Id = Guid.NewGuid(),
-            ServerId = server.Id,
-            Name = "Członek",
-            Color = "oklch(0.70 0.02 277)",
-            Permissions = ServerPrivileges.None,
-            Position = 1,
-            IsSystem = true,
-        };
-
-        db.Servers.Add(server);
-        db.ServerRoles.AddRange(ownerRole, memberRole);
-        db.Channels.AddRange(
-            new Channel { Id = Guid.NewGuid(), ServerId = server.Id, Name = "ogólny", Kind = ChannelKind.Text, Position = 0 },
-            new Channel { Id = Guid.NewGuid(), ServerId = server.Id, Name = "rozmowa", Kind = ChannelKind.Voice, Position = 1 });
-        db.ServerAdminSettings.Add(new ServerAdminSettings { ServerId = server.Id });
-        return (server, ownerRole);
-    }
 }

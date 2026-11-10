@@ -302,6 +302,167 @@ public sealed class ServerAdministrationTests : IClassFixture<StellarrWebApplica
         Assert.Equal(1, read.GetProperty("mutedChannelIds").GetArrayLength());
     }
 
+    [Fact]
+    public async Task ACreatedServerBelongsToItsCreatorWhoOwnsItAndNameRulesApply()
+    {
+        using var jo = await SignInAsync("jo", "Corona!2026", server: null);
+
+        var tooLong = await jo.PostAsJsonAsync("/api/servers", new { name = "x", description = new string('d', 281) });
+        var nameless = await jo.PostAsJsonAsync("/api/servers", new { name = "   " });
+        Assert.Equal(HttpStatusCode.BadRequest, tooLong.StatusCode);
+        Assert.Equal(HttpStatusCode.BadRequest, nameless.StatusCode);
+
+        var serverId = await CreateServerAsync(jo, isPublic: false);
+
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var member = await db.ServerMembers.AsNoTracking().Include(x => x.Role).SingleAsync(x => x.ServerId == serverId);
+        Assert.Equal(JoId, member.UserId);
+        Assert.Equal(1, member.OwnerSlot);
+        Assert.True(member.Role.IsOwner);
+        var roles = await db.ServerRoles.AsNoTracking().Where(x => x.ServerId == serverId).ToListAsync();
+        Assert.Equal(2, roles.Count);
+        Assert.All(roles, role => Assert.True(role.IsSystem));
+        Assert.True(await db.ServerAdminSettings.AnyAsync(x => x.ServerId == serverId));
+    }
+
+    [Fact]
+    public async Task TheServerListHoldsOnlyTheServersOfThePersonAskingInOrderOfJoining()
+    {
+        using var ada = await SignInAsync("ada", "Quasar!2026", server: null);
+        using var ilya = await SignInAsync("ilya", "Meteor!2026", server: null);
+        var created = await CreateServerAsync(ada, isPublic: false);
+
+        var adaServers = await ada.GetFromJsonAsync<JsonElement[]>("/api/servers");
+        var ilyaServers = await ilya.GetFromJsonAsync<JsonElement[]>("/api/servers");
+
+        Assert.Equal(created.ToString(), adaServers![^1].GetProperty("id").GetString());
+        Assert.Contains(adaServers, x => x.GetProperty("id").GetString() == TestData.ServerId.ToString());
+        Assert.DoesNotContain(ilyaServers!, x => x.GetProperty("id").GetString() == created.ToString());
+    }
+
+    [Fact]
+    public async Task DiscoveryOffersPublicServersUntilThePersonJoinsOrIsBanned()
+    {
+        using var ada = await SignInAsync("ada", "Quasar!2026", server: null);
+        using var ilya = await SignInAsync("ilya", "Meteor!2026", server: null);
+        using var nils = await SignInAsync("nils", "Zenith!2026", server: null);
+        var open = await CreateServerAsync(ada, isPublic: true);
+        var closed = await CreateServerAsync(ada, isPublic: false);
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.ServerBans.Add(new ServerBan
+            {
+                ServerId = open,
+                UserId = NilsId,
+                BannedById = AdaId,
+                Reason = "test",
+                BannedAt = DateTime.UtcNow,
+            });
+            await db.SaveChangesAsync();
+        }
+
+        Assert.Contains(await DiscoveredAsync(ilya), id => id == open);
+        Assert.DoesNotContain(await DiscoveredAsync(ilya), id => id == closed);
+        Assert.DoesNotContain(await DiscoveredAsync(ada), id => id == open);
+        Assert.DoesNotContain(await DiscoveredAsync(nils), id => id == open);
+
+        Assert.Equal(HttpStatusCode.NotFound, (await ilya.PostAsync($"/api/servers/{closed}/join", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await nils.PostAsync($"/api/servers/{open}/join", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await ilya.PostAsync($"/api/servers/{open}/join", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await ilya.PostAsync($"/api/servers/{open}/join", null)).StatusCode);
+        Assert.DoesNotContain(await DiscoveredAsync(ilya), id => id == open);
+
+        await using var verification = _factory.Services.CreateAsyncScope();
+        var context = verification.ServiceProvider.GetRequiredService<AppDbContext>();
+        var memberRoles = await context.ServerMembers.AsNoTracking().Include(x => x.Role)
+            .Where(x => x.ServerId == open && x.UserId != AdaId).ToListAsync();
+        var joined = Assert.Single(memberRoles);
+        Assert.False(joined.Role.IsOwner);
+        Assert.Null(joined.OwnerSlot);
+        Assert.Equal(1, await context.Messages.CountAsync(x => x.IsSystem && x.AuthorId == joined.UserId &&
+            context.Channels.Any(channel => channel.Id == x.ChannelId && channel.ServerId == open)));
+    }
+
+    [Fact]
+    public async Task AnInviteCountsEachNewMemberOnceAndRefusesBannedExpiredAndUsedUpCodes()
+    {
+        using var ada = await SignInAsync("ada", "Quasar!2026", server: null);
+        using var ilya = await SignInAsync("ilya", "Meteor!2026", server: null);
+        using var nils = await SignInAsync("nils", "Zenith!2026", server: null);
+        var serverId = await CreateServerAsync(ada, isPublic: false);
+        ada.DefaultRequestHeaders.Add("X-Stellarr-Server", serverId.ToString());
+        var counted = await CreateInviteAsync(ada);
+        var expired = await CreateInviteAsync(ada);
+        var spent = await CreateInviteAsync(ada);
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            (await db.ServerInvites.SingleAsync(x => x.Id == expired.Id)).ExpiresAt = DateTime.UtcNow.AddMinutes(-1);
+            var used = await db.ServerInvites.SingleAsync(x => x.Id == spent.Id);
+            used.Uses = used.MaxUses!.Value;
+            db.ServerBans.Add(new ServerBan
+            {
+                ServerId = serverId,
+                UserId = NilsId,
+                BannedById = AdaId,
+                Reason = "test",
+                BannedAt = DateTime.UtcNow,
+            });
+            await db.SaveChangesAsync();
+        }
+
+        Assert.Equal(HttpStatusCode.OK, (await ilya.PostAsync($"/api/invites/{counted.Code}/join", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.OK, (await ilya.PostAsync($"/api/invites/{counted.Code}/join", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await ilya.PostAsync($"/api/invites/{expired.Code}/join", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await ilya.PostAsync($"/api/invites/{spent.Code}/join", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await ilya.PostAsync("/api/invites/no-such-code/join", null)).StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, (await nils.PostAsync($"/api/invites/{counted.Code}/join", null)).StatusCode);
+
+        await using var verification = _factory.Services.CreateAsyncScope();
+        var context = verification.ServiceProvider.GetRequiredService<AppDbContext>();
+        Assert.Equal(1, (await context.ServerInvites.SingleAsync(x => x.Id == counted.Id)).Uses);
+        Assert.False(await context.ServerMembers.AnyAsync(x => x.ServerId == serverId && x.UserId == NilsId));
+    }
+
+    [Fact]
+    public async Task JoiningAServerTellsTheInboxToReloadWithoutASequence()
+    {
+        using var ada = await SignInAsync("ada", "Quasar!2026", server: null);
+        using var jo = await SignInAsync("jo", "Corona!2026", server: null);
+        var serverId = await CreateServerAsync(ada, isPublic: false);
+        ada.DefaultRequestHeaders.Add("X-Stellarr-Server", serverId.ToString());
+        var invite = await CreateInviteAsync(ada);
+        await using var listener = await ListenAsync("jo", "Corona!2026", JoId);
+        Assert.Equal(
+            HttpStatusCode.NoContent,
+            (await ada.PostAsync($"/api/admin/invites/{invite.Id}/members/{JoId}", null)).StatusCode);
+        await listener.NextAsync();
+
+        Assert.Equal(HttpStatusCode.OK, (await jo.PostAsync($"/api/invites/{invite.Code}/join", null)).StatusCode);
+
+        var joined = await listener.NextAsync();
+        Assert.Equal(serverId.ToString(), joined.GetProperty("serverId").GetString());
+        Assert.True(joined.GetProperty("global").GetBoolean());
+        Assert.False(joined.TryGetProperty("sequence", out _));
+        Assert.Empty(Invitations(await jo.GetFromJsonAsync<JsonElement>("/api/notifications"), serverId));
+    }
+
+    private static async Task<Guid> CreateServerAsync(HttpClient client, bool isPublic)
+    {
+        var response = await client.PostAsJsonAsync("/api/servers", new { name = $"Directory {Guid.NewGuid():N}", isPublic });
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var created = await response.Content.ReadFromJsonAsync<JsonElement>();
+        return Guid.Parse(created.GetProperty("id").GetString()!);
+    }
+
+    private static async Task<Guid[]> DiscoveredAsync(HttpClient client)
+    {
+        var servers = await client.GetFromJsonAsync<JsonElement[]>("/api/servers/discover");
+        return servers!.Select(x => Guid.Parse(x.GetProperty("id").GetString()!)).ToArray();
+    }
+
     private static JsonElement[] Invitations(JsonElement inbox, Guid serverId) =>
         inbox.GetProperty("items").EnumerateArray()
             .Where(item => item.GetProperty("target").ValueKind != JsonValueKind.Null &&

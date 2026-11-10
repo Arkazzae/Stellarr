@@ -206,9 +206,9 @@ public static class ChannelEndpoints
         return deleted == 0 ? Results.Conflict() : Results.NoContent();
     }
 
-    private static string Normalize(string? name) => name?.Trim().ToLowerInvariant() ?? "";
+    internal static string Normalize(string? name) => name?.Trim().ToLowerInvariant() ?? "";
 
-    private static bool IsValidName(string name) =>
+    internal static bool IsValidName(string name) =>
         name.Length is >= 1 and <= MaxNameLength && name.All(c => char.IsLetterOrDigit(c) || c == '-');
 
     private static bool AreSettingsInRange(UpdateChannelRequest request) =>

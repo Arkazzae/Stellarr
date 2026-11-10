@@ -176,6 +176,7 @@ app.MapChannelEndpoints();
 app.MapSectionEndpoints();
 app.MapRoleEndpoints();
 app.MapPermissionOverrideEndpoints();
+app.MapServerDirectoryEndpoints();
 app.MapServerEndpoints();
 app.MapServerAdministrationEndpoints();
 app.MapNotificationEndpoints();

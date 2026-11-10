@@ -37,6 +37,34 @@ public sealed record UpdateServerRequest(string? Name, string? Description, bool
 
 public sealed record ServerIconDto(string? IconUrl);
 
+/// <summary>
+/// A new server and the few choices worth making before anybody is in it.
+/// Everything after the description is optional and falls back to the usual
+/// start, so a client that sends only a name still gets a working server.
+/// </summary>
+/// <param name="TextChannelName">The first text channel; "ogólny" when omitted.</param>
+/// <param name="VoiceChannelName">The first voice channel; "rozmowa" when omitted, none when empty.</param>
+/// <param name="MentionsOnly">False makes every message notify by default.</param>
+public sealed record CreateServerRequest(
+    string Name,
+    string? Description,
+    bool IsPublic = false,
+    string? TextChannelName = null,
+    string? VoiceChannelName = null,
+    bool? MentionsOnly = null,
+    bool? VoiceJoinSound = null);
+
+/// <summary>The server a person joined through an invite, and the channel the invite points to.</summary>
+public sealed record JoinInviteResponseDto(
+    string Id,
+    string Name,
+    string Description,
+    string? IconUrl,
+    DateTime CreatedAt,
+    bool IsPublic,
+    string? ChannelId,
+    string? ChannelName);
+
 public sealed record ServerInviteDto(
     string Id,
     string Url,
@@ -95,6 +123,17 @@ public static class ServerContractMappings
         section.Id.ToString(),
         section.Name,
         section.Position);
+
+    /// <remarks>The invite's channel must be loaded.</remarks>
+    public static JoinInviteResponseDto ToJoinResponse(this StellarrServer server, ServerInvite invite) => new(
+        server.Id.ToString(),
+        server.Name,
+        server.Description,
+        server.IconUrl,
+        server.CreatedAt.AsUtc(),
+        server.IsPublic,
+        invite.ChannelId?.ToString(),
+        invite.Channel?.Name);
 
     /// <remarks>The invite's author and channel must be loaded.</remarks>
     public static ServerInviteDto ToDto(this ServerInvite invite, string origin) => new(
