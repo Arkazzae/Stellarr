@@ -103,6 +103,18 @@ export function stringArray(value: unknown): string[] {
     : [];
 }
 
+/**
+ * A list a server may leave out, as older builds do: anything that is not a
+ * list reads as empty, while a malformed item inside one is still an error.
+ */
+export function optionalList<T>(
+  value: unknown,
+  path: string,
+  parseItem: (item: unknown, path: string) => T,
+): T[] {
+  return Array.isArray(value) ? value.map((item) => parseItem(item, path)) : [];
+}
+
 /** Spread into an object literal so an absent field stays absent, not `undefined`. */
 export function definedField<K extends string, V>(
   key: K,

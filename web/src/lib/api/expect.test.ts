@@ -10,6 +10,7 @@ import {
   expectSafeInteger,
   expectString,
   isRecord,
+  optionalList,
   optionalNumber,
   optionalString,
   stringArray,
@@ -117,6 +118,24 @@ describe("stringArray", () => {
     expect(stringArray(["a", 1, null, "b"])).toEqual(["a", "b"]);
     expect(stringArray("a")).toEqual([]);
     expect(stringArray(undefined)).toEqual([]);
+  });
+});
+
+describe("optionalList", () => {
+  const parseId = (item: unknown, path: string): string => expectString(expectRecord(item, path), "id", path);
+
+  it("parses every item of a list", () => {
+    expect(optionalList([{ id: "a" }, { id: "b" }], "/p[]", parseId)).toEqual(["a", "b"]);
+  });
+
+  it("reads anything that is not a list as empty", () => {
+    expect(optionalList(undefined, "/p[]", parseId)).toEqual([]);
+    expect(optionalList(null, "/p[]", parseId)).toEqual([]);
+    expect(optionalList({ id: "a" }, "/p[]", parseId)).toEqual([]);
+  });
+
+  it("still rejects a malformed item, naming the path it was given", () => {
+    expect(malformedMessage(() => optionalList([{ id: "a" }, {}], "/p[]", parseId))).toContain("/p[]");
   });
 });
 
