@@ -41,6 +41,8 @@ import type {
   User,
 } from "./types";
 
+export { ACTIVE_SERVER_STORAGE_KEY } from "./transport";
+
 /**
  * The HTTP surface the UI depends on. Adapters build the ports on top of this
  * client, so nothing above them knows about routes, headers or payload shapes.
