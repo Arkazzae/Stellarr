@@ -2,6 +2,7 @@ using System.Net;
 using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
+using Stellarr.Api.Localization;
 using Stellarr.Api.Mail;
 
 namespace Stellarr.Api.Tests;
@@ -81,7 +82,8 @@ public sealed class MailDeliveryTests
             "<b>Jo</b>",
             "Orbit & Co",
             "https://chat.test/reset-hasla?token=abc&x=1",
-            tokenId);
+            tokenId,
+            new Messages(new LanguageOptions { Language = "pl" }));
 
         Assert.Contains("&lt;b&gt;Jo&lt;/b&gt;", mail.Html, StringComparison.Ordinal);
         Assert.DoesNotContain("<b>Jo</b>", mail.Html, StringComparison.Ordinal);

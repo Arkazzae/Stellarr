@@ -44,12 +44,6 @@ public sealed partial class Messages
             throw new ArgumentException($"{key} needs a value for {match.Value}.", nameof(values));
         });
 
-    /// <summary>The catalog for <c>Stellarr__Language</c>, for code that runs outside a host.</summary>
-    internal static Messages FromEnvironment() =>
-        new(new LanguageOptions
-        {
-            Language = Environment.GetEnvironmentVariable("Stellarr__Language") ?? LanguageOptions.English,
-        });
 
     internal string Template(MessageKey key) => _templates(key);
 

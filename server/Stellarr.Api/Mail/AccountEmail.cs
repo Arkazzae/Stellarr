@@ -6,10 +6,7 @@ namespace Stellarr.Api.Mail;
 /// <summary>The messages the instance sends about an account or about itself.</summary>
 public static class AccountEmail
 {
-    /// <param name="messages">
-    /// The catalog of the instance. Without one, which only happens outside a
-    /// running host, the language is taken from <c>Stellarr__Language</c>.
-    /// </param>
+    /// <param name="messages">The catalog of the instance.</param>
     public static EmailMessage PasswordReset(
         string from,
         string to,
@@ -17,9 +14,8 @@ public static class AccountEmail
         string instanceName,
         string resetUrl,
         Guid tokenId,
-        Messages? messages = null)
+        Messages messages)
     {
-        messages ??= Messages.FromEnvironment();
         var name = WebUtility.HtmlEncode(displayName);
         var instance = WebUtility.HtmlEncode(instanceName);
         var link = WebUtility.HtmlEncode(resetUrl);
