@@ -137,6 +137,9 @@ public sealed record MessageSyncPageDto(
     bool HasMore,
     bool ResetRequired);
 
+/// <summary>A channel's pinned messages, newest pin first.</summary>
+public sealed record PinnedMessagesDto(IReadOnlyList<MessageDto> Messages);
+
 /// <summary>A person's read watermark in one text channel.</summary>
 public sealed record ChannelReadDto(string ChannelId, DateTime LastReadAt);
 
