@@ -1362,6 +1362,8 @@ export const en = {
   "shell.starterTextChannel": "Text channel",
   "shell.starterVoiceChannel": "Voice channel",
   "shell.starterVoiceChannelDetail": "The server can be created without a voice channel.",
+  "shell.starterTextChannelName": "general",
+  "shell.starterVoiceChannelName": "voice",
   "shell.withVoiceChannel": "Create a voice channel",
   "shell.serverNotificationsDetail": "Default notifications on this server",
   "shell.defaultNotifications": "Notify about",

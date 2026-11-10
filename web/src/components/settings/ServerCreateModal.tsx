@@ -42,20 +42,19 @@ interface Draft {
   voiceJoinSound: boolean;
 }
 
-/** The channels the server seeds when the dialog is left alone. */
-const DEFAULT_TEXT_CHANNEL = "ogólny";
-const DEFAULT_VOICE_CHANNEL = "rozmowa";
-
-const BLANK_DRAFT: Draft = {
-  name: "",
-  description: "",
-  isPublic: false,
-  textChannel: DEFAULT_TEXT_CHANNEL,
-  voiceChannel: DEFAULT_VOICE_CHANNEL,
-  withVoice: true,
-  mentionsOnly: true,
-  voiceJoinSound: true,
-};
+/** The channel names are suggestions in the reader's language, kept if left alone. */
+function blankDraft(t: Translator): Draft {
+  return {
+    name: "",
+    description: "",
+    isPublic: false,
+    textChannel: t("shell.starterTextChannelName"),
+    voiceChannel: t("shell.starterVoiceChannelName"),
+    withVoice: true,
+    mentionsOnly: true,
+    voiceJoinSound: true,
+  };
+}
 
 interface NavItem {
   key: PaneKey;
@@ -139,22 +138,21 @@ export function ServerCreateModal({ open, onClose, onCreate }: ServerCreateModal
   const textChannelId = useId();
   const voiceChannelId = useId();
   const errorId = useId();
-  const [draft, setDraft] = useState(BLANK_DRAFT);
+  const [draft, setDraft] = useState(() => blankDraft(t));
   const [active, setActive] = useState<PaneKey>("basics");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Reset while rendering, not in an effect, so a reopened dialog is never
-  // painted once with the previous draft. Closing also drops the draft.
+  // painted once with the previous draft. The draft is dropped on closing and
+  // renewed on opening, which keeps the suggested names in the current language.
   const [wasOpen, setWasOpen] = useState(open);
   if (wasOpen !== open) {
     setWasOpen(open);
     setActive("basics");
     setError(null);
-    if (!open) {
-      setDraft(BLANK_DRAFT);
-      setSubmitting(false);
-    }
+    setDraft(blankDraft(t));
+    if (!open) setSubmitting(false);
   }
 
   const change = <K extends keyof Draft>(key: K, value: Draft[K]) =>
@@ -270,7 +268,7 @@ export function ServerCreateModal({ open, onClose, onCreate }: ServerCreateModal
                   type="text"
                   value={draft.textChannel}
                   maxLength={60}
-                  placeholder={DEFAULT_TEXT_CHANNEL}
+                  placeholder={t("shell.starterTextChannelName")}
                   disabled={submitting}
                   required
                   autoComplete="off"
@@ -305,7 +303,7 @@ export function ServerCreateModal({ open, onClose, onCreate }: ServerCreateModal
                     type="text"
                     value={draft.voiceChannel}
                     maxLength={60}
-                    placeholder={DEFAULT_VOICE_CHANNEL}
+                    placeholder={t("shell.starterVoiceChannelName")}
                     disabled={submitting}
                     required
                     autoComplete="off"

@@ -28,11 +28,6 @@ const ALLOWED = [
     line: '.replaceAll("ł", "l")',
     why: "search folds diacritics, and this letter has no decomposition",
   },
-  {
-    file: "components/settings/ServerCreateModal.tsx",
-    line: 'DEFAULT_TEXT_CHANNEL = "ogólny"',
-    why: "the first channel's name is sent to the API and stored, not displayed text",
-  },
 ] as const;
 
 function sourceFiles(directory: string): string[] {

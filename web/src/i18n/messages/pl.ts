@@ -1360,6 +1360,8 @@ export const pl = {
   "shell.starterTextChannel": "Kanał tekstowy",
   "shell.starterVoiceChannel": "Kanał głosowy",
   "shell.starterVoiceChannelDetail": "Serwer może powstać bez kanału głosowego.",
+  "shell.starterTextChannelName": "ogólny",
+  "shell.starterVoiceChannelName": "rozmowa",
   "shell.withVoiceChannel": "Utwórz kanał głosowy",
   "shell.serverNotificationsDetail": "Domyślne powiadomienia na tym serwerze",
   "shell.defaultNotifications": "Powiadamiaj o",
