@@ -56,6 +56,7 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton(services => ClientDiscoveryIdentity.Load(services.GetRequiredService<IConfiguration>()));
 builder.Services.AddSingleton<DesktopReleaseCatalogue>();
 builder.Services.AddSingleton<AndroidReleaseCatalogue>();
+builder.Services.AddSingleton<DesktopUpdateCatalogue>();
 builder.Services.AddSignalR(options =>
 {
     options.MaximumReceiveMessageSize = 160 * 1024;
@@ -162,6 +163,7 @@ app.MapGet("/health/ready", async (AppDbContext db, CancellationToken cancellati
 app.MapClientDiscoveryEndpoints();
 app.MapDesktopReleaseEndpoints();
 app.MapAndroidReleaseEndpoints();
+app.MapDesktopUpdateEndpoints();
 app.MapAuthEndpoints();
 app.MapPasswordRecoveryEndpoints();
 app.MapRegistrationEndpoints();
