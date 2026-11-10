@@ -101,6 +101,7 @@ if (app.Environment.IsDevelopment())
     app.UseCors();
 }
 app.UseRateLimiter();
+app.UseClientGate();
 app.UseAuthentication();
 app.UseAuthorization();
 // Sets how often WebSocket connections, the hub's included, are pinged.
