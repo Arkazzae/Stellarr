@@ -6,6 +6,7 @@ using Stellarr.Api.Auth;
 using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
 using Stellarr.Api.Domain;
+using Stellarr.Api.Localization;
 using Stellarr.Api.Realtime;
 
 namespace Stellarr.Api.Endpoints;
@@ -69,6 +70,7 @@ public static class ServerAdministrationEndpoints
         CreateInviteRequest? request,
         HttpContext http,
         AppDbContext db,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         if (await AuthorizeAsync(http, db, ServerPrivileges.ManageServer, cancellationToken) is not { } actor)
@@ -83,7 +85,7 @@ public static class ServerAdministrationEndpoints
                 x => x.Id == channelId && x.ServerId == actor.ServerId, cancellationToken);
             if (channel is null)
             {
-                return Invalid("channelId", "Nieznany kanał.");
+                return Invalid("channelId", messages.Get(MessageKey.ChannelUnknown));
             }
         }
 
@@ -104,7 +106,9 @@ public static class ServerAdministrationEndpoints
         await StageAuditAsync(
             db,
             actor,
-            channel is null ? "utworzył(a) zaproszenie" : $"utworzył(a) zaproszenie na kanał #{channel.Name}",
+            channel is null
+                ? messages.Get(MessageKey.AuditInviteCreated)
+                : messages.Get(MessageKey.AuditInviteCreatedForChannel, ("channel", channel.Name)),
             cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
 
@@ -117,6 +121,7 @@ public static class ServerAdministrationEndpoints
         HttpContext http,
         AppDbContext db,
         IHubContext<AppHub> hub,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         if (await AuthorizeAsync(http, db, ServerPrivileges.ManageServer, cancellationToken) is not { } actor)
@@ -137,7 +142,7 @@ public static class ServerAdministrationEndpoints
             .ToListAsync(cancellationToken);
         db.UserNotifications.RemoveRange(sent);
         db.ServerInvites.Remove(invite);
-        await StageAuditAsync(db, actor, "unieważnił(a) zaproszenie", cancellationToken);
+        await StageAuditAsync(db, actor, messages.Get(MessageKey.AuditInviteRevoked), cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
 
         foreach (var recipientId in sent.Select(x => x.UserId).Distinct())
@@ -258,6 +263,7 @@ public static class ServerAdministrationEndpoints
         UpdateNotificationSettingsRequest request,
         HttpContext http,
         AppDbContext db,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         if (await AuthorizeAsync(http, db, ServerPrivileges.ManageServer, cancellationToken) is not { } actor)
@@ -269,7 +275,7 @@ public static class ServerAdministrationEndpoints
         if (muted is not null && await db.Channels.CountAsync(
                 x => x.ServerId == actor.ServerId && muted.Contains(x.Id), cancellationToken) != muted.Length)
         {
-            return Invalid("mutedChannelIds", "Nieznany kanał.");
+            return Invalid("mutedChannelIds", messages.Get(MessageKey.ChannelUnknown));
         }
 
         var settings = await SettingsAsync(db, actor.ServerId, cancellationToken);
@@ -291,6 +297,7 @@ public static class ServerAdministrationEndpoints
         HttpContext http,
         AppDbContext db,
         ServerMutationGate gate,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         var actor = new Actor(http.RequireActiveServerId(), http.User.RequireUserId());
@@ -308,7 +315,7 @@ public static class ServerAdministrationEndpoints
             x => x.ServerId == actor.ServerId && x.UserId == request.UserId, cancellationToken);
         if (successor is null || successor.UserId == actor.UserId)
         {
-            return Invalid("userId", "Wybierz innego członka serwera.");
+            return Invalid("userId", messages.Get(MessageKey.TransferTargetInvalid));
         }
 
         var memberRole = await ServerAccess.FindMemberRoleAsync(db, actor.ServerId, cancellationToken)
@@ -323,7 +330,7 @@ public static class ServerAdministrationEndpoints
 
         successor.RoleId = ownerRoleId;
         successor.OwnerSlot = 1;
-        await StageAuditAsync(db, actor, "przekazał(a) własność serwera", cancellationToken);
+        await StageAuditAsync(db, actor, messages.Get(MessageKey.AuditOwnershipTransferred), cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
         return Results.NoContent();

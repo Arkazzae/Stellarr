@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
 using Stellarr.Api.Data;
+using Stellarr.Api.Localization;
 
 namespace Stellarr.Api.Auth;
 
@@ -88,7 +89,8 @@ public static class ExternalOidcAuthentication
             return;
         }
 
-        var session = SessionAuthentication.CreateSession(context.HttpContext, user.Id);
+        var session = SessionAuthentication.CreateSession(
+            context.HttpContext, user.Id, context.HttpContext.RequestServices.GetRequiredService<Messages>());
         db.UserSessions.Add(session);
         await db.SaveChangesAsync(cancellationToken);
 

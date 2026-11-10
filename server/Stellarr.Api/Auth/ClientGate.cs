@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Stellarr.Api.Data;
+using Stellarr.Api.Localization;
 
 namespace Stellarr.Api.Auth;
 
@@ -51,7 +52,6 @@ public static class ClientGate
 
     private const string DesktopKind = "desktop-linux";
     private const string UnsupportedClient = "unsupported-client";
-    private const string UnsupportedClientTitle = "Ta aplikacja nie jest już obsługiwana. Pobierz aktualnego klienta Stellarr.";
 
     private static readonly string[] GatedPaths =
     [
@@ -74,7 +74,8 @@ public static class ClientGate
                 // Bound on each gated request, so a changed appsettings file applies without a restart.
                 var options = configuration.GetSection(ClientGateOptions.Section).Get<ClientGateOptions>()
                     ?? new ClientGateOptions();
-                if (await FindRefusalAsync(context, options, configuration) is { } refusal)
+                var messages = context.RequestServices.GetRequiredService<Messages>();
+                if (await FindRefusalAsync(context, options, configuration, messages) is { } refusal)
                 {
                     await refusal.ExecuteAsync(context);
                     return;
@@ -91,28 +92,26 @@ public static class ClientGate
     private static async Task<IResult?> FindRefusalAsync(
         HttpContext context,
         ClientGateOptions options,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        Messages messages)
     {
         var kind = context.Request.Headers[KindHeader].ToString().Trim();
         if (kind.Length == 0)
         {
             return options.RequireIdentification
-                ? Refuse(UnsupportedClient, UnsupportedClientTitle, options)
+                ? Refuse(UnsupportedClient, messages.Get(MessageKey.ClientUnsupported), options)
                 : null;
         }
 
         if (!options.Allowed.Contains(kind, StringComparer.OrdinalIgnoreCase))
         {
-            return Refuse(UnsupportedClient, UnsupportedClientTitle, options);
+            return Refuse(UnsupportedClient, messages.Get(MessageKey.ClientUnsupported), options);
         }
 
         var reported = context.Request.Headers[VersionHeader].ToString().Trim();
         if (!Version.TryParse(reported, out var version))
         {
-            return Refuse(
-                UnsupportedClient,
-                "Ta aplikacja nie podaje swojej wersji i nie jest obsługiwana.",
-                options);
+            return Refuse(UnsupportedClient, messages.Get(MessageKey.ClientVersionMissing), options);
         }
 
         // Only the desktop client has a floor to compare against.
@@ -126,7 +125,7 @@ public static class ClientGate
             ? null
             : Refuse(
                 "outdated-client",
-                $"Ta wersja aplikacji ({reported}) jest za stara. Wymagana jest co najmniej {minimum}.",
+                messages.Get(MessageKey.ClientOutdated, ("reported", reported), ("minimum", minimum)),
                 options,
                 minimum.ToString());
     }

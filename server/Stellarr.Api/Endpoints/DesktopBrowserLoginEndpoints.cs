@@ -7,6 +7,7 @@ using Stellarr.Api.Auth;
 using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
 using Stellarr.Api.Domain;
+using Stellarr.Api.Localization;
 
 namespace Stellarr.Api.Endpoints;
 
@@ -72,6 +73,7 @@ public static class DesktopBrowserLoginEndpoints
 
     private static async Task<IResult> ApproveAsync(
         Guid requestId,
+        Messages messages,
         HttpContext context,
         AppDbContext db,
         CancellationToken cancellationToken)
@@ -83,14 +85,15 @@ public static class DesktopBrowserLoginEndpoints
         {
             return Page(
                 context,
-                "Link wygasł",
-                "Wróć do Stellarr Desktop i rozpocznij logowanie ponownie.",
+                messages,
+                messages.Get(MessageKey.BrowserLoginExpiredHeading),
+                messages.Get(MessageKey.BrowserLoginExpiredBody),
                 StatusCodes.Status410Gone);
         }
 
         if (login.UserId is { } approvedBy && approvedBy != userId)
         {
-            return Results.Conflict(new { title = "To logowanie zostało już zatwierdzone przez inne konto." });
+            return Results.Conflict(new { title = messages.Get(MessageKey.BrowserLoginApprovedByAnother) });
         }
 
         login.UserId = userId;
@@ -98,19 +101,21 @@ public static class DesktopBrowserLoginEndpoints
         await db.SaveChangesAsync(cancellationToken);
         return Page(
             context,
-            "Zalogowano do Stellarr",
-            "Możesz zamknąć tę kartę i wrócić do aplikacji desktopowej.");
+            messages,
+            messages.Get(MessageKey.BrowserLoginDoneHeading),
+            messages.Get(MessageKey.BrowserLoginDoneBody));
     }
 
     private static async Task<IResult> ExchangeAsync(
         DesktopBrowserExchangeRequest request,
+        Messages messages,
         HttpContext context,
         AppDbContext db,
         CancellationToken cancellationToken)
     {
         if (!Guid.TryParse(request.RequestId, out var requestId))
         {
-            return RejectedLink();
+            return RejectedLink(messages);
         }
 
         var now = DateTime.UtcNow;
@@ -118,7 +123,7 @@ public static class DesktopBrowserLoginEndpoints
         if (login is null || login.ExpiresAt <= now || login.RedeemedAt is not null ||
             !SecretMatches(request.Secret ?? "", login.SecretHash))
         {
-            return RejectedLink();
+            return RejectedLink(messages);
         }
 
         if (login.UserId is not { } userId || login.ApprovedAt is null)
@@ -133,7 +138,7 @@ public static class DesktopBrowserLoginEndpoints
             .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.RedeemedAt, now), cancellationToken);
         if (redeemed != 1)
         {
-            return RejectedLink();
+            return RejectedLink(messages);
         }
 
         var user = await db.Users.SingleOrDefaultAsync(x => x.Id == userId && !x.IsDisabled, cancellationToken);
@@ -142,16 +147,16 @@ public static class DesktopBrowserLoginEndpoints
             return Results.Forbid();
         }
 
-        var session = SessionAuthentication.CreateSession(context, user.Id);
+        var session = SessionAuthentication.CreateSession(context, user.Id, messages);
         db.UserSessions.Add(session);
         await db.SaveChangesAsync(cancellationToken);
         await SessionAuthentication.SignInAsync(context, user, session.Id);
         return Results.Ok(user.ToDto("online"));
     }
 
-    private static IResult RejectedLink() => Results.Problem(
+    private static IResult RejectedLink(Messages messages) => Results.Problem(
         statusCode: StatusCodes.Status400BadRequest,
-        title: "Link logowania jest nieprawidłowy albo wygasł.");
+        title: messages.Get(MessageKey.BrowserLoginLinkInvalid));
 
     private static string HashSecret(string secret) =>
         Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(secret)));
@@ -169,7 +174,12 @@ public static class DesktopBrowserLoginEndpoints
     }
 
     /// <summary>A small page for the system browser, which has nothing to run and nothing to leak.</summary>
-    private static IResult Page(HttpContext context, string title, string message, int statusCode = StatusCodes.Status200OK)
+    private static IResult Page(
+        HttpContext context,
+        Messages messages,
+        string title,
+        string message,
+        int statusCode = StatusCodes.Status200OK)
     {
         var headers = context.Response.Headers;
         headers.CacheControl = "no-store";
@@ -182,7 +192,7 @@ public static class DesktopBrowserLoginEndpoints
         var body = WebUtility.HtmlEncode(message);
         var html = $$"""
             <!doctype html>
-            <html lang="pl">
+            <html lang="{{messages.Language}}">
             <head>
               <meta charset="utf-8">
               <meta name="viewport" content="width=device-width, initial-scale=1">

@@ -1,4 +1,5 @@
 using Stellarr.Api.Domain;
+using Stellarr.Api.Localization;
 
 namespace Stellarr.Api.Contracts;
 
@@ -201,7 +202,7 @@ public static class MessageContractMappings
     /// <c>MessageQueries.WithMessageDetails</c> loads; reactions are counted
     /// for everybody and flagged for <paramref name="viewerId"/>.
     /// </summary>
-    public static MessageDto ToDto(this Message message, Guid? viewerId = null) => new(
+    public static MessageDto ToDto(this Message message, Messages messages, Guid? viewerId = null) => new(
         message.Id.ToString(),
         message.ChannelId.ToString(),
         message.IsSystem ? SystemAuthor : message.Author.ToDto("online"),
@@ -211,7 +212,7 @@ public static class MessageContractMappings
         message.Embeds.OrderBy(x => x.Position).Select(x => x.ToDto()).ToArray(),
         message.EditedAt.AsUtc(),
         message.PinnedAt.AsUtc(),
-        message.ReplyToMessage?.ToReferenceDto(),
+        message.ReplyToMessage?.ToReferenceDto(messages),
         message.Reactions
             .GroupBy(x => x.Emoji, StringComparer.Ordinal)
             .OrderBy(group => group.Min(reaction => reaction.CreatedAt))
@@ -222,7 +223,7 @@ public static class MessageContractMappings
             .ToArray());
 
     /// <summary>The one-line quote shown above a reply.</summary>
-    public static MessageReferenceDto ToReferenceDto(this Message message)
+    public static MessageReferenceDto ToReferenceDto(this Message message, Messages messages)
     {
         var preview = string.Join(' ', message.Content.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries));
         if (preview.Length > PreviewLength)
@@ -233,7 +234,7 @@ public static class MessageContractMappings
         var hasAttachment = message.Attachments.Count > 0;
         if (preview.Length == 0 && hasAttachment)
         {
-            preview = "Załącznik";
+            preview = messages.Get(MessageKey.AttachmentPreview);
         }
 
         return new MessageReferenceDto(

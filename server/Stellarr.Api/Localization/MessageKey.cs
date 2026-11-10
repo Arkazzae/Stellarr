@@ -1,0 +1,214 @@
+namespace Stellarr.Api.Localization;
+
+/// <summary>
+/// Everything the server says to people. Each key has a text in every language
+/// of the catalog; <see cref="Messages"/> looks it up.
+/// </summary>
+public enum MessageKey
+{
+    // Client gate and sign-in
+    ClientUnsupported,
+    ClientVersionMissing,
+    ClientOutdated,
+    SignInFailed,
+
+    // Passwords and accounts
+    PasswordTooShort,
+    PasswordTooLong,
+    NewPasswordTooLong,
+    RecoveryEmailChangeDisabled,
+    VadSensitivityRange,
+    JoinSoundNotAvailable,
+    AccountDisplayNameLength,
+    BioTooLong,
+    CustomStatusTooLong,
+    PronounsTooLong,
+    PasswordResetLinkInvalid,
+
+    // Registration
+    InviteUnusable,
+    InviteRequired,
+    InviteServerGone,
+    InstanceHasNoMemberRole,
+    UsernameInvalid,
+    RegistrationDisplayNameLength,
+    EmailInvalid,
+    UsernameTaken,
+    EmailTaken,
+
+    // Channels and sections
+    ChannelNameOrKindInvalid,
+    ChannelNameInvalid,
+    ChannelSettingInvalid,
+    ChannelSettingWrongKind,
+    ChannelOrderIncomplete,
+    SectionNameInvalid,
+    SectionOrderIncomplete,
+
+    // Messages
+    ReactionInvalid,
+    PinLimitReached,
+    AttachmentLimit,
+    MessageIdInvalid,
+    MessageContentInvalid,
+    ReplyTargetInvalid,
+    AttachmentsNotFound,
+    SlowModeActive,
+    SlowModeWait,
+    VoiceMessageAlone,
+    MessageEditContentInvalid,
+
+    // Message history and search
+    PageLimitRange,
+    HistoryCursorInvalid,
+    DirectHistoryCursorInvalid,
+    SyncCursorInvalid,
+    SearchQueryLength,
+    IndexKindInvalid,
+    IndexCursorInvalid,
+
+    // Roles and permissions
+    PermissionUnknown,
+    PermissionAllowedAndDenied,
+    RoleInvalid,
+
+    // Operator panel
+    OpsUserInvalid,
+    OpsRoleMustNotBeOwner,
+    OpsCannotDisableSelf,
+    OpsCannotDisableOwner,
+    OpsInstanceNameLength,
+    OpsPublicUrlInvalid,
+    OpsTimeZoneUnavailable,
+    OpsTimeZoneBroken,
+    OpsMailFromRequired,
+    OpsBackupRetentionRange,
+    OpsLogRetentionRange,
+    OpsOrphanRetentionRange,
+    OpsVersionInvalid,
+    OpsRecommendedBelowMinimum,
+    OpsReleaseManifestBroken,
+    OpsVersionsSavedManifestBroken,
+    OpsTestMailRecipientInvalid,
+    OpsMailNotReadyTitle,
+    OpsMailNotReadyDetail,
+    OpsBackupFailedIntegrity,
+    OpsDatabaseHealthy,
+    OpsDatabaseDown,
+    OpsRealtimeConnections,
+    OpsMaintenanceRunning,
+    OpsMaintenanceOff,
+    OpsStorageInitializationOff,
+    OpsStorageChecked,
+
+    // Uploads and images
+    FileEmpty,
+    ImageTypesAllowed,
+    FileContentMismatch,
+    UploadTypeUnsupported,
+    UploadTypesAllowed,
+    UploadTooLarge,
+    UploadImageMaximum,
+    UploadAudioMaximum,
+    UploadVideoMaximum,
+    UploadFileMaximum,
+    UploadOverLimit,
+    UploadTypeMismatch,
+    UploadPosterInvalid,
+    VoiceMessageInvalid,
+    MediaDurationInvalid,
+    MediaDimensionsInvalid,
+    StorageFull,
+    StorageUserQuota,
+    StorageInstanceQuota,
+    StorageLowDisk,
+    StorageUnavailable,
+    ServerNameLength,
+    ServerDescriptionLength,
+    ServerIconTooLarge,
+    ServerIconMaximum,
+    ServerIconTypeUnsupported,
+    ServerIconTypeMismatch,
+    ProfileImageTooLarge,
+    ProfileImageTypeUnsupported,
+    ProfileImageTypeMismatch,
+    AvatarMaximum,
+    BannerMaximum,
+    EmojiShortcodeInvalid,
+    EmojiLimitReached,
+    EmojiLimitDetail,
+    EmojiTooLarge,
+    EmojiMaximum,
+    EmojiTypeUnsupported,
+    EmojiTypeMismatch,
+
+    // Servers
+    ChannelUnknown,
+    TransferTargetInvalid,
+    ServerNameOrDescriptionInvalid,
+    StarterChannelNameInvalid,
+    StarterChannelNamesCollide,
+    ServerHasNoMemberRole,
+
+    // Soundboard
+    SoundAttachmentInvalid,
+    SoundInvalid,
+
+    // Client releases
+    AndroidReleaseUnavailable,
+    DesktopReleaseUnavailable,
+    ReleaseListUnavailable,
+    DesktopUpdateUnavailable,
+
+    // Friends and moderation
+    FriendUsernameRequired,
+    BanReasonTooLong,
+
+    // Desktop browser sign-in
+    BrowserLoginExpiredHeading,
+    BrowserLoginExpiredBody,
+    BrowserLoginApprovedByAnother,
+    BrowserLoginDoneHeading,
+    BrowserLoginDoneBody,
+    BrowserLoginLinkInvalid,
+
+    // Audit trail
+    AuditInviteCreated,
+    AuditInviteCreatedForChannel,
+    AuditInviteRevoked,
+    AuditOwnershipTransferred,
+    AuditBackupCreated,
+    AuditBackupVerified,
+    AuditSettingsUpdated,
+    AuditDesktopVersionsSet,
+    AuditAccountCreated,
+    AuditRoleChanged,
+    AuditAccountDisabled,
+    AuditAccountEnabled,
+    AuditRoleCreated,
+    AuditRoleUpdated,
+    AuditSessionRevoked,
+
+    // Notices and defaults
+    ServerWelcomeNotice,
+    OwnerRoleName,
+    MemberRoleName,
+    DefaultTextChannelName,
+    DefaultVoiceChannelName,
+    UnknownDevice,
+    NoBanReason,
+    AttachmentPreview,
+    OidcDefaultName,
+
+    // Mail
+    PasswordResetSubject,
+    PasswordResetGreeting,
+    PasswordResetInstruction,
+    PasswordResetValidity,
+    PasswordResetHeading,
+    PasswordResetIntro,
+    PasswordResetButton,
+    PasswordResetIgnore,
+    DeliveryTestSubject,
+    DeliveryTestBody,
+}

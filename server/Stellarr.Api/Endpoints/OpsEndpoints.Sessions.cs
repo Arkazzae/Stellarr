@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Stellarr.Api.Auth;
 using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
+using Stellarr.Api.Localization;
 
 namespace Stellarr.Api.Endpoints;
 
@@ -50,6 +51,7 @@ public static partial class OpsEndpoints
         Guid sessionId,
         HttpContext http,
         AppDbContext db,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         var server = http.RequireInstanceServer();
@@ -72,7 +74,7 @@ public static partial class OpsEndpoints
             db,
             server.Id,
             http.User.RequireUserId(),
-            $"unieważnił(a) sesję {session.User.DisplayName}",
+            messages.Get(MessageKey.AuditSessionRevoked, ("name", session.User.DisplayName)),
             cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
         return Results.NoContent();

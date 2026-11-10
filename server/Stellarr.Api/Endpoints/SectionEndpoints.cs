@@ -3,6 +3,7 @@ using Stellarr.Api.Auth;
 using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
 using Stellarr.Api.Domain;
+using Stellarr.Api.Localization;
 
 namespace Stellarr.Api.Endpoints;
 
@@ -35,6 +36,7 @@ public static class SectionEndpoints
         CreateSectionRequest request,
         HttpContext http,
         AppDbContext db,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         var serverId = http.RequireActiveServerId();
@@ -47,7 +49,7 @@ public static class SectionEndpoints
         var name = request.Name?.Trim() ?? "";
         if (!IsValidName(name))
         {
-            return InvalidName();
+            return InvalidName(messages);
         }
 
         var lastPosition = await db.Sections.Where(x => x.ServerId == serverId)
@@ -69,6 +71,7 @@ public static class SectionEndpoints
         UpdateSectionRequest request,
         HttpContext http,
         AppDbContext db,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         var serverId = http.RequireActiveServerId();
@@ -88,7 +91,7 @@ public static class SectionEndpoints
         var name = request.Name?.Trim();
         if (name is not null && !IsValidName(name))
         {
-            return InvalidName();
+            return InvalidName(messages);
         }
 
         section.Name = name ?? section.Name;
@@ -100,6 +103,7 @@ public static class SectionEndpoints
         ReorderSectionsRequest request,
         HttpContext http,
         AppDbContext db,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         var serverId = http.RequireActiveServerId();
@@ -116,7 +120,7 @@ public static class SectionEndpoints
         {
             return Results.ValidationProblem(new Dictionary<string, string[]>
             {
-                ["sectionIds"] = ["Lista musi zawierać każdą sekcję dokładnie raz."],
+                ["sectionIds"] = [messages.Get(MessageKey.SectionOrderIncomplete)],
             });
         }
 
@@ -204,9 +208,9 @@ public static class SectionEndpoints
 
     private static bool IsValidName(string name) => name.Length is >= 1 and <= MaxNameLength;
 
-    private static IResult InvalidName() =>
+    private static IResult InvalidName(Messages messages) =>
         Results.ValidationProblem(new Dictionary<string, string[]>
         {
-            ["name"] = ["Nazwa sekcji jest nieprawidłowa."],
+            ["name"] = [messages.Get(MessageKey.SectionNameInvalid)],
         });
 }

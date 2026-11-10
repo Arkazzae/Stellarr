@@ -7,6 +7,7 @@ using Stellarr.Api.Auth;
 using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
 using Stellarr.Api.Domain;
+using Stellarr.Api.Localization;
 using Stellarr.Api.Mail;
 
 namespace Stellarr.Api.Endpoints;
@@ -17,8 +18,6 @@ namespace Stellarr.Api.Endpoints;
 /// </summary>
 public static partial class PasswordRecoveryEndpoints
 {
-    private const string InvalidLinkMessage = "Link do zmiany hasła jest nieprawidłowy lub wygasł.";
-
     private static readonly TimeSpan LinkLifetime = TimeSpan.FromHours(1);
 
     /// <summary>Where the mail goes out from and what its link points at.</summary>
@@ -26,7 +25,7 @@ public static partial class PasswordRecoveryEndpoints
 
     [LoggerMessage(
         Level = LogLevel.Error,
-        Message = "Nie udało się wysłać wiadomości resetu hasła dla tokenu {TokenId}")]
+        Message = "Sending the password reset mail for token {TokenId} failed.")]
     private static partial void PasswordResetMailFailed(ILogger logger, Guid tokenId, Exception exception);
 
     public static IEndpointRouteBuilder MapPasswordRecoveryEndpoints(this IEndpointRouteBuilder endpoints)
@@ -43,6 +42,7 @@ public static partial class PasswordRecoveryEndpoints
         IEmailDelivery delivery,
         IOptions<MailOptions> mailOptions,
         IConfiguration configuration,
+        Messages messages,
         ILoggerFactory loggers,
         CancellationToken cancellationToken)
     {
@@ -84,7 +84,7 @@ public static partial class PasswordRecoveryEndpoints
         try
         {
             await delivery.SendAsync(
-                AccountEmail.PasswordReset(mailing.Sender, user.Email!, user.DisplayName, server.Name, link, token.Id),
+                AccountEmail.PasswordReset(mailing.Sender, user.Email!, user.DisplayName, server.Name, link, token.Id, messages),
                 cancellationToken);
         }
         catch (Exception exception) when (IsDeliveryFailure(exception, cancellationToken))
@@ -109,17 +109,18 @@ public static partial class PasswordRecoveryEndpoints
         ResetPasswordRequest request,
         AppDbContext db,
         PasswordService passwords,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         var errors = new Dictionary<string, string[]>(StringComparer.Ordinal);
-        if (PasswordPolicy.Violation(request.NewPassword) is { } passwordProblem)
+        if (PasswordPolicy.Violation(request.NewPassword, messages) is { } passwordProblem)
         {
             errors["newPassword"] = [passwordProblem];
         }
 
         if (string.IsNullOrWhiteSpace(request.Token))
         {
-            errors["token"] = [InvalidLinkMessage];
+            errors["token"] = [messages.Get(MessageKey.PasswordResetLinkInvalid)];
         }
 
         if (errors.Count > 0)
@@ -133,7 +134,7 @@ public static partial class PasswordRecoveryEndpoints
             .SingleOrDefaultAsync(x => x.TokenHash == hash, cancellationToken);
         if (token is null || token.UsedAt is not null || token.ExpiresAt <= now || token.User.IsDisabled)
         {
-            return Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: InvalidLinkMessage);
+            return Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: messages.Get(MessageKey.PasswordResetLinkInvalid));
         }
 
         token.User.PasswordHash = passwords.Hash(request.NewPassword);

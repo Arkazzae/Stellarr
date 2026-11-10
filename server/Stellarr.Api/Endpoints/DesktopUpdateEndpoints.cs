@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using Stellarr.Api.Localization;
 
 namespace Stellarr.Api.Endpoints;
 
@@ -124,7 +125,6 @@ public static class DesktopUpdateEndpoints
     // offering an install it has no way to perform.
     private const string SelfUpdatingBundle = "appimage";
     private const int LastRolloutBucket = 99;
-    private const string UnavailableTitle = "Aktualizacja desktopowa jest chwilowo niedostępna.";
 
     /// <summary>The body that the Tauri updater expects from a dynamic update server.</summary>
     private sealed record UpdateResponse(
@@ -152,6 +152,7 @@ public static class DesktopUpdateEndpoints
     private static IResult CheckUpdate(
         HttpContext http,
         DesktopUpdateCatalogue catalogue,
+        Messages messages,
         string target,
         string architecture,
         string currentVersion,
@@ -174,7 +175,7 @@ public static class DesktopUpdateEndpoints
         }
         catch (InvalidDataException)
         {
-            return Results.Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: UnavailableTitle);
+            return ClientReleaseResults.Unavailable(messages, MessageKey.DesktopUpdateUnavailable);
         }
 
         if (candidate is null ||
@@ -207,6 +208,7 @@ public static class DesktopUpdateEndpoints
     private static IResult DownloadArtifact(
         HttpContext http,
         DesktopUpdateCatalogue catalogue,
+        Messages messages,
         string channel,
         string bundle)
     {
@@ -218,7 +220,7 @@ public static class DesktopUpdateEndpoints
         }
         catch (InvalidDataException)
         {
-            return Results.Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: UnavailableTitle);
+            return ClientReleaseResults.Unavailable(messages, MessageKey.DesktopUpdateUnavailable);
         }
 
         if (candidate is null)

@@ -5,6 +5,7 @@ using Stellarr.Api.Auth;
 using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
 using Stellarr.Api.Domain;
+using Stellarr.Api.Localization;
 using Stellarr.Api.Realtime;
 using Stellarr.Api.Storage;
 
@@ -33,6 +34,7 @@ public static class ServerEndpoints
         HttpContext http,
         AppDbContext db,
         IHubContext<AppHub> hub,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         if (await FindManagedAsync(http, db, cancellationToken) is not { } server)
@@ -43,13 +45,13 @@ public static class ServerEndpoints
         var name = request.Name?.Trim();
         if (name is { Length: < 1 or > MaxNameLength })
         {
-            return Invalid("name", "Nazwa serwera musi mieć od 1 do 80 znaków.");
+            return Invalid("name", messages.Get(MessageKey.ServerNameLength));
         }
 
         var description = request.Description?.Trim();
         if (description?.Length > MaxDescriptionLength)
         {
-            return Invalid("description", "Opis serwera może mieć najwyżej 280 znaków.");
+            return Invalid("description", messages.Get(MessageKey.ServerDescriptionLength));
         }
 
         server.Name = name ?? server.Name;
@@ -68,6 +70,7 @@ public static class ServerEndpoints
         AppDbContext db,
         MediaStorage mediaStorage,
         IHubContext<AppHub> hub,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         if (await FindManagedAsync(http, db, cancellationToken) is not { } server)
@@ -78,7 +81,7 @@ public static class ServerEndpoints
         var inspection = await mediaStorage.InspectImageAsync(file, MaxIconBytes, cancellationToken);
         if (!inspection.Accepted)
         {
-            return Refusal(inspection.Failure);
+            return Refusal(inspection.Failure, messages);
         }
 
         var id = Guid.NewGuid();
@@ -160,22 +163,22 @@ public static class ServerEndpoints
             .SendAsync("ServerUpdated", server.ToDto(), cancellationToken);
     }
 
-    private static IResult Refusal(UploadFailure failure) => failure switch
+    private static IResult Refusal(UploadFailure failure, Messages messages) => failure switch
     {
-        UploadFailure.Empty => Invalid("file", "Plik jest pusty."),
+        UploadFailure.Empty => Invalid("file", messages.Get(MessageKey.FileEmpty)),
         UploadFailure.TooLarge => Results.Problem(
             statusCode: StatusCodes.Status413PayloadTooLarge,
-            title: "Ikona jest za duża",
-            detail: "Ikona serwera może mieć najwyżej 4 MB."),
+            title: messages.Get(MessageKey.ServerIconTooLarge),
+            detail: messages.Get(MessageKey.ServerIconMaximum)),
         UploadFailure.UnsupportedType => Results.Problem(
             statusCode: StatusCodes.Status415UnsupportedMediaType,
-            title: "Nieobsługiwany format ikony",
-            detail: "Dozwolone są obrazy JPEG, PNG, GIF i WebP."),
+            title: messages.Get(MessageKey.ServerIconTypeUnsupported),
+            detail: messages.Get(MessageKey.ImageTypesAllowed)),
         // A signature that does not fit the declared type.
         _ => Results.Problem(
             statusCode: StatusCodes.Status415UnsupportedMediaType,
-            title: "Nieprawidłowy format ikony",
-            detail: "Zawartość pliku nie odpowiada zadeklarowanemu typowi."),
+            title: messages.Get(MessageKey.ServerIconTypeMismatch),
+            detail: messages.Get(MessageKey.FileContentMismatch)),
     };
 
     private static IResult Invalid(string field, string message) =>
