@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { revealSettingsNavItem } from "./settingsNav";
+import {
+  USER_SETTINGS_GROUPS,
+  USER_SETTINGS_PANES,
+  revealSettingsNavItem,
+} from "./settingsNav";
 
 function setup(
   view: { left: number; right: number },
@@ -60,5 +64,13 @@ describe("revealSettingsNavItem", () => {
     Object.defineProperty(container, "scrollTo", { value: undefined });
 
     expect(() => revealSettingsNavItem(container, item)).not.toThrow();
+  });
+});
+
+describe("USER_SETTINGS_GROUPS", () => {
+  it("lists every pane exactly once, so none is unreachable or doubled", () => {
+    const listed = USER_SETTINGS_GROUPS.flatMap((group) => group.panes);
+
+    expect([...listed].sort()).toEqual(Object.keys(USER_SETTINGS_PANES).sort());
   });
 });
