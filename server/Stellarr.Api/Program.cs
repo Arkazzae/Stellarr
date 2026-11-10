@@ -182,6 +182,7 @@ app.MapServerAdministrationEndpoints();
 app.MapModerationEndpoints();
 app.MapVoiceModerationEndpoints();
 app.MapNotificationEndpoints();
+app.MapSocialEndpoints();
 app.MapHub<AppHub>("/hubs/app");
 
 await InitializeApplicationAsync(app);

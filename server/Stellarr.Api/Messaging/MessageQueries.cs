@@ -20,6 +20,12 @@ public static class MessageQueries
             .Include(x => x.ReplyToMessage).ThenInclude(x => x!.Author)
             .Include(x => x.ReplyToMessage).ThenInclude(x => x!.Attachments);
 
+    /// <summary>Loads the author and attachments a direct message needs to become a MessageDto.</summary>
+    public static IQueryable<DirectMessage> WithMessageDetails(this IQueryable<DirectMessage> messages) =>
+        messages
+            .Include(x => x.Author)
+            .Include(x => x.Attachments).ThenInclude(x => x.Attachment);
+
     /// <summary>
     /// The channel when it is a text channel of the given server, and nothing
     /// otherwise. A channel of another server is as good as absent.

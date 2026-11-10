@@ -30,6 +30,7 @@ public static class DatabaseSchema
         SectionSchema.UpgradeAsync,
         ServerAdministrationSchema.UpgradeAsync,
         ModerationSchema.UpgradeAsync,
+        SocialSchema.UpgradeAsync,
     ];
 
     public static async Task UpgradeAsync(AppDbContext db, CancellationToken cancellationToken)
