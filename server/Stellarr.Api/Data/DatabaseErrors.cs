@@ -19,4 +19,23 @@ public static class DatabaseErrors
             SqliteErrorCode: ConstraintError,
             SqliteExtendedErrorCode: PrimaryKeyViolation or UniqueViolation,
         };
+
+    /// <summary>
+    /// Saves, and says false when a unique value was taken by another request
+    /// after this one had checked that it was free. The pending changes are
+    /// dropped then, so the context holds nothing the caller did not mean to keep.
+    /// </summary>
+    public static async Task<bool> TrySaveChangesAsync(this DbContext db, CancellationToken cancellationToken)
+    {
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+            return true;
+        }
+        catch (DbUpdateException exception) when (IsUniqueConstraint(exception))
+        {
+            db.ChangeTracker.Clear();
+            return false;
+        }
+    }
 }

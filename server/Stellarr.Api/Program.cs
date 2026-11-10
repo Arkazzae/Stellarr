@@ -171,6 +171,7 @@ app.MapMessagePinEndpoints();
 app.MapMessageThreadEndpoints();
 app.MapMessageIndexEndpoints();
 app.MapChannelReadEndpoints();
+app.MapChannelEndpoints();
 app.MapNotificationEndpoints();
 app.MapHub<AppHub>("/hubs/app");
 
