@@ -1,0 +1,1248 @@
+@layer components {
+  /*
+   * USTAWIENIA UŻYTKOWNIKA
+   *
+   * The shell is the server settings' — `.sv-wrap`, `.sv`, `.sv-nav`,
+   * `.sv-panes`, `.frm`, `.sc`. Only what this modal adds lives here, so the
+   * two dialogs cannot drift apart on the parts they share.
+   */
+
+  /* Your face beside your name, where the server's settings put its name. */
+  .us-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  /* Log out is the one nav item that opens no pane, so it sits below a rule
+     and outside every group rather than at the end of the last one. */
+  .us-out {
+    margin-top: auto;
+    padding: 8px;
+    border-top: 1px solid var(--line-subtle);
+  }
+
+  .us-out .sv-item {
+    width: 100%;
+  }
+
+  /* ---------- MOJE KONTO ---------- */
+  .acc-answer {
+    margin-top: 8px;
+    font-size: 12.5px;
+    line-height: 1.5;
+  }
+
+  .acc-answer.ok {
+    color: var(--live);
+  }
+
+  .acc-answer.bad {
+    color: var(--danger-text);
+  }
+
+  /* Login details are facts first, forms second. The current e-mail stays
+     visible while each credential editor opens independently underneath it. */
+  .acc-security {
+    margin-bottom: 0;
+  }
+
+  .acc-security-list {
+    padding-block: 0;
+  }
+
+  .acc-security-item {
+    padding: 18px 0;
+  }
+
+  .acc-security-item + .acc-security-item {
+    border-top: 1px solid var(--line-subtle);
+  }
+
+  .acc-security-summary {
+    display: flex;
+    align-items: flex-start;
+    gap: 20px;
+  }
+
+  .acc-security-summary > button {
+    flex: none;
+  }
+
+  .acc-security-copy {
+    min-width: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .acc-security-copy b {
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .acc-security-copy > span {
+    width: fit-content;
+    max-width: 100%;
+    font-size: 14px;
+    color: var(--text);
+    overflow-wrap: anywhere;
+  }
+
+  .acc-security-copy > span.empty {
+    color: var(--text-muted);
+  }
+
+  .acc-security-copy small {
+    max-width: 62ch;
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: var(--text-faint);
+  }
+
+  .acc-credential-form {
+    display: grid;
+    grid-template-columns: 200px minmax(0, 1fr);
+    gap: 12px 28px;
+    align-items: start;
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line-subtle);
+  }
+
+  .acc-credential-form .frm-lab {
+    padding-top: 9px;
+  }
+
+  .acc-credential-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .acc-credential-form .acc-credential-actions {
+    grid-column: 2;
+  }
+
+  .acc-password-form {
+    margin-top: 16px;
+  }
+
+  .acc-password-form > .acc-credential-actions {
+    padding-top: 16px;
+  }
+
+  @media (max-width: 760px) {
+    .acc-security-summary {
+      align-items: stretch;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .acc-security-summary > button {
+      align-self: flex-start;
+    }
+
+    .acc-credential-form {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 8px;
+    }
+
+    .acc-credential-form .frm-lab {
+      padding-top: 0;
+    }
+
+    .acc-credential-form .acc-credential-actions {
+      grid-column: 1;
+    }
+  }
+
+  /* ---------- JĘZYK I TŁUMACZENIE ---------- */
+  .lang-section{display:flex;flex-direction:column;gap:12px}
+  .lang-choices{display:flex;flex-wrap:wrap;gap:8px}
+  .lang-choice{
+    flex:1 1 180px;min-width:0;max-width:280px;min-height:58px;
+    display:flex;align-items:center;gap:12px;padding:9px 12px;
+    border:1px solid var(--line);border-radius:var(--radius-md);
+    background:var(--surface-field);text-align:left;color:var(--text-muted);
+    transition:background var(--dur-fast) var(--ease-standard),border-color var(--dur-fast) var(--ease-standard),color var(--dur-fast) var(--ease-standard);
+  }
+  .lang-choice:hover{background:var(--surface-overlay);border-color:var(--line-strong);color:var(--text)}
+  .lang-choice:active{background:var(--surface-field)}
+  .lang-choice.on{border-color:var(--accent-quiet);color:var(--text)}
+  .lang-choice > svg{flex:none;margin-left:auto;color:var(--accent-text)}
+  .lang-code{
+    flex:none;display:inline-flex;align-items:center;justify-content:center;
+    width:34px;height:28px;border-radius:var(--radius-sm);
+    background:var(--surface-overlay);font:650 11px/1 var(--font-mono);color:var(--text-muted);
+  }
+  .lang-choice.on .lang-code{background:var(--accent-soft);color:var(--accent-text)}
+  .lang-name{min-width:0;display:flex;flex-direction:column;gap:2px}
+  .lang-name b{font-size:13.5px;font-weight:600;line-height:1.25}
+  .lang-name span{font-size:11.5px;line-height:1.3;color:var(--text-faint)}
+  .lang-target{padding-top:18px;border-top:1px solid var(--line-subtle)}
+  .lang-model{min-height:32px;display:flex;align-items:center;margin-top:10px}
+  .lang-model-state,.lang-model-download{font-size:12px;color:var(--text-faint)}
+  .lang-model-state{display:inline-flex;align-items:center;gap:6px}
+  .lang-model-state.ok{color:var(--live)}
+  .lang-model-state.bad,.lang-model-error{color:var(--danger-text)}
+  .lang-model-download{width:min(360px,100%);display:grid;grid-template-columns:auto minmax(80px,1fr) 36px;align-items:center;gap:10px}
+  .lang-model-download progress{width:100%;height:6px;accent-color:var(--accent)}
+  .lang-model-download b{text-align:right;font-variant-numeric:tabular-nums;color:var(--text-muted)}
+  .lang-model-error{display:flex;align-items:center;flex-wrap:wrap;gap:10px;font-size:12px}
+  .lang-model-error .btn-ghost{height:30px;padding-inline:12px}
+  .lang-private-note{margin-top:10px;max-width:68ch}
+
+  @media (max-width:479px){
+    .lang-choice{flex-basis:100%;max-width:none}
+    .lang-model-download{grid-template-columns:1fr 38px}
+    .lang-model-download span{grid-column:1/-1}
+  }
+
+  /* ---------- KARTA PROFILU ---------- */
+  /*
+   * The card being edited, at the size it will be seen, and the control that
+   * edits it: the banner and the face are buttons, so a picture is changed by
+   * clicking the picture. The two keep the relationship they have on the mini
+   * profile, which is what makes the preview worth its height.
+   */
+  .pf-preview {
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background: var(--surface-raised);
+    margin-bottom: 10px;
+    padding-bottom: 16px;
+  }
+
+  /* Both pictures: a button that is only a picture, with a veil that arrives
+     on hover and on keyboard focus. Nothing about them reads as a button until
+     you are on them — the card has to look like the card. */
+  .pf-shot {
+    position: relative;
+    display: block;
+    overflow: hidden;
+    cursor: pointer;
+  }
+
+  .pf-shot:disabled {
+    cursor: default;
+  }
+
+  .pf-banner {
+    width: 100%;
+    height: 120px;
+    background: linear-gradient(
+      160deg,
+      oklch(0.55 0.16 var(--mp-hue)),
+      oklch(0.38 0.1 var(--mp-hue))
+    );
+  }
+
+  .pf-banner img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .pf-veil {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: oklch(0 0 0 / 0.55);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 550;
+    opacity: 0;
+    transition: opacity var(--dur-fast) var(--ease-standard);
+  }
+
+  .pf-shot:hover .pf-veil,
+  .pf-shot:focus-visible .pf-veil {
+    opacity: 1;
+  }
+
+  /* Nothing to reveal, so the veil stays down and the cursor says so. */
+  .pf-shot:disabled .pf-veil {
+    display: none;
+  }
+
+  /* The face overlaps the banner, and the name sits beside it — the same
+     arrangement the mini profile uses. */
+  .pf-face {
+    display: flex;
+    align-items: flex-end;
+    gap: 14px;
+    padding: 0 16px;
+  }
+
+  .pf-shot-av {
+    flex: none;
+    margin-top: -32px;
+    border-radius: 50%;
+    box-shadow: 0 0 0 6px var(--surface-raised);
+  }
+
+  .pf-shot-av .pf-veil {
+    border-radius: 50%;
+  }
+
+  .pf-face-txt {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding-bottom: 2px;
+  }
+
+  .pf-face-txt b {
+    font-size: 17px;
+    font-weight: 650;
+    line-height: 1.2;
+    overflow-wrap: anywhere;
+  }
+
+  .pf-face-txt span {
+    font-size: 12.5px;
+    color: var(--text-faint);
+  }
+
+  .pf-bio {
+    min-height: 120px;
+  }
+
+  .pf-preview-bio {
+    padding: 10px 16px 0;
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: var(--text-muted);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .pf-preview-bio strong {
+    color: var(--text);
+    font-weight: 650;
+  }
+
+  .pf-preview-bio a {
+    color: var(--accent-text);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .pf-count {
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--text-faint);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- GŁOS I WIDEO ---------- */
+  /*
+   * Hearing yourself: a button and one bar.
+   *
+   * The bar fills with the level and changes colour on `speaking`, which is the
+   * detector's own verdict — so the sensitivity dial below it is being tuned
+   * against the line it actually moves, not against a decorative meter.
+   */
+  .mic-test {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .mic-test .btn-ghost {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  /* Running: the button is the only thing holding the microphone open, so it
+     stops looking like an invitation and starts looking like a state. */
+  .mic-test .btn-ghost.on {
+    border-color: var(--accent-quiet);
+    background: var(--accent-soft);
+    color: var(--accent-text);
+  }
+
+  .sc .btn-ghost:has(svg) {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  .sc .btn-ghost.on {
+    border-color: var(--accent-quiet);
+    background: var(--accent-soft);
+    color: var(--accent-text);
+  }
+
+  .output-status {
+    margin-top: 8px;
+  }
+
+  /*
+   * Choosing an arrival sound: the list and the way to hear it, side by side.
+   * A sound picked from a name alone is a sound nobody has heard, so the
+   * audition button never wraps away from the select it belongs to.
+   */
+  /* Apart from the profile form above it: it saves on its own, the moment it
+     changes, and must not read as one more field of that form. */
+  .acc-join-sound {
+    margin-top: 28px;
+  }
+
+  .join-sound-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .join-sound-row .set-select {
+    flex: 1 1 220px;
+  }
+
+  .join-sound-row .btn-ghost {
+    flex: none;
+  }
+
+  .mic-bar {
+    flex: 1;
+    min-width: 0;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--surface-field);
+    overflow: hidden;
+  }
+
+  .mic-bar {
+    position: relative;
+  }
+
+  .mic-bar i {
+    display: block;
+    height: 100%;
+    width: 0;
+    border-radius: 999px;
+    background: var(--line-strong);
+    /* Fast enough to feel like the sound, slow enough not to strobe: the
+       detector publishes in eighths, so every step is a visible jump. */
+    transition:
+      width 90ms linear,
+      background var(--dur-fast) var(--ease-standard);
+  }
+
+  .mic-bar.live i {
+    background: var(--accent);
+  }
+
+  /* The peak: a hairline that leads the fill and falls back to it. Rises with
+     the sound and eases on the way down, which is the shape of the thing it is
+     describing. */
+  .mic-bar u {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2px;
+    margin-left: -2px;
+    border-radius: 1px;
+    background: var(--text-faint);
+    transition: left 120ms var(--ease-standard);
+  }
+
+  .mic-bar.live u {
+    background: var(--accent-text);
+  }
+
+  .mic-recapture {
+    margin: 14px 0 0;
+  }
+
+  .mic-truth {
+    margin-top: 12px;
+  }
+
+  /* The one destructive thing on the pane, so it keeps the settings' own
+     danger row rather than inventing a shape of its own. */
+  .mic-reset {
+    margin-top: 4px;
+  }
+
+  .mic-reset .btn-ghost,
+  .mic-reset .btn-danger {
+    flex: none;
+  }
+
+  .vad-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .vad-range {
+    flex: 1;
+    min-width: 0;
+    accent-color: var(--accent);
+  }
+
+  .vad-value {
+    flex: none;
+    min-width: 44px;
+    text-align: right;
+    font-size: 13px;
+    color: var(--text-muted);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .voice-eq-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 24px;
+  }
+
+  .voice-eq-control {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 10px;
+    padding: 3px 0 15px;
+    cursor: pointer;
+  }
+
+  .voice-eq-control:nth-child(n + 3) {
+    padding-top: 15px;
+    border-top: 1px solid var(--line-subtle);
+  }
+
+  .voice-eq-control.wide {
+    grid-column: 1 / -1;
+  }
+
+  .voice-eq-copy {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .voice-eq-copy b {
+    font-size: 13.5px;
+    font-weight: 550;
+  }
+
+  .voice-eq-copy small {
+    overflow: hidden;
+    color: var(--text-faint);
+    font-size: 11.5px;
+    line-height: 1.35;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .voice-eq-control:focus-within .voice-eq-copy b {
+    color: var(--accent-text);
+  }
+
+  .camera-preview {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    max-height: 300px;
+    overflow: hidden;
+    border: 1px solid var(--line-subtle);
+    border-radius: var(--radius-md);
+    background: var(--surface-field);
+  }
+
+  .camera-preview video {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .camera-preview:not(.on) video {
+    visibility: hidden;
+  }
+
+  .camera-empty {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: var(--text-faint);
+    font-size: 12.5px;
+  }
+
+  .camera-empty svg {
+    color: var(--text-muted);
+  }
+
+  .camera-controls {
+    margin-top: 18px;
+  }
+
+  /* ---------- SKRÓTY KLAWISZOWE ---------- */
+  .kb-list {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .kb-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 10px 0;
+  }
+
+  .kb-row + .kb-row {
+    border-top: 1px solid var(--line-subtle);
+  }
+
+  .kb-keys {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: 128px;
+  }
+
+  .kb-key {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 26px;
+    padding: 0 8px;
+    border-radius: var(--radius-sm);
+    background: var(--surface-pop);
+    border: 1px solid var(--line);
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    color: var(--text-muted);
+  }
+
+  .kb-what {
+    font-size: 13px;
+    color: var(--text-muted);
+    line-height: 1.45;
+  }
+
+  .kb-edit-row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 10px 20px;
+    padding: 14px 0;
+  }
+
+  .kb-action-copy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+
+  .kb-action-copy b {
+    font-size: 13.5px;
+    font-weight: 550;
+    color: var(--text);
+  }
+
+  .kb-action-copy > span {
+    max-width: 58ch;
+    font-size: 12.5px;
+    line-height: 1.45;
+    color: var(--text-faint);
+  }
+
+  .kb-binding-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .kb-record {
+    min-width: 176px;
+    min-height: 38px;
+    padding: 5px 10px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    background: var(--surface-pop);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    color: var(--text-muted);
+    transition:
+      border-color var(--dur-fast) var(--ease-standard),
+      background var(--dur-fast) var(--ease-standard),
+      color var(--dur-fast) var(--ease-standard);
+  }
+
+  .kb-record:hover {
+    border-color: var(--line-strong);
+    background: var(--surface-overlay);
+    color: var(--text);
+  }
+
+  .kb-record.recording {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+    color: var(--accent-text);
+  }
+
+  .kb-record .kb-key {
+    height: 24px;
+    background: var(--surface-raised);
+  }
+
+  .kb-listening,
+  .kb-unassigned {
+    font-size: 12px;
+    font-weight: 550;
+  }
+
+  .kb-unassigned {
+    color: var(--text-faint);
+  }
+
+  .kb-clear {
+    min-width: 70px;
+  }
+
+  .kb-clear:disabled,
+  .kb-reset-row .btn-ghost:disabled {
+    opacity: 0.42;
+    cursor: default;
+  }
+
+  .kb-error {
+    grid-column: 1 / -1;
+    font-size: 12.5px;
+    line-height: 1.4;
+    color: var(--danger-text);
+  }
+
+  .kb-reset-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding-top: 14px;
+    border-top: 1px solid var(--line-subtle);
+  }
+
+  .kb-reset-row > span {
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--text-faint);
+  }
+
+  @media (max-width: 767px) {
+    .voice-eq-grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    /* A range is direct manipulation on touch. The native track can stay
+       visually slim, but its input box must be tall enough to grab without
+       landing on the output beside it. */
+    .vad-range {
+      min-height: 44px;
+    }
+
+    .voice-eq-control:nth-child(n + 2) {
+      padding-top: 15px;
+      border-top: 1px solid var(--line-subtle);
+    }
+
+    .voice-eq-control.wide {
+      grid-column: auto;
+    }
+
+    /* In the one-column phone layout the explanation has room to wrap. An
+       ellipsis here hid the difference between adjacent audio controls. */
+    .voice-eq-copy small {
+      overflow: visible;
+      text-overflow: clip;
+      white-space: normal;
+    }
+
+    .kb-row {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 6px;
+    }
+
+    .kb-edit-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 10px;
+    }
+
+    .kb-binding-actions {
+      width: 100%;
+      justify-content: flex-start;
+    }
+
+    .kb-record {
+      flex: 1;
+      min-width: 0;
+      min-height: 44px;
+    }
+
+    .kb-reset-row {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+  }
+  /*
+   * ---------- PANEL KONTA ----------
+   *
+   * Slides out of the account row, inside the rail. `.dock-pop` is that move
+   * already — anchored to its corner and animated up from below — but the
+   * parts inside come from the mini profile: the field has the card's message
+   * box shape, and the tiles sit on the same `--surface-pop` step the card's
+   * facts do.
+   *
+   * No face and no banner: your own picture, seen from your own row, tells you
+   * nothing you did not know, and this is a place to type in.
+   */
+  .acc-pop {
+    left: 0;
+    width: var(--rail-w);
+    bottom: calc(100% - 14px);
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+    padding: 12px;
+    /* The card's elevation, not the dock's: one system per element, so the
+       shadow arrives and the border goes. */
+    border: none;
+    box-shadow: var(--elev-drawer);
+    border-radius: var(--radius-lg);
+  }
+
+  /* ---------- TWÓJ STATUS ---------- */
+  .acc-cap {
+    padding: 0 2px 6px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+
+  .acc-mood {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 6px 6px 10px;
+    border-radius: var(--radius-md);
+    background: var(--surface-field);
+    border: 1px solid var(--line);
+    transition: border-color var(--dur-fast) var(--ease-standard);
+  }
+
+  .acc-mood:focus-within {
+    border-color: var(--line-strong);
+  }
+
+  .acc-mood textarea {
+    flex: 1;
+    min-width: 0;
+    height: 48px;
+    resize: none;
+    padding: 5px 0;
+    background: none;
+    border: none;
+    outline: none;
+    font: inherit;
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--text);
+    overflow-y: auto;
+  }
+
+  /* ---------- EDYTOR O MNIE W USTAWIENIACH ---------- */
+  .pf-bio-wrap {
+    position: relative;
+  }
+
+  .pf-bio-editor {
+    display: flex;
+    flex-direction: column;
+    border-radius: var(--radius-md);
+    background: var(--surface-field);
+    border: 1px solid var(--line);
+    outline: 2px solid transparent;
+    outline-offset: 2px;
+    transition: border-color var(--dur-fast) var(--ease-standard);
+    overflow: hidden;
+  }
+
+  .pf-bio-editor:focus-within {
+    border-color: var(--line-strong);
+    outline-color: var(--accent-quiet);
+  }
+
+  .pf-bio-tools {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    min-height: 40px;
+    padding: 3px 5px;
+    border-bottom: 1px solid var(--line-subtle);
+    color: var(--text-faint);
+  }
+
+  .pf-format {
+    width: 30px;
+    height: 30px;
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    color: inherit;
+    transition:
+      background var(--dur-fast) var(--ease-standard),
+      color var(--dur-fast) var(--ease-standard);
+  }
+
+  .pf-format.strong {
+    font-weight: 750;
+  }
+
+  .pf-format.emphasis {
+    font-family: serif;
+    font-size: 16px;
+    font-style: italic;
+    font-weight: 650;
+  }
+
+  .pf-format:hover:not(:disabled),
+  .pf-format.on {
+    background: var(--surface-overlay);
+    color: var(--text);
+  }
+
+  .pf-format:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .pf-tool-spacer {
+    flex: 1;
+  }
+
+  .pf-bio-editor textarea {
+    display: block;
+    width: 100%;
+    min-height: 120px;
+    max-height: 280px;
+    resize: vertical;
+    padding: 12px;
+    background: none;
+    border: none;
+    outline: none;
+    font: inherit;
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--text);
+  }
+
+  .pf-bio-editor textarea::placeholder {
+    color: var(--text-faint);
+  }
+
+  .pf-bio-preview-text {
+    min-height: 120px;
+    padding: 12px;
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: var(--text-muted);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .pf-bio-preview-text > span {
+    color: var(--text-faint);
+  }
+
+  .pf-bio-preview-text strong {
+    color: var(--text);
+    font-weight: 650;
+  }
+
+  .pf-bio-preview-text a {
+    color: var(--accent-text);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .pf-emoji-pop {
+    position: absolute;
+    top: 44px;
+    right: 4px;
+    z-index: 44;
+  }
+
+  .pf-bio-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 28px;
+    padding: 5px 10px;
+    border-top: 1px solid var(--line-subtle);
+    font-size: 11px;
+    color: var(--text-faint);
+  }
+
+  .pf-bio-count {
+    margin-left: auto;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .acc-save {
+    width: 30px;
+    height: 30px;
+    flex: none;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-faint);
+    transition:
+      background var(--dur-fast) var(--ease-standard),
+      color var(--dur-fast) var(--ease-standard);
+  }
+
+  .acc-save:hover:not(:disabled) {
+    background: var(--surface-overlay);
+    color: var(--accent-text);
+  }
+
+  .acc-save:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  .acc-picks {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 3px;
+    margin-bottom: 6px;
+  }
+
+  .acc-pick {
+    width: 28px;
+    height: 30px;
+    flex: none;
+    border-radius: var(--radius-sm);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    line-height: 1;
+    transition:
+      background var(--dur-fast) var(--ease-standard),
+      box-shadow var(--dur-fast) var(--ease-standard);
+  }
+
+  .acc-pick:hover {
+    background: var(--surface-overlay);
+  }
+
+  .acc-pick.on {
+    background: var(--surface-overlay);
+    box-shadow: inset 0 0 0 1px var(--accent-quiet);
+  }
+
+  .acc-emoji-card {
+    overflow: hidden;
+    background: none;
+    box-shadow: none;
+  }
+
+  /* ---------- DOSTĘPNOŚĆ ---------- */
+  /* Four quick choices in a 2×2 grid: only the presence dot and its name. */
+  .acc-states {
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid var(--line-subtle);
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4px;
+  }
+
+  .acc-state {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    min-height: 38px;
+    padding: 7px 9px;
+    border-radius: var(--radius-md);
+    text-align: left;
+    transition:
+      background var(--dur-fast) var(--ease-standard),
+      box-shadow var(--dur-fast) var(--ease-standard);
+  }
+
+  .acc-state-label {
+    min-width: 0;
+    flex: 1;
+    font-size: 11px;
+    font-weight: 550;
+    line-height: 1.2;
+    color: var(--text-muted);
+    overflow-wrap: normal;
+  }
+
+  .acc-state:hover {
+    background: var(--surface-overlay);
+  }
+
+  .acc-state:hover .acc-state-label {
+    color: var(--text);
+  }
+
+  /* The state you are in: a keyline rather than a fill, so a hover on another
+     row cannot look like the choice has moved. */
+  .acc-state.on {
+    background: var(--surface-overlay);
+    box-shadow: inset 0 0 0 1px var(--accent-quiet);
+  }
+
+  .acc-state.on .acc-state-label {
+    color: var(--text);
+  }
+
+  /* ---------- STOPKA ---------- */
+  /* What is left of the menu: the two ways out of the panel, as icons in the
+     corner rather than as rows competing with the two things above them. */
+  .acc-foot {
+    margin-top: 10px;
+    padding-top: 8px;
+    border-top: 1px solid var(--line-subtle);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .acc-note {
+    flex: 1;
+    min-width: 0;
+    font-size: 11px;
+    line-height: 1.35;
+    color: var(--text-faint);
+  }
+
+  /* Without a note beside them the icons still belong on the right. */
+  .acc-foot .icon-btn:first-child {
+    margin-left: auto;
+  }
+
+  .acc-out:hover {
+    background: var(--danger-soft);
+    color: var(--danger-text);
+  }
+
+  @media (max-width: 767px) {
+    /* The account row lives inside the navigation rail. On a 320px phone that
+       rail is intentionally only 216px wide, which is too narrow for a status
+       editor. Let the panel borrow the server column and the free viewport
+       space while keeping a safe gutter on both sides. */
+    .acc-pop {
+      left: calc(
+        max(12px, env(safe-area-inset-left)) -
+        env(safe-area-inset-left) -
+        var(--servers-rail-w)
+      );
+      width: min(
+        420px,
+        calc(
+          100vw - max(12px, env(safe-area-inset-left)) -
+          max(12px, env(safe-area-inset-right))
+        )
+      );
+      max-height: calc(
+        100dvh - env(safe-area-inset-top) -
+        env(safe-area-inset-bottom) - 88px
+      );
+      overscroll-behavior: contain;
+    }
+
+    /* The server column normally sits one layer above the channel drawer. The
+       widened card deliberately crosses that boundary, so raise its owning
+       stacking context only while the card is visible. */
+    .rail:has(.acc-pop:not([hidden])) {
+      z-index: 42;
+    }
+
+    .acc-mood textarea,
+    .pf-bio-editor textarea {
+      font-size: 16px;
+    }
+  }
+
+  /* Touch has no discovery hover. Keep the profile preview itself intact,
+     but leave the edit affordance visible where a finger can act on it. */
+  @media (hover: none) {
+    .pf-shot:not(:disabled) .pf-veil {
+      opacity: 1;
+      align-items: flex-end;
+      justify-content: flex-end;
+      padding: 10px 12px;
+      background: linear-gradient(180deg, transparent 38%, oklch(0 0 0 / 0.72));
+    }
+
+    .pf-shot-av:not(:disabled) .pf-veil {
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      background: oklch(0 0 0 / 0.46);
+    }
+  }
+
+  @media (pointer: coarse) {
+    .acc-mood textarea,
+    .pf-bio-editor textarea {
+      font-size: 16px;
+    }
+
+    .pf-format,
+    .acc-pick,
+    .acc-save {
+      width: 44px;
+      height: 44px;
+    }
+
+    .acc-state,
+    .kb-record,
+    .vad-range {
+      min-height: 44px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pf-format,
+    .acc-pop {
+      transition: none;
+      animation: none;
+    }
+  }
+}

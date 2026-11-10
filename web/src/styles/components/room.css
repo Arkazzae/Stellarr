@@ -1,0 +1,56 @@
+@layer components {
+  /* ---------- ROOM ---------- */
+  .room{
+    --cp-w:320px;
+    --thread-w:480px;
+    position:relative;
+    background:var(--surface-room);
+    display:grid;
+    grid-template-columns:minmax(0, 1fr) 0;
+    grid-template-rows:52px minmax(0, 1fr);
+    min-width:0;
+    min-height:0;
+    /* A width transition rewraps every visible message on each animation
+       frame. That continuously changes virtual-row heights and makes a thread
+       visibly jump while it is being pinned to the bottom. Switch desktop
+       tracks atomically; narrow layouts still use the transform drawer below,
+       which does not reflow the transcript. */
+  }
+  .room.channel-panel-open{grid-template-columns:minmax(0, 1fr) var(--cp-w)}
+  .room.thread-panel-open{grid-template-columns:minmax(0, 1fr) var(--thread-w)}
+  .room.thread-panel-open.thread-panel-expanded{grid-template-columns:0 minmax(0, 1fr)}
+  .room-header{
+    position:relative;grid-column:1;grid-row:1;height:52px;min-width:0;overflow:hidden;border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:12px;padding:0 20px;
+  }
+  .burger{display:none}
+  .room-header .glyph{color:var(--text-faint)}
+  .room-header h2{font-size:16px;font-weight:550;line-height:1.4;white-space:nowrap}
+  .room-header .topic{
+    font-size:13px;color:var(--text-faint);
+    border-left:1px solid var(--line-subtle);padding-left:12px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:0;
+  }
+  .roster-toggle{
+    display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 10px;
+    border-radius:var(--radius-sm);font-size:13px;color:var(--text-muted);
+    font-variant-numeric:tabular-nums;flex:none;
+    transition:background var(--dur-fast) var(--ease-standard);
+  }
+  .roster-toggle:hover{background:var(--surface-overlay);color:var(--text)}
+  .roster-toggle[aria-pressed="true"]{background:var(--surface-overlay);color:var(--text)}
+
+  /* widoki: tekst / głos — obok panelu kanału, patrz channel-panel.css */
+  /* Responsive controls inside a view care about the room that is actually
+     left after rails and drawers, not the browser width. This container lets
+     dense surfaces such as the call bar collapse as soon as their own column
+     becomes narrow, including when a desktop side panel opens. */
+  .view{
+    position:relative;flex:1;min-width:0;min-height:0;display:none;flex-direction:column;
+    container:room-view / inline-size;
+    animation:viewIn var(--dur-slow) var(--ease-standard);
+  }
+  .view.active{display:flex}
+  @keyframes viewIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+}

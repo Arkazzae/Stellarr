@@ -1,0 +1,283 @@
+/*
+ * ============================================================================
+ * RECIPE — how a Stellarr theme is built
+ * ============================================================================
+ *
+ * A preset supplies the complete dark palette through `--palette-*`
+ * properties. The runtime writes them before first paint from the registry in
+ * `design/themes.ts`; the values below are the Midnight fallback for storage-
+ * blocked and script-disabled clients.
+ *
+ * Two axes select a ramp:
+ *
+ *   [data-scheme="dark" | "light"]     lightness direction
+ *   [data-contrast="high"]             optional AAA-leaning override
+ *
+ * Structural tokens (radii, durations, sizes, measures) are scheme-independent
+ * and live at the bottom of this file — a theme never moves layout.
+ * ============================================================================
+ */
+
+:root {
+  /* Midnight fallbacks. Keep these in sync with `PALETTES[0]`. */
+  --palette-accent: #5865f2;
+  --palette-on-accent: #ffffff;
+  --palette-background-darkest: #09090b;
+  --palette-background-dark: #18181b;
+  --palette-background-primary: #222327;
+  --palette-background-secondary: #18181b;
+  --palette-background-tertiary: #1e1f23;
+  --palette-background-hover: #27272a;
+  --palette-background-active: #33343a;
+  --palette-background-floating: #101113;
+  --palette-text-normal: #f3f4f6;
+  --palette-text-muted: #b9bec9;
+  --palette-text-faint: #747b89;
+  --palette-text-faint-accessible: #9aa0ad;
+  --palette-border-subtle: rgb(255 255 255 / 0.06);
+  --palette-border-default: #292e39;
+  --palette-border-strong: rgb(255 255 255 / 0.2);
+  --palette-success: #3dd68c;
+  --palette-warning: #f0b232;
+  --palette-danger: #f2555a;
+  --palette-info: #6ea8fe;
+
+  /* The light recipe remains derived so every named dark preset also has a
+     calm light counterpart. `palettes.css` only tunes these light ramps. */
+  --h-neutral: 277;
+  --c-neutral: 1;
+}
+
+/* ---------------------------------------------------------------- dark ---- */
+
+:root,
+[data-scheme="dark"] {
+  color-scheme: dark;
+
+  --surface-canvas: var(--palette-background-darkest);
+  --surface-dark: var(--palette-background-dark);
+  --surface-base: var(--palette-background-primary);
+  --surface-raised: var(--palette-background-secondary);
+  /* Structural surfaces are named by responsibility. Layout components should
+     not have to guess whether a flat sidebar is conceptually "raised". */
+  --surface-room: var(--palette-background-primary);
+  --surface-sidebar: var(--palette-background-secondary);
+  --surface-field: var(--palette-background-tertiary);
+  --surface-overlay: var(--palette-background-hover);
+  --surface-active: var(--palette-background-active);
+
+  --line-subtle: var(--palette-border-subtle);
+  --line: var(--palette-border-default);
+  --line-strong: var(--palette-border-strong);
+
+  --text: var(--palette-text-normal);
+  --text-muted: var(--palette-text-muted);
+  /* The raw faint swatch remains part of the exported palette. Small UI copy
+     uses its contrast-safe partner, because several familiar app palettes make
+     their decorative faint grey too dim for 11–13px text. */
+  --text-faint: var(--palette-text-faint-accessible);
+
+  --accent: var(--palette-accent);
+  --accent-hover: color-mix(in oklab, var(--palette-accent) 82%, white);
+  --accent-quiet: color-mix(in oklab, var(--palette-accent) 82%, black);
+  --accent-text: color-mix(in oklab, var(--palette-accent) 38%, white);
+  --accent-soft: color-mix(in srgb, var(--palette-accent) 14%, transparent);
+  --on-accent: var(--palette-on-accent);
+
+  --danger-text: color-mix(in oklab, var(--palette-danger) 58%, white);
+  --danger-line: var(--palette-danger);
+  --danger-soft: color-mix(in srgb, var(--palette-danger) 14%, transparent);
+  --live: color-mix(in oklab, var(--palette-success) 64%, white);
+  --live-line: var(--palette-success);
+  --warn-text: color-mix(in oklab, var(--palette-warning) 72%, white);
+  --warn-line: var(--palette-warning);
+  --info-text: color-mix(in oklab, var(--palette-info) 58%, white);
+  --info-line: var(--palette-info);
+
+  /* Shadows — one elevation system, expressed as a colour so light can differ. */
+  --shadow-color: 0 0 0;
+  --elev-pop: 0 4px 14px oklch(var(--shadow-color) / 0.45);
+  --elev-drawer: 0 8px 24px oklch(var(--shadow-color) / 0.5);
+  --elev-modal: 0 34px 90px oklch(var(--shadow-color) / 0.62);
+  --scrim: oklch(var(--shadow-color) / 0.5);
+  --scrim-strong: oklch(var(--shadow-color) / 0.55);
+
+  /* Veils sit *over* media, so they follow the media surface, not the page. */
+  --veil: oklch(0.145 0 0 / 0.75);
+  --veil-soft: oklch(0.145 0 0 / 0.12);
+  --veil-strong: oklch(0.12 0 0 / 0.92);
+  --track: oklch(1 0 0 / 0.18);
+
+  /* Media surfaces sit below the canvas so video reads as a hole in the page. */
+  --surface-stage: var(--palette-background-darkest);
+  /* One step under `raised`: popovers, the dock pill row, code blocks. */
+  --surface-pop: var(--palette-background-floating);
+  /* The barely-there wash under a hovered transcript group. */
+  --surface-hover: color-mix(in srgb, var(--palette-background-hover) 58%, transparent);
+
+  /* Hang up is the one control allowed to be loud. */
+  --hang: oklch(0.55 0.19 25);
+  --hang-hover: oklch(0.6 0.2 25);
+  --on-hang: oklch(0.99 0.01 25);
+
+  --live-glow: color-mix(in srgb, var(--palette-success) 16%, transparent);
+
+  /*
+   * Presence — four states, one flat colour each, on the shared semantic hues.
+   * Every dot in the app reads these and nothing else: no gradient, no hollow
+   * ring, so the four are told apart by colour and by the word beside them.
+   */
+  --presence-online: var(--palette-success);
+  --presence-idle: var(--palette-warning);
+  --presence-dnd: var(--palette-danger);
+  --presence-offline: var(--palette-text-faint);
+
+  /* Syntax highlighting in code attachments. */
+  --syntax-keyword: var(--accent-text);
+  --syntax-string: color-mix(in oklab, var(--palette-success) 62%, white);
+  --syntax-comment: var(--text-faint);
+  --syntax-number: color-mix(in oklab, var(--palette-warning) 70%, white);
+  --syntax-type: color-mix(in oklab, var(--palette-info) 62%, white);
+  --syntax-function: color-mix(in oklab, var(--palette-accent) 42%, white);
+}
+
+/* --------------------------------------------------------------- light ---- */
+
+[data-scheme="light"] {
+  color-scheme: light;
+
+  --surface-canvas: oklch(0.975 calc(0.004 * var(--c-neutral)) var(--h-neutral));
+  --surface-base: oklch(0.995 calc(0.002 * var(--c-neutral)) var(--h-neutral));
+  --surface-raised: oklch(0.965 calc(0.005 * var(--c-neutral)) var(--h-neutral));
+  --surface-room: var(--surface-base);
+  --surface-sidebar: var(--surface-raised);
+  --surface-overlay: oklch(0.928 calc(0.008 * var(--c-neutral)) var(--h-neutral));
+  --surface-field: oklch(0.945 calc(0.007 * var(--c-neutral)) var(--h-neutral));
+
+  --line-subtle: oklch(0.905 calc(0.008 * var(--c-neutral)) var(--h-neutral));
+  --line: oklch(0.852 calc(0.012 * var(--c-neutral)) var(--h-neutral));
+  --line-strong: oklch(0.72 calc(0.018 * var(--c-neutral)) var(--h-neutral));
+
+  --text: oklch(0.235 calc(0.012 * var(--c-neutral)) var(--h-neutral));
+  --text-muted: oklch(0.44 calc(0.014 * var(--c-neutral)) var(--h-neutral));
+  --text-faint: oklch(0.5 calc(0.016 * var(--c-neutral)) var(--h-neutral));
+
+  --accent: color-mix(in oklab, var(--palette-accent) 76%, black);
+  --accent-hover: color-mix(in oklab, var(--palette-accent) 64%, black);
+  --accent-quiet: color-mix(in oklab, var(--palette-accent) 70%, black);
+  --accent-text: color-mix(in oklab, var(--palette-accent) 56%, black);
+  --accent-soft: color-mix(in srgb, var(--palette-accent) 12%, transparent);
+  --on-accent: #ffffff;
+
+  --danger-text: color-mix(in oklab, var(--palette-danger) 72%, black);
+  --danger-line: var(--palette-danger);
+  --danger-soft: color-mix(in srgb, var(--palette-danger) 12%, transparent);
+  --live: color-mix(in oklab, var(--palette-success) 72%, black);
+  --live-line: var(--palette-success);
+  --warn-text: color-mix(in oklab, var(--palette-warning) 62%, black);
+  --warn-line: var(--palette-warning);
+  --info-text: color-mix(in oklab, var(--palette-info) 66%, black);
+  --info-line: var(--palette-info);
+
+  --shadow-color: 0.3 0.02 var(--h-neutral);
+  --elev-pop: 0 4px 14px oklch(var(--shadow-color) / 0.14);
+  --elev-drawer: 0 8px 24px oklch(var(--shadow-color) / 0.18);
+  --elev-modal: 0 34px 90px oklch(var(--shadow-color) / 0.24);
+  --scrim: oklch(var(--shadow-color) / 0.32);
+  --scrim-strong: oklch(var(--shadow-color) / 0.38);
+
+  /* Media stays dark in a light theme — a video is a hole in the page either
+     way, so the veils over it do not invert. */
+  --veil: oklch(0.145 0 0 / 0.75);
+  --veil-soft: oklch(0.145 0 0 / 0.12);
+  --veil-strong: oklch(0.12 0 0 / 0.92);
+  --track: oklch(1 0 0 / 0.24);
+
+  --surface-stage: oklch(0.9 calc(0.006 * var(--c-neutral)) var(--h-neutral));
+  --surface-pop: oklch(0.985 calc(0.004 * var(--c-neutral)) var(--h-neutral));
+  --surface-hover: oklch(0.955 calc(0.006 * var(--c-neutral)) var(--h-neutral));
+
+  --hang: oklch(0.55 0.19 25);
+  --hang-hover: oklch(0.48 0.2 25);
+  --on-hang: oklch(0.99 0.01 25);
+
+  --live-glow: color-mix(in srgb, var(--palette-success) 16%, transparent);
+
+  /* Darker and no less saturated: these sit on a pale surface. */
+  --presence-online: color-mix(in oklab, var(--palette-success) 74%, black);
+  --presence-idle: color-mix(in oklab, var(--palette-warning) 72%, black);
+  --presence-dnd: color-mix(in oklab, var(--palette-danger) 82%, black);
+  --presence-offline: oklch(0.68 calc(0.012 * var(--c-neutral)) var(--h-neutral));
+
+  --syntax-keyword: var(--accent-text);
+  --syntax-string: color-mix(in oklab, var(--palette-success) 64%, black);
+  --syntax-comment: var(--text-faint);
+  --syntax-number: color-mix(in oklab, var(--palette-warning) 62%, black);
+  --syntax-type: color-mix(in oklab, var(--palette-info) 66%, black);
+  --syntax-function: color-mix(in oklab, var(--palette-accent) 58%, black);
+}
+
+/* ------------------------------------------------------- high contrast ---- */
+/*
+ * Not a separate theme: an override applied on top of whichever scheme is
+ * active. Only text and lines move — surfaces and accents keep their identity.
+ */
+
+[data-contrast="high"][data-scheme="dark"],
+[data-contrast="high"]:not([data-scheme="light"]) {
+  --text: oklch(1 0 0);
+  --text-muted: oklch(0.9 calc(0.006 * var(--c-neutral)) var(--h-neutral));
+  --text-faint: oklch(0.855 calc(0.008 * var(--c-neutral)) var(--h-neutral));
+  --line-subtle: oklch(0.38 calc(0.014 * var(--c-neutral)) var(--h-neutral));
+  --line: oklch(0.48 calc(0.018 * var(--c-neutral)) var(--h-neutral));
+  --line-strong: oklch(0.62 calc(0.022 * var(--c-neutral)) var(--h-neutral));
+  --accent-text: color-mix(in oklab, var(--palette-accent) 22%, white);
+  --danger-text: color-mix(in oklab, var(--palette-danger) 32%, white);
+  --live: color-mix(in oklab, var(--palette-success) 30%, white);
+}
+
+[data-contrast="high"][data-scheme="light"] {
+  --text: oklch(0.14 0 0);
+  --text-muted: oklch(0.3 calc(0.012 * var(--c-neutral)) var(--h-neutral));
+  --text-faint: oklch(0.36 calc(0.014 * var(--c-neutral)) var(--h-neutral));
+  --line-subtle: oklch(0.78 calc(0.01 * var(--c-neutral)) var(--h-neutral));
+  --line: oklch(0.66 calc(0.014 * var(--c-neutral)) var(--h-neutral));
+  --line-strong: oklch(0.5 calc(0.018 * var(--c-neutral)) var(--h-neutral));
+  --accent-text: color-mix(in oklab, var(--palette-accent) 48%, black);
+  --danger-text: color-mix(in oklab, var(--palette-danger) 62%, black);
+  --live: color-mix(in oklab, var(--palette-success) 58%, black);
+}
+
+/* ------------------------------------------------------------ structure --- */
+/*
+ * Scheme-independent. A theme changes colour, never geometry or timing.
+ */
+
+/*
+ * Fonts, radii and easing live in `@theme` (see ../theme.css) because Tailwind
+ * owns those namespaces and emits them here anyway. What is left is everything
+ * Tailwind has no namespace for.
+ */
+:root {
+  /* One avatar scale in the whole app. */
+  --av-xs: 24px;
+  --av-sm: 32px;
+  --av-md: 40px;
+  --av-xl: 64px;
+
+  /* Two caps, not one: 72ch keeps prose readable, 860px lets images breathe. */
+  --room-max: 860px;
+  --measure: 72ch;
+
+  /* Layout constants the shell grid and the drawers both read. */
+  --rail-w: 248px;
+  --roster-w: 264px;
+  --roster-mini-w: 60px;
+  /* The servers / DM column, when it is open. */
+  --servers-rail-w: 68px;
+  --header-h: 52px;
+
+  --dur-fast: 90ms;
+  --dur-base: 140ms;
+  --dur-slow: 200ms;
+}

@@ -1,0 +1,204 @@
+@layer components {
+  /*
+   * ---------- AWATAR I KROPKA STATUSU ----------
+   *
+   * One face, and one status dot beside it, for the whole app.
+   *
+   * Every place that shows a person — the rail's voice occupants, the roster
+   * and its collapsed column, the transcript, the friends list, the DM rail,
+   * the settings tables, the voice stage, the profile card and the account
+   * panes — renders `.av`. Size, radius, the picture overlay, the speaking
+   * ring and the four presence states are declared here once, because they
+   * used to be declared across eight files that agreed by hand: three names
+   * for one face (`.avatar`, `.mini-avatar`, `.big-avatar`), a fourth hand
+   * rolled in the transcript (`.g-avatar`), the 64px block written out three
+   * times, two sizes off the scale, and two class names for one dot.
+   *
+   * What a context may still say about an avatar: which of the four sizes it
+   * wants, and where it sits. Nothing else.
+   */
+  .av {
+    /* The size class sets these; everything else is derived from them. */
+    --av-size: var(--av-sm);
+    --av-face: 12px;
+    --av-dot: 10px;
+    --av-dot-line: 2px;
+
+    position: relative;
+    flex: none;
+    width: var(--av-size);
+    height: var(--av-size);
+    /* One radius decision in one place. It used to be forced from the
+       redesign layer in `chrome.css` with `!important` over four names. */
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--av-face);
+    font-weight: 600;
+    line-height: 1;
+    /* The initials sit on the person's own hue, which the component publishes
+       as `--person-bg`. The fallback is the neutral disc for anything without
+       an identity to derive a colour from. */
+    color: var(--on-accent);
+    background: var(--person-bg, var(--surface-overlay));
+    -webkit-user-select: none;
+    user-select: none;
+    transition: box-shadow 160ms var(--ease-standard);
+  }
+
+  /* The avatar scale from `recipe.css`, and nothing between the steps. */
+  .av-xs {
+    --av-size: var(--av-xs);
+    --av-face: 10px;
+    --av-dot: 8px;
+  }
+
+  .av-sm {
+    --av-size: var(--av-sm);
+    --av-face: 12px;
+    --av-dot: 10px;
+  }
+
+  .av-md {
+    --av-size: var(--av-md);
+    --av-face: 13px;
+    --av-dot: 12px;
+  }
+
+  .av-xl {
+    --av-size: var(--av-xl);
+    --av-face: 22px;
+    --av-dot: 16px;
+    --av-dot-line: 3px;
+  }
+
+  /*
+   * The picture is laid over the initials rather than replacing them, so one
+   * that never arrives falls back to what was already there instead of to a
+   * hole. It takes the face's radius rather than restating it.
+   */
+  .av-img {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: inherit;
+    /* The element carries `draggable={false}` as well; this is the half of it
+       WebKit and Chromium read when the press starts on the picture itself. */
+    -webkit-user-drag: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* A face that opens a profile. The hover is the only affordance it needs:
+     the row under it already lights up, and a second border would fight it. */
+  .av-btn {
+    cursor: pointer;
+  }
+
+  .av-btn:hover {
+    filter: brightness(1.08);
+  }
+
+  /*
+   * Speaking is a prop, never an ancestor's class: the roster row, the rail
+   * occupant and the mini column each used to grow their own selector for the
+   * same 2px ring. The one place that still styles a speaking face from the
+   * outside is the voice tile, which pops it rather than ringing it.
+   */
+  .av.speaking {
+    box-shadow: 0 0 0 2px var(--accent);
+  }
+
+  /* Someone who is not here. The component has already drained the hue; this
+     is the rest of the answer, for the columns with no row to dim. */
+  .av.dim {
+    opacity: 0.6;
+  }
+
+  /*
+   * ---------- KROPKA STATUSU ----------
+   *
+   * `DESIGN.md` §4: status is never colour alone. Each state is a different
+   * shape as well as a different hue — a full disc, a crescent, a disc with a
+   * bar, a hollow ring — so the app loses nothing in greyscale. The shape is
+   * cut by one pseudo-element in the colour behind the dot, which is why the
+   * keyline colour is a variable: a context on another surface sets
+   * `--pdot-line` once and the whole dot follows.
+   */
+  .pdot {
+    position: relative;
+    flex: none;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: var(--presence-offline);
+  }
+
+  .pdot::after {
+    content: "";
+    position: absolute;
+    background: var(--pdot-line, var(--surface-raised));
+  }
+
+  .pdot.online {
+    background: var(--presence-online);
+  }
+
+  /* A full disc says "here" on its own; nothing is cut out of it. */
+  .pdot.online::after {
+    display: none;
+  }
+
+  .pdot.idle {
+    background: var(--presence-idle);
+  }
+
+  /* Bitten from the top right — the disc filled past its halfway line. */
+  .pdot.idle::after {
+    top: -14%;
+    right: -14%;
+    width: 62%;
+    height: 62%;
+    border-radius: 50%;
+  }
+
+  .pdot.dnd {
+    background: var(--presence-dnd);
+  }
+
+  .pdot.dnd::after {
+    left: 17%;
+    right: 17%;
+    top: 38%;
+    height: 24%;
+    border-radius: 1px;
+  }
+
+  .pdot.offline {
+    background: var(--presence-offline);
+  }
+
+  /* Hollow: the ring is the state, and it reads as "not filled in". */
+  .pdot.offline::after {
+    inset: 24%;
+    border-radius: 50%;
+  }
+
+  /*
+   * The dot that rides a face. It scales with the avatar — a 10px dot on a
+   * 24px face was a badge, on a 64px one it was a speck — and sits just
+   * outside the circle, so the keyline separates it from the face without
+   * cutting into it.
+   */
+  .av > .pdot {
+    position: absolute;
+    right: calc(var(--av-dot) * -0.3);
+    bottom: calc(var(--av-dot) * -0.3);
+    width: var(--av-dot);
+    height: var(--av-dot);
+    border: var(--av-dot-line) solid var(--pdot-line, var(--surface-raised));
+  }
+}

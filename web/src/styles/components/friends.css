@@ -1,0 +1,1000 @@
+@layer components {
+  .dm-video-stage {
+    min-height: 220px;
+    max-height: 42%;
+    padding: 12px;
+    border-bottom: 1px solid var(--line);
+    background: var(--bg);
+  }
+  .dm-video-stage .tiles { height: 100%; }
+  /*
+   * ==========================================================================
+   * FRIENDS AND DIRECT MESSAGES
+   * ==========================================================================
+   *
+   * The messages side of the app reuses the shell rather than restating it: the
+   * rail is `.rail` with different contents, the room is `.room` with a
+   * different header, and the transcript and composer are the same components
+   * the channels use. Only the parts that genuinely differ live here.
+   *
+   * Accent stays rationed, as `DESIGN.md` requires. On this surface it marks
+   * exactly two things: the row you are on, and a request waiting for an
+   * answer. An unread count is *not* one of them — it is carried by weight and
+   * a neutral pill, so a rail with six unread threads does not turn into six
+   * warm badges competing with the send button.
+   */
+
+  /* ---------- RAIL: HEADER ---------- */
+  .dm-rail .rail-header {
+    gap: 6px;
+  }
+
+  .dm-back:active {
+    background: var(--surface-base);
+  }
+
+  .dm-home {
+    flex: 1;
+    min-width: 0;
+    height: 34px;
+    padding: 0 10px;
+    border-radius: var(--radius-sm);
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    color: var(--text-muted);
+    font-size: 14px;
+    font-weight: 550;
+    text-align: left;
+    transition:
+      background var(--dur-fast) var(--ease-standard),
+      color var(--dur-fast) var(--ease-standard);
+  }
+
+  .dm-home:hover {
+    background: var(--surface-overlay);
+    color: var(--text);
+  }
+
+  .dm-home[aria-current="page"] {
+    background: var(--accent-soft);
+    color: var(--text);
+  }
+
+  .dm-home .glyph {
+    display: inline-flex;
+    flex: none;
+    color: var(--text-faint);
+  }
+
+  .dm-home[aria-current="page"] .glyph {
+    color: var(--accent-text);
+  }
+
+  .dm-home .name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* Something is waiting for you to answer it — one of the two accent moments. */
+  .badge {
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 9px;
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent);
+    color: var(--on-accent);
+    font-size: 11px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- RAIL: SEARCH ---------- */
+  .dm-find {
+    flex: none;
+    position: relative;
+    padding: 10px;
+    border-bottom: 1px solid var(--line-subtle);
+  }
+
+  .dm-find .glyph {
+    position: absolute;
+    left: 20px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    color: var(--text-faint);
+    pointer-events: none;
+  }
+
+  .dm-find input,
+  .fr-find input {
+    width: 100%;
+    height: 32px;
+    padding: 0 10px 0 32px;
+    border-radius: var(--radius-sm);
+    background: var(--surface-field);
+    border: 1px solid transparent;
+    color: var(--text);
+    font-size: 13px;
+    transition: border-color var(--dur-fast) var(--ease-standard);
+  }
+
+  .dm-find input:hover,
+  .fr-find input:hover {
+    border-color: var(--line);
+  }
+
+  /* The browser's own clear button is a second control with no label. */
+  .dm-find input::-webkit-search-cancel-button,
+  .fr-find input::-webkit-search-cancel-button {
+    display: none;
+  }
+
+  /* ---------- RAIL: CONVERSATIONS ---------- */
+  .group-caption .cap-act {
+    width: 22px;
+    height: 22px;
+    border-radius: var(--radius-sm);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-faint);
+    transition:
+      background var(--dur-fast) var(--ease-standard),
+      color var(--dur-fast) var(--ease-standard);
+  }
+
+  .group-caption .cap-act:hover {
+    background: var(--surface-overlay);
+    color: var(--accent-text);
+  }
+
+  .dm-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .dm-item {
+    position: relative;
+  }
+
+  .dm-call-live {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent-soft);
+    color: var(--accent-text);
+  }
+
+  /* Incoming calls float above either app space without taking over the room. */
+  .dm-call-banner {
+    position: fixed;
+    z-index: 90;
+    top: max(16px, env(safe-area-inset-top));
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(420px, calc(100vw - 24px));
+    min-height: 68px;
+    padding: 10px 12px;
+    border: 1px solid var(--line-strong);
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    background: var(--surface-raised);
+    box-shadow: var(--elev-modal);
+  }
+
+  .dm-call-copy {
+    min-width: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    line-height: 1.25;
+  }
+
+  .dm-call-copy b {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .dm-call-copy span {
+    color: var(--text-muted);
+    font-size: 12px;
+  }
+
+  .dm-call-answer,
+  .dm-call-decline {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--on-accent);
+  }
+
+  .dm-call-answer {
+    background: var(--accent);
+  }
+
+  .dm-call-answer:hover {
+    background: var(--accent-hover);
+  }
+
+  .dm-call-decline {
+    background: var(--danger-line);
+  }
+
+  .dm-row {
+    width: 100%;
+    height: 44px;
+    padding: 0 8px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-align: left;
+    color: var(--text-muted);
+    transition:
+      background var(--dur-fast) var(--ease-standard),
+      color var(--dur-fast) var(--ease-standard);
+  }
+
+  .dm-row:hover {
+    background: var(--surface-overlay);
+    color: var(--text);
+  }
+
+  .dm-row[aria-current="page"] {
+    background: var(--accent-soft);
+    color: var(--text);
+  }
+
+  .dm-row[aria-current="page"]::before {
+    content: "";
+    position: absolute;
+    left: -4px;
+    top: 8px;
+    bottom: 8px;
+    width: 2px;
+    border-radius: 1px;
+    background: var(--accent-quiet);
+  }
+
+  .dm-txt {
+    min-width: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    line-height: 1.3;
+  }
+
+  .dm-txt b {
+    font-size: 14px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .dm-last {
+    font-size: 12px;
+    color: var(--text-faint);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Unread reads in greyscale: heavier name, brighter preview, a counted pill. */
+  .dm-item.unread .dm-txt b {
+    font-weight: 650;
+    color: var(--text);
+  }
+
+  .dm-item.unread .dm-last {
+    color: var(--text-muted);
+  }
+
+  .dm-unread {
+    min-width: 20px;
+    height: 18px;
+    padding: 0 6px;
+    border-radius: 9px;
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface-pop);
+    color: var(--text);
+    font-size: 11px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .dm-empty {
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--text-faint);
+    padding: 4px 8px 8px;
+  }
+
+  /* The server rail's own unread mark, on the messages entry. */
+  .srv-badge {
+    position: absolute;
+    right: -2px;
+    bottom: -2px;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+    border-radius: 10px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent);
+    color: var(--on-accent);
+    border: 2px solid var(--surface-canvas);
+    font-size: 11px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- ROOM: FRIENDS ---------- */
+  .fr-tabs {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+    margin-left: 6px;
+    overflow-x: auto;
+    /* A tab strip that scrolls must not also draw a bar under the header. */
+    scrollbar-width: none;
+  }
+
+  .fr-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .fr-tab {
+    height: 30px;
+    padding: 0 12px;
+    border-radius: var(--radius-sm);
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    flex: none;
+    font-size: 13px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    transition:
+      background var(--dur-fast) var(--ease-standard),
+      color var(--dur-fast) var(--ease-standard);
+  }
+
+  .fr-tab:hover {
+    background: var(--surface-overlay);
+    color: var(--text);
+  }
+
+  .fr-tab.on {
+    background: var(--surface-overlay);
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  /* `.btn-primary.sm` carries the shape; only the icon gap and the pressed
+     state are this button's own. */
+  .fr-add {
+    gap: 7px;
+    white-space: nowrap;
+  }
+
+  .fr-add.on {
+    background: var(--accent-hover);
+  }
+
+  .fr-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 20px 0 40px;
+  }
+
+  /*
+   * Full width, like the transcript beside it.
+   *
+   * `--room-max` caps a *reading* column, and the transcript proves what that
+   * means in practice: the rows run the width of the room and only `.msg-body`
+   * is held to `--measure`. A list of people is the same shape — a face on the
+   * left, actions on the right, and nothing in between that gets harder to read
+   * as the window grows. Capping it at 860px left the actions stranded in the
+   * middle of a 1440px screen with a third of the room empty beside them.
+   *
+   * Prose here is still capped, one element at a time: the note, the help text
+   * and every empty state carry `--measure` themselves.
+   */
+  .fr-inner {
+    padding: 0 20px;
+  }
+
+  .fr-note {
+    max-width: var(--measure);
+    margin-bottom: 20px;
+    padding: 10px 12px;
+    border: 1px solid var(--line-subtle);
+    border-radius: var(--radius-sm);
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--text-faint);
+  }
+
+  /* Spans the list it filters, so its right edge lands where the row actions
+     do rather than stopping short of them. */
+  .fr-find {
+    position: relative;
+    margin-bottom: 22px;
+  }
+
+  .fr-find .glyph {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: inline-flex;
+    color: var(--text-faint);
+    pointer-events: none;
+  }
+
+  .fr-section + .fr-section {
+    margin-top: 24px;
+  }
+
+  .fr-section .group-caption {
+    justify-content: flex-start;
+    gap: 5px;
+    margin: 0 0 4px;
+    padding: 0 8px;
+  }
+
+  .fr-section .group-caption .count {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .fr-section .group-caption .count::before {
+    content: "·";
+    margin-right: 5px;
+  }
+
+  .fr-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .fr-row {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-height: 58px;
+    padding: 8px;
+    border-top: 1px solid var(--line-subtle);
+    border-radius: var(--radius-md);
+    transition: background var(--dur-fast) var(--ease-standard);
+  }
+
+  .fr-row:hover {
+    background: var(--surface-overlay);
+  }
+
+  .fr-row.offline .av,
+  .fr-row.offline .fr-who {
+    opacity: 0.75;
+  }
+
+  .fr-who {
+    min-width: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    line-height: 1.3;
+  }
+
+  .fr-who b {
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+    min-width: 0;
+    font-size: 14.5px;
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Keep both identifiers discoverable. A long display name used to consume
+     the anonymous flex item and clip the @username completely on a phone. */
+  .fr-display-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Always visible, never hover-only: the username is how you add someone, so
+     it is information, not decoration. */
+  .fr-tag {
+    flex: none;
+    max-width: min(45%, 180px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 12.5px;
+    font-weight: 400;
+    color: var(--text-faint);
+  }
+
+  .fr-state {
+    font-size: 12.5px;
+    color: var(--text-faint);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .fr-acts {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: none;
+  }
+
+  .fr-act {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--surface-pop);
+    color: var(--text-muted);
+    transition:
+      background var(--dur-fast) var(--ease-standard),
+      color var(--dur-fast) var(--ease-standard);
+  }
+
+  .fr-act:hover:not(:disabled) {
+    background: var(--surface-overlay);
+    color: var(--text);
+  }
+
+  .fr-act:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  .fr-act.ok:hover {
+    color: var(--live);
+  }
+
+  .fr-act.no:hover {
+    color: var(--danger-text);
+  }
+
+  /* Portaled beyond the scrolling list, so the last row never clips it. */
+  .fr-pop {
+    width: 200px;
+    padding: 6px;
+  }
+
+  .fr-menu-item {
+    width: 100%;
+    height: 32px;
+    padding: 0 10px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-align: left;
+    font-size: 13px;
+    color: var(--text-muted);
+    transition:
+      background var(--dur-fast) var(--ease-standard),
+      color var(--dur-fast) var(--ease-standard);
+  }
+
+  .fr-menu-item:hover {
+    background: var(--surface-overlay);
+    color: var(--text);
+  }
+
+  /* Quiet destructive: no filled red, only the label and the wash. */
+  .fr-menu-item.danger:hover {
+    background: var(--danger-soft);
+    color: var(--danger-text);
+  }
+
+  /* The same anatomy as every other empty list in the app (`.asset-empty`):
+     a mark, what is empty, one sentence, and the way out where there is one. */
+  .fr-empty {
+    max-width: var(--measure);
+    min-height: 168px;
+    margin: 4px 0 0;
+    padding: 26px 22px;
+    border: 1px dashed var(--line);
+    border-radius: var(--radius-md);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    text-align: center;
+    font-size: 12.5px;
+    line-height: 1.55;
+    color: var(--text-faint);
+  }
+
+  .fr-empty b {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+
+  .fr-empty-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    margin-bottom: 5px;
+    border-radius: 50%;
+    background: var(--surface-overlay);
+    color: var(--accent-text);
+  }
+
+  .fr-empty-act {
+    display: inline-flex;
+    margin-top: 11px;
+  }
+
+  /* ---------- ROOM: ADD A FRIEND ---------- */
+  .fr-add-panel {
+    max-width: var(--measure);
+  }
+
+  .fr-add-panel h3 {
+    font-size: 17px;
+    font-weight: 600;
+    line-height: 1.3;
+    margin-bottom: 6px;
+  }
+
+  .fr-help {
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--text-faint);
+    margin-bottom: 16px;
+  }
+
+  .fr-add-form {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .fr-add-form input {
+    flex: 1;
+    min-width: 220px;
+    height: 42px;
+    padding: 0 14px;
+    border-radius: var(--radius-sm);
+    background: var(--surface-field);
+    border: 1px solid var(--line);
+    color: var(--text);
+    font-size: 14px;
+    transition: border-color var(--dur-fast) var(--ease-standard);
+  }
+
+  .fr-add-form input:hover {
+    border-color: var(--line-strong);
+  }
+
+  .fr-add-form input[aria-invalid="true"] {
+    border-color: var(--danger-line);
+  }
+
+  .fr-add-form .btn-primary:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+  }
+
+  .fr-answer {
+    margin-top: 12px;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+
+  .fr-answer.ok {
+    color: var(--live);
+  }
+
+  .fr-answer.bad {
+    color: var(--danger-text);
+  }
+
+  /* ---------- ROOM: ONE CONVERSATION ---------- */
+  .dm-room .room-header h2 {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .dm-presence {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    padding-left: 12px;
+    border-left: 1px solid var(--line-subtle);
+    font-size: 12.5px;
+    color: var(--text-faint);
+    white-space: nowrap;
+  }
+
+  /* The dot is `avatar.css`'s, in all four of its shapes. The only thing the
+     header owns is the colour it is cut against: this row sits on the room's
+     ground, not on a raised panel. */
+  .dm-presence .pdot {
+    --pdot-line: var(--surface-base);
+  }
+
+  .dm-room .pill-bar {
+    margin-left: auto;
+  }
+
+  .dm-intro {
+    padding: 40px 20px 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .dm-intro h3 {
+    font-size: 26px;
+    font-weight: 650;
+    line-height: 1.15;
+  }
+
+  .dm-intro p {
+    max-width: var(--measure);
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--text-faint);
+  }
+
+  .dm-intro p b {
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+
+  /* ---------- SHELL ---------- */
+  /*
+   * The messages side has no third region.
+   *
+   * A conversation has no channel roster, and the track spent a while holding
+   * "Aktywni teraz" instead — which listed the friends who were online beside
+   * a view whose whole job is listing the friends who are online, and beside a
+   * rail already naming every conversation. So the fourth track collapses here
+   * at every width and the room keeps its own 860px cap, exactly as a channel
+   * looks with the roster shut.
+   */
+  .app.dm-space,
+  .app.dm-space.roster-open {
+    grid-template-columns: var(--servers-w) var(--rail-w) minmax(0, 1fr) 0px;
+  }
+
+  @media (max-width: 767px) {
+    /* `friends.css` loads after the shared responsive layer so DM can collapse
+       the desktop roster. On phones it must also preserve that layer's two
+       collapsed navigation tracks instead of resurrecting the hidden rail. */
+    .app.dm-space,
+    .app.dm-space.roster-open {
+      grid-template-columns: 0px 0px minmax(0, 1fr) 0px;
+    }
+
+    /* The header below really occupies two rows. Reserve both in the room
+       grid, otherwise the list starts after 52px and paints over the tabs. */
+    .room.friends {
+      grid-template-rows: 104px minmax(0, 1fr);
+    }
+
+    .fr-inner {
+      padding: 0 16px;
+    }
+
+    .fr-body {
+      padding-top: 16px;
+    }
+
+    /* On a phone the four list tabs need a real row. Compressing them between
+       the title and the add action left only 39px of visible tab strip at the
+       320px floor, which made three of the four destinations effectively
+       undiscoverable. */
+    .friends .room-header {
+      height: auto;
+      min-height: 104px;
+      display: grid;
+      grid-template-columns: auto auto minmax(0, 1fr) auto;
+      grid-template-rows: 52px 52px;
+      column-gap: 8px;
+      row-gap: 0;
+      padding-inline: 12px;
+    }
+
+    .friends .burger {
+      grid-column: 1;
+      grid-row: 1;
+    }
+
+    .friends .room-header > .glyph {
+      grid-column: 2;
+      grid-row: 1;
+    }
+
+    .friends .room-header h2 {
+      grid-column: 3;
+      grid-row: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Icon only: the name lives in `aria-label`, and the header has a title,
+       a tab strip and this action to fit into 375px. */
+    .friends .fr-add {
+      grid-column: 4;
+      grid-row: 1;
+      height: 44px;
+      width: 44px;
+      padding-inline: 0;
+    }
+
+    .fr-add-label {
+      display: none;
+    }
+
+    .friends .fr-tabs {
+      grid-column: 1 / -1;
+      grid-row: 2;
+      align-self: stretch;
+      width: 100%;
+      margin-left: 0;
+      padding-bottom: 4px;
+      scroll-snap-type: x proximity;
+      overscroll-behavior-x: contain;
+    }
+
+    .friends .fr-tab {
+      height: 44px;
+      scroll-snap-align: nearest;
+    }
+
+    .dm-find input,
+    .fr-find input,
+    .fr-add-form input {
+      min-height: 44px;
+      font-size: 16px;
+    }
+
+    .dm-home,
+    .dm-call-answer,
+    .dm-call-decline {
+      min-height: 44px;
+    }
+
+    .dm-call-answer,
+    .dm-call-decline {
+      width: 44px;
+    }
+
+    /* Message and menu are enough beside a name at the 320px floor. Calling
+       remains the first action in the portaled menu. */
+    .fr-direct-call {
+      display: none;
+    }
+
+    .fr-open {
+      min-height: 44px;
+    }
+
+    .fr-menu-item {
+      min-height: 44px;
+      height: auto;
+    }
+
+    /* The header has a title, a tab strip and a primary action in 375px; the
+       presence word is the one part the room repeats elsewhere. */
+    .dm-presence {
+      display: none;
+    }
+
+    .dm-intro {
+      padding: 28px 16px 4px;
+    }
+
+    .dm-intro h3 {
+      font-size: 22px;
+    }
+  }
+
+  @media (max-width: 479px) {
+    .fr-add-form input {
+      min-width: 0;
+      flex-basis: 100%;
+    }
+
+    .fr-add-form .btn-primary {
+      width: 100%;
+      min-height: 44px;
+    }
+  }
+
+  @media (max-width: 359px) {
+    /* Four essential actions already occupy most of a 320px DM header. The
+       decorative @ repeats the meaning of the conversation title. */
+    .dm-room .room-header > .glyph {
+      display: none;
+    }
+  }
+
+  @media (max-width: 767px) and (max-height: 480px) and (orientation: landscape) {
+    /* The desktop 220px floor left only one clipped transcript line at
+       640×360. In a short landscape room, spend a proportional slice on the
+       call while preserving useful history and composer space below it. */
+    .dm-video-stage {
+      height: 42%;
+      min-height: 120px;
+    }
+
+    .dm-video-stage .tiles {
+      align-content: stretch;
+    }
+
+    .dm-video-stage .tile {
+      height: 100%;
+      max-height: none;
+      aspect-ratio: auto;
+    }
+
+    .dm-video-stage .av {
+      --av-size: var(--av-md);
+      --av-face: 13px;
+    }
+
+    /* The title and explanatory copy repeat the header and otherwise become
+       taller than the remaining transcript viewport. Actual messages keep
+       the reclaimed space. */
+    .dm-video-stage + .transcript-area .dm-intro {
+      display: none;
+    }
+  }
+}

@@ -1,0 +1,134 @@
+@layer components {
+  /*
+   * Persistent errors live beside the failed thing. A full outline and a
+   * labelled glyph carry the state without relying on red alone; there is no
+   * shadow, toast timer or coloured side stripe competing with the content.
+   */
+  .error-notice {
+    width: 100%;
+    min-width: 0;
+    display: grid;
+    grid-template-columns: 32px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid var(--danger-line);
+    border-radius: var(--radius-md);
+    background: var(--danger-soft);
+  }
+
+  .error-notice-icon {
+    width: 32px;
+    height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    background: var(--surface-raised);
+    color: var(--danger-text);
+  }
+
+  .error-notice-copy {
+    min-width: 0;
+  }
+
+  .error-notice-copy strong {
+    display: block;
+    color: var(--danger-text);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.4;
+  }
+
+  .error-notice-copy p {
+    margin-top: 2px;
+    max-width: var(--measure);
+    color: var(--text);
+    font-size: 12.5px;
+    line-height: 1.5;
+    text-wrap: pretty;
+  }
+
+  .error-notice-actions {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .error-notice-action {
+    min-height: 32px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 10px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--surface-raised);
+    color: var(--text-muted);
+    font-size: 12px;
+    font-weight: 550;
+    white-space: nowrap;
+    transition:
+      border-color var(--dur-fast) var(--ease-standard),
+      background var(--dur-fast) var(--ease-standard),
+      color var(--dur-fast) var(--ease-standard);
+  }
+
+  .error-notice-action.primary {
+    border-color: var(--danger-line);
+    color: var(--text);
+  }
+
+  .error-notice-action:hover {
+    border-color: var(--line-strong);
+    background: var(--surface-overlay);
+    color: var(--text);
+  }
+
+  .error-notice-action:active {
+    background: var(--surface-raised);
+  }
+
+  .error-notice.compact {
+    grid-template-columns: 28px minmax(0, 1fr) auto;
+    gap: 10px;
+    margin-top: 8px;
+    padding: 10px;
+  }
+
+  .error-notice.compact .error-notice-icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .error-notice.compact .error-notice-copy strong,
+  .error-notice.compact .error-notice-copy p {
+    font-size: 12px;
+  }
+
+  @media (max-width: 620px) {
+    .error-notice,
+    .error-notice.compact {
+      grid-template-columns: 32px minmax(0, 1fr);
+    }
+
+    .error-notice-actions {
+      grid-column: 2;
+      justify-content: flex-start;
+    }
+  }
+
+  @media (pointer: coarse) {
+    .error-notice-action {
+      min-height: 44px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .error-notice-action {
+      transition-duration: 0.01ms;
+    }
+  }
+}

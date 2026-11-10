@@ -1,0 +1,1256 @@
+@layer components {
+  /* ---------- USTAWIENIA SERWERA (pełny ekran) ---------- */
+  .sv-wrap{
+    position:fixed;inset:0;z-index:95;display:none;
+    align-items:center;justify-content:center;padding:32px;
+    background:var(--scrim-strong);
+    backdrop-filter:blur(12px) saturate(0.9);-webkit-backdrop-filter:blur(12px) saturate(0.9);
+  }
+  .sv-wrap.open{display:flex;animation:viewIn var(--dur-base) var(--ease-standard)}
+  .sv{
+    display:grid;grid-template-columns:264px minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);
+    width:min(1080px, 100%);height:min(720px, calc(100vh - 64px));
+    background:var(--surface-canvas);border:1px solid var(--line);
+    border-radius:20px;overflow:hidden;
+    box-shadow:var(--elev-modal);
+    animation:actIn var(--dur-slow) var(--ease-standard);
+  }
+  .sv-nav{
+    grid-column:1;grid-row:1/-1;
+    background:var(--surface-raised);border-right:1px solid var(--line);
+    display:flex;flex-direction:column;min-height:0;
+  }
+  .sv-brand{display:flex;align-items:center;gap:12px;padding:20px 20px 18px;flex:none}
+  .sv-brand-txt{min-width:0;display:flex;flex-direction:column;gap:2px}
+  .sv-brand-txt b{font-size:16px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sv-brand-txt span{font-size:12px;color:var(--text-faint)}
+  .sv-nav-scroll{flex:1;min-height:0;overflow-y:auto;padding:0 12px 24px}
+  .sv-cap{
+    font-size:10.5px;font-weight:700;letter-spacing:0.1em;color:var(--text-faint);
+    padding:18px 10px 8px;
+  }
+  .sv-nav-scroll .sv-cap:first-child{padding-top:6px}
+  .sv-item{
+    position:relative;width:100%;height:40px;padding:0 12px;border-radius:var(--radius-md);
+    display:flex;align-items:center;gap:12px;text-align:left;
+    font-size:14px;color:var(--text-muted);
+    transition:background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+  }
+  .sv-item .sv-ico{display:inline-flex;flex:none;color:var(--text-faint);transition:color var(--dur-fast) var(--ease-standard)}
+  .sv-item:hover{background:var(--surface-overlay);color:var(--text)}
+  .sv-item:hover .sv-ico{color:var(--text-muted)}
+  .sv-item.on{background:var(--accent-soft);color:var(--text);font-weight:550}
+  .sv-item.on .sv-ico{color:var(--accent-text)}
+  .sv-item.on::before{
+    content:"";position:absolute;left:-12px;top:8px;bottom:8px;width:3px;
+    background:var(--accent);border-radius:0 2px 2px 0;
+  }
+  .sv-item.danger{color:var(--danger-text)}
+  .sv-item.danger .sv-ico{color:var(--danger-text)}
+  .sv-item.danger:hover{background:var(--danger-soft)}
+  .sv-main{grid-column:2;grid-row:2;position:relative;min-width:0;min-height:0;overflow:hidden;display:flex;flex-direction:column}
+  /*
+   * The title bar, outside the scroller.
+   *
+   * The pane's name used to be the first thing in the scrolling column, which
+   * meant scrolling three screens of roles left nothing on screen saying which
+   * pane they belonged to — and put the close button next to whatever happened
+   * to be under it. Now the name, the sentence under it and the way out are one
+   * fixed band, and only the content moves.
+   */
+  .sv-bar{
+    grid-column:2;grid-row:1;display:flex;align-items:center;gap:20px;
+    padding:14px 26px 14px 34px;
+    border-bottom:1px solid var(--line-subtle);
+    background:var(--surface-base);
+  }
+  .sv-bar-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+  .sv-bar-txt h2{font-size:18px;font-weight:600;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sv-bar-txt p{font-size:12.5px;color:var(--text-faint);line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sv-close{flex:none;display:flex;flex-direction:column;align-items:center;gap:4px}
+  .sv-x{
+    width:44px;height:44px;border-radius:50%;
+    border:1px solid var(--line);color:var(--text-muted);
+    display:inline-flex;align-items:center;justify-content:center;
+    transition:background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard);
+  }
+  .sv-x:hover{background:var(--surface-overlay);color:var(--text);border-color:var(--line-strong)}
+  .sv-close span{font-size:10.5px;font-weight:700;letter-spacing:0.08em;color:var(--text-faint)}
+  .sv-panes{flex:1;min-height:0;overflow-y:auto;padding:24px 34px 48px;width:100%}
+  .sv-pane{display:none}
+  .sv-pane.on{display:block;animation:viewIn var(--dur-base) var(--ease-standard)}
+  /* What is left of the old title row: the action that used to sit beside the
+     title, now that the title has moved into `.sv-bar`. */
+  .sv-head{display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-bottom:16px}
+  .sv-head .btn-primary{margin-top:0}
+  .sv-h{font-size:23px;font-weight:600;line-height:1.2;display:flex;flex-direction:column;gap:6px;margin-bottom:26px;padding-right:90px}
+  .sv-h span{font-size:13.5px;font-weight:400;color:var(--text-faint)}
+  /* ---------- PROFIL SERWERA (przegląd) ---------- */
+  .overview-section .sc-b{padding-top:16px}
+  .ov-id{display:flex;align-items:center;gap:14px;margin-bottom:22px}
+  .ov-id-ico{
+    position:relative;width:44px;height:44px;border-radius:14px;flex:none;overflow:hidden;
+    display:inline-flex;align-items:center;justify-content:center;
+    background:var(--accent);cursor:pointer;
+    color:var(--on-accent);font-size:15px;font-weight:700;
+  }
+  .ov-id-ico:disabled{cursor:default}
+  .ov-id-ico img{width:100%;height:100%;object-fit:cover}
+  .ov-icon-veil{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    background:oklch(0 0 0 / 0.58);color:white;opacity:0;
+    transition:opacity var(--dur-fast) var(--ease-standard);
+  }
+  .ov-id-ico:hover:not(:disabled) .ov-icon-veil,
+  .ov-id-ico:focus-visible .ov-icon-veil{opacity:1}
+  .ov-id-txt{display:flex;flex:1;flex-direction:column;gap:2px;min-width:0}
+  .ov-id-txt b{font-size:18px;font-weight:600;line-height:1.2}
+  .ov-id-txt span{font-size:12.5px;color:var(--text-faint)}
+  .ov-icon-actions{display:flex;align-items:center;gap:8px;flex:none}
+  .ov-icon-actions .btn-ghost{gap:6px}
+  .ov-icon-actions .btn-ghost.danger{color:var(--danger-text)}
+  .ov-icon-note{margin:-12px 0 18px 58px;font-size:12px;color:var(--text-faint)}
+
+  /* ---------- FORMULARZ USTAWIEŃ ---------- */
+  /*
+   * Label on the left, control on the right, a hairline between rows.
+   *
+   * The alternative — one bordered card per field, each with its own icon and
+   * heading — spends a heading, a border and 38px of padding to introduce a
+   * text input that is already labelled. Three fields became four screens.
+   */
+  .frm{border-top:1px solid var(--line-subtle)}
+  .frm-row{
+    display:grid;grid-template-columns:200px minmax(0,1fr);
+    gap:14px 28px;align-items:start;
+    padding:18px 0;border-bottom:1px solid var(--line-subtle);
+  }
+  .frm-lab{
+    display:flex;flex-direction:column;gap:4px;
+    font-size:14px;font-weight:550;padding-top:9px;
+  }
+  .frm-lab span{font-size:12.5px;font-weight:400;color:var(--text-faint);line-height:1.45}
+  .frm-lab .frm-detail-error{color:var(--danger-text)}
+  .frm-ctl{min-width:0}
+  /*
+   * Przełącznik siada przy prawej krawędzi wiersza — tak samo jak w
+   * ustawieniach serwera, gdzie `.set-lab{flex:1}` odpycha go od etykiety.
+   * Kolumna etykiety przestaje być stała: zdanie pod nazwą niesie teraz to, co
+   * wcześniej powtarzał napis „Włączone/Wyłączone” obok gałki, a sama gałka i
+   * tak mówi, w którą stronę jest przestawiona.
+   *
+   * Not `.frm-ctl.inline` — Tailwind owns `.inline` and its utilities layer
+   * outranks this one, so the modifier silently lost its `display:flex` and the
+   * gap with it. Component modifiers keep the component's prefix for exactly
+   * this reason.
+   */
+  .frm-row:has(> .frm-switch){grid-template-columns:minmax(0,1fr) auto;align-items:center}
+  .frm-row:has(> .frm-switch) .frm-lab{padding-top:0}
+  .frm-ctl.frm-switch{display:flex;align-items:center;justify-content:flex-end;padding-top:0}
+  .frm-actions{display:flex;justify-content:flex-end;padding-top:20px}
+  .frm-actions .btn-primary:disabled{opacity:0.45;cursor:default}
+  .frm-actions .btn-primary:disabled:hover{background:var(--accent)}
+
+  /* One column once the label column costs more than it explains. */
+  @media (max-width:760px){
+    .frm-row{grid-template-columns:minmax(0,1fr);gap:10px}
+    .frm-lab{padding-top:0}
+    .frm-ctl.frm-switch{padding-top:0}
+  }
+  /* karty ustawień */
+  .sc{background:var(--surface-base);border:1px solid var(--line-subtle);border-radius:var(--radius-lg);margin-bottom:18px;overflow:hidden}
+  .sc-h{
+    display:flex;align-items:center;gap:10px;padding:16px 20px;
+    border-bottom:1px solid var(--line-subtle);font-size:14.5px;font-weight:600;
+  }
+  .sc-ico{display:inline-flex;color:var(--accent-text);flex:none}
+  .sc-b{padding:18px 20px 20px}
+  .sc-row{display:flex;align-items:center;gap:20px;padding:10px 0}
+  .sc-row + .sc-row{border-top:1px solid var(--line-subtle);margin-top:4px;padding-top:14px}
+  .fld-lab{display:block;font-size:10.5px;font-weight:700;letter-spacing:0.09em;color:var(--text-faint);margin-bottom:9px}
+  .fld-note{font-size:12.5px;color:var(--text-faint);margin-bottom:10px;line-height:1.5}
+  .set-input, .set-select, .set-area{
+    display:block;width:100%;min-width:0;background:var(--surface-field);
+    border:1px solid var(--line-subtle);border-radius:var(--radius-md);
+    padding:11px 14px;font-size:14px;color:var(--text);
+  }
+  .set-area{min-height:88px;line-height:1.55;color:var(--text-muted);resize:vertical}
+  .set-area.empty{color:var(--text-faint)}
+  .set-select{position:relative;padding-right:32px;color:var(--text-muted);max-width:320px}
+  .set-select::after{
+    content:"";position:absolute;right:14px;top:50%;width:6px;height:6px;
+    border-right:1.5px solid var(--text-faint);border-bottom:1.5px solid var(--text-faint);
+    transform:translateY(-70%) rotate(45deg);
+  }
+  .sv-tick{display:inline-flex;margin-right:8px}
+  .btn-primary.lg{height:46px;padding:0 26px;border-radius:12px;font-size:14px}
+  .set-lab{min-width:0;flex:1;display:flex;flex-direction:column;gap:3px}
+  .set-lab b{font-size:14px;font-weight:550}
+  .set-lab span{font-size:12.5px;color:var(--text-faint);line-height:1.45}
+  .set-ctl{flex:none;display:flex;align-items:center;gap:10px}
+  .set-row{display:flex;align-items:center;gap:20px;padding:16px 0;border-top:1px solid var(--line-subtle)}
+  .set-row.col{flex-direction:column;align-items:stretch;gap:14px}
+  .set-row.danger{border-top-color:color-mix(in oklab, var(--danger-line) 35%, transparent)}
+  .set-h{font-size:17px;font-weight:600;display:flex;align-items:center;gap:12px;padding:8px 0 12px}
+  .set-h .btn-primary{margin-left:auto}
+  .set-note{font-size:13px;color:var(--text-faint);line-height:1.5;margin:-4px 0 14px}
+  /* przełącznik */
+  .sw{
+    width:44px;height:26px;border-radius:999px;flex:none;position:relative;
+    background:var(--surface-overlay);border:1px solid var(--line);
+    transition:background var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard);
+  }
+  .sw i{
+    position:absolute;left:2px;top:2px;width:20px;height:20px;border-radius:50%;
+    background:var(--text-faint);transition:left var(--dur-base) var(--ease-standard), background var(--dur-fast) var(--ease-standard);
+  }
+  .sw.on{background:var(--accent);border-color:var(--accent)}
+  .sw.on i{left:20px;background:var(--on-accent)}
+  /* segment z profilami */
+  .seg{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  /* Three choices are three columns; the 2×2 the default grid made of them
+     left one cell empty and read as a broken pair. */
+  .seg.three{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .seg-i{
+    display:flex;flex-direction:column;gap:4px;text-align:left;
+    padding:13px 15px;border-radius:var(--radius-md);
+    border:1px solid var(--line-subtle);font-size:13.5px;font-weight:550;color:var(--text-muted);
+    transition:border-color var(--dur-fast) var(--ease-standard), background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+  }
+  .seg-i span{font-size:12px;font-weight:400;color:var(--text-faint);font-variant-numeric:tabular-nums}
+  .seg-i:hover{border-color:var(--line-strong);color:var(--text)}
+  /* Mixed from the live accent, not the indigo literal this used to hold: the
+     selected segment now follows whichever palette is on. */
+  .seg-i.on{
+    border-color:var(--accent);
+    background:color-mix(in oklab, var(--accent) 12%, transparent);
+    color:var(--text);
+  }
+
+  /*
+   * A ladder, laid out as one.
+   *
+   * Three, four and five choices that differ only in degree are one row of
+   * equal tiles — the eye reads the order off the line. The old two-column
+   * grid broke five profiles into 2+2+1 and, with a sentence of explanation
+   * inside every tile, made a wall of text out of a scale. The sentence is
+   * still there, once, under the row: it describes the choice that is on, and
+   * a tile carries the whole thing as a tooltip.
+   */
+  .seg.row{display:flex;flex-wrap:wrap;gap:8px}
+  .seg.row .seg-i{
+    flex:1 1 92px;min-width:0;
+    display:flex;flex-direction:column;align-items:center;gap:7px;
+    padding:11px 8px;text-align:center;font-size:12.5px;
+  }
+  .seg-ico{
+    display:flex;align-items:center;justify-content:center;flex:none;
+    width:28px;height:28px;border-radius:9px;
+    color:var(--text-faint);background:var(--surface-field);
+    transition:color var(--dur-fast) var(--ease-standard), background var(--dur-fast) var(--ease-standard);
+  }
+  .seg-i:hover .seg-ico{color:var(--text-muted)}
+  .seg-i.on .seg-ico{color:var(--accent-text);background:var(--accent-soft)}
+  .seg-ico .icon-image{color:inherit}
+  .seg-i:disabled .seg-ico{opacity:0.6}
+  /* The one line the row costs: what the current choice actually means. */
+  .seg-note{
+    margin-top:10px;color:var(--text-faint);font-size:11.5px;line-height:1.45;
+  }
+  .seg-note b{color:var(--text-muted);font-weight:600}
+
+  /* ---------- WYGLĄD ---------- */
+  /*
+   * The cards in this pane are working instances of what they offer: a preset
+   * carries `data-theme`/`data-scheme`, a font card carries `data-font`, and
+   * every token below is read from the card rather than from the page. That is
+   * why nothing here names a colour or a family — a swatch that is painted by
+   * the same rules as the app cannot show a colour the app will not use.
+   */
+  /* One line of text and a 32px button: centred on each other, not top-aligned.
+     The note drops its own bottom margin here — the row owns the spacing, and
+     two margins would put the button off the sentence it belongs to. */
+  .ap-intro{display:flex;align-items:center;gap:16px;margin:-4px 0 16px}
+  .ap-intro .set-note{flex:1;margin:0}
+
+  /* Motywy: a board of miniatures, not a column of banners. The tile is only
+     as wide as the picture it has to show, so six themes read as one compact
+     block that keeps everything below it above the fold. */
+  .ap-themes{display:grid;grid-template-columns:repeat(auto-fill,minmax(116px,1fr));gap:10px}
+  .ap-tile{
+    position:relative;display:flex;flex-direction:column;gap:8px;text-align:left;
+    padding:8px;border-radius:var(--radius-md);
+    border:1px solid var(--line-subtle);background:var(--surface-raised);
+    transition:border-color var(--dur-fast) var(--ease-standard), box-shadow var(--dur-fast) var(--ease-standard);
+  }
+  .ap-tile:hover{border-color:var(--line-strong)}
+  /* An inset ring, not an elevation shadow: it thickens the border the tile
+     already has instead of putting a second system beside it. */
+  .ap-tile.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+  .ap-tile:disabled{opacity:0.5;cursor:default}
+  .ap-name{
+    display:block;min-width:0;padding:0 1px;
+    font-size:11.5px;font-weight:600;color:var(--text-muted);
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .ap-tile.on .ap-name{color:var(--text)}
+  /* On a tile the mark is a corner badge: it costs no row of its own, and the
+     ring around it is the tile's own surface, so it reads as cut out of it. */
+  .ap-tile .ap-tick{
+    position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:999px;
+    display:inline-flex;align-items:center;justify-content:center;
+    background:var(--accent);color:var(--on-accent);
+    box-shadow:0 0 0 2px var(--surface-raised);
+  }
+
+  .ap-accent-row{align-items:center}
+  .ap-accent-control{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap}
+  .ap-accent-control input[type="color"]{
+    width:42px;height:42px;flex:none;padding:3px;
+    border:1px solid var(--line);border-radius:var(--radius-md);
+    background:var(--surface-field);cursor:pointer;
+  }
+  .ap-accent-control input[type="color"]::-webkit-color-swatch-wrapper{padding:0}
+  .ap-accent-control input[type="color"]::-webkit-color-swatch,
+  .ap-accent-control input[type="color"]::-moz-color-swatch{
+    border:0;border-radius:calc(var(--radius-md) - 3px);
+  }
+  .ap-accent-control input[type="color"]:disabled{opacity:0.5;cursor:default}
+  .ap-accent-control output{
+    min-width:76px;color:var(--text-muted);font-family:var(--font-mono);
+    font-size:12px;font-variant-numeric:tabular-nums;text-transform:uppercase;
+  }
+
+  .ap-palette{border-top:1px solid var(--line-subtle)}
+  .ap-palette summary{
+    display:flex;align-items:center;gap:8px;min-height:48px;
+    color:var(--text-muted);font-size:13px;font-weight:550;cursor:pointer;
+  }
+  .ap-palette summary::before{
+    content:"";width:7px;height:7px;flex:none;
+    border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;
+    transform:rotate(-45deg);transition:transform var(--dur-base) var(--ease-standard);
+  }
+  .ap-palette[open] summary::before{transform:rotate(45deg) translate(-1px,-1px)}
+  .ap-palette summary::marker,.ap-palette summary::-webkit-details-marker{display:none}
+  .ap-palette summary span{color:var(--text-faint);font-weight:400}
+  /* The inspector is a swatch board: the colour is the object, its name and
+     value are the caption under it. Twenty-two ruled rows in two columns said
+     the same thing with twenty-two rules and no colour worth looking at. */
+  .ap-token-groups{display:flex;flex-direction:column;gap:16px;padding:6px 0 14px}
+  /* Mark, word, rule — the same heading the palette of commands uses, so the
+     two places in the app that group small things group them the same way. */
+  .ap-token-group h3{
+    display:flex;align-items:center;gap:7px;margin-bottom:9px;
+    color:var(--text-faint);font-size:11.5px;font-weight:600;
+  }
+  .ap-token-group h3 .ap-token-ico{display:flex;flex:none;opacity:0.9}
+  .ap-token-group h3::after{
+    content:"";flex:1;height:1px;margin-left:2px;
+    background:linear-gradient(to right,var(--line-subtle),transparent);
+  }
+  .ap-token-group ul{
+    list-style:none;display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:9px;
+  }
+  .ap-token-group li{display:flex;flex-direction:column;gap:4px;min-width:0}
+  .ap-token-group li i{
+    height:26px;border-radius:var(--radius-sm);box-shadow:inset 0 0 0 1px var(--line-subtle);
+  }
+  .ap-token-group li span{
+    color:var(--text-muted);font-size:11px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .ap-token-group li code{
+    color:var(--text-faint);font-family:var(--font-mono);font-size:10px;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:lowercase;
+  }
+  .ap-palette > p{margin:0 0 14px;color:var(--text-faint);font-size:11.5px;line-height:1.5}
+
+  /* The app in miniature: sidebar, room, three lines of a message — the same
+     elevation order the window has, so a tile is recognisable as the thing it
+     will turn into rather than as a row of paint samples. */
+  .ap-mini{
+    display:flex;height:50px;border-radius:8px;overflow:hidden;
+    background:var(--surface-sidebar);border:1px solid var(--line-subtle);
+  }
+  .ap-mini-rail{
+    flex:none;width:19px;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;gap:5px;
+  }
+  .ap-mini-rail i{width:8px;height:8px;border-radius:999px;background:var(--surface-active)}
+  .ap-mini-rail i:first-child{background:var(--accent)}
+  .ap-mini-room{
+    flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:5px;
+    padding:0 9px 0 8px;border-radius:7px 0 0 7px;background:var(--surface-room);
+  }
+  .ap-mini-room i{display:block;height:4px;border-radius:2px;background:var(--text-faint);opacity:0.5}
+  .ap-mini-room i:first-child{width:50%;background:var(--accent-text);opacity:0.95}
+  .ap-mini-room i:nth-child(2){width:100%}
+  .ap-mini-room i:last-child{width:72%}
+
+  /*
+   * Pismo: a specimen sheet. One line per face, set in that face — the name is
+   * the specimen, so nothing has to be said twice. `font-family` has to be
+   * restated here: a child inherits the *resolved* family, so redefining
+   * `--font-sans` on the row only reaches text that reads the variable again.
+   */
+  .ap-faces{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:8px}
+  .ap-face{
+    display:flex;align-items:center;justify-content:space-between;gap:8px;
+    min-height:40px;padding:0 11px;text-align:left;
+    border-radius:var(--radius-md);border:1px solid var(--line-subtle);
+    background:var(--surface-raised);font-family:var(--font-sans);color:var(--text-muted);
+    transition:border-color var(--dur-fast) var(--ease-standard), box-shadow var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+  }
+  .ap-face:hover{border-color:var(--line-strong);color:var(--text)}
+  .ap-face.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);color:var(--text)}
+  .ap-face:disabled{opacity:0.5;cursor:default}
+  .ap-face-name{
+    min-width:0;font-size:14px;font-weight:550;
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  }
+  .ap-face .ap-tick{flex:none;display:inline-flex;color:var(--accent-text)}
+
+  /* Podgląd: the transcript's own classes, so size and density are shown by
+     the rules that will actually lay out the room — not by a copy of them. */
+  .ap-preview .msg-group{padding-left:0;padding-right:0}
+  .ap-preview .msg-group:hover{background:none}
+
+  /* listy */
+  /* ---------- INTEGRACJE · KANAŁY · ROLE ---------- */
+  /*
+   * The panes that are a plain list rather than a stack of cards.
+   *
+   * A settings list is read by running down the left edge for a name and
+   * across to a switch. `.sc` — the bordered card the other panes use — puts a
+   * box around that motion for no gain, so here the group is a caption and
+   * space, and the rows are separated by a hairline. Nothing else.
+   */
+  .int-cap{
+    display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;
+    padding-bottom:10px;border-bottom:1px solid var(--line-subtle);
+  }
+  .int-cap b{font-size:14.5px;font-weight:600}
+  .int-cap span{font-size:12.5px;color:var(--text-faint)}
+  .int-empty{font-size:13px;color:var(--text-faint);padding:16px 2px}
+  .int-list{display:flex;flex-direction:column}
+  .int-row{
+    display:grid;grid-template-columns:auto minmax(0,1fr) auto;
+    align-items:center;gap:14px;padding:14px 2px;
+  }
+  .int-row + .int-row{border-top:1px solid var(--line-subtle)}
+  /* A fourth cell for rows that also carry the up/down pair. */
+  .int-row.has-move{grid-template-columns:auto minmax(0,1fr) auto auto;gap:10px}
+  /*
+   * Reordering as one control rather than two loose buttons: a single bordered
+   * track split in half, the second half being the first one turned over. Two
+   * `btn-ghost`s with "↑"/"↓" typed into them sat at button height beside
+   * "Edytuj" and read as three equal actions, which is not what they are.
+   */
+  .int-move{
+    flex:none;display:inline-flex;align-items:center;
+    border:1px solid var(--line-subtle);border-radius:999px;overflow:hidden;
+  }
+  .int-move button{
+    width:26px;height:26px;
+    display:inline-flex;align-items:center;justify-content:center;
+    color:var(--text-faint);
+    transition:background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+  }
+  .int-move button:first-child{transform:rotate(180deg)}
+  .int-move button + button{border-left:1px solid var(--line-subtle)}
+  .int-move button:hover:not(:disabled){background:var(--surface-overlay);color:var(--text)}
+  .int-move button:disabled{opacity:0.3;cursor:not-allowed}
+  .int-mark{
+    width:38px;height:38px;border-radius:12px;flex:none;
+    display:inline-flex;align-items:center;justify-content:center;
+    font-size:13px;font-weight:700;letter-spacing:0.01em;
+    color:var(--text-muted);background:var(--surface-overlay);
+  }
+  .int-txt{min-width:0;display:flex;flex-direction:column;gap:3px}
+  .int-txt b{font-size:14px;font-weight:550;line-height:1.3;overflow-wrap:anywhere}
+  .int-txt span{font-size:12.5px;color:var(--text-faint);line-height:1.45}
+  /* A glyph rather than two initials: the mark keeps its size and tile so the
+     three lists line up, and only what is inside it changes. */
+  .int-mark.ico{color:var(--text-muted)}
+  /*
+   * A role writes itself in its own colour — the mark tinted, the name plain.
+   * `--rc` is set once on the row, so the two can never disagree, and the tint
+   * is mixed against the tile it replaces rather than laid over it as alpha,
+   * which would let a pale role wash the surface out.
+   */
+  .int-mark.role{
+    color:var(--rc);
+    background:color-mix(in oklab, var(--rc) 20%, var(--surface-overlay));
+  }
+  .int-txt b.role-name{color:var(--rc)}
+
+  .set-list{display:flex;flex-direction:column;gap:2px}
+  .set-item{
+    display:flex;align-items:center;gap:12px;padding:11px 10px;border-radius:var(--radius-md);
+    transition:background var(--dur-fast) var(--ease-standard);
+  }
+  .set-item:hover{background:var(--surface-overlay)}
+  .set-item-txt{min-width:0;flex:1;display:flex;flex-direction:column;gap:2px}
+  .set-item-txt b{font-size:13.5px;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .set-item-txt span{font-size:12px;color:var(--text-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .set-item-txt.mono b{font-family:var(--font-mono);font-size:12.5px}
+  .set-item-act{flex:none;font-size:12.5px;font-weight:550;color:var(--accent-text);opacity:0;transition:opacity var(--dur-fast) var(--ease-standard)}
+  .set-item-act.danger{color:var(--danger-text)}
+  .set-item:hover .set-item-act{opacity:1}
+  /* `.set-grip` and `.role-dot` lived here. The grip was a drag handle on a
+     list that never reordered — channels are dragged in the rail — and the dot
+     told you a role had a colour and nothing else. Both are gone; the rows
+     they belonged to now use `.int-*` with a real icon. */
+  .role-chip{flex:none;font-size:11.5px;font-weight:600;color:var(--rc);border:1px solid var(--rc);border-radius:999px;padding:2px 10px}
+  .member-role-select{width:auto;max-width:180px}
+  .role-editor{margin-top:16px}
+  .role-editor-fields{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:12px}
+  .role-editor-fields label > span{display:block;font-size:11px;font-weight:650;color:var(--text-faint);margin-bottom:7px}
+  .role-permission{cursor:pointer}
+  .role-permission input{accent-color:var(--accent)}
+
+  /* ---------- WYJĄTKI UPRAWNIEŃ (kanał / sekcja) ---------- */
+  /*
+   * A role's base permissions are set once, in the server's role editor. This
+   * only records where one channel or section departs from them, so the row is
+   * a three-way grant rather than a checkbox — and the middle, neutral state is
+   * the resting one. The big `.seg-i` profile card would make eight of these
+   * into a wall, so the same accessible radio group is repainted here as a
+   * compact pill: the control stays one row tall and the eight names read as a
+   * list rather than as a grid of buttons.
+   */
+  .perm-role .int-txt{gap:4px}
+  /* An inset edge rather than a `::before` bar: `.int-row` is a three-column
+     grid, so a pseudo-element would become a fourth cell and shove the row's
+     own action out of line. */
+  .perm-role.on{background:var(--surface-overlay);box-shadow:inset 2px 0 0 var(--accent)}
+  .perm-summary{display:flex;align-items:center;gap:6px}
+  .perm-tag{
+    flex:none;padding:1px 7px;border-radius:999px;
+    font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;
+  }
+  .perm-tag.allow{
+    background:color-mix(in oklab, var(--live) 18%, transparent);color:var(--live);
+  }
+  .perm-tag.deny{background:var(--danger-soft);color:var(--danger-text)}
+  .perm-editor{
+    margin-top:14px;padding-top:14px;border-top:1px solid var(--line-subtle);
+  }
+  .perm-editor-head{
+    display:flex;align-items:baseline;justify-content:space-between;gap:16px;
+    margin-bottom:8px;
+  }
+  .perm-editor-head b{font-size:14px;font-weight:600}
+  .perm-editor-head span{font-size:12px;color:var(--text-faint);text-align:right}
+  .perm-rows{display:flex;flex-direction:column;gap:2px}
+  .perm-row{
+    display:flex;align-items:center;gap:16px;min-height:42px;
+    padding:4px 10px;border-radius:var(--radius-md);
+    transition:background var(--dur-fast) var(--ease-standard);
+  }
+  .perm-row:hover{background:var(--surface-overlay)}
+  .perm-row-txt{
+    flex:1;min-width:0;font-size:13.5px;font-weight:550;
+    overflow:hidden;text-overflow:ellipsis;
+  }
+  /* Repaints `.seg` as one pill: no gap between segments, the track carries the
+     border, and each segment is a plain 26px cell rather than a bordered card. */
+  .seg.perm-tri{
+    flex:none;width:228px;gap:0;padding:2px;
+    border:1px solid var(--line-subtle);border-radius:999px;
+    background:var(--surface-field);
+  }
+  .seg.perm-tri .seg-i{
+    flex-direction:row;align-items:center;justify-content:center;text-align:center;
+    height:26px;padding:0 4px;gap:0;
+    border:0;border-radius:999px;
+    font-size:12px;font-weight:600;color:var(--text-faint);
+  }
+  .seg.perm-tri .seg-i:hover:not(:disabled){background:var(--surface-pop);color:var(--text)}
+  .seg.perm-tri .seg-i.on{background:var(--surface-pop);color:var(--text)}
+  .seg.perm-tri .seg-i[data-tone="allow"].on{
+    background:color-mix(in oklab, var(--live) 20%, transparent);color:var(--live);
+  }
+  .seg.perm-tri .seg-i[data-tone="deny"].on{
+    background:var(--danger-soft);color:var(--danger-text);
+  }
+  .seg.perm-tri .seg-i:disabled{opacity:0.5;cursor:not-allowed}
+  .perm-editor-foot{
+    display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:14px;
+  }
+  .role-editor .sv-head{margin-top:14px;justify-content:flex-end}
+  .set-ico{
+    width:48px;height:48px;border-radius:14px;flex:none;
+    display:inline-flex;align-items:center;justify-content:center;
+    background:var(--accent);color:var(--on-accent);font-size:15px;font-weight:700;
+  }
+  /* emoji */
+  .emo-grid{display:grid;grid-template-columns:repeat(auto-fill, minmax(104px,1fr));gap:10px}
+  .emo-tile{
+    display:flex;flex-direction:column;align-items:center;gap:7px;padding:16px 6px;
+    border-radius:var(--radius-md);background:var(--surface-raised);
+  }
+  .emo-tile b{font-size:26px;line-height:1}
+  .emo-tile span{font-size:11.5px;color:var(--text-faint);font-family:var(--font-mono)}
+  .asset-head .btn-primary{margin-left:auto;gap:7px}
+  .asset-count{
+    padding:2px 7px;border-radius:999px;background:var(--surface-overlay);
+    color:var(--text-faint);font-size:10.5px;font-weight:650;font-variant-numeric:tabular-nums;
+  }
+  .settings-section-note{
+    margin:0 0 12px;color:var(--text-faint);font-size:12.5px;line-height:1.45;
+  }
+  .settings-section .set-row:first-child{border-top:0;padding-top:4px}
+  .settings-section .set-item-act{opacity:1}
+  .emoji-grid{grid-template-columns:repeat(auto-fill,minmax(112px,1fr))}
+  .asset-empty{
+    min-height:152px;border:1px dashed var(--line);border-radius:var(--radius-md);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;
+    padding:22px;color:var(--text-faint);text-align:center;
+  }
+  .asset-empty svg{margin-bottom:3px;color:var(--accent-text)}
+  .asset-empty b{color:var(--text-muted);font-size:13.5px;font-weight:600}
+  .asset-empty span{font-size:12.5px;line-height:1.45}
+  .emoji-tile{position:relative;min-height:108px;justify-content:center;padding:16px 12px 14px;overflow:hidden}
+  .emoji-tile.editable{padding-right:28px;padding-left:10px}
+  .emoji-glyph{
+    min-height:42px;display:flex;align-items:center;justify-content:center;
+    color:var(--text);font-family:inherit!important;font-size:36px!important;line-height:1!important;
+  }
+  .emoji-glyph img{width:40px;height:40px;object-fit:contain}
+  .emoji-name{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .emoji-delete{
+    position:absolute;right:5px;top:5px;width:28px;height:28px;border-radius:9px;
+    display:inline-flex;align-items:center;justify-content:center;color:var(--text-faint);
+    opacity:0;transition:opacity var(--dur-fast) var(--ease-standard),background var(--dur-fast) var(--ease-standard),color var(--dur-fast) var(--ease-standard);
+  }
+  .emoji-tile:hover .emoji-delete,.emoji-delete:focus-visible{opacity:1}
+  .emoji-delete:hover:not(:disabled){background:var(--danger-soft);color:var(--danger-text)}
+  .emoji-delete:disabled{cursor:wait}
+  .emoji-tile[aria-busy="true"]{opacity:.55}
+  .emoji-limit-note{margin:14px 0 0}
+  .emoji-error{color:var(--danger-text)}
+  .emoji-editor-fields{display:grid;grid-template-columns:80px minmax(0,1fr);align-items:center;gap:16px}
+  .emoji-upload-preview{
+    width:80px;height:80px;border:1px solid var(--line-subtle);border-radius:var(--radius-md);
+    background:var(--surface-field);display:grid;place-items:center;
+  }
+  .emoji-upload-preview img{width:56px;height:56px;object-fit:contain}
+  .emoji-code-field{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:5px}
+  .emoji-code-field i{font-family:var(--font-mono);font-style:normal;color:var(--text-faint)}
+  .emoji-code-field .set-input{font-family:var(--font-mono)}
+  .emoji-file-name{
+    display:block;margin-top:6px;color:var(--text-faint);font-size:11px;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .emoji-editor-body > .fld-note{margin:12px 0 0 96px}
+  .emoji-editor-actions{display:flex;align-items:center;gap:8px;margin-top:16px}
+  .emoji-editor-actions > span{flex:1}
+  /* Soundboard follows the same management-list rhythm as channels, roles
+     and integrations. The compact tiles belong in the VC playback popover;
+     here names, timings and actions need one stable reading edge. */
+  .sound-error{color:var(--danger-text)}
+  .sound-group + .sound-group{margin-top:28px}
+  .sound-cap{align-items:baseline}
+  .sound-list{display:flex;flex-direction:column}
+  .sound-row{
+    display:grid;grid-template-columns:auto minmax(0,1fr) auto;
+    align-items:center;gap:13px;padding:12px 2px;
+    transition:background var(--dur-fast) var(--ease-standard);
+  }
+  .sound-row + .sound-row{border-top:1px solid var(--line-subtle)}
+  .sound-row.active{background:linear-gradient(90deg,var(--accent-soft),transparent 82%)}
+  .sound-mark,.sound-editor-mark{
+    display:inline-flex;align-items:center;justify-content:center;flex:none;
+    color:var(--text-muted);background:var(--surface-overlay);
+  }
+  .sound-mark{width:40px;height:40px;border-radius:12px;font-size:19px}
+  .sound-row-txt{min-width:0;display:flex;flex-direction:column;gap:3px}
+  .sound-row-txt b{font-size:14px;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sound-row-txt span{font-size:12px;color:var(--text-faint);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sound-row-actions{display:flex;align-items:center;gap:14px;padding-right:6px}
+  .sound-row .set-item-act:focus-visible,.sound-row.active .set-item-act{opacity:1}
+  .sound-row:hover .set-item-act{opacity:1}
+  .sound-editor-card{margin-top:20px;padding:20px}
+  .sound-editor-head{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:13px;margin-bottom:20px}
+  .sound-editor-mark{width:42px;height:42px;border-radius:13px;font-size:20px}
+  .sound-editor-head > span:nth-child(2){min-width:0;display:flex;flex-direction:column;gap:3px}
+  .sound-editor-head b{font-size:15px;font-weight:600}
+  .sound-editor-head small{font-size:12px;color:var(--text-faint);line-height:1.4}
+  .sound-editor-close{
+    width:34px;height:34px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
+    color:var(--text-faint);transition:background var(--dur-fast) var(--ease-standard),color var(--dur-fast) var(--ease-standard);
+  }
+  .sound-editor-close:hover{background:var(--surface-overlay);color:var(--text)}
+  .sound-fields{display:grid;grid-template-columns:160px minmax(0,1fr);gap:12px}
+  .sound-field > label{display:block;font-size:11px;font-weight:650;color:var(--text-faint);margin-bottom:7px}
+  .sound-field-label{display:block;font-size:11px;font-weight:650;color:var(--text-faint);margin-bottom:7px}
+  /* The symbol is the control: the chosen emoji at reading size, with the
+     picker's own glyph beside it saying that pressing this opens one. */
+  .sound-glyph-pick{
+    width:100%;height:38px;display:inline-flex;align-items:center;gap:8px;
+    padding:0 10px;
+    border:1px solid var(--line-subtle);border-radius:var(--radius-sm);
+    background:var(--surface-field);color:var(--text-faint);
+    transition:background var(--dur-fast) var(--ease-standard),border-color var(--dur-fast) var(--ease-standard),color var(--dur-fast) var(--ease-standard);
+  }
+  .sound-glyph-face{
+    flex:1;min-width:0;font-size:20px;line-height:1;text-align:left;
+  }
+  .sound-glyph-hint{flex:none}
+  .sound-glyph-pick:hover,.sound-glyph-pick[aria-expanded="true"]{background:var(--surface-overlay);border-color:var(--line);color:var(--accent-text)}
+  .sound-glyph-pick:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .sound-glyph-pick:disabled{opacity:.55;cursor:not-allowed}
+  .sound-preview-volume{
+    flex:none;display:inline-flex;align-items:center;gap:8px;color:var(--text-faint);
+  }
+  .sound-preview-volume input[type="range"]{width:104px}
+  .sound-preview-volume output{
+    min-width:38px;font-size:12px;font-variant-numeric:tabular-nums;text-align:right;
+  }
+
+  /* ---------- WYBÓR KLIENTA ---------- */
+  .client-modal .am-card{width:min(780px,100%)}
+  .client-list{display:flex;flex-direction:column;gap:10px;overflow-y:auto}
+  .client-option{
+    display:flex;align-items:center;gap:12px;padding:12px;
+    border:1px solid var(--line);border-radius:var(--radius-md);
+    background:var(--surface-raised);
+  }
+  .client-option-ico{
+    width:40px;height:40px;border-radius:var(--radius-md);flex:none;
+    display:inline-flex;align-items:center;justify-content:center;
+    background:var(--surface-overlay);color:var(--text-muted);
+  }
+  .client-option-text{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
+  .client-option-text b{font-size:13.5px;font-weight:600;color:var(--text)}
+  .client-option-text span{font-size:12px;color:var(--text-muted)}
+  .client-option-text small{font-size:11px;color:var(--text-faint)}
+  .client-option-checksum{display:flex;min-width:0;gap:4px}
+  .client-option-checksum code{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:inherit}
+  /* The one already running: present, and plainly not a thing to press. */
+  .client-option.current{background:none;border-style:dashed}
+  .client-option-tag{
+    flex:none;padding:3px 8px;border-radius:999px;
+    background:var(--surface-overlay);color:var(--text-faint);
+    font-size:11px;font-weight:600;
+  }
+  @media (max-width:560px){
+    .client-option{align-items:flex-start;flex-wrap:wrap}
+    .client-option-text{flex-basis:calc(100% - 52px)}
+    .client-option .btn-primary{min-height:44px;margin-left:52px}
+    .client-option.current{align-items:center;flex-wrap:nowrap}
+    .client-option.current .client-option-text{flex-basis:auto}
+  }
+  .sound-emoji-card{overflow:hidden;background:transparent;box-shadow:none}
+  .sound-wave-head{display:flex;align-items:center;gap:16px;margin-top:20px}
+  .sound-wave-head > span{min-width:0;flex:1;display:flex;flex-direction:column;gap:3px}
+  .sound-wave-head b{font-size:13.5px;font-weight:550}
+  .sound-wave-head small{font-size:12px;color:var(--text-faint);line-height:1.4}
+  .sound-wave-head button{gap:6px}
+  .wave-editor{margin-top:11px}
+  .wave-plot{
+    position:relative;height:132px;border:1px solid var(--line);border-radius:var(--radius-md);
+    background:var(--surface-field);overflow:hidden;touch-action:none;user-select:none;
+  }
+  .wave-plot svg{position:absolute;inset:16px 0;width:100%;height:100px;fill:var(--accent-text);opacity:.78}
+  .wave-mask{position:absolute;top:0;bottom:0;background:color-mix(in oklab,var(--surface-canvas) 76%,transparent);pointer-events:none}
+  .wave-mask.left{left:0}
+  .wave-mask.right{right:0}
+  .wave-selection{
+    position:absolute;top:0;bottom:0;z-index:1;
+    border-block:1px solid color-mix(in oklab,var(--accent) 65%,transparent);
+    cursor:grab;outline:none;
+  }
+  .wave-selection:active{cursor:grabbing}
+  .wave-selection:focus-visible{box-shadow:inset 0 0 0 2px var(--accent-soft)}
+  .wave-clamp{
+    position:absolute;top:0;bottom:0;width:18px;transform:translateX(-50%);
+    cursor:ew-resize;z-index:2;outline:none;
+  }
+  .wave-clamp::before{
+    content:"";position:absolute;top:0;bottom:0;left:8px;width:2px;background:var(--accent);
+    box-shadow:0 0 0 1px color-mix(in oklab,var(--surface-base) 55%,transparent);
+  }
+  .wave-clamp::after{
+    content:"";position:absolute;top:8px;left:3px;width:12px;height:24px;
+    border-radius:5px;background:var(--accent);border:2px solid var(--surface-base);
+  }
+  .wave-clamp:focus-visible::after{box-shadow:0 0 0 3px var(--accent-soft)}
+  .wave-times{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding-top:8px;font-size:11px;color:var(--text-faint);font-variant-numeric:tabular-nums}
+  .wave-times b{font-size:11.5px;color:var(--text-muted);font-weight:600}
+  .wave-times span:last-child{text-align:right}
+  .sound-editor-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:18px}
+  .sound-rules{display:flex;flex-direction:column}
+  .sound-rule-row{display:flex;align-items:center;gap:20px;padding:15px 2px}
+  .sound-rule-row + .sound-rule-row{border-top:1px solid var(--line-subtle)}
+  .danger-section{border-color:color-mix(in oklab,var(--danger-line) 55%,var(--line-subtle))}
+  .danger-section .sc-h{border-bottom-color:color-mix(in oklab,var(--danger-line) 40%,var(--line-subtle))}
+  .danger-section .sc-ico{color:var(--danger-text)}
+
+  /* ---------- WYDANIE DESKTOPOWE ---------- */
+  .desktop-release{max-width:760px}
+  .desktop-release-body{display:flex;flex-direction:column;gap:18px}
+  .desktop-release-state{margin:0;color:var(--text-faint);font-size:13px;line-height:1.5}
+  .desktop-release-state.bad{color:var(--danger-text)}
+  .desktop-release-copy{display:flex;align-items:center;justify-content:space-between;gap:20px}
+  .desktop-release-copy > div{display:flex;min-width:0;flex-direction:column;gap:4px}
+  .desktop-release-copy b{font-size:15px;font-weight:600;color:var(--text)}
+  .desktop-release-copy span{font-size:12.5px;color:var(--text-faint);font-variant-numeric:tabular-nums}
+  .desktop-release-copy .btn-primary{gap:7px}
+  .desktop-release-notes{margin:0;max-width:68ch;color:var(--text-muted);font-size:13px;line-height:1.55}
+  .desktop-release-details{display:flex;flex-direction:column;margin:0;border-top:1px solid var(--line-subtle)}
+  .desktop-release-details > div{display:grid;grid-template-columns:120px minmax(0,1fr);gap:16px;padding:12px 0;border-bottom:1px solid var(--line-subtle)}
+  .desktop-release-details dt{font-size:12px;font-weight:550;color:var(--text-faint)}
+  .desktop-release-details dd{min-width:0;margin:0;font-size:12.5px;color:var(--text-muted)}
+  .desktop-release-details code{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:11.5px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace}
+  .desktop-release-install{margin:0}
+  @media (max-width:560px){
+    .desktop-release-copy{align-items:stretch;flex-direction:column}
+    .desktop-release-copy .btn-primary{align-self:flex-start;min-height:44px}
+    .desktop-release-details > div{grid-template-columns:minmax(0,1fr);gap:5px}
+  }
+
+  /* przyciski */
+  .btn-primary, .btn-ghost, .btn-danger{
+    flex:none;height:36px;padding:0 18px;border-radius:999px;font-size:13px;font-weight:600;
+    display:inline-flex;align-items:center;justify-content:center;
+    transition:background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard);
+  }
+  .btn-primary{background:var(--accent);color:var(--on-accent)}
+  .btn-primary:hover{background:var(--accent-hover)}
+  /* All three take `.sm`: the three share a size, and a danger button that
+     stayed 36px beside a 32px "Anuluj" would look like the odd one by accident
+     rather than by emphasis. */
+  .btn-primary.sm, .btn-ghost.sm, .btn-danger.sm{height:32px;padding:0 14px;font-size:12.5px}
+  .btn-ghost{border:1px solid var(--line);color:var(--text-muted)}
+  .btn-ghost:hover{border-color:var(--line-strong);color:var(--text)}
+  /* A read-only pane is full of these — "Edytuj" on a channel nobody may edit
+     has to look unavailable, not merely refuse to work when pressed. */
+  .btn-ghost:disabled{opacity:0.4;cursor:default}
+  .btn-ghost:disabled:hover{border-color:var(--line);color:var(--text-muted)}
+  .btn-danger{border:1px solid var(--danger-line);color:var(--danger-text)}
+  .btn-danger:hover{background:var(--danger-soft)}
+  @media (max-width:1023px){
+    .sv-wrap{padding:16px}
+    .sv{grid-template-columns:220px minmax(0,1fr);height:calc(100vh - 32px)}
+    .sv-panes{padding:20px 24px 48px}
+  }
+  /*
+   * KRÓTKIE MODALE Z LISTĄ — zaproszenia i wyszukiwanie serwerów
+   *
+   * Jedna kolumna 34px pod nagłówkiem, podpisy `.fld-lab`, pola w ramce
+   * `.dlg-field`, przyciski `.btn-*` i stopka taka jak `.ch-foot`. Oba okna
+   * robią to samo — podają jedno pole i listę, z której się coś wybiera — więc
+   * dzielą jeden rytm zamiast każde swojego: zaproszenia miały wcześniej
+   * wyszukiwarkę, listę i stopkę na trzech różnych marginesach (26/18/26px),
+   * a wyszukiwanie serwerów było pełnym panelem ustawień z 264px nawigacją
+   * po dwóch ekranach.
+   */
+  .dlg-body{
+    flex:1;min-height:0;display:flex;flex-direction:column;gap:22px;
+    padding:22px 34px 4px;
+  }
+  .dlg-block{display:flex;flex-direction:column;min-height:0}
+  /* Lista jest jedynym miejscem, które się przewija — reszta karty stoi. */
+  .dlg-block.grow{flex:1}
+  .dlg-block .fld-note{margin:9px 0 0}
+  .dlg-field,.dlg-search{
+    border-radius:var(--radius-md);
+    background:var(--surface-field);border:1px solid var(--line-subtle);
+    display:flex;align-items:center;
+    transition:border-color var(--dur-fast) var(--ease-standard);
+  }
+  .dlg-field:focus-within,.dlg-search:focus-within{border-color:var(--accent-quiet)}
+  /* Pole z akcją w środku: przycisk 32px plus 6px zapasu z każdej strony. */
+  .dlg-field{gap:10px;padding:6px 6px 6px 13px}
+  .dlg-search{gap:8px;height:38px;padding:0 12px}
+  .dlg-si{display:inline-flex;flex:none;color:var(--text-faint)}
+  .dlg-input{
+    flex:1;min-width:0;background:none;border:0;outline:none;
+    font:inherit;font-size:12.5px;color:var(--text);
+  }
+  .dlg-input::placeholder{color:var(--text-faint)}
+  .dlg-mono{
+    min-width:0;flex:1;font-size:12.5px;color:var(--text-muted);
+    font-family:var(--font-mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  /* Wiersze wychodzą 10px poza kolumnę tekstu, żeby kafelek najechania miał
+     zapas, a nazwy nadal stały na linii 34px razem z nagłówkiem. */
+  .dlg-list{
+    flex:1;min-height:0;overflow-y:auto;
+    margin:10px -10px 0;padding:0 10px 6px;
+    display:flex;flex-direction:column;
+  }
+  .dlg-list .asset-empty{flex:none;margin-top:2px}
+  .dlg-row{
+    display:flex;align-items:center;gap:11px;padding:8px 10px;border-radius:var(--radius-md);
+    transition:background var(--dur-fast) var(--ease-standard);
+  }
+  .dlg-row:hover{background:var(--surface-overlay)}
+  .dlg-who{min-width:0;flex:1;display:flex;flex-direction:column;line-height:1.3}
+  .dlg-who b{font-size:13.5px;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .dlg-who span{font-size:12px;color:var(--text-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .dlg-state{flex:none;font-size:11.5px;color:var(--text-faint)}
+  .dlg-mark{
+    width:36px;height:36px;border-radius:12px;overflow:hidden;flex:none;
+    display:inline-flex;align-items:center;justify-content:center;
+    background:var(--accent-soft);color:var(--accent-text);
+    font-size:12px;font-weight:700;letter-spacing:0.02em;
+  }
+  .dlg-mark img{width:100%;height:100%;object-fit:cover}
+  .dlg-note{margin:12px 0 0}
+  .dlg-foot{
+    flex:none;display:flex;align-items:center;justify-content:flex-end;gap:10px;
+    padding:14px 34px 16px;border-top:1px solid var(--line-subtle);
+    background:var(--surface-base);border-radius:0 0 20px 20px;
+  }
+  /* Szkielet listy nosi wymiary `.dlg-row`, żeby lista nie podskoczyła, gdy
+     dane dojadą. */
+  .dlg-skeleton{display:flex;flex-direction:column}
+  .dlg-skeleton-row{display:flex;align-items:center;gap:11px;padding:8px 10px}
+  .dlg-skeleton-row > i{width:36px;height:36px;border-radius:12px;background:var(--surface-overlay);flex:none}
+  .dlg-skeleton-row > span{display:flex;flex:1;flex-direction:column;gap:8px}
+  .dlg-skeleton-row b,
+  .dlg-skeleton-row em{display:block;height:8px;border-radius:999px;background:var(--surface-overlay)}
+  .dlg-skeleton-row b{width:42%}
+  .dlg-skeleton-row em{width:68%;opacity:0.65}
+  .dlg-retry{
+    display:flex;align-items:center;justify-content:space-between;gap:14px;
+    padding:13px 14px;border:1px dashed var(--line);border-radius:var(--radius-md);
+    font-size:12.5px;color:var(--text-faint);line-height:1.45;
+  }
+
+  /* ---------- ZAPROSZENIA ---------- */
+  .inv-modal .am-card{width:min(560px, 100%);height:min(640px, calc(100vh - 64px))}
+  .inv-copy{gap:6px}
+  .inv-copy.done,.inv-copy.done:hover{background:var(--live-line)}
+  .inv-btn{gap:6px}
+  .inv-btn.sent,.inv-btn.sent:hover{border-color:oklch(0.5 0.09 145);color:var(--live)}
+
+  /* ---------- SZUKANIE SERWERÓW ---------- */
+  .find-modal .am-card{width:min(600px, 100%);height:min(660px, calc(100vh - 64px))}
+  .find-join{gap:6px}
+
+  /* pełnoekranowe modale z rozmyciem tła — ta sama otoczka co Ustawienia
+     (`.sv-wrap`/`.sv-bar`/`.sv-x`), tylko bez panelu nawigacji z boku. */
+  .act-modal{
+    position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;
+    padding:32px;background:var(--scrim-strong);
+    backdrop-filter:blur(12px) saturate(0.9);-webkit-backdrop-filter:blur(12px) saturate(0.9);
+    opacity:0;pointer-events:none;
+    transition:opacity var(--dur-slow) var(--ease-standard);
+  }
+  .act-modal.open{opacity:1;pointer-events:auto}
+  .am-card{
+    width:min(1180px, 100%);max-height:calc(100vh - 64px);
+    display:flex;flex-direction:column;min-height:0;
+    background:var(--surface-canvas);border:1px solid var(--line);
+    border-radius:20px;box-shadow:var(--elev-modal);
+    transform:translateY(14px) scale(0.985);opacity:0;
+    transition:transform var(--dur-slow) var(--ease-standard), opacity var(--dur-base) var(--ease-standard);
+  }
+  .act-modal.open .am-card{transform:none;opacity:1}
+  .am-head{
+    flex:none;display:flex;align-items:center;gap:20px;
+    padding:14px 34px;
+    border-bottom:1px solid var(--line-subtle);
+    background:var(--surface-base);
+    border-radius:20px 20px 0 0;
+  }
+  .am-head .sv-close{margin-left:auto}
+  .am-title{min-width:0}
+  .am-title h2{font-size:18px;font-weight:600;line-height:1.25}
+  .am-title p{font-size:12.5px;color:var(--text-faint);line-height:1.35;margin-top:2px}
+  .am-title p b{color:var(--accent-text);font-weight:600}
+  /* ---------- USTAWIENIA KANAŁU ---------- */
+  .ch-modal .am-card{width:min(680px, 100%)}
+  .ch-body{flex:1;min-height:0;overflow-y:auto;padding:24px 34px 6px}
+  .ch-body .frm-row:first-child{border-top:none;padding-top:0}
+  .ch-sect{margin-top:22px;border-top:1px solid var(--line-subtle);padding-top:18px}
+  .ch-sect-h{
+    display:flex;align-items:center;gap:9px;
+    font-size:15px;font-weight:600;margin-bottom:8px;
+  }
+  .ch-sect.danger .sc-ico{color:var(--danger-text)}
+  .ch-roles{display:flex;flex-direction:column;gap:2px;margin:10px 0 12px}
+  .ch-role{
+    display:flex;align-items:center;gap:9px;
+    padding:7px 8px;border-radius:var(--radius-md);
+    font-size:13px;color:var(--text-muted);background:var(--surface-base);
+  }
+  .ch-role.empty{color:var(--text-faint);background:none;padding-left:0}
+  .ch-role-dot{width:8px;height:8px;border-radius:50%;flex:none}
+  .ch-role-state{margin-left:auto;font-size:11.5px;color:var(--text-faint)}
+  .ch-confirm{display:flex;align-items:center;gap:8px}
+  .ch-foot{
+    flex:none;display:flex;align-items:center;justify-content:flex-end;gap:10px;
+    padding:14px 34px 16px;border-top:1px solid var(--line-subtle);
+    background:var(--surface-base);
+  }
+  /* Tworzenie i wyszukiwanie serwerów korzysta z tej samej krótkiej karty co
+     tworzenie kanału. Tylko lista publicznych serwerów potrzebuje własnego
+     układu; formularze, przyciski i stany pól pozostają wspólne z Settings. */
+  /*
+   * Finding and creating a server now use the settings shell, so the list no
+   * longer scrolls inside itself: the pane column is already the scroller, and
+   * a second one nested in it meant a 250px window inside a 720px dialog.
+   */
+  /* Channel settings now speak the same visual language as account and server
+     settings: identity in the rail, intent-based navigation and one fixed
+     action bar. The compact `.ch-modal` rules above remain for channel
+     creation, which is deliberately still a short form dialog. */
+  .ch-settings-brand{min-width:0}
+  .ch-settings-mark{
+    width:42px;height:42px;border-radius:13px;flex:none;
+    display:inline-flex;align-items:center;justify-content:center;
+    color:var(--accent-text);background:var(--accent-soft);
+    border:1px solid var(--accent-quiet);
+  }
+  .ch-settings-form{padding-top:14px}
+  .ch-settings-form > .frm{border-top:0}
+  .ch-settings-form .frm-row:first-child{padding-top:0}
+  .ch-settings-form .frm-row:last-child{padding-bottom:0;border-bottom:0}
+  .ch-settings .btn-primary,
+  .ch-settings .btn-ghost,
+  .ch-settings .btn-danger{gap:7px}
+  .ch-settings .danger-section{
+    border-color:color-mix(in oklab, var(--danger-line) 60%, var(--line-subtle));
+  }
+  .ch-settings .danger-section .sc-h{
+    color:var(--danger-text);
+    border-bottom-color:color-mix(in oklab, var(--danger-line) 42%, var(--line-subtle));
+  }
+  .ch-settings .danger-section .sc-ico{color:var(--danger-text)}
+  .ch-settings-foot{
+    flex:none;display:flex;align-items:center;justify-content:flex-end;gap:10px;
+    padding:14px 34px 16px;border-top:1px solid var(--line-subtle);
+    background:var(--surface-base);
+  }
+  /* A touch screen does not become precise just because it is wider than the
+     phone breakpoint. Keep compact mouse controls visually restrained on
+     desktop, but give their tablet and hybrid-laptop variants a 44px target. */
+  @media (pointer:coarse){
+    .set-item-act,.ap-face{min-height:44px}
+    .set-item-act{
+      min-width:44px;display:inline-flex;align-items:center;justify-content:center;
+    }
+    .set-input,.set-select,.set-area{font-size:16px}
+    .dlg-search{min-height:44px}
+    .dlg-search .dlg-input{height:42px}
+    .ap-accent-control input[type="color"]{width:44px;height:44px}
+    .int-move button{width:44px;height:44px}
+    .seg.perm-tri .seg-i{height:44px}
+    .emoji-tile.editable{padding-right:48px}
+    .emoji-delete{top:2px;right:2px;width:44px;height:44px;opacity:1}
+    .sound-editor-close{width:44px;height:44px}
+    .sound-glyph-pick{height:44px}
+    .wave-clamp{width:44px}
+    .wave-clamp::before{left:21px}
+    .wave-clamp::after{left:16px}
+  }
+  /* Mobile settings are an app screen, not a desktop sidebar squeezed above a
+     form. Identity, section navigation and content each get one compact band;
+     only the content pane scrolls vertically. This block intentionally lives
+     after every modal base rule so those desktop declarations cannot override
+     the adaptation through import order. */
+  @media (max-width:767px){
+    .sv-wrap{
+      padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      align-items:stretch;justify-content:stretch;
+    }
+    .sv{
+      grid-template-columns:minmax(0,1fr);
+      grid-template-rows:auto auto minmax(0,1fr);
+      width:100%;height:100%;max-height:none;
+      border:none;border-radius:0;
+    }
+    .sv-nav{
+      grid-column:1;grid-row:2;
+      display:grid;grid-template-columns:minmax(0,1fr) auto;
+      grid-template-rows:auto;min-height:0;max-height:none;
+      border-right:none;border-bottom:1px solid var(--line);
+      background:var(--surface-raised);
+    }
+    /* The title bar already names the current settings pane and owns the
+       close action. Repeating the account/server identity between it and the
+       tabs costs a full mobile row without helping navigation. */
+    .sv-brand,.sv-brand.us-brand{display:none}
+    .sv-nav-scroll{
+      grid-column:1/-1;grid-row:1;display:flex;align-items:center;gap:4px;
+      min-width:0;overflow-x:auto;overflow-y:hidden;
+      padding:5px 8px 8px;scrollbar-width:none;overscroll-behavior-x:contain;
+      scroll-snap-type:x proximity;
+    }
+    .sv-nav-scroll::-webkit-scrollbar{display:none}
+    .sv-cap{display:none}
+    .sv-item{
+      width:auto;height:44px;min-height:44px;flex:none;padding:0 13px;gap:8px;
+      scroll-snap-align:nearest;white-space:nowrap;font-size:13px;
+    }
+    .sv-item.on::before{display:none}
+    .sv-nav:has(.us-out) .sv-nav-scroll{grid-column:1;grid-row:1}
+    .sv-nav .us-out{
+      grid-column:2;grid-row:1;margin:0;padding:5px 8px 8px 4px;
+      border-top:none;border-left:1px solid var(--line-subtle);
+    }
+    .sv-nav .us-out .sv-item{
+      width:44px;padding:0;justify-content:center;gap:0;font-size:0;
+    }
+    .sv-main{grid-column:1;grid-row:3;min-height:0}
+    .sv-bar{grid-column:1;grid-row:1;min-height:68px;padding:10px 12px 10px 16px;gap:10px}
+    .sv-bar-txt h2{font-size:17px}
+    .sv-bar-txt p{font-size:11.5px}
+    .sv-close{gap:0}
+    .sv-close span{display:none}
+    .sv-panes{
+      padding:18px 16px max(36px, env(safe-area-inset-bottom));
+      overscroll-behavior:contain;scrollbar-gutter:stable;
+    }
+    .sv-h{padding-right:0;font-size:21px}
+    .ov-id{align-items:flex-start;flex-wrap:wrap}
+    .ov-icon-actions{width:calc(100% - 58px);margin-left:58px}
+    .ov-icon-note{margin-left:58px}
+    .sc{margin-bottom:14px}
+    .sc-h{padding:14px 16px}
+    .sc-b{padding:16px}
+    .set-item{gap:8px}
+    .set-item-act{
+      min-width:44px;min-height:44px;padding-inline:6px;
+      display:inline-flex;align-items:center;justify-content:center;opacity:1;
+    }
+    .set-input,.set-select,.set-area{font-size:16px}
+    .set-select{max-width:100%}
+    .set-row:not(:has(.sw)){flex-direction:column;align-items:stretch;gap:10px}
+    .set-ctl{min-width:0;flex-wrap:wrap}
+    .seg{grid-template-columns:minmax(0,1fr)}
+    /* `.seg.three` outranks the line above on specificity, so it has to be
+       collapsed by name rather than inherited into it. */
+    .seg.three{grid-template-columns:minmax(0,1fr)}
+    .ch-modal .seg{grid-template-columns:1fr 1fr}
+    /* The permission pill is three words, not three cards: it stays one row of
+       three and moves under its label instead of stacking into a tower. */
+    .perm-row{align-items:stretch;flex-direction:column;gap:8px;padding:10px}
+    .seg.perm-tri{width:100%;grid-template-columns:repeat(3,minmax(0,1fr))}
+    .seg.perm-tri .seg-i{height:44px}
+    /* The reorder pair moves below the section name. Keeping four controls in
+       one 320px row either shrank the arrows below a finger target or crushed
+       the name into a few characters. */
+    .int-row.has-move{
+      grid-template-columns:auto minmax(0,1fr) auto;align-items:center;
+    }
+    .int-row.has-move .int-move{
+      grid-column:2;grid-row:2;justify-self:start;
+    }
+    .int-row.has-move .int-move button{width:44px;height:44px}
+    .int-row.has-move > .btn-ghost{
+      grid-column:3;grid-row:1 / span 2;min-height:44px;align-self:center;
+    }
+    /* Both boards already reflow on their own; the phone only needs the face
+       rows to reach a comfortable tap target. */
+    .ap-face{min-height:44px}
+    .ap-intro{flex-direction:column;gap:0}
+    .ap-reset{align-self:flex-start;margin:0 0 14px;min-height:44px}
+    .ap-accent-row{align-items:stretch}
+    .ap-accent-control{justify-content:flex-start}
+    .ap-accent-control .btn-ghost{min-height:44px}
+    .role-editor-fields{grid-template-columns:minmax(0,1fr)}
+    .emoji-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+    .emoji-tile.editable{padding-right:48px}
+    .emoji-delete{
+      top:2px;right:2px;width:44px;height:44px;opacity:1;
+    }
+    .emoji-editor-body > .fld-note{margin-left:0}
+    .emoji-editor-actions .btn-primary{margin-left:auto}
+    .wave-plot{height:112px}
+    .wave-plot svg{inset:6px 0}
+    .sound-row-actions{gap:12px;padding-right:2px}
+    .sound-row .set-item-act{opacity:1}
+    .sound-editor-card{padding:16px}
+    .sound-editor-head{margin-bottom:18px}
+    .sound-editor-close{width:44px;height:44px}
+    .sound-glyph-pick{height:44px}
+    .sound-wave-head{align-items:flex-end}
+    .sound-wave-head .btn-ghost{min-height:44px}
+    .wave-clamp{width:44px}
+    .wave-clamp::before{left:21px}
+    .wave-clamp::after{left:16px}
+    .member-role-select{width:min(160px,46vw);max-width:100%}
+    .sv-head{align-items:stretch}
+    .sv-head .btn-primary{min-height:44px}
+
+    .act-modal{
+      padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+      align-items:stretch;justify-content:stretch;
+    }
+    .am-card,.ch-modal .am-card,.inv-modal .am-card,.find-modal .am-card,.client-modal .am-card{
+      width:100%;height:100%;max-height:none;
+      border:none;border-radius:0;
+      background:var(--surface-canvas);
+    }
+    .am-head{padding:10px 16px;border-radius:0}
+    .am-title h2{font-size:19px;overflow-wrap:anywhere}
+    .am-title p{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .ch-body{padding:4px 16px 10px;overscroll-behavior:contain}
+    .ch-foot{
+      padding:12px 16px max(14px, env(safe-area-inset-bottom));
+      margin-top:0;flex-wrap:nowrap;
+    }
+    .ch-foot .btn-primary,.ch-foot .btn-ghost{min-height:44px}
+    .ch-settings .sv-panes{padding-bottom:18px}
+    .ch-settings-foot{
+      padding:10px 16px max(10px, env(safe-area-inset-bottom));
+      flex-wrap:nowrap;
+    }
+    .ch-settings-foot .btn-primary,.ch-settings-foot .btn-ghost{min-height:44px}
+    .dlg-body{padding:16px 16px 4px;gap:18px}
+    /* 16px zapobiega przybliżeniu pola przez iOS przy dotknięciu. */
+    .dlg-field,.dlg-search{min-height:44px}
+    .dlg-input{font-size:16px}
+    .dlg-list{margin-inline:-8px;padding:0 8px 6px;overscroll-behavior:contain}
+    .dlg-row,.dlg-skeleton-row{min-height:58px;padding-inline:8px}
+    .dlg-retry{flex-direction:column;align-items:stretch;gap:12px}
+    .dlg-retry .btn-ghost{min-height:44px}
+    .dlg-foot{
+      padding:12px 16px max(14px, env(safe-area-inset-bottom));
+      border-radius:0;
+    }
+    .dlg-foot .btn-ghost{min-height:44px}
+    .inv-btn,.inv-copy,.find-join{height:44px;padding-inline:13px}
+  }
+
+  @media (max-width:479px){
+    .frm-actions .btn-primary{width:100%;min-height:44px}
+    .perm-editor-head{align-items:flex-start;flex-direction:column;gap:4px}
+    .perm-editor-head span{text-align:left}
+    .mic-test{align-items:stretch;flex-direction:column}
+    .mic-bar{flex:none;width:100%}
+    .ch-foot > button{flex:1;min-width:0;padding-inline:12px}
+    .ch-settings-foot > button{flex:1;min-width:0;padding-inline:12px}
+    .ov-icon-actions{width:100%;margin-left:0}
+    .ov-icon-actions .btn-ghost{flex:1}
+    .ov-icon-note{margin-left:0}
+    .asset-head{flex-wrap:wrap}
+    .asset-head .btn-primary{width:100%;min-height:44px;margin-top:4px}
+    .emoji-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .emoji-editor-fields{grid-template-columns:minmax(0,1fr)}
+    .emoji-upload-preview{width:100%;height:104px}
+    .emoji-editor-actions{flex-wrap:wrap}
+    .emoji-editor-actions > span{display:none}
+    .emoji-editor-actions button{flex:1;min-height:44px}
+    .sound-cap{align-items:flex-start;flex-direction:column;gap:3px}
+    .sound-row{grid-template-columns:auto minmax(0,1fr);gap:11px}
+    .sound-row-actions{grid-column:2;justify-content:flex-start;padding:0 0 2px}
+    .sound-fields{grid-template-columns:minmax(0,1fr)}
+    .sound-wave-head{align-items:stretch}
+    .sound-wave-head .btn-ghost{align-self:flex-start}
+    .sound-editor-actions > button{flex:1;min-height:44px}
+  }
+
+  @media (max-width:767px) and (orientation:landscape){
+    .sv-panes{padding-top:14px}
+    .am-head{padding-block:8px}
+  }
+}

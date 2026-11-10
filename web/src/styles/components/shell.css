@@ -1,0 +1,78 @@
+@layer components {
+  /*
+   * SHELL — "one rail, one room"
+   *
+   * Two structural regions plus two on-demand ones. Every panel here is a grid
+   * track that animates from 0 to its width rather than a floating layer, so
+   * the room genuinely reflows and nothing ends up underneath anything.
+   *
+   * The server rail is expressed as a custom property rather than a fourth
+   * value repeated in each rule below: the column count is the same at every
+   * breakpoint, only its first width changes, and one variable is far harder to
+   * get out of step than five copies of the same number.
+   */
+  .app {
+    --servers-w: 0px;
+    display: grid;
+    grid-template-columns: var(--servers-w) var(--rail-w) 1fr 0px;
+    height: 100vh;
+    height: 100dvh;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right)
+      env(safe-area-inset-bottom) env(safe-area-inset-left);
+    transition: grid-template-columns var(--dur-base) var(--ease-standard);
+  }
+
+  .app.servers-open {
+    --servers-w: var(--servers-rail-w);
+  }
+
+  .app.roster-open {
+    grid-template-columns: var(--servers-w) var(--rail-w) 1fr var(--roster-w);
+  }
+
+  /* From 1024 up, a closed roster collapses to a column of avatars rather than
+     disappearing, so presence stays visible without spending 264px on it.
+     `.app.roster-open` outranks this, so opening the list still widens the
+     track. Below 1024 the responsive layer takes the column back to 0. */
+  @media (min-width: 1024px) {
+    .app {
+      grid-template-columns: var(--servers-w) var(--rail-w) 1fr var(--roster-mini-w);
+    }
+  }
+
+  .srv-rail {
+    grid-column: 1;
+  }
+
+  .rail {
+    grid-column: 2;
+  }
+
+  .room {
+    grid-column: 3;
+  }
+
+  .roster {
+    grid-column: 4;
+  }
+
+  /*
+   * Cinema mode: the stage takes the width the roster was using, and nothing
+   * else moves.
+   *
+   * It used to collapse every track, which meant leaving a call to look at a
+   * channel had to leave cinema first — a bigger picture is the point, not a
+   * different app. The rail stays where it is; only the panel on the right,
+   * which says who is in a call you are already looking at, steps aside.
+   */
+  .app.stage-full,
+  .app.stage-full.roster-open {
+    grid-template-columns: var(--servers-w) var(--rail-w) 1fr 0px;
+  }
+
+  /* The track is 0 wide; the panel leaves the flow so the avatar column at
+     1024–1439 cannot reappear inside it. */
+  .app.stage-full .roster {
+    display: none;
+  }
+}

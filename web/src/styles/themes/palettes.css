@@ -1,0 +1,38 @@
+/*
+ * The complete dark palettes live in `design/themes.ts`, where the runtime,
+ * pre-hydration script, cards and tests can share one source of truth. These
+ * small blocks only tint the generated light counterpart of each preset.
+ *
+ * Keep one block per registry entry: `themes.test.ts` checks that both lists
+ * stay in lockstep.
+ */
+
+[data-theme="midnight"] {
+  --h-neutral: 277;
+  --c-neutral: 1;
+}
+
+[data-theme="discord"] {
+  --h-neutral: 270;
+  --c-neutral: 1.2;
+}
+
+[data-theme="spotify"] {
+  --h-neutral: 0;
+  --c-neutral: 0;
+}
+
+[data-theme="steam"] {
+  --h-neutral: 254;
+  --c-neutral: 3.6;
+}
+
+[data-theme="twitch"] {
+  --h-neutral: 286;
+  --c-neutral: 0.7;
+}
+
+[data-theme="github-dark"] {
+  --h-neutral: 258;
+  --c-neutral: 2;
+}

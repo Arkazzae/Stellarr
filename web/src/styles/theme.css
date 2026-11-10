@@ -1,0 +1,89 @@
+/*
+ * ============================================================================
+ * TAILWIND THEME — the utility surface of the design system
+ * ============================================================================
+ *
+ * Every colour here is `var(…)`, declared with `@theme inline` so the utility
+ * resolves the variable at use time rather than freezing it at build time.
+ * That is what makes `data-theme` / `data-scheme` switch the whole app live.
+ *
+ * Rule: components never hard-code a colour. If a utility for it does not
+ * exist, the token is missing and belongs in `themes/recipe.css`.
+ * ============================================================================
+ */
+
+@theme inline {
+  /* -- surfaces ------------------------------------------------------- */
+  --color-canvas: var(--surface-canvas);
+  --color-dark: var(--surface-dark);
+  --color-base: var(--surface-base);
+  --color-raised: var(--surface-raised);
+  --color-room: var(--surface-room);
+  --color-sidebar: var(--surface-sidebar);
+  --color-overlay: var(--surface-overlay);
+  --color-active: var(--surface-active);
+  --color-field: var(--surface-field);
+  --color-stage: var(--surface-stage);
+  --color-pop: var(--surface-pop);
+
+  /* -- lines ---------------------------------------------------------- */
+  --color-line: var(--line);
+  --color-line-subtle: var(--line-subtle);
+  --color-line-strong: var(--line-strong);
+
+  /* -- text ----------------------------------------------------------- */
+  --color-fg: var(--text);
+  --color-fg-muted: var(--text-muted);
+  --color-fg-faint: var(--text-faint);
+
+  /* -- accent --------------------------------------------------------- */
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-quiet: var(--accent-quiet);
+  --color-accent-text: var(--accent-text);
+  --color-accent-soft: var(--accent-soft);
+  --color-on-accent: var(--on-accent);
+
+  /* -- status --------------------------------------------------------- */
+  --color-danger: var(--danger-text);
+  --color-danger-line: var(--danger-line);
+  --color-danger-soft: var(--danger-soft);
+  --color-live: var(--live);
+  --color-live-line: var(--live-line);
+  --color-warn: var(--warn-text);
+  --color-warn-line: var(--warn-line);
+  --color-info: var(--info-text);
+  --color-info-line: var(--info-line);
+
+  /* -- shadows -------------------------------------------------------- */
+  --shadow-pop: var(--elev-pop);
+  --shadow-modal: var(--elev-modal);
+}
+
+@theme {
+  /* Structural, scheme-independent. Tailwind owns these namespaces, so they
+     are declared statically and read back as `var(--radius-md)` in CSS. */
+  --font-sans: "Outfit", ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    Roboto, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Mono", "JetBrains Mono", Menlo,
+    Consolas, monospace;
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
+  /* The mockup's type scale, so `text-13` means the same thing everywhere. */
+  --text-10: 10px;
+  --text-11: 11px;
+  --text-12: 12px;
+  --text-13: 13px;
+  --text-14: 14px;
+  --text-15: 15px;
+  --text-16: 16px;
+  --text-18: 18px;
+  --text-20: 20px;
+  --text-24: 24px;
+  --text-28: 28px;
+}

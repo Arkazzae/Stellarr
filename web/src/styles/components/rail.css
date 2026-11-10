@@ -1,0 +1,567 @@
+@layer components {
+  /* ---------- RAIL ---------- */
+  .rail{
+    background:var(--surface-sidebar);
+    border-right:1px solid var(--line);
+    display:flex;flex-direction:column;min-height:0;z-index:30;
+  }
+  .rail-header{
+    height:52px;padding:0 12px 0 10px;border-bottom:1px solid var(--line-subtle);flex:none;
+    display:flex;align-items:center;gap:4px;
+  }
+  /* The way out of this server, immediately left of its name. */
+  .rail-switch{
+    width:32px;height:32px;border-radius:var(--radius-sm);flex:none;
+    display:inline-flex;align-items:center;justify-content:center;
+    color:var(--text-faint);
+    transition:background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+  }
+  .rail-switch:hover{background:var(--surface-overlay);color:var(--text)}
+  .rail-switch[aria-expanded="true"]{background:var(--surface-overlay);color:var(--accent-text)}
+
+  /* ---------- RAIL SERWERÓW / PW ---------- */
+  /*
+   * A grid track, not a layer over one. Opening it moves the whole app right
+   * instead of covering the channel rail, which is the difference between a
+   * place you are and a menu you are holding open.
+   */
+  .srv-rail{
+    overflow:hidden;min-width:0;
+    background:var(--surface-canvas);border-right:1px solid var(--line);
+    display:flex;flex-direction:column;align-items:center;gap:10px;
+    padding:12px 0;
+  }
+  /* Closed the track is 0 wide, so the contents must leave the tab order and
+     the accessibility tree rather than merely being clipped. */
+  .srv-rail[inert]{border-right:none}
+  .srv-inner{
+    width:var(--servers-rail-w);flex:1;min-height:0;
+    display:flex;flex-direction:column;align-items:center;gap:10px;
+  }
+  .srv-item{
+    position:relative;width:46px;height:46px;border-radius:16px;flex:none;
+    display:inline-flex;align-items:center;justify-content:center;
+    background:var(--surface-raised);color:var(--text-muted);
+    transition:background var(--dur-fast) var(--ease-standard),
+               color var(--dur-fast) var(--ease-standard),
+               border-radius var(--dur-fast) var(--ease-standard);
+  }
+  .srv-item:hover:not(:disabled){background:var(--surface-overlay);color:var(--text);border-radius:14px}
+  /* Not dressed up as working: there is no backend behind these two yet. */
+  .srv-item:disabled{opacity:0.4;cursor:not-allowed}
+  .srv-item.on{background:var(--accent-soft);color:var(--text)}
+  .srv-item.on::before{
+    content:"";position:absolute;left:-11px;top:8px;bottom:8px;width:4px;
+    background:var(--accent);border-radius:0 3px 3px 0;
+  }
+  .srv-mark{font-size:14px;font-weight:700;letter-spacing:0.01em}
+  .srv-icon{display:block;width:100%;height:100%;object-fit:cover;border-radius:inherit}
+  .srv-sep{width:28px;height:1px;background:var(--line);flex:none}
+  .srv-list{flex:1;min-height:0;overflow-y:auto;display:flex;flex-direction:column;align-items:center;gap:10px;width:100%}
+  .srv-item.add{border:1px dashed var(--line-strong);background:none}
+
+  /* ---------- LAUNCHER U STOPY KOLUMNY ---------- */
+  /*
+   * The tile stays a tile; the rest of the column rises out of it. The rail
+   * clips its contents so a closed 0-wide track cannot leak, which would clip
+   * the tiles too — so the clip is lifted only while the launcher is actually
+   * open, and the track is never both closed and open at once.
+   */
+  .srv-rail:has(.srv-menu:not([hidden])){overflow:visible}
+  .srv-launcher{position:relative;flex:none;display:flex;justify-content:center;width:100%}
+  .srv-item.more{background:var(--surface-raised);color:var(--text-muted)}
+  .srv-item.more[aria-expanded="true"]{
+    background:var(--surface-overlay);color:var(--text);
+    border-radius:14px;
+  }
+  .srv-more-glyph{display:inline-flex}
+  /*
+   * A column of tiles above the trigger, not a card beside it.
+   *
+   * The rail is 60px of unlabelled tiles; a 232px card of labelled rows
+   * hanging off its foot was a second navigation's worth of chrome for three
+   * actions, and it covered the servers it grew out of. The tiles are the same
+   * size and the same shape as the rest of the column, so the launcher reads
+   * as the column continuing upwards for as long as it is open. The names live
+   * in the tooltip and the accessible name, where the rest of the rail keeps
+   * them.
+   */
+  .srv-menu{
+    position:absolute;bottom:calc(100% + 8px);left:50%;transform:translateX(-50%);
+    z-index:60;display:flex;flex-direction:column-reverse;gap:8px;
+  }
+  .srv-menu-tile{
+    --i:0;
+    width:44px;height:44px;border-radius:14px;flex:none;
+    display:inline-flex;align-items:center;justify-content:center;
+    background:var(--surface-raised);border:1px solid var(--line);
+    color:var(--text-muted);box-shadow:0 8px 22px oklch(0 0 0 / 0.38);
+    animation:srvTileIn 180ms var(--ease-standard) both;
+    animation-delay:calc(var(--i) * 40ms);
+    transition:background var(--dur-fast) var(--ease-standard),
+               color var(--dur-fast) var(--ease-standard),
+               border-color var(--dur-fast) var(--ease-standard);
+  }
+  @keyframes srvTileIn{
+    from{opacity:0;transform:translateY(10px) scale(0.92)}
+    to{opacity:1;transform:none}
+  }
+  .srv-menu-tile:hover:not(:disabled){
+    background:var(--surface-overlay);border-color:var(--line-strong);color:var(--text);
+  }
+  .srv-menu-tile:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  /* Nothing behind it yet: dimmed and unclickable, with the tooltip saying why. */
+  .srv-menu-tile:disabled{opacity:0.45;cursor:not-allowed}
+  @media (prefers-reduced-motion: reduce){
+    .srv-menu-tile{animation:none}
+  }
+  .rail-header h1{
+    font-size:20px;line-height:1.25;font-weight:600;flex:1;min-width:0;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .rail-act{
+    width:32px;height:32px;border-radius:50%;flex:none;color:var(--text-faint);
+    display:inline-flex;align-items:center;justify-content:center;
+    transition:background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+  }
+  .rail-act:hover{background:var(--surface-overlay);color:var(--text)}
+  .rail-act.invite:hover{color:var(--accent-text)}
+
+  .rail-scroll{flex:1;overflow-y:auto;padding:12px 8px;min-height:0}
+  .group-caption{font-size:12px;color:var(--text-faint);padding:0 8px;margin:16px 0 4px;display:flex;align-items:center;justify-content:space-between}
+  .rail-scroll .group-caption:first-child,
+  .rail-scroll .rail-cap:first-child .group-caption{margin-top:0}
+  /* Kropka „+" ma być na tej samej linii co kapitalik, nie pod nią. */
+  .rail-cap{margin:16px 0 4px}
+  .rail-cap .group-caption{margin:0}
+  .rail-scroll .rail-cap:first-child{margin-top:0}
+  .group-caption .hint{font-size:10px;opacity:0.7}
+
+  .channel{
+    display:flex;align-items:center;
+    width:100%;height:32px;
+    border-radius:var(--radius-sm);
+    color:var(--text-muted);font-size:13px;
+    position:relative;text-align:left;cursor:pointer;
+    transition:background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+  }
+  .channel:hover{background:var(--surface-overlay);color:var(--text)}
+  .channel-main{
+    flex:1;min-width:0;height:100%;padding:0 8px;
+    display:flex;align-items:center;gap:8px;border-radius:inherit;
+    color:inherit;text-align:left;cursor:inherit;
+  }
+  .channel-main:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+  .channel .glyph{width:16px;flex:none;color:var(--text-faint);display:inline-flex;justify-content:center}
+  .channel .name{min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* Nieprzeczytane: jaśniejsza nazwa i licznik po prawej. */
+  .channel.unread{color:var(--text)}
+  .channel.unread .name{font-weight:600}
+  .channel.unread .glyph{color:var(--text-muted)}
+  .ch-muted{flex:none;display:inline-flex;color:var(--text-faint)}
+  .ch-unread{
+    margin-left:auto;flex:none;
+    min-width:18px;height:18px;padding:0 5px;border-radius:9px;
+    display:inline-flex;align-items:center;justify-content:center;
+    background:var(--accent);color:var(--on-accent);
+    font-size:11px;font-weight:600;font-variant-numeric:tabular-nums;
+  }
+  .channel .count{margin-left:auto;font-size:11px;font-weight:500;color:var(--text-faint);font-variant-numeric:tabular-nums}
+  /*
+   * Zębatka kanału: tylko dla osoby, która może go edytować, i tylko gdy wiersz
+   * jest pod kursorem albo ma fokus. Wchodzi na miejsce licznika, bo obie
+   * rzeczy naraz w 248px robią z railu tabelę.
+   */
+  .ch-cog{
+    margin-left:auto;flex:none;width:20px;height:20px;border-radius:var(--radius-sm);
+    display:none;align-items:center;justify-content:center;
+    color:var(--text-faint);cursor:pointer;
+    transition:background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+  }
+  .ch-cog:hover{background:var(--surface-pop);color:var(--text)}
+  .ch-threads-toggle{
+    width:20px;height:20px;flex:none;border-radius:var(--radius-sm);
+    display:inline-flex;align-items:center;justify-content:center;
+    color:var(--text-faint);cursor:pointer;
+    transition:background var(--dur-fast) var(--ease-standard),
+               color var(--dur-fast) var(--ease-standard),
+               transform var(--dur-base) var(--ease-standard);
+  }
+  .ch-threads-toggle:hover{background:var(--surface-pop);color:var(--text)}
+  .ch-threads-toggle[aria-expanded="false"]{transform:rotate(-90deg)}
+  .ch-threads-toggle:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  .ch-threads-toggle + .ch-cog{margin-left:0}
+  .channel.active{background:var(--surface-base);color:var(--text)}
+  .channel.active .glyph,
+  .channel.active .count,
+  .channel.active .ch-cog{color:var(--text)}
+  .channel.active .ch-cog:hover{background:var(--surface-overlay);color:var(--text)}
+  .channel:hover .ch-cog, .channel:focus-within .ch-cog{display:inline-flex}
+  .channel:hover .ch-unread, .channel:focus-within .ch-unread,
+  .channel:hover .count, .channel:focus-within .count{display:none}
+  .channel-threads{
+    list-style:none;margin:0;padding:0;overflow:hidden;opacity:1;
+    transition:max-height var(--dur-base) var(--ease-standard),
+               opacity var(--dur-fast) var(--ease-standard);
+  }
+  .channel-threads.closed{opacity:0}
+  .channel-thread{
+    width:100%;min-height:40px;padding:5px 8px 5px 28px;
+    display:flex;align-items:flex-start;gap:8px;border-radius:var(--radius-sm);
+    color:var(--text-muted);text-align:left;
+    transition:background var(--dur-fast) var(--ease-standard),
+               color var(--dur-fast) var(--ease-standard),
+               opacity var(--dur-fast) var(--ease-standard);
+  }
+  .channel-thread:hover{background:var(--surface-overlay);color:var(--text)}
+  .channel-thread[aria-current="page"]{background:var(--surface-base);color:var(--text)}
+  .channel-thread[aria-busy="true"]{opacity:0.55;cursor:progress}
+  .channel-thread-icon{width:14px;padding-top:2px;flex:none;display:inline-flex;color:var(--text-faint)}
+  .channel-thread-copy{min-width:0;display:flex;flex:1;flex-direction:column;gap:1px}
+  .channel-thread-preview{
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    font-size:12px;line-height:1.35;font-weight:550;
+  }
+  .channel-thread-meta{
+    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+    color:var(--text-faint);font-size:10.5px;line-height:1.3;
+  }
+  .channel-thread:hover .channel-thread-meta,
+  .channel-thread[aria-current="page"] .channel-thread-meta{color:var(--text-muted)}
+  /* Kanał w trakcie przenoszenia — reszta listy rozsuwa się sama (dnd-kit). */
+  .drag-chosen{background:var(--surface-overlay);box-shadow:0 4px 14px oklch(0 0 0 / 0.45);cursor:grabbing}
+  /* The collapse caret owns the trailing edge. The separate create button is
+     overlaid just before it, keeping two valid sibling buttons without making
+     the caret look stranded between the caption and the "+". */
+  .rail-cap{position:relative;display:flex;align-items:center;min-height:22px}
+  .rail-cap .group-caption{flex:1;min-width:0}
+  .rail-add{
+    position:absolute;right:24px;top:50%;z-index:1;
+    width:22px;height:22px;border-radius:var(--radius-sm);flex:none;
+    display:inline-flex;align-items:center;justify-content:center;
+    color:var(--text-faint);opacity:0;pointer-events:none;
+    transform:translateY(-50%);
+    transition:background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard), opacity var(--dur-fast) var(--ease-standard);
+  }
+  .rail-add:hover{background:var(--surface-overlay);color:var(--text)}
+  .rail-cap:hover .rail-add, .rail-add:focus-visible{opacity:1;pointer-events:auto}
+
+  /*
+   * A rail section: one collapsible header over a text and a voice sub-list.
+   *
+   * The header has to read as a level above the "TEKSTOWE"/"GŁOSOWE" captions
+   * nested inside it, which at 248px cannot be done with indentation. So it is
+   * separated instead — a hairline above, a folder mark, and the name in the
+   * body colour rather than the caption's faint one.
+   */
+  .rail-section{margin-top:14px;padding-top:12px;border-top:1px solid var(--line-subtle)}
+  .rail-section-cap{margin-bottom:2px}
+  .rail-section-cap .group-caption{
+    display:flex;align-items:center;gap:7px;flex:1;min-width:0;
+    color:var(--text-muted);font-weight:600;letter-spacing:0;text-transform:none;
+  }
+  .rail-section-cap .group-caption:hover{color:var(--text)}
+  .rail-section-mark{flex:none;display:inline-flex;color:var(--text-faint)}
+  .rail-section-cap .group-caption:hover .rail-section-mark{color:var(--text-muted)}
+  .rail-section-name{
+    min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  /* Sits in flow rather than absolutely over the caret like `.rail-add`: the
+     caption owns the remaining width and truncates against this button. */
+  .rail-section-cog{
+    flex:none;width:22px;height:22px;border-radius:var(--radius-sm);
+    display:inline-flex;align-items:center;justify-content:center;
+    color:var(--text-faint);opacity:0;pointer-events:none;
+    transition:background var(--dur-fast) var(--ease-standard),
+               color var(--dur-fast) var(--ease-standard),
+               opacity var(--dur-fast) var(--ease-standard);
+  }
+  .rail-section-cog:hover{background:var(--surface-overlay);color:var(--text)}
+  .rail-section-cap:hover .rail-section-cog,
+  .rail-section-cog:focus-visible{opacity:1;pointer-events:auto}
+  /* A section holds one flat list: its channels carry "#" and the speaker glyph
+     already, so repeating the TEKSTOWE/GŁOSOWE captions inside every section
+     would label what the icons have said and push the rail into two heading
+     levels at 248px. */
+  .rail-section-empty{
+    padding:4px 8px 6px;font-size:12px;color:var(--text-faint);
+  }
+
+  /*
+   * Where a dragged person would land.
+   *
+   * No colour wash and no bar down one edge: a coloured block behind a list of
+   * names reads as "these people are selected", which is the opposite of what
+   * is being said, and an edge marker points at a boundary rather than at the
+   * channel. What is true is that this box is about to accept something, so the
+   * box is what is drawn — one dashed outline around the channel and the people
+   * already in it, on the surface the rail uses for anything under the pointer.
+   */
+  .voice-channel-drop{
+    position:relative;
+    border-radius:var(--radius-md);
+    transition:background var(--dur-fast) var(--ease-standard);
+  }
+  .voice-channel-drop::after{
+    content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+    border:1px dashed transparent;
+    transition:border-color var(--dur-fast) var(--ease-standard);
+  }
+  .voice-channel-drop.is-over{background:var(--surface-overlay)}
+  .voice-channel-drop.is-over::after{border-color:var(--line-strong)}
+  /* The name of the channel taking them, brought up to full contrast — the
+     one thing that has to be unambiguous while the pointer is moving. */
+  .voice-channel-drop.is-over .channel .name{color:var(--text)}
+
+  .voice-occupants{list-style:none;padding:2px 4px 4px 28px}
+  .voice-occupants li{display:flex;align-items:center;gap:8px;height:30px;padding:0 4px;border-radius:var(--radius-sm);font-size:13px;color:var(--text-muted)}
+  .voice-occupants li.me{color:var(--text);animation:msgIn 200ms var(--ease-standard)}
+  .voice-occupants li.is-draggable{cursor:grab;user-select:none;-webkit-user-drag:none}
+  .voice-occupants li.is-draggable:active{cursor:grabbing}
+  .voice-occupants li.is-draggable:hover{background:var(--surface-overlay);color:var(--text)}
+  .voice-occupants li.is-draggable:focus-visible{
+    outline:2px solid var(--accent);outline-offset:1px;color:var(--text);
+  }
+  .voice-occupants li.is-dragging{opacity:0.35}
+  .voice-occupants li.is-moving{opacity:0.55;cursor:progress}
+  /* Fixed height and an avatar that cannot be squeezed: the chip follows the
+     pointer over boxes of every width, and a face that reflows into an ellipse
+     under it is the drag telling you it has gone wrong. */
+  .voice-occupant-overlay{
+    width:190px;height:34px;padding:0 8px;border-radius:var(--radius-sm);
+    display:flex;align-items:center;gap:8px;
+    background:var(--surface-pop);border:1px solid var(--line);color:var(--text);
+    box-shadow:0 8px 24px oklch(0 0 0 / 0.42);
+    font-size:13px;cursor:grabbing;
+  }
+  .voice-occupant-overlay .av{flex:none;aspect-ratio:1}
+  .voice-occupant-overlay span{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* The name yields to the mic badge rather than pushing it off the row. */
+  .occ-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /*
+   * Muted, in the rail.
+   *
+   * The same crossed microphone and the same danger colour the stage tile uses
+   * — `.tile.muted .t-mic` — because it is the same fact about the same person,
+   * and two different marks for it would be two things to learn. The row itself
+   * dims: someone who cannot be heard is still on the call, so they stay in the
+   * list, just quieter than the people who can be.
+   */
+  .voice-occupants li.muted{color:var(--text-faint)}
+  .voice-occupants li.muted .av{opacity:0.65}
+  .occ-mic{margin-left:auto;flex:none;display:inline-flex;color:var(--danger-text)}
+  .rail-move-error{
+    margin:6px 4px 0;padding:7px 8px;border-radius:var(--radius-sm);
+    background:var(--danger-soft);color:var(--danger-text);font-size:12px;line-height:1.35;
+  }
+  @media (pointer:coarse){
+    /* The thread disclosure and section settings sit inside the navigation
+       drawer, but they are still independent controls. Their desktop glyphs
+       stay compact while the hit areas fill the 44px rail rhythm. */
+    .ch-threads-toggle{width:44px;height:44px}
+    .channel-thread{min-height:44px}
+    .rail-section-cog{
+      width:44px;height:44px;margin-right:-8px;
+      opacity:1;pointer-events:auto;
+    }
+    .voice-occupants li.is-draggable{height:44px}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .ch-threads-toggle,.channel-threads,.channel-thread{transition:none}
+  }
+  /* ---------- „coś trwa na kanale" ---------- */
+  .dock-item{
+    display:flex;align-items:center;gap:9px;width:100%;text-align:left;
+    padding:6px 4px 6px 8px;border-radius:var(--radius-md);
+    transition:background var(--dur-fast) var(--ease-standard);
+  }
+  .dock-item.act:hover{background:var(--surface-raised)}
+  .dock-item.clickable{cursor:pointer}
+  .dock-item.clickable:hover{background:var(--surface-raised)}
+  .di-ico{width:32px;height:32px;flex:none;display:inline-flex;align-items:center;justify-content:center;color:var(--live)}
+  .di-txt{min-width:0;flex:1;display:flex;flex-direction:column;line-height:1.3}
+  .di-txt b{font-size:12.5px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .di-txt b:has(.voice-connection-quality){display:flex;align-items:baseline;gap:6px}
+  .di-txt b > span:first-child{min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .di-txt b.ok{color:var(--live)}
+  /* A qualifier, set below the thing it qualifies. It read heavier than
+     "Połączono" itself — the headline was the status and the diagnostics were
+     what caught the eye. Only a quality worth acting on takes a colour. */
+  .voice-connection-quality{
+    flex:none;font-size:10.5px;font-weight:500;font-variant-numeric:tabular-nums;
+    color:var(--text-faint)
+  }
+  .voice-connection-quality.good{color:var(--text-faint)}
+  .voice-connection-quality.fair{color:var(--warning-text,var(--text-muted))}
+  .voice-connection-quality.poor{color:var(--danger-text)}
+  .di-txt span{font-size:11px;color:var(--text-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  /* Where you are, in one line: the Activity, then the call, then how long.
+     The Activity leads because it is the part that changes and the part the
+     rest of the interface cannot show you once you leave the stage. */
+  .di-where{display:flex;align-items:baseline;gap:4px}
+  .di-where i{flex:none;font-style:normal;color:var(--text-faint);opacity:.65}
+  .di-where time{flex:none;font-variant-numeric:tabular-nums}
+  .di-channel{min-width:0;overflow:hidden;text-overflow:ellipsis}
+  .di-btn{
+    width:28px;height:28px;border-radius:50%;flex:none;color:var(--text-faint);
+    display:inline-flex;align-items:center;justify-content:center;
+    transition:background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+  }
+  .di-btn:hover{background:var(--surface-raised);color:var(--text)}
+  .di-btn.noise.rnnoise{color:var(--accent-text)}
+  .di-btn.noise.browser{color:var(--info-text)}
+  .di-btn.noise.off{color:var(--text-faint)}
+  .di-btn.danger:hover{background:var(--danger-soft);color:var(--danger-text)}
+  .dock-item.act:hover .di-btn.ghost{color:var(--text)}
+  .dock-sep{display:none}
+  .live-dot{
+    width:6px;height:6px;border-radius:50%;background:var(--live);flex:none;
+    box-shadow:0 0 0 3px var(--live-glow);
+  }
+  .meter{display:inline-flex;gap:2px;align-items:flex-end;height:10px;margin-left:auto}
+  .meter i{width:3px;background:var(--line-strong);border-radius:1px;height:3px;transition:height 120ms var(--ease-standard), background 120ms var(--ease-standard)}
+  .speaking .meter i{background:var(--accent)}
+  .speaking .meter i:nth-child(1){animation:lvl1 900ms var(--ease-standard) infinite}
+  .speaking .meter i:nth-child(2){animation:lvl2 700ms var(--ease-standard) infinite}
+  .speaking .meter i:nth-child(3){animation:lvl3 1100ms var(--ease-standard) infinite}
+  @keyframes lvl1{0%,100%{height:4px}50%{height:8px}}
+  @keyframes lvl2{0%,100%{height:9px}40%{height:5px}}
+  @keyframes lvl3{0%,100%{height:5px}60%{height:10px}}
+
+  /* ---------- VOICE DOCK ---------- */
+  .voice-dock{border-top:1px solid var(--line-subtle);padding:10px 12px;flex:none;position:relative}
+  .dock-pop{
+    position:absolute;left:12px;right:12px;bottom:calc(100% - 6px);z-index:40;
+    background:var(--surface-raised);border:1px solid var(--line);
+    border-radius:var(--radius-lg);box-shadow:0 16px 40px oklch(0 0 0 / 0.55);
+    padding:6px;animation:msgIn 140ms var(--ease-standard);
+  }
+  .dock-pop.vc-pop{
+    left:50%;right:auto;transform:translateX(-50%);width:248px;bottom:calc(100% - 6px);
+    animation:vcPopIn 140ms var(--ease-standard);
+  }
+  @keyframes vcPopIn{
+    from{opacity:0;transform:translateX(-50%) translateY(8px)}
+    to{opacity:1;transform:translateX(-50%) translateY(0)}
+  }
+  .dp-row{
+    width:100%;display:flex;align-items:center;gap:9px;
+    padding:8px;border-radius:var(--radius-md);font-size:12.5px;color:var(--text-muted);text-align:left;
+    transition:background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+  }
+  .dp-row:hover{background:var(--surface-overlay);color:var(--text)}
+  .dp-row.on{color:var(--accent-text)}
+  .dp-ico{display:inline-flex;flex:none}
+  .dp-state{margin-left:auto;font-size:11px;color:var(--text-faint)}
+  .dp-row.on .dp-state{color:var(--accent-text)}
+  .dp-cap{
+    font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;
+    color:var(--text-faint);padding:4px 6px 8px;
+  }
+  .dp-volume{padding:4px 6px 8px;margin-bottom:5px;border-bottom:1px solid var(--line-subtle)}
+  .dp-volume-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;font-size:11.5px;color:var(--text-muted)}
+  .dp-volume label{display:inline-flex;align-items:center;gap:6px;font-weight:550}
+  .dp-volume output{font-variant-numeric:tabular-nums;color:var(--text-faint)}
+  .dp-volume input{display:block;width:100%;height:18px;accent-color:var(--accent);cursor:pointer}
+  /*
+   * Three by three, then it scrolls down — never sideways. Columns are
+   * minmax(0,1fr) and names are cut to one line, so a long name can no longer
+   * widen a column past the popover and push the board into a side scroll.
+   */
+  .dp-grid{
+    --dp-tile:54px;
+    display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:var(--dp-tile);gap:4px;
+    max-height:calc(3 * var(--dp-tile) + 2 * 4px);
+    overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;
+    scrollbar-width:thin;scrollbar-gutter:stable;
+  }
+
+  .dp-board-empty{
+    min-height:146px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:5px;padding:18px 14px 20px;border-radius:var(--radius-md);text-align:center;
+  }
+  .dp-board-empty-icon{
+    width:44px;height:44px;margin-bottom:5px;border-radius:15px;
+    display:inline-flex;align-items:center;justify-content:center;
+    background:var(--surface-overlay);color:var(--accent-text);
+    box-shadow:inset 0 0 0 1px var(--line-subtle);
+  }
+  .dp-board-empty b{font-size:13.5px;font-weight:600;color:var(--text)}
+  .dp-board-empty > span:last-child{max-width:210px;font-size:11.5px;line-height:1.45;color:var(--text-faint)}
+  .dp-snd{
+    min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
+    padding:6px 4px;border-radius:var(--radius-md);
+    font-size:10.5px;color:var(--text-faint);
+    transition:background var(--dur-fast) var(--ease-standard), transform var(--dur-fast) var(--ease-standard);
+  }
+  .dp-snd b{font-size:18px;line-height:1}
+  .dp-snd-name{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .dp-snd:hover{background:var(--surface-overlay);color:var(--text)}
+  .dp-snd:active, .dp-snd.play{background:var(--accent);color:var(--on-accent);transform:scale(0.96)}
+  .voice-dock.hidden{display:none}
+  .dock-card{
+    background:none;border:none;padding:0;
+    display:flex;flex-direction:column;gap:8px;
+    animation:viewIn var(--dur-slow) var(--ease-standard);
+  }
+  .dock-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:2px}
+  .dock-name{
+    display:flex;align-items:center;gap:7px;
+    font-size:12.5px;color:var(--text-muted);line-height:1.2;min-width:0;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .dock-name b{font-weight:600;color:var(--text)}
+  /* rząd ikon w sidebarze w tej samej czarnej pigułce co pasek w głównym widoku */
+  .dock-row{
+    display:flex;align-items:center;justify-content:space-between;gap:4px;
+    background:var(--surface-pop);
+    border:1px solid var(--line);
+    border-radius:16px;padding:4px 6px;
+  }
+  .dpill{
+    flex:none;width:34px;height:34px;border-radius:12px;
+    border:1px solid transparent;background:none;
+    font-size:12px;font-weight:550;color:var(--text-muted);
+    display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    transition:background var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+  }
+  .dpill:hover{background:var(--surface-overlay);color:var(--text)}
+  .dpill.icon{padding:0}
+  .dpill.muted{color:var(--danger-text);background:var(--danger-soft)}
+  .dpill.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+
+  /* ---------- ACCOUNT ROW ---------- */
+  /* `position` for the panel that slides out of it — `.acc-pop` in
+     `account.css` is positioned against this row. */
+  .account{position:relative;border-top:1px solid var(--line-subtle);padding:22px 8px 22px 16px;display:flex;align-items:center;gap:6px;flex:none}
+  .account .icon-btn:disabled{opacity:0.4;cursor:not-allowed}
+  .account .icon-btn:disabled:hover{background:none;color:var(--text-faint)}
+  .account .who{min-width:0;flex:1}
+  .account .who b{display:block;font-size:13px;font-weight:550;line-height:1.3}
+  .account .who span{font-size:12px;color:var(--text-faint);line-height:1.3}
+  .icon-btn{
+    width:32px;height:32px;border-radius:var(--radius-sm);flex:none;
+    display:inline-flex;align-items:center;justify-content:center;
+    color:var(--text-faint);
+    transition:background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+  }
+  .icon-btn:hover{background:var(--surface-overlay);color:var(--text)}
+
+  @media (pointer:coarse){
+    /* The dock remains reachable from the mobile navigation drawer. Give its
+       inline controls full finger targets, then reflow the five call toggles
+       into a centred 3 + 2 grid instead of squeezing them into one row. */
+    .di-btn{width:44px;height:44px}
+    .dock-row{
+      display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:4px;
+    }
+    .dock-row .dpill{grid-column:span 2;width:100%;height:44px}
+    .dock-row > .dpill:nth-of-type(4){grid-column:2 / span 2}
+    .dock-row > .dpill:nth-of-type(5){grid-column:4 / span 2}
+    .dp-row{min-height:44px}
+    .dp-volume input{min-height:44px}
+    .dp-snd{min-height:44px}
+    .dp-grid{--dp-tile:58px}
+  }
+
+}

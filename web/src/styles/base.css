@@ -1,0 +1,102 @@
+/*
+ * ============================================================================
+ * BASE — element defaults, on top of Tailwind's preflight
+ * ============================================================================
+ */
+
+@layer base {
+  /* Faces live in `themes/font-faces.css`; `themes/typeset.css` maps the
+     selected `data-font` value onto the application stack. */
+
+  /* `hidden` is a semantic statement; it must beat any `display` a class sets. */
+  [hidden] {
+    display: none !important;
+  }
+
+  html,
+  body {
+    height: 100%;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    background: var(--surface-canvas);
+    color: var(--text);
+    font-size: 15px;
+    line-height: 1.6;
+    /* The app owns its own scroll regions; the page itself never scrolls. */
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Chrome behaves like an app, but conversation text and editable fields
+     remain selectable for copying and precise text editing. */
+  input,
+  textarea,
+  [contenteditable="true"],
+  .msg-body {
+    -webkit-user-select: text;
+    user-select: text;
+  }
+
+  button {
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: none;
+    cursor: pointer;
+  }
+
+  button,
+  a,
+  [role="button"] {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--accent-quiet);
+    outline-offset: 2px;
+  }
+
+  ::placeholder {
+    color: var(--text-faint);
+  }
+
+  svg {
+    display: block;
+  }
+
+  html[data-reduced-motion="true"] *,
+  html[data-reduced-motion="true"] *::before,
+  html[data-reduced-motion="true"] *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    transition-delay: 0ms !important;
+  }
+
+  /* Long unbroken strings (URLs, pasted tokens) must never cause horizontal
+     overflow at any width. */
+  p,
+  li,
+  td,
+  .wrap-anywhere {
+    overflow-wrap: anywhere;
+  }
+
+}
+
+@layer utilities {
+  .sr-only {
+    position: absolute;
+    left: -9999px;
+  }
+
+  /* The measure cap for prose inside the room. */
+  .measure {
+    max-width: var(--measure);
+  }
+}

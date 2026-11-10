@@ -1,0 +1,168 @@
+@layer components {
+  /* ---------- ZWIJANE KATEGORIE ---------- */
+  button.group-caption{
+    width:100%;background:none;border:none;cursor:pointer;
+    color:var(--text-faint);text-align:left;
+    border-radius:var(--radius-sm);
+  }
+  button.group-caption:hover{color:var(--text-muted)}
+  .group-caption .caret{transition:transform var(--dur-base) var(--ease-standard);display:inline-flex}
+  .group-caption[aria-expanded="false"] .caret{transform:rotate(-90deg)}
+  .collapsible{
+    overflow:hidden;max-height:600px;
+    transition:max-height var(--dur-slow) var(--ease-standard), opacity var(--dur-slow) var(--ease-standard);
+  }
+  .collapsible.closed{max-height:0;opacity:0}
+
+  /* ---------- KONTO: STATUS ---------- */
+  .account .who span{display:flex;align-items:center;gap:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .account .who .astate{color:var(--text-faint);transition:color var(--dur-base) var(--ease-standard)}
+  /* topbar: przycisk osób tylko tam, gdzie panel osób jest szufladą */
+  #rosterBtn{display:none}
+  @media (max-width:1023px){ #rosterBtn{display:inline-flex} }
+
+  /* ---------- REDESIGN: kapitaliki, pille ---------- */
+  /* The round face used to be forced from here with `!important` over four
+     class names; it is one declaration in `avatar.css` now. */
+  .group-caption{text-transform:uppercase;letter-spacing:0.08em;font-size:11px;font-weight:600}
+  .pill-bar{
+    display:flex;align-items:center;gap:2px;flex:none;
+    background:var(--surface-pop);
+    border:1px solid var(--line);
+    border-radius:999px;padding:4px 6px;
+  }
+  .pill-btn{
+    width:32px;height:32px;border-radius:50%;
+    display:inline-flex;align-items:center;justify-content:center;
+    color:var(--text-muted);
+    transition:background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+  }
+  .pill-btn:hover{background:var(--surface-overlay);color:var(--text)}
+  .pill-btn.accent{color:var(--accent-text)}
+  .pill-btn[aria-pressed="true"]{background:var(--surface-overlay);color:var(--accent-text)}
+  .pill-lg{padding:6px 8px;gap:6px}
+
+  /* auto-chowanie: zwinięta do prawej, rozwija się po najechaniu */
+  .pill-bar.auto .pill-x{
+    max-width:0;min-width:0;opacity:0;transform:scale(0.6);overflow:hidden;padding:0;
+    transition:max-width var(--dur-base) var(--ease-standard), opacity var(--dur-base) var(--ease-standard), transform var(--dur-base) var(--ease-standard);
+  }
+  .pill-bar.auto:hover .pill-x, .pill-bar.auto:focus-within .pill-x{
+    max-width:32px;opacity:1;transform:none;
+  }
+  /* The button that raised the channel panel stays out while the panel is up:
+     a toggle that folds itself away has no way of being pressed again. */
+  .pill-bar.auto .pill-x[aria-pressed="true"]{
+    max-width:32px;opacity:1;transform:none;
+  }
+  .tools-slot{display:flex;align-items:center;gap:2px}
+  /* topbar bez ramki — same okrągłe ikony */
+  .room-header .pill-bar{background:none;border-color:transparent;padding:0;gap:4px}
+  .room-header .pill-btn{width:34px;height:34px}
+  /* narzędzia kanału (apki) istnieją tylko na kanale tekstowym */
+  .room.in-voice .tools-slot{display:none}
+  .room.in-voice .pill-bar.auto{background:none;border-color:transparent;padding:0}
+
+
+  /* ---------- SCROLLBARS ---------- */
+  /*
+   * The bar appears when the region is scrolled or hovered, and is invisible
+   * otherwise: a permanent 5px line down the side of every panel is chrome the
+   * conversation does not need.
+   */
+  /*
+   * The standard properties are fenced off to the engines that have nothing
+   * else. Setting `scrollbar-width` / `scrollbar-color` anywhere Chrome can see
+   * them makes it drop every `::-webkit-scrollbar` rule below and draw its own
+   * bar instead — stepper arrows at both ends and all. Firefox has no such
+   * pseudo-elements, and its thin bar has no steppers to begin with.
+   */
+  @supports not selector(::-webkit-scrollbar) {
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: var(--line) transparent;
+    }
+  }
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  /* No end caps. The bar is a thumb and nothing else — the stepper buttons some
+     platforms add at either end are two more controls nobody presses. */
+  ::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--line);
+    border-radius: 999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: var(--line-strong);
+  }
+  /* More than the buttons used to occupy: the bar is a short mark floating
+     clear of the panel's corners, not a rail running the full edge. */
+  ::-webkit-scrollbar-track {
+    background: transparent;
+    margin-block: 14px;
+  }
+  ::-webkit-scrollbar-track:horizontal {
+    margin-block: 0;
+    margin-inline: 14px;
+  }
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+
+  @supports not selector(::-webkit-scrollbar) {
+    .transcript,
+    .rail-scroll,
+    .roster-list,
+    .voice-stage {
+      scrollbar-color: transparent transparent;
+      transition: scrollbar-color var(--dur-base) var(--ease-standard);
+    }
+    .transcript:hover,
+    .rail-scroll:hover,
+    .roster-list:hover,
+    .voice-stage:hover {
+      scrollbar-color: var(--line) transparent;
+    }
+  }
+  .transcript::-webkit-scrollbar-thumb,
+  .rail-scroll::-webkit-scrollbar-thumb,
+  .roster-list::-webkit-scrollbar-thumb,
+  .voice-stage::-webkit-scrollbar-thumb {
+    background: transparent;
+  }
+  .transcript:hover::-webkit-scrollbar-thumb,
+  .rail-scroll:hover::-webkit-scrollbar-thumb,
+  .roster-list:hover::-webkit-scrollbar-thumb,
+  .voice-stage:hover::-webkit-scrollbar-thumb {
+    background: var(--line);
+  }
+  .transcript:hover::-webkit-scrollbar-thumb:hover,
+  .rail-scroll:hover::-webkit-scrollbar-thumb:hover,
+  .roster-list:hover::-webkit-scrollbar-thumb:hover,
+  .voice-stage:hover::-webkit-scrollbar-thumb:hover {
+    background: var(--line-strong);
+  }
+
+  /*
+   * 1024–1439: the roster is a column of avatars rather than a full panel, so
+   * presence stays visible without spending 264px on it.
+   */
+  @media (min-width: 1024px) {
+    .app:not(.roster-open) .roster .roster-inner {
+      display: none;
+    }
+    .app:not(.roster-open) .roster .roster-mini {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 12px 0;
+      animation: viewIn var(--dur-base) var(--ease-standard);
+    }
+  }
+}

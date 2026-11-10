@@ -1,0 +1,733 @@
+@layer components {
+  .thread-panel {
+    position: relative;
+    z-index: 16;
+    grid-column: 2;
+    grid-row: 1 / -1;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    overflow: hidden;
+    border-left: 1px solid var(--line);
+    transition: width 180ms ease, border-width 180ms ease;
+    background: var(--surface-raised);
+  }
+  .thread-panel.open { width: 100%; border-left-width: 1px; }
+  .room.channel-panel-open .thread-panel:not(.open) { width: 0; border-left-width: 0; }
+  .thread-panel-inner { width: var(--thread-w); height: 100%; min-height: 0; display: grid; grid-template-rows: 52px minmax(0, 1fr) auto; }
+  .thread-panel.expanded .thread-panel-inner { width: 100%; }
+  .thread-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 10px 0 16px; border-bottom: 1px solid var(--line-subtle); }
+  .thread-panel-head b { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 14px; font-weight: 600; }
+  .thread-panel-actions { display: flex; align-items: center; gap: 2px; }
+  .thread-panel-head button { width: 32px; height: 32px; flex: none; display: grid; place-items: center; border-radius: var(--radius-sm); color: var(--text-faint); transition: background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard); }
+  .thread-panel-head button:hover { background: var(--surface-overlay); color: var(--text); }
+  .thread-panel-body { min-height: 0; overflow: hidden; display: flex; flex-direction: column; }
+  .thread-panel-body > .transcript-area,
+  .thread-panel-body > .transcript { flex: 1; width: 100%; min-height: 0; }
+  .thread-panel > .thread-panel-inner > .composer { padding: 8px 16px 16px; }
+  .thread-panel .transcript { padding-top: 16px; }
+  .thread-panel .msg-group { padding-inline: 16px; }
+  .thread-panel .day-sep,
+  .thread-panel .unread-sep { margin-inline: 16px; }
+  /*
+   * CHANNEL PANEL — the channel's own material, beside the conversation
+   *
+   * Same idea as the roster: a full-height grid track that animates from zero
+   * width rather than a layer that floats over the transcript. Both the room
+   * header and the conversation end at its left edge. The inner column holds
+   * the panel's own width, so its contents do not reflow while it opens.
+   *
+   * Below 1280 there is not enough room left to give 320px away, and the rules
+   * at the bottom of this file turn it into an overlay drawer inside the room.
+   */
+  .room-body {
+    grid-column: 1;
+    grid-row: 2;
+    min-height: 0;
+    display: flex;
+    /* The anchor for the drawer variant below 1280. */
+    position: relative;
+    /* A translated, closed drawer still participates in scrollable overflow.
+       Clip it at the room boundary so its 320px off-screen column cannot widen
+       the page or make mobile browsers scale the whole application down. */
+    overflow: hidden;
+  }
+
+  .room-body > .view {
+    min-width: 0;
+  }
+
+  .channel-panel {
+    grid-column: 2;
+    grid-row: 1 / -1;
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    border-left: 1px solid var(--line);
+    background: var(--surface-raised);
+  }
+
+  .channel-panel.open {
+    width: 100%;
+    border-left-width: 1px;
+  }
+
+  .room.thread-panel-open .channel-panel:not(.open) {
+    width: 0;
+    border-left-width: 0;
+  }
+
+  .cp-inner {
+    width: var(--cp-w);
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .cp-head {
+    height: 52px;
+    flex: none;
+    border-bottom: 1px solid var(--line-subtle);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 8px 0 10px;
+  }
+
+  .cp-tabs {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+  }
+
+  .cp-tab {
+    width: 32px;
+    height: 30px;
+    padding: 0;
+    border-radius: var(--radius-sm);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    flex: none;
+    font-size: 13px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    transition:
+      background var(--dur-fast) var(--ease-standard),
+      color var(--dur-fast) var(--ease-standard);
+  }
+
+  .cp-tab svg {
+    flex: none;
+  }
+
+  .cp-tab:hover {
+    background: var(--surface-overlay);
+    color: var(--text);
+  }
+
+  .cp-tab.on {
+    width: auto;
+    padding: 0 7px;
+    background: var(--surface-overlay);
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  .cp-tab-label {
+    display: none;
+  }
+
+  .cp-tab.on .cp-tab-label {
+    display: inline;
+  }
+
+  .cp-close {
+    flex: none;
+    color: var(--text-faint);
+  }
+
+  .cp-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 12px;
+  }
+
+  .cp-body-search {
+    overflow: hidden;
+    padding: 0;
+  }
+
+  /* ---------- SZUKAJ ---------- */
+  .cp-search {
+    height: 100%;
+    min-height: 0;
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .cp-search-field {
+    height: 36px;
+    margin: 12px;
+    padding: 0 10px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--line-subtle);
+    border-radius: var(--radius-sm);
+    background: var(--surface-field);
+    color: var(--text-faint);
+    transition:
+      border-color var(--dur-fast) var(--ease-standard),
+      background var(--dur-fast) var(--ease-standard);
+  }
+
+  .cp-search-field:focus-within {
+    border-color: var(--line-strong);
+    background: var(--surface-overlay);
+    color: var(--text-muted);
+  }
+
+  .cp-search-field svg {
+    flex: none;
+  }
+
+  .cp-search-field input {
+    width: 100%;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-size: 13px;
+  }
+
+  .cp-search-field input::-webkit-search-cancel-button {
+    display: none;
+  }
+
+  .cp-search-results {
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0 8px 12px;
+  }
+
+  .cp-search-results > p {
+    padding: 18px 12px;
+    color: var(--text-faint);
+    text-align: center;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .cp-search-result {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 10px 12px;
+    border-radius: var(--radius-sm);
+    text-align: left;
+    transition: background var(--dur-fast) var(--ease-standard);
+  }
+
+  .cp-search-result + .cp-search-result {
+    margin-top: 2px;
+  }
+
+  .cp-search-result:hover {
+    background: var(--surface-overlay);
+  }
+
+  .cp-search-result-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .cp-search-result-head b {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text);
+    font-size: 12.5px;
+    font-weight: 600;
+  }
+
+  .cp-search-result-head time {
+    flex: none;
+    color: var(--text-faint);
+    font-size: 10.5px;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .cp-search-result-text {
+    color: var(--text-muted);
+    font-size: 12.5px;
+    line-height: 1.5;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+  }
+
+  .cp-search-result-materials {
+    color: var(--text-faint);
+    font-size: 11px;
+    line-height: 1.45;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .cp-index-error {
+    margin: 8px 4px;
+    padding: 8px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    border-radius: var(--radius-sm);
+    background: var(--danger-soft);
+    color: var(--danger-text);
+    font-size: 12px;
+    line-height: 1.45;
+  }
+
+  .cp-index-error button {
+    min-width: 32px;
+    min-height: 32px;
+    flex: none;
+    padding-inline: 8px;
+    border-radius: var(--radius-sm);
+    color: inherit;
+    font-weight: 600;
+  }
+
+  .cp-index-error button:hover {
+    background: var(--surface-overlay);
+  }
+
+  .cp-more {
+    width: 100%;
+    min-height: 32px;
+    margin-top: 10px;
+    padding-inline: 10px;
+    border-radius: var(--radius-sm);
+    color: var(--text-muted);
+    font-size: 12.5px;
+    font-weight: 550;
+    transition:
+      background var(--dur-fast) var(--ease-standard),
+      color var(--dur-fast) var(--ease-standard);
+  }
+
+  .cp-more:hover:not(:disabled) {
+    background: var(--surface-overlay);
+    color: var(--text);
+  }
+
+  /* The tab panel is a scroll region, so it takes focus; it is not a control
+     and must not be outlined as one when reached by pointer. */
+  .cp-body:focus {
+    outline: none;
+  }
+
+  .cp-empty,
+  .cp-foot {
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--text-faint);
+    padding: 4px 4px 0;
+  }
+
+  .cp-foot {
+    font-size: 12px;
+    margin-top: 14px;
+    border-top: 1px solid var(--line-subtle);
+    padding-top: 10px;
+  }
+
+  .cp-caption {
+    display: block;
+    color: var(--text-faint);
+    margin: 16px 4px 6px;
+  }
+
+  .cp-error {
+    margin: 0 0 10px;
+    padding: 8px 10px;
+    border-radius: var(--radius-sm);
+    background: var(--danger-soft);
+    color: var(--danger-text);
+    font-size: 12.5px;
+    line-height: 1.5;
+  }
+
+  /* ---------- PRZYPIĘTE ---------- */
+  /*
+   * A list of references, not a second transcript. Each row is one line of the
+   * message and the two facts that identify it; the message itself is in the
+   * channel, which is where the row goes.
+   */
+  .cp-pins {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .cp-pin {
+    display: flex;
+    align-items: flex-start;
+    gap: 2px;
+    border-radius: var(--radius-sm);
+    transition: background var(--dur-fast) var(--ease-standard);
+  }
+
+  .cp-pin:hover {
+    background: var(--surface-overlay);
+  }
+
+  .cp-pin-open {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 8px;
+    text-align: left;
+    color: inherit;
+  }
+
+  .cp-pin-head {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .cp-pin-head b {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .cp-pin-head time {
+    flex: none;
+    font-size: 11px;
+    color: var(--text-faint);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Two lines, then it stops: a pinned essay is still one entry in a list. */
+  .cp-pin-text {
+    font-size: 12.5px;
+    line-height: 1.5;
+    color: var(--text-muted);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    overflow-wrap: anywhere;
+  }
+
+  /* Only on hover or focus: the list is for reading, and a column of unpin
+     buttons down its edge reads as the point of it. */
+  .cp-pin-off {
+    flex: none;
+    align-self: center;
+    margin-right: 4px;
+    opacity: 0;
+    transition: opacity var(--dur-fast) var(--ease-standard);
+  }
+
+  .cp-pin:hover .cp-pin-off,
+  .cp-pin:focus-within .cp-pin-off {
+    opacity: 1;
+  }
+
+  /* A pointer is what "hover" assumes. Without one there is nothing to reveal
+     the control, so it is simply there. */
+  @media (hover: none) {
+    .cp-pin-off {
+      opacity: 1;
+    }
+  }
+
+  /* ---------- MULTIMEDIA ---------- */
+  .cp-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 5px;
+  }
+
+  .cp-tile {
+    position: relative;
+    aspect-ratio: 1;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: var(--surface-overlay);
+    border: 1px solid var(--line-subtle);
+    cursor: zoom-in;
+    transition: border-color var(--dur-fast) var(--ease-standard);
+  }
+
+  .cp-tile:hover {
+    border-color: var(--line-strong);
+  }
+
+  .cp-tile img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .cp-tile.video {
+    cursor: pointer;
+  }
+
+  .cp-noposter {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: var(--surface-overlay);
+  }
+
+  /* The same treatment the transcript's own video tile gets, at panel size. */
+  .cp-play {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: oklch(0 0 0 / 0.25);
+    transition: background var(--dur-base) var(--ease-standard);
+  }
+
+  .cp-play span {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--veil);
+    color: var(--text);
+    transition: background var(--dur-base) var(--ease-standard);
+  }
+
+  .cp-tile.video:hover .cp-play {
+    background: var(--veil-soft);
+  }
+
+  .cp-tile.video:hover .cp-play span {
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+
+  .cp-dur {
+    position: absolute;
+    right: 4px;
+    bottom: 4px;
+    padding: 1px 5px;
+    border-radius: var(--radius-sm);
+    background: oklch(0.145 0 0 / 0.8);
+    /* A fixed dark chip in both schemes, so its text is fixed too. */
+    color: oklch(0.98 0 0);
+    font-size: 10.5px;
+    font-weight: 500;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---------- PLIKI I LINKI ---------- */
+  .cp-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .cp-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    border-radius: var(--radius-md);
+    color: inherit;
+    transition: background var(--dur-fast) var(--ease-standard);
+  }
+
+  a.cp-row:hover {
+    background: var(--surface-overlay);
+  }
+
+  .cp-row.inert {
+    opacity: 0.6;
+  }
+
+  .cp-thumb,
+  .cp-favicon,
+  .cp-ext {
+    flex: none;
+    width: 38px;
+    height: 38px;
+    border-radius: var(--radius-sm);
+    background: var(--surface-overlay);
+    border: 1px solid var(--line-subtle);
+  }
+
+  .cp-thumb {
+    object-fit: cover;
+  }
+
+  .cp-favicon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-faint);
+  }
+
+  .cp-ext {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    color: var(--text-muted);
+  }
+
+  .cp-meta {
+    min-width: 0;
+    flex: 1;
+    display: block;
+  }
+
+  .cp-meta b {
+    display: block;
+    font-size: 13px;
+    font-weight: 550;
+    line-height: 1.35;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .cp-meta span {
+    display: block;
+    font-size: 11.5px;
+    line-height: 1.4;
+    color: var(--text-faint);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* The panel belongs to a text channel; a call has the stage instead. */
+  .room.in-voice .channel-panel {
+    display: none;
+  }
+
+  /*
+   * Below 1280 the transcript cannot spare the width, so the panel stops being
+   * a track and slides over the room instead. It covers the messages rather
+   * than the whole shell: the rail and the roster are a different decision, and
+   * the reader can still see which channel they are on.
+   */
+  @media (max-width: 1279px) {
+    .room,
+    .room.channel-panel-open,
+    .room.thread-panel-open,
+    .room.thread-panel-open.thread-panel-expanded {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .thread-panel {
+      position: absolute;
+      grid-column: 1;
+      grid-row: 1 / -1;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: min(var(--thread-w), 100%);
+      height: auto;
+      /* The room ends at the safe content edge. Move the closed drawer past
+         the remaining physical inset as well, or its first strip stays visible. */
+      transform: translateX(calc(100% + env(safe-area-inset-right)));
+      transition: transform var(--dur-base) var(--ease-standard);
+      box-shadow: var(--elev-drawer);
+      border-left: none;
+      z-index: 16;
+    }
+
+    .thread-panel.open {
+      width: min(var(--thread-w), 100%);
+      border-left: none;
+      transform: translateX(0);
+    }
+
+    .thread-panel.open.expanded {
+      width: 100%;
+    }
+
+    .thread-panel-inner {
+      width: 100%;
+    }
+
+    .channel-panel {
+      position: absolute;
+      grid-column: 1;
+      grid-row: 1 / -1;
+      top: 0;
+      right: 0;
+      bottom: 0;
+      width: min(var(--cp-w), 100%);
+      transform: translateX(calc(100% + env(safe-area-inset-right)));
+      transition: transform var(--dur-base) var(--ease-standard);
+      box-shadow: var(--elev-drawer);
+      border-left: none;
+      z-index: 15;
+    }
+
+    .channel-panel.open {
+      width: min(var(--cp-w), 100%);
+      border-left: none;
+      transform: translateX(0);
+    }
+
+    .cp-inner {
+      width: 100%;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .cp-search-field {
+      height: 44px;
+    }
+
+    .cp-index-error button,
+    .cp-more {
+      min-height: 44px;
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .channel-panel,
+    .thread-panel {
+      transition: none;
+    }
+  }
+}

@@ -1,0 +1,499 @@
+@layer components {
+  .notification-trigger {
+    position: relative;
+    overflow: visible;
+  }
+
+  .notification-badge {
+    position: absolute;
+    top: -2px;
+    right: -4px;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    border: 2px solid var(--surface-room);
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent);
+    color: var(--on-accent);
+    font-size: 9px;
+    font-weight: 700;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .notification-inbox {
+    width: min(390px, calc(100vw - 24px));
+    overflow-x: hidden;
+  }
+
+  .notification-inbox-header {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    min-height: 48px;
+    padding: 8px 10px 8px 15px;
+    border-bottom: 1px solid var(--line-subtle);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: var(--surface-raised);
+  }
+
+  /* Title and count on one line. Stacked, the count read as a subtitle for a
+     panel that needs no explaining — and it is the same number the badge on
+     the bell outside already showed. */
+  .notification-inbox-heading {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 7px;
+  }
+
+  .notification-inbox-head-actions {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .notification-inbox-header h3 {
+    font-size: 15px;
+    font-weight: 650;
+    line-height: 1.25;
+  }
+
+  .notification-inbox-header p {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    color: var(--text-faint);
+    font-size: 11.5px;
+    line-height: 1.35;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .notification-mark-all,
+  .notification-load-older,
+  .notification-error button {
+    color: var(--accent-text);
+    font-size: 11.5px;
+    font-weight: 600;
+    line-height: 1.3;
+  }
+
+  .notification-mark-all-icon {
+    display: none;
+  }
+
+  .notification-close {
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-faint);
+  }
+
+  .notification-close:hover {
+    background: var(--surface-overlay);
+    color: var(--text);
+  }
+
+  .notification-mark-all:hover,
+  .notification-load-older:hover:not(:disabled),
+  .notification-error button:hover {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  .notification-error {
+    margin: 10px 12px 0;
+    padding: 9px 10px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    background: var(--danger-soft);
+    color: var(--danger-text);
+    font-size: 11.5px;
+    line-height: 1.45;
+  }
+
+  .notification-error button {
+    flex: none;
+    color: inherit;
+  }
+
+  .notification-list {
+    list-style: none;
+  }
+
+  /* ---------- one notification ----------
+
+     A row is a message, not a control panel. The mark on the left carries
+     both tone and unread; the title says what happened; the foot says where
+     it came from and offers the one thing worth doing about it. Housekeeping
+     sits outside that column entirely, so it never competes with the text. */
+  .notification-item {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: start;
+    column-gap: 10px;
+    padding: 11px 12px 12px 15px;
+    border-bottom: 1px solid var(--line-subtle);
+  }
+
+  .notification-item:last-child {
+    border-bottom: 0;
+  }
+
+  /* The list answers the pointer. Without it the rows read as printed output
+     rather than as things you can act on, which no amount of restraint in the
+     row itself can make up for. */
+  .notification-item:hover {
+    background: var(--surface-overlay);
+  }
+
+  /* Read rows recede through the type, not through opacity: a blanket alpha
+     would drop the text under its contrast floor on a light ground, while
+     these tokens are the ones chosen to stay legible in both. The title is
+     handled where it is declared; here the rest of the row follows it down. */
+  .notification-item:not(.unread) .notification-body,
+  .notification-item:not(.unread) .notification-meta {
+    color: var(--text-faint);
+  }
+
+  .notification-item-main {
+    min-width: 0;
+  }
+
+  .notification-title strong {
+    display: block;
+    overflow-wrap: anywhere;
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 550;
+    line-height: 1.35;
+  }
+
+  /* Unread is stated twice here, deliberately: colour alone is not a signal
+     everyone receives, so the weight carries it as well. Those two plus the
+     tick that only unread rows offer are what replaced the marker column. */
+  .notification-item.unread .notification-title strong {
+    color: var(--text);
+    font-weight: 640;
+  }
+
+  .notification-body {
+    margin-top: 3px;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
+  }
+
+  /* Source, time and the one thing to do about it, reading left to right on
+     one line. Right-aligning the chip sent the eye zigzagging down the row —
+     title left, tools right, body left, chip right — for no gain. */
+  .notification-foot {
+    margin-top: 7px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .notification-meta {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--text-faint);
+    font-size: 11px;
+    line-height: 1.35;
+  }
+
+  .notification-source {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .notification-meta time {
+    flex: none;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* The row's one action, as a chip rather than a link: a list of underlined
+     accent text is what made three different actions look equally urgent. */
+  .notification-open {
+    flex: none;
+    max-width: 60%;
+    min-height: 24px;
+    padding: 0 8px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    background: var(--surface-overlay);
+    color: var(--text-muted);
+    font-size: 11.5px;
+    font-weight: 550;
+    line-height: 1.3;
+    transition: background var(--dur-fast) var(--ease-standard),
+      color var(--dur-fast) var(--ease-standard);
+  }
+
+  .notification-open span {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .notification-open:hover:not(:disabled) {
+    background: var(--surface-pop);
+    color: var(--text);
+  }
+
+  /* Joining a server is a commitment, not navigation. It is the only chip
+     that takes the accent, because it is the only one that changes anything. */
+  .notification-open.primary {
+    background: var(--accent);
+    color: var(--on-accent);
+    font-weight: 600;
+  }
+
+  .notification-open.primary:hover:not(:disabled) {
+    background: var(--accent);
+    color: var(--on-accent);
+    filter: brightness(1.08);
+  }
+
+  .notification-open:disabled {
+    opacity: .55;
+    cursor: wait;
+  }
+
+  /* Lifted so the buttons sit on the title's optical line rather than
+     floating above it. */
+  .notification-tools {
+    margin-top: -3px;
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 2px;
+  }
+
+  .notification-tool {
+    position: relative;
+    width: 26px;
+    height: 26px;
+    flex: none;
+    border-radius: var(--radius-sm);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-faint);
+    transition: background var(--dur-fast) var(--ease-standard),
+      color var(--dur-fast) var(--ease-standard);
+  }
+
+  .notification-tool:hover {
+    background: var(--surface-overlay);
+    color: var(--text);
+  }
+
+  .notification-tool.danger:hover {
+    background: var(--danger-soft);
+    color: var(--danger-text);
+  }
+
+  /* An empty inbox is good news, not an event. It used to reserve 230px and a
+     ringed icon to announce that nothing had happened. */
+  .notification-empty {
+    min-height: 148px;
+    padding: 26px 26px 30px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+
+  .notification-empty-icon {
+    margin-bottom: 9px;
+    display: inline-flex;
+    color: var(--text-faint);
+    opacity: .55;
+  }
+
+  .notification-empty strong {
+    color: var(--text-muted);
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .notification-empty p {
+    max-width: 270px;
+    margin-top: 5px;
+    color: var(--text-faint);
+    font-size: 12px;
+    line-height: 1.5;
+  }
+
+  .notification-loading {
+    padding: 2px 0;
+  }
+
+  /* Shaped like the row it stands in for — same rail, same three lines, same
+     rhythm — so the list does not resize under the reader when it arrives. */
+  /* The row's own geometry, so nothing shifts sideways when the real list
+     replaces it. */
+  .notification-skeleton {
+    padding: 13px 12px 14px 15px;
+    border-bottom: 1px solid var(--line-subtle);
+  }
+
+  .notification-skeleton span {
+    display: block;
+    height: 7px;
+    border-radius: 999px;
+    background: var(--line);
+    animation: notificationPulse 1.15s var(--ease-standard) infinite alternate;
+  }
+
+  .notification-skeleton span:nth-child(1) { width: 44%; }
+  .notification-skeleton span:nth-child(2) { width: 78%; margin-top: 10px; }
+  .notification-skeleton span:nth-child(3) { width: 28%; height: 6px; margin-top: 12px; opacity: .65; }
+
+  .notification-load-older {
+    width: 100%;
+    min-height: 42px;
+    padding: 10px 14px;
+  }
+
+  .notification-load-older:disabled {
+    opacity: .55;
+    cursor: wait;
+  }
+
+  @keyframes notificationPulse {
+    from { opacity: .38; }
+    to { opacity: .9; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .notification-skeleton span { animation: none; }
+  }
+
+  @media (pointer: coarse) {
+    .notification-mark-all,
+    .notification-load-older,
+    .notification-error button {
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    /* Drawn small, hit big — the same trade the message toolbar makes. Two
+       44px squares beside every row would be a column of buttons running down
+       the list, which is the weight this panel was already carrying too much
+       of. 34 + 5 + 5 and 32 + 6 + 6 both land on the 44px target. */
+    .notification-tool {
+      width: 34px;
+      height: 34px;
+    }
+
+    .notification-tool::after {
+      content: "";
+      position: absolute;
+      inset: -5px;
+    }
+
+    .notification-open {
+      position: relative;
+      min-height: 32px;
+      padding: 0 11px;
+    }
+
+    .notification-open::after {
+      content: "";
+      position: absolute;
+      inset: -6px;
+    }
+
+    .notification-close {
+      width: 44px;
+      height: 44px;
+    }
+  }
+
+  @media (max-width: 767px) {
+    .friends .room-header {
+      grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+    }
+
+    .friends .room-header > .notification-trigger {
+      grid-column: 4;
+      grid-row: 1;
+      width: 44px;
+      height: 44px;
+    }
+
+    .friends .fr-add {
+      grid-column: 5;
+    }
+
+    /* The inbox can fill the usable viewport. Keep both header actions, but
+       compact the secondary one to its familiar tick so the title still has
+       room at the 320px floor. */
+    .notification-mark-all {
+      width: 44px;
+      padding: 0;
+      justify-content: center;
+    }
+
+    .notification-mark-all-icon {
+      display: inline-flex;
+    }
+
+    .notification-mark-all-label {
+      display: none;
+    }
+
+    .notification-mark-all,
+    .notification-error button {
+      min-height: 44px;
+      display: inline-flex;
+      align-items: center;
+    }
+
+    /* At the 320px floor the source, the time and a channel name will not
+       share a line. The chip takes the row under them rather than truncating
+       the one thing on it worth pressing. */
+    .notification-foot {
+      flex-wrap: wrap;
+      gap: 7px 10px;
+    }
+
+    .notification-open {
+      max-width: 100%;
+    }
+
+    .notification-load-older {
+      min-height: 44px;
+    }
+  }
+}

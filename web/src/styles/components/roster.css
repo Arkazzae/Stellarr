@@ -1,0 +1,53 @@
+@layer components {
+  /* ---------- ROSTER ---------- */
+  .roster{background:var(--surface-sidebar);border-left:1px solid var(--line);overflow:hidden;min-width:0;z-index:25}
+  /* A header that stays put over a list that scrolls, the same shape the rail
+     and the room already use. The width is held here as well as on the track so
+     the content does not reflow while the grid column animates open. */
+  .roster-inner{width:var(--roster-w);height:100%;display:flex;flex-direction:column;min-height:0}
+  .roster-head{
+    height:52px;flex:none;border-bottom:1px solid var(--line-subtle);
+    display:flex;align-items:center;gap:10px;padding:0 8px 0 16px;
+  }
+  .roster-head .glyph{color:var(--text-muted);flex:none;display:inline-flex}
+  .roster-head h3{
+    font-size:17px;line-height:1.25;font-weight:600;flex:1;min-width:0;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .roster-list{flex:1;min-height:0;overflow-y:auto;padding:12px 12px 16px}
+  .roster-empty{font-size:13px;color:var(--text-faint);padding:4px 8px}
+  .roster-mini{display:none}
+  .roster-mini .mini-list{display:flex;flex-direction:column;gap:12px;align-items:center;margin-top:10px}
+  /* The count reads as part of the caption, not as a right-aligned column the
+     way it does in the rail. */
+  .roster .group-caption{padding:0 8px;margin:0 0 4px;justify-content:flex-start;gap:5px}
+  .roster .group-caption .count{font-variant-numeric:tabular-nums}
+  .roster .group-caption .count::before{content:"·";margin-right:5px}
+  .roster-group + .roster-group{margin-top:16px}
+  .person{position:relative;display:flex;align-items:center;gap:12px;height:44px;border-radius:var(--radius-md);padding:0 8px;transition:background var(--dur-fast) var(--ease-standard)}
+  .person:hover{background:var(--surface-overlay)}
+  .person .who{min-width:0;flex:1}
+  .person .who b{display:block;font-size:14px;font-weight:500;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .person.offline{opacity:0.6}
+  .person-list{display:flex;flex-direction:column}
+  .person-more{
+    position:absolute;z-index:1;right:4px;top:50%;transform:translateY(-50%);
+    width:32px;height:32px;border-radius:var(--radius-sm);
+    display:inline-flex;align-items:center;justify-content:center;
+    background:var(--surface-sidebar);color:var(--text-faint);
+    opacity:0;pointer-events:none;
+    transition:opacity var(--dur-fast) var(--ease-standard),
+               background var(--dur-fast) var(--ease-standard),
+               color var(--dur-fast) var(--ease-standard);
+  }
+  .person:hover .person-more,.person:focus-within .person-more{
+    opacity:1;pointer-events:auto;
+  }
+  .person-more:hover,.person-more[aria-expanded="true"]{
+    background:var(--surface-overlay);color:var(--text);
+  }
+  @media (hover:none), (pointer:coarse){
+    .person.has-menu .person-main{padding-right:40px}
+    .person-more{right:0;width:44px;height:44px;opacity:1;pointer-events:auto;background:transparent}
+  }
+}

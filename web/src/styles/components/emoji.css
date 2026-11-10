@@ -1,0 +1,590 @@
+@layer components {
+  /*
+   * WYBÓR EMOJI
+   *
+   * A panel with four bands: search, rail, grid, footer. The grid is a fixed
+   * nine columns rather than an auto-fill, because `EmojiPicker` moves the
+   * keyboard cursor a row at a time and a row has to be a knowable width — a
+   * responsive column count would make ArrowDown land somewhere different at
+   * every window size.
+   */
+  .emo-pick {
+    display: flex;
+    flex-direction: column;
+    width: min(392px, calc(100vw - 32px));
+    height: min(438px, calc(100dvh - 124px));
+    min-height: min(300px, calc(100dvh - 124px));
+    background: var(--surface-raised);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--elev-pop);
+    overflow: hidden;
+  }
+
+  /* ---------- SZUKAJ ---------- */
+  .emo-pick-search {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 10px 10px 6px;
+    padding: 0 10px;
+    height: 36px;
+    background: var(--surface-field);
+    border: 1px solid var(--line-subtle);
+    border-radius: var(--radius-sm);
+    color: var(--text-faint);
+    transition:
+      border-color var(--dur-fast) var(--ease-standard),
+      background var(--dur-fast) var(--ease-standard);
+  }
+
+  .emo-pick-search:focus-within {
+    border-color: var(--line-strong);
+    background: var(--surface-overlay);
+  }
+
+  .emo-pick-search input {
+    flex: 1;
+    min-width: 0;
+    background: none;
+    border: none;
+    outline: none;
+    font: inherit;
+    font-size: 13.5px;
+    color: var(--text);
+  }
+
+  .emo-pick-clear {
+    flex: none;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-faint);
+    transition:
+      background var(--dur-fast) var(--ease-standard),
+      color var(--dur-fast) var(--ease-standard);
+  }
+
+  .emo-pick-clear:hover {
+    background: var(--surface-overlay);
+    color: var(--text);
+  }
+
+  .emo-pick-body {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+  }
+
+  /* ---------- KATEGORIE ---------- */
+  /* Glyphs rather than icons: there is no icon in the set that means "🐾", and
+     inventing one would be a worse label than the thing itself. */
+  .emo-pick-rail {
+    flex: none;
+    width: 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 4px 0;
+    overflow-y: auto;
+    scrollbar-width: none;
+    border-right: 1px solid var(--line-subtle);
+  }
+
+  .emo-pick-rail::-webkit-scrollbar {
+    display: none;
+  }
+
+  .emo-pick-cat {
+    flex: none;
+    width: 30px;
+    height: 30px;
+    border-radius: var(--radius-sm);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    line-height: 1;
+    opacity: 0.62;
+    transition:
+      background var(--dur-fast) var(--ease-standard),
+      opacity var(--dur-fast) var(--ease-standard);
+  }
+
+  /* ---------- SIATKA ---------- */
+  .emo-pick-scroll {
+    flex: 1;
+    min-width: 0;
+    overflow-y: auto;
+    padding: 0 6px 8px 8px;
+    overscroll-behavior: contain;
+  }
+
+  /* Sticky so you always know which band you are scrolling through — the whole
+     reason the grid is sectioned rather than continuous. */
+  .emo-pick-head {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    margin: 0;
+    padding: 8px 2px 6px;
+    background: var(--surface-raised);
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--text-faint);
+  }
+
+  .emo-pick-grid {
+    display: grid;
+    grid-template-columns: repeat(9, 1fr);
+    gap: 1px;
+  }
+
+  .emo-pick-tile {
+    aspect-ratio: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-sm);
+    font-size: 21px;
+    line-height: 1;
+    transition:
+      background var(--dur-fast) var(--ease-standard),
+      transform var(--dur-fast) var(--ease-standard);
+  }
+
+  .emo-pick-tile img {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+  }
+
+  .emo-pick-tile[aria-selected="true"] {
+    background: var(--surface-overlay);
+    box-shadow: inset 0 0 0 1px var(--accent-quiet);
+  }
+
+  .emo-pick-empty {
+    padding: 24px 12px;
+    font-size: 13px;
+    line-height: 1.55;
+    color: var(--text-faint);
+  }
+
+  .emo-pick-empty code {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  /* ---------- STOPKA ---------- */
+  /* Names what is under the cursor. The shortcode is the point: it is how the
+     same emoji gets typed next time without opening any of this. */
+  .emo-pick-foot {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 42px;
+    padding: 0 12px;
+    border-top: 1px solid var(--line-subtle);
+    background: var(--surface-base);
+    font-size: 13px;
+    color: var(--text-muted);
+  }
+
+  .emo-pick-big {
+    font-size: 22px;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  .emo-pick-big img {
+    width: 24px;
+    height: 24px;
+    object-fit: contain;
+  }
+
+  .emo-pick-foot b {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .emo-pick-tag {
+    flex: none;
+    margin-left: auto;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: var(--surface-overlay);
+    font-size: 11px;
+    color: var(--text-faint);
+  }
+
+  .emo-pick-hint {
+    color: var(--text-faint);
+  }
+
+  /* Hover magnification is useful with a precise pointer, but touch browsers
+     can leave :hover stuck after a tap. A short press state gives the same
+     acknowledgement without making the chosen tile look permanently raised. */
+  @media (hover: hover) and (pointer: fine) {
+    .emo-pick-cat:hover {
+      background: var(--surface-overlay);
+      opacity: 1;
+    }
+
+    .emo-pick-tile:hover {
+      background: var(--surface-overlay);
+      transform: scale(1.18);
+    }
+  }
+
+  .emo-pick-cat:active {
+    background: var(--surface-overlay);
+    opacity: 1;
+  }
+
+  .emo-pick-tile:active {
+    background: var(--surface-overlay);
+    transform: scale(0.94);
+  }
+
+  /* ---------- OSADZENIE ---------- */
+  /* Above the composer, right-aligned to the button that opens it. */
+  .emo-pop {
+    position: absolute;
+    right: 20px;
+    bottom: calc(100% - 4px);
+    z-index: 42;
+    animation: emoPopIn var(--dur-base) var(--ease-standard);
+  }
+
+  /* Above the message it will react to, hanging off the toolbar's right edge. */
+  .emo-pop-react {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 6px);
+    z-index: 44;
+    animation: emoPopIn var(--dur-base) var(--ease-standard);
+  }
+
+  /* Near the bottom of the transcript there is no room below, so it flips. */
+  .emo-pop-react.up {
+    top: auto;
+    bottom: calc(100% + 6px);
+  }
+
+  /* Message rows live in a transformed virtual list. Once portalled to body,
+     fixed coordinates keep the picker attached to the viewport instead of a
+     row that may be recycled while the transcript moves. */
+  .emo-pop-react.portaled {
+    position: fixed;
+  }
+
+  @keyframes emoPopIn {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  /* ---------- EMOJI W WIADOMOŚCI ---------- */
+  /* An uploaded emoji inline in a body: sized to the line rather than to a
+     fixed pixel count, so it grows with the jumbo rule below without a second
+     declaration. */
+  .msg-emo {
+    display: inline-block;
+    width: 1.375em;
+    height: 1.375em;
+    object-fit: contain;
+    vertical-align: -0.3em;
+    margin: 0 0.02em;
+  }
+
+  /* ---------- EDYCJA W MIEJSCU ---------- */
+  /*
+   * The message, opened for rewriting where it sits.
+   *
+   * Shaped like the composer's box — same field surface, same rounding, same
+   * eight-line ceiling — because it is the same act. What it must not do is
+   * shift the messages around it: the box takes the width of the body it
+   * replaced, so the block keeps its place in the scroller while the field
+   * grows downwards.
+   */
+  .msg-edit {
+    margin: 2px 0 4px;
+    padding: 8px 10px;
+    background: var(--surface-field);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+  }
+
+  .msg-edit-field {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    background: none;
+    border: none;
+    resize: none;
+    outline: none;
+    font: inherit;
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--text);
+    max-height: calc(1.6em * 8);
+  }
+
+  .msg-edit-field:disabled {
+    opacity: 0.6;
+  }
+
+  .msg-edit-foot {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  /* The keys first and in the quietest voice: someone who knows them never
+     reaches for the buttons, and someone who does not needs telling once. */
+  .msg-edit-hint {
+    flex: 1;
+    min-width: 0;
+    font-size: 11.5px;
+    color: var(--text-faint);
+  }
+
+  .msg-edit-x,
+  .msg-edit-ok {
+    flex: none;
+    height: 28px;
+    padding: 0 12px;
+    border-radius: 999px;
+    font-size: 12.5px;
+    font-weight: 600;
+    transition:
+      background var(--dur-fast) var(--ease-standard),
+      color var(--dur-fast) var(--ease-standard);
+  }
+
+  .msg-edit-x {
+    color: var(--text-faint);
+  }
+
+  .msg-edit-x:hover {
+    background: var(--surface-overlay);
+    color: var(--text);
+  }
+
+  .msg-edit-ok {
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+
+  .msg-edit-ok:hover:not(:disabled) {
+    background: var(--accent-hover);
+  }
+
+  .msg-edit-ok:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+
+  /* A footnote on the message, not part of it: small, quiet, unselectable. */
+  .msg-edited {
+    margin-left: 6px;
+    font-size: 10.5px;
+    color: var(--text-faint);
+    -webkit-user-select: none;
+    user-select: none;
+    cursor: help;
+  }
+
+  /* Never inflated with the body it sits at the end of. */
+  .msg-body.jumbo .msg-edited {
+    font-size: 11px;
+    vertical-align: middle;
+  }
+
+  /*
+   * A message that is nothing but emoji is a reaction, not a sentence, so it is
+   * drawn at the size a reaction deserves. Three is the cut-off: past that it
+   * stops being an exclamation and starts being a wall.
+   */
+  .msg-body.jumbo {
+    font-size: 40px;
+    line-height: 1.25;
+    letter-spacing: 0.02em;
+  }
+
+  @media (pointer: coarse) {
+    /* Keyboard legends do not help while editing by touch. Give the two real
+       decisions the footer and keep the textarea above Safari's zoom floor. */
+    .msg-edit-field {
+      font-size: 16px;
+    }
+
+    .msg-edit-foot {
+      justify-content: flex-end;
+    }
+
+    .msg-edit-hint {
+      display: none;
+    }
+
+    .msg-edit-x,
+    .msg-edit-ok {
+      min-height: 44px;
+    }
+
+    .emo-pick-search {
+      height: 44px;
+    }
+
+    .emo-pick-rail {
+      width: 52px;
+    }
+
+    .emo-pick-cat {
+      width: 44px;
+      height: 44px;
+    }
+
+    .emo-pick-clear {
+      width: 44px;
+      height: 44px;
+      margin-right: -10px;
+    }
+
+    .emo-pick-search input {
+      font-size: 16px;
+    }
+
+    .emo-pick-tile {
+      min-height: 44px;
+    }
+
+    .emo-pick-foot {
+      min-height: 44px;
+    }
+  }
+
+  @media (pointer: coarse) and (min-width: 560px) {
+    .emo-pick {
+      width: min(472px, calc(100vw - 32px));
+    }
+  }
+
+  @media (max-width: 767px) {
+    .emo-pick-search input {
+      font-size: 16px;
+    }
+
+    .emo-pop-react.portaled,
+    .emo-pop-react.portaled.up {
+      inset:calc(env(safe-area-inset-top) + 60px) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left)) !important;
+      display:flex;align-items:flex-end;justify-content:center;
+    }
+
+    .emo-pop-react.portaled .emo-pick {
+      max-width:100%;max-height:100%;
+    }
+
+    /* The composer picker is a transparent viewport layer with a bottom sheet
+       inside it. Before search it leaves the composer visible; focusing search
+       uses the room above the software keyboard. Tapping the clear area still
+       dismisses because the event handlers distinguish the sheet from layer. */
+    .emo-pop {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100dvh;
+      padding:
+        calc(env(safe-area-inset-top) + 60px)
+        max(12px, env(safe-area-inset-right))
+        max(88px, calc(env(safe-area-inset-bottom) + 76px))
+        max(12px, env(safe-area-inset-left));
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+    }
+
+    .emo-pop .emo-pick {
+      width: min(472px, 100%);
+      height: min(438px, 100%);
+      min-height: 0;
+      max-height: 100%;
+    }
+
+    .emo-pop:has(.emo-pick-search:focus-within) {
+      padding-bottom: max(12px, env(safe-area-inset-bottom));
+    }
+  }
+
+  @media (max-width: 559px) {
+    .emo-pick {
+      /* Stay between the room header and the composer even on short phones.
+         The grid scrolls internally, so stealing height from the transcript is
+         preferable to covering navigation or the field that opened it. */
+      height: min(438px, calc(100dvh - 152px));
+      min-height: min(300px, calc(100dvh - 152px));
+    }
+
+    .emo-pop .emo-pick {
+      width: min(392px, 100%);
+    }
+
+    .emo-pick-grid {
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 767px) and (max-height: 520px) {
+    /* In phone landscape the footer otherwise consumes a fifth of the whole
+       panel while only repeating the selected shortcode. Keep that teaching
+       aid in portrait and give the constrained view another grid row. */
+    .emo-pop .emo-pick-foot,
+    .emo-pop-react.portaled .emo-pick-foot {
+      display: none;
+    }
+  }
+
+  @media (max-width: 359px) {
+    .emo-pick-scroll {
+      padding-inline: 4px;
+    }
+
+    .emo-pick-grid {
+      grid-template-columns: repeat(5, minmax(0, 1fr));
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .emo-pop,
+    .emo-pop-react {
+      animation: none;
+    }
+
+    .emo-pick-tile:hover,
+    .emo-pick-tile:active {
+      transform: none;
+    }
+  }
+}
