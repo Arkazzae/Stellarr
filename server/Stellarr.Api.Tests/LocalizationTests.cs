@@ -321,6 +321,50 @@ public sealed class LocalizationTests
         Assert.Equal("Company login", byOperator.GetProperty("displayName").GetString());
     }
 
+    [Fact]
+    public async Task DataWrittenInPolishKeepsItsNamesWhileTheInstanceSpeaksEnglish()
+    {
+        // The seeded server is what an installation upgraded from the Polish build looks like.
+        using var factory = new StellarrWebApplicationFactory(
+            loadTestData: true,
+            new Dictionary<string, string?> { [LanguageOptions.SettingName] = "en" });
+        var code = await AddInviteAsync(factory);
+        using var client = SignedInClient(factory);
+
+        using var response = await client.PostAsJsonAsync(
+            "/api/auth/register",
+            new { username = "newcomer", displayName = "Newcomer", email = "newcomer@example.test", password = "Corona!2026", inviteCode = code });
+
+        response.EnsureSuccessStatusCode();
+        await using var scope = factory.OpenScope(out var db);
+        var membership = await db.ServerMembers.Include(x => x.Role).SingleAsync(x => x.User.Username == "newcomer");
+        Assert.Equal("Członek", membership.Role.Name);
+        var welcome = await db.Messages.SingleAsync(x => x.IsSystem && x.Content.Contains("Newcomer"));
+        Assert.Equal(TestData.GeneralChannelId, welcome.ChannelId);
+        Assert.Equal("<b>Newcomer</b> has joined the server. Say hello!", welcome.Content);
+        Assert.Equal("ogólny", (await db.Channels.SingleAsync(x => x.Id == TestData.GeneralChannelId)).Name);
+        var bootstrap = await client.GetFromJsonAsync<JsonElement>("/api/bootstrap");
+        Assert.Contains(
+            bootstrap.GetProperty("channels").EnumerateArray(),
+            channel => channel.GetProperty("name").GetString() == "ogólny");
+    }
+
+    private static async Task<string> AddInviteAsync(StellarrWebApplicationFactory factory)
+    {
+        await using var scope = factory.OpenScope(out var db);
+        var code = $"invite{Guid.NewGuid():N}"[..16];
+        db.ServerInvites.Add(new ServerInvite
+        {
+            Id = Guid.NewGuid(),
+            ServerId = TestData.ServerId,
+            CreatedById = await db.Users.Where(x => x.Username == "maja").Select(x => x.Id).SingleAsync(),
+            Code = code,
+            CreatedAt = DateTime.UtcNow,
+        });
+        await db.SaveChangesAsync();
+        return code;
+    }
+
     private static HttpClient SignedInClient(StellarrWebApplicationFactory factory) =>
         factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false, HandleCookies = true });
 
