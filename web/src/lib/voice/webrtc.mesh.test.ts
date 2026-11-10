@@ -1,0 +1,1139 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+import type {
+  RealtimeClient,
+  RealtimeEventMap,
+  RealtimeEventName,
+  VoiceSignal,
+} from "@/lib/realtime/types";
+import { RTC_PROTOCOL_VERSION } from "@/lib/rtc/protocol";
+import type { VoiceIceProvider } from "./iceSession";
+import { RemoteVoiceMixer } from "./remoteMixer";
+import { DEFAULT_SETTINGS, type VoiceSettings } from "./settings";
+import { WebRtcVoiceClient } from "./webrtc";
+
+const CHANNEL = "ch-salon";
+const SDP = [
+  "v=0",
+  "m=audio 9 UDP/TLS/RTP/SAVPF 111 0",
+  "a=mid:0",
+  "a=rtpmap:111 opus/48000/2",
+  "a=fmtp:111 minptime=10;useinbandfec=1",
+  "a=rtpmap:0 PCMU/8000",
+  "",
+].join("\r\n");
+
+// ---- fakes -----------------------------------------------------------------
+
+class FakeSender {
+  parameters = { encodings: [{}] } as unknown as RTCRtpSendParameters;
+  constructor(public track: MediaStreamTrack | null) {}
+  replaceTrack = vi.fn(async (next: MediaStreamTrack | null) => {
+    this.track = next;
+  });
+  getParameters = vi.fn(() => this.parameters);
+  setParameters = vi.fn(async (next: RTCRtpSendParameters) => {
+    this.parameters = next;
+  });
+}
+
+class FakePeerConnection {
+  static instances: FakePeerConnection[] = [];
+
+  localDescription: RTCSessionDescriptionInit | null = null;
+  remoteDescription: RTCSessionDescriptionInit | null = null;
+  signalingState: RTCSignalingState = "stable";
+  connectionState: RTCPeerConnectionState = "new";
+  senders: FakeSender[] = [];
+  addedCandidates: Array<RTCIceCandidateInit | undefined> = [];
+
+  onicecandidate: ((event: { candidate: RTCIceCandidate | null }) => void) | null = null;
+  ontrack: ((event: { track: MediaStreamTrack; streams: MediaStream[] }) => void) | null = null;
+  onnegotiationneeded: (() => void) | null = null;
+  onconnectionstatechange: (() => void) | null = null;
+
+  constructor(public config: RTCConfiguration) {
+    FakePeerConnection.instances.push(this);
+  }
+
+  addTrack(track: MediaStreamTrack): FakeSender {
+    const sender = new FakeSender(track);
+    this.senders.push(sender);
+    return sender;
+  }
+
+  getTransceivers = () =>
+    this.senders.map((sender, index) => ({
+      sender,
+      mid: String(index),
+      setCodecPreferences: vi.fn(),
+    }));
+  getConfiguration = () => this.config;
+  setConfiguration = vi.fn((next: RTCConfiguration) => {
+    this.config = next;
+  });
+  createOffer = vi.fn(async () => ({ type: "offer" as const, sdp: SDP }));
+  createAnswer = vi.fn(async () => ({ type: "answer" as const, sdp: SDP }));
+  setLocalDescription = vi.fn(async (description?: RTCSessionDescriptionInit) => {
+    if (description?.type === "rollback") {
+      this.signalingState = "stable";
+      return;
+    }
+    this.localDescription = description ?? null;
+    this.signalingState = description?.type === "offer" ? "have-local-offer" : "stable";
+  });
+  setRemoteDescription = vi.fn(async (description: RTCSessionDescriptionInit) => {
+    this.remoteDescription = description;
+    this.signalingState = description.type === "offer" ? "have-remote-offer" : "stable";
+  });
+  addIceCandidate = vi.fn(async (candidate?: RTCIceCandidateInit) => {
+    this.addedCandidates.push(candidate);
+  });
+  restartIce = vi.fn();
+  getStats = vi.fn(async () => []);
+  close = vi.fn(() => {
+    this.connectionState = "closed";
+  });
+
+  setState(state: RTCPeerConnectionState): void {
+    this.connectionState = state;
+    this.onconnectionstatechange?.();
+  }
+}
+
+class FakeRealtime implements RealtimeClient {
+  sent: VoiceSignal[] = [];
+  private handlers = new Map<RealtimeEventName, Array<(payload: never) => void>>();
+  private statusListeners: Array<() => void> = [];
+
+  start = vi.fn(async () => {});
+  stop = vi.fn(async () => {});
+  getStatus = vi.fn(() => "connected" as const);
+  subscribeStatus = vi.fn((listener: () => void) => {
+    this.statusListeners.push(listener);
+    return () => {
+      this.statusListeners = this.statusListeners.filter((item) => item !== listener);
+    };
+  });
+  setPresence = vi.fn(async () => {});
+  joinChannel = vi.fn(async () => {});
+  sendTyping = vi.fn(async () => {});
+  joinVoice = vi.fn(async (_channelId: string) => {});
+  leaveVoice = vi.fn(async () => {});
+  declineDirectCall = vi.fn(async () => {});
+  sendVoiceSignal = vi.fn(async (signal: VoiceSignal) => {
+    this.sent.push(signal);
+  });
+  playSoundboard = vi.fn(async () => {});
+  getRtcClock = vi.fn(async () => Date.now());
+
+  on<E extends RealtimeEventName>(
+    event: E,
+    handler: (payload: RealtimeEventMap[E]) => void,
+  ): () => void {
+    const list = this.handlers.get(event) ?? [];
+    list.push(handler as (payload: never) => void);
+    this.handlers.set(event, list);
+    return () => {
+      this.handlers.set(
+        event,
+        (this.handlers.get(event) ?? []).filter((item) => item !== handler),
+      );
+    };
+  }
+
+  emit<E extends RealtimeEventName>(event: E, payload: RealtimeEventMap[E]): void {
+    for (const handler of this.handlers.get(event) ?? []) {
+      (handler as (value: RealtimeEventMap[E]) => void)(payload);
+    }
+  }
+
+  /** A signal from another participant. */
+  signal(fromUserId: string, kind: VoiceSignal["kind"], payload: unknown): void {
+    this.emit("VoiceSignal", {
+      protocolVersion: RTC_PROTOCOL_VERSION,
+      channelId: CHANNEL,
+      fromUserId,
+      kind,
+      payload: typeof payload === "string" ? payload : JSON.stringify(payload),
+    });
+  }
+
+  setStatus(status: "connected" | "reconnecting"): void {
+    this.getStatus.mockReturnValue(status as never);
+    for (const listener of this.statusListeners) listener();
+  }
+
+  sentOfKind(kind: VoiceSignal["kind"]): VoiceSignal[] {
+    return this.sent.filter((signal) => signal.kind === kind);
+  }
+}
+
+function fakeTrack(): MediaStreamTrack {
+  return {
+    kind: "audio",
+    enabled: true,
+    contentHint: "",
+    stop: vi.fn(),
+    onended: null,
+    getSettings: () => ({ channelCount: 1 }),
+  } as unknown as MediaStreamTrack;
+}
+
+let streamCounter = 0;
+function fakeStream(track: MediaStreamTrack = fakeTrack()): MediaStream {
+  return {
+    id: `stream-${streamCounter++}`,
+    getTracks: () => [track],
+    getAudioTracks: () => [track],
+    getVideoTracks: () => [],
+  } as unknown as MediaStream;
+}
+
+const ICE: RTCIceServer[] = [{ urls: "stun:orbit.example:3478" }];
+
+let realtime: FakeRealtime;
+let ice: VoiceIceProvider & { beginSession: ReturnType<typeof vi.fn> };
+let micTrack: MediaStreamTrack;
+let settings: VoiceSettings;
+let getUserMedia: ReturnType<typeof vi.fn>;
+let clients: WebRtcVoiceClient[];
+let devices: MediaDeviceInfo[];
+let deviceChange: EventListener | null;
+
+function build(selfUserId = "u-a", updateSettings?: (patch: Partial<VoiceSettings>) => void) {
+  const client = new WebRtcVoiceClient({
+    realtime,
+    selfUserId,
+    selfDisplayName: "Ja",
+    ice,
+    rtc: { protocolVersion: RTC_PROTOCOL_VERSION, topology: "mesh" },
+    getSettings: () => settings,
+    updateSettings,
+    statsIntervalMs: 60_000,
+    recoveryGraceMs: 20,
+  });
+  clients.push(client);
+  return client;
+}
+
+function announce(...ids: string[]): void {
+  realtime.emit("VoiceParticipantChanged", {
+    channelId: CHANNEL,
+    participants: ids.map((userId) => ({ userId, displayName: `Osoba ${userId}`, muted: false })),
+  });
+}
+
+/** Join, then bring one other person into the channel. */
+async function joinWith(client: WebRtcVoiceClient, peerId = "u-z"): Promise<FakePeerConnection> {
+  await client.join(CHANNEL);
+  announce(peerId);
+  await vi.waitFor(() => expect(FakePeerConnection.instances).toHaveLength(1));
+  return FakePeerConnection.instances[0]!;
+}
+
+/** Join and wait until the newcomer has been told where we stand. */
+async function joinAndSettle(client: WebRtcVoiceClient): Promise<FakePeerConnection> {
+  const pc = await joinWith(client);
+  await vi.waitFor(() =>
+    expect(realtime.sentOfKind("state").some((frame) => frame.toUserId === "u-z")).toBe(true),
+  );
+  realtime.sent = [];
+  return pc;
+}
+
+function peerOf(client: WebRtcVoiceClient) {
+  return client.getSnapshot().peers.find((peer) => !peer.self);
+}
+
+function audioDevice(kind: MediaDeviceKind, deviceId: string): MediaDeviceInfo {
+  return { kind, deviceId, groupId: "g", label: deviceId, toJSON: () => ({}) };
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((done) => {
+    resolve = done;
+  });
+  return { promise, resolve };
+}
+
+beforeEach(() => {
+  FakePeerConnection.instances = [];
+  streamCounter = 0;
+  clients = [];
+  realtime = new FakeRealtime();
+  micTrack = fakeTrack();
+  settings = { ...DEFAULT_SETTINGS };
+  ice = {
+    beginSession: vi.fn(async () => ICE),
+    current: vi.fn(() => ICE),
+    endSession: vi.fn(),
+  };
+  getUserMedia = vi.fn(async () => fakeStream(micTrack));
+  vi.stubGlobal("RTCPeerConnection", FakePeerConnection);
+  devices = [];
+  deviceChange = null;
+  vi.stubGlobal("navigator", {
+    mediaDevices: {
+      getUserMedia,
+      enumerateDevices: vi.fn(async () => devices),
+      addEventListener: vi.fn((name: string, listener: EventListener) => {
+        if (name === "devicechange") deviceChange = listener;
+      }),
+      removeEventListener: vi.fn(),
+    },
+  });
+});
+
+afterEach(() => {
+  for (const client of clients) client.dispose();
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
+
+describe("joining and leaving", () => {
+  it("refreshes ICE before joining the hub, then announces its state", async () => {
+    const order: string[] = [];
+    ice.beginSession.mockImplementation(async () => {
+      order.push("ice");
+      return ICE;
+    });
+    realtime.joinVoice.mockImplementation(async () => {
+      order.push("hub");
+    });
+    const client = build();
+
+    await client.join(CHANNEL);
+
+    expect(order).toEqual(["ice", "hub"]);
+    expect(client.getSnapshot()).toMatchObject({
+      connection: "connected",
+      channelId: CHANNEL,
+      error: null,
+      transport: { signaling: "connected", media: "ready", peerCount: 0 },
+    });
+    expect(client.getSnapshot().peers).toHaveLength(1);
+    expect(JSON.parse(realtime.sentOfKind("state")[0]!.payload)).toEqual({
+      muted: false,
+      screenStreamId: null,
+      cameraStreamId: null,
+    });
+  });
+
+  it("does nothing when asked to join the channel it is already in", async () => {
+    const client = build();
+    await client.join(CHANNEL);
+
+    await client.join(CHANNEL);
+
+    expect(getUserMedia).toHaveBeenCalledTimes(1);
+    expect(realtime.joinVoice).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses an incompatible RTC contract before opening the microphone", async () => {
+    const client = new WebRtcVoiceClient({
+      realtime,
+      selfUserId: "u-a",
+      selfDisplayName: "Ja",
+      ice,
+      rtc: { protocolVersion: 2, topology: "mesh" },
+    });
+    clients.push(client);
+
+    await client.join(CHANNEL);
+
+    expect(client.getSnapshot()).toMatchObject({
+      connection: "failed",
+      transport: { signaling: "disconnected", media: "failed" },
+      error: { kind: "unsupported" },
+    });
+    expect(getUserMedia).not.toHaveBeenCalled();
+    expect(realtime.joinVoice).not.toHaveBeenCalled();
+  });
+
+  it("reports a blocked microphone and never reaches the hub", async () => {
+    getUserMedia.mockRejectedValueOnce(new DOMException("blocked", "NotAllowedError"));
+    const client = build();
+
+    await client.join(CHANNEL);
+
+    expect(client.getSnapshot()).toMatchObject({
+      connection: "failed",
+      channelId: CHANNEL,
+      error: { kind: "mic-denied" },
+    });
+    expect(ice.beginSession).not.toHaveBeenCalled();
+    expect(realtime.joinVoice).not.toHaveBeenCalled();
+  });
+
+  it("joins on the system microphone when the saved device is gone, and remembers it", async () => {
+    settings = { ...settings, inputDeviceId: "missing-usb-mic" };
+    const updateSettings = vi.fn();
+    const replacement = fakeTrack();
+    getUserMedia
+      .mockRejectedValueOnce(new DOMException("gone", "NotFoundError"))
+      .mockResolvedValueOnce(fakeStream(replacement));
+    const client = build("u-a", updateSettings);
+
+    await client.join(CHANNEL);
+
+    expect(updateSettings).toHaveBeenCalledWith({ inputDeviceId: null });
+    expect(getUserMedia.mock.calls[1]?.[0].audio).not.toHaveProperty("deviceId");
+    expect(client.getSnapshot().connection).toBe("connected");
+  });
+
+  it("does not retry a blocked microphone on another device", async () => {
+    settings = { ...settings, inputDeviceId: "usb-mic" };
+    getUserMedia.mockRejectedValue(new DOMException("blocked", "NotAllowedError"));
+    const client = build();
+
+    await client.join(CHANNEL);
+
+    expect(getUserMedia).toHaveBeenCalledTimes(1);
+    expect(client.getSnapshot().error?.kind).toBe("mic-denied");
+  });
+
+  it("releases the microphone and the ICE session when the hub join fails", async () => {
+    realtime.joinVoice.mockRejectedValueOnce(new Error("hub down"));
+    const client = build();
+
+    await client.join(CHANNEL);
+
+    expect(client.getSnapshot()).toMatchObject({
+      connection: "failed",
+      error: { kind: "signaling" },
+    });
+    expect(micTrack.stop).toHaveBeenCalled();
+    expect(ice.endSession).toHaveBeenCalled();
+  });
+
+  it("can be retried after the ICE configuration failed", async () => {
+    ice.beginSession.mockRejectedValueOnce(new Error("offline"));
+    const client = build();
+    await client.join(CHANNEL);
+    expect(client.getSnapshot().error?.kind).toBe("ice-config");
+    expect(micTrack.stop).toHaveBeenCalled();
+
+    await client.join(CHANNEL);
+
+    expect(client.getSnapshot().connection).toBe("connected");
+  });
+
+  it("leaves cleanly: closes peers, stops the microphone, tells the hub", async () => {
+    const client = build();
+    const pc = await joinWith(client);
+
+    await client.leave();
+
+    expect(pc.close).toHaveBeenCalled();
+    expect(micTrack.stop).toHaveBeenCalled();
+    expect(realtime.leaveVoice).toHaveBeenCalledTimes(1);
+    expect(ice.endSession).toHaveBeenCalled();
+    expect(client.getSnapshot()).toMatchObject({ connection: "idle", channelId: null, peers: [] });
+    expect(document.querySelector("[data-stellarr-voice-audio]")).toBeNull();
+  });
+
+  it("still leaves when the hub is unreachable", async () => {
+    const client = build();
+    await client.join(CHANNEL);
+    realtime.leaveVoice.mockRejectedValueOnce(new Error("hub gone"));
+
+    await client.leave();
+
+    expect(client.getSnapshot().channelId).toBeNull();
+  });
+
+  it("drops a join that is left while the microphone is still opening", async () => {
+    const opening = deferred<MediaStream>();
+    getUserMedia.mockReturnValueOnce(opening.promise);
+    const client = build();
+
+    const joining = client.join(CHANNEL);
+    await client.leave();
+    opening.resolve(fakeStream(micTrack));
+    await joining;
+
+    expect(micTrack.stop).toHaveBeenCalled();
+    expect(realtime.joinVoice).not.toHaveBeenCalled();
+    expect(client.getSnapshot().channelId).toBeNull();
+  });
+});
+
+describe("offer and answer", () => {
+  it("opens with a tuned offer on the impolite side only", async () => {
+    const impolite = build("u-a");
+    const pc = await joinWith(impolite, "u-z");
+
+    expect(pc.config).toMatchObject({ iceServers: ICE, bundlePolicy: "max-bundle" });
+    expect(pc.signalingState).toBe("have-local-offer");
+    const offer = realtime.sentOfKind("offer")[0]!;
+    expect(offer.toUserId).toBe("u-z");
+    expect(JSON.parse(offer.payload).sdp).toContain("maxaveragebitrate=128000");
+
+    FakePeerConnection.instances = [];
+    realtime.sent = [];
+    const polite = build("u-z");
+    const waiting = await joinWith(polite, "u-a");
+    expect(waiting.signalingState).toBe("stable");
+    expect(realtime.sentOfKind("offer")).toHaveLength(0);
+  });
+
+  it("puts the microphone on every peer connection", async () => {
+    const client = build();
+    const pc = await joinWith(client);
+
+    expect(pc.senders).toHaveLength(1);
+    expect(pc.senders[0]?.track).toBe(micTrack);
+    expect(micTrack.contentHint).toBe("speech");
+  });
+
+  it("answers an offer from the other side", async () => {
+    const client = build("u-z");
+    const pc = await joinWith(client, "u-a");
+    realtime.sent = [];
+
+    realtime.signal("u-a", "offer", { type: "offer", sdp: SDP });
+
+    await vi.waitFor(() => expect(realtime.sentOfKind("answer")).toHaveLength(1));
+    expect(pc.remoteDescription?.type).toBe("offer");
+    expect(realtime.sentOfKind("answer")[0]?.toUserId).toBe("u-a");
+  });
+
+  it("ignores a colliding offer when impolite and yields when polite", async () => {
+    const impolite = build("u-a");
+    const first = await joinWith(impolite, "u-z");
+    realtime.signal("u-z", "offer", { type: "offer", sdp: SDP });
+    await Promise.resolve();
+    expect(first.setRemoteDescription).not.toHaveBeenCalled();
+
+    FakePeerConnection.instances = [];
+    const polite = build("u-z");
+    const second = await joinWith(polite, "u-a");
+    second.signalingState = "have-local-offer";
+    realtime.signal("u-a", "offer", { type: "offer", sdp: SDP });
+    await vi.waitFor(() => expect(second.setRemoteDescription).toHaveBeenCalled());
+  });
+
+  it("sends local candidates and the end-of-candidates marker to that peer", async () => {
+    const client = build();
+    const pc = await joinWith(client);
+    realtime.sent = [];
+
+    pc.onicecandidate?.({
+      candidate: { toJSON: () => ({ candidate: "candidate:1", sdpMid: "0" }) } as RTCIceCandidate,
+    });
+    pc.onicecandidate?.({ candidate: null });
+
+    await vi.waitFor(() => expect(realtime.sentOfKind("candidate")).toHaveLength(2));
+    const [candidate, end] = realtime.sentOfKind("candidate");
+    expect(candidate?.toUserId).toBe("u-z");
+    expect(JSON.parse(candidate!.payload).candidate).toBe("candidate:1");
+    expect(end?.payload).toBe("null");
+  });
+
+  it("holds remote candidates until the answer, then applies them in order", async () => {
+    const client = build();
+    const pc = await joinWith(client);
+
+    for (const name of ["a", "b", "c"]) {
+      realtime.signal("u-z", "candidate", { candidate: `candidate:${name}`, sdpMid: "0" });
+    }
+    await Promise.resolve();
+    expect(pc.addIceCandidate).not.toHaveBeenCalled();
+
+    realtime.signal("u-z", "answer", { type: "answer", sdp: SDP });
+
+    await vi.waitFor(() => expect(pc.addedCandidates).toHaveLength(3));
+    expect(pc.addedCandidates.map((candidate) => candidate?.candidate)).toEqual([
+      "candidate:a",
+      "candidate:b",
+      "candidate:c",
+    ]);
+  });
+
+  it("survives a frame it cannot parse, and one from someone who is not here", async () => {
+    const client = build();
+    await joinWith(client);
+
+    realtime.signal("u-z", "answer", "not json");
+    realtime.signal("u-nobody", "offer", { type: "offer", sdp: SDP });
+    await Promise.resolve();
+
+    expect(client.getSnapshot().connection).toBe("connected");
+    expect(client.getSnapshot().error).toBeNull();
+  });
+
+  it("does not report a targeted frame lost to a peer that already left", async () => {
+    realtime.sendVoiceSignal.mockImplementation(async (signal) => {
+      if (signal.toUserId !== undefined) throw new Error("peer already left");
+    });
+    const client = build();
+
+    await joinWith(client);
+    await Promise.resolve();
+
+    expect(client.getSnapshot().error).toBeNull();
+  });
+
+  it("closes the connection of someone who left the channel", async () => {
+    const client = build();
+    const pc = await joinWith(client);
+
+    announce();
+
+    await vi.waitFor(() => expect(pc.close).toHaveBeenCalled());
+    await vi.waitFor(() => expect(client.getSnapshot().peers).toHaveLength(1));
+  });
+
+  it("stops building connections once the call has been left", async () => {
+    const client = build();
+    await client.join(CHANNEL);
+
+    announce("u-x", "u-y");
+    await client.leave();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+
+    expect(FakePeerConnection.instances).toHaveLength(1);
+  });
+});
+
+describe("mute and deafen", () => {
+  it("mutes only the outgoing track and tells everyone", async () => {
+    const client = build();
+    await client.join(CHANNEL);
+    realtime.sent = [];
+
+    client.setMuted(true);
+
+    expect(micTrack.enabled).toBe(false);
+    expect(client.getSnapshot()).toMatchObject({ muted: true });
+    await vi.waitFor(() => expect(realtime.sentOfKind("state")).toHaveLength(1));
+    expect(JSON.parse(realtime.sentOfKind("state")[0]!.payload).muted).toBe(true);
+
+    client.setMuted(false);
+    expect(micTrack.enabled).toBe(true);
+  });
+
+  it("opens the microphone muted when the person muted before joining", async () => {
+    const client = build();
+    client.setMuted(true);
+
+    await client.join(CHANNEL);
+
+    expect(micTrack.enabled).toBe(false);
+    client.setMuted(false);
+    expect(micTrack.enabled).toBe(true);
+  });
+
+  it("learns another person's mute state from their frame", async () => {
+    const client = build();
+    await joinWith(client);
+
+    realtime.signal("u-z", "state", {
+      muted: true,
+      screenStreamId: null,
+      cameraStreamId: null,
+    });
+
+    expect(peerOf(client)?.muted).toBe(true);
+  });
+
+  it("silences every remote voice when deafened and restores it", async () => {
+    const client = build();
+    await joinWith(client);
+    const sink = document.querySelector("[data-stellarr-voice-audio] audio") as HTMLAudioElement;
+
+    client.setDeafened(true);
+    expect(sink.muted).toBe(true);
+    expect(micTrack.enabled).toBe(true);
+
+    client.setDeafened(false);
+    expect(sink.muted).toBe(false);
+  });
+});
+
+describe("remote voice", () => {
+  function arrive(pc: FakePeerConnection, stream = fakeStream()): MediaStream {
+    pc.ontrack?.({ track: stream.getAudioTracks()[0]!, streams: [stream] });
+    return stream;
+  }
+
+  it("routes a remote voice through the mixer and keeps the raw stream off the speakers", async () => {
+    const attach = vi.spyOn(RemoteVoiceMixer.prototype, "attach").mockReturnValue(true);
+    vi.spyOn(RemoteVoiceMixer.prototype, "resume").mockResolvedValue(true);
+    const setVolume = vi
+      .spyOn(RemoteVoiceMixer.prototype, "setVolume")
+      .mockImplementation(() => undefined);
+    const client = build();
+    const pc = await joinWith(client);
+
+    const stream = arrive(pc);
+
+    const [audible, decoder] = [...document.querySelectorAll("[data-stellarr-voice-audio] audio")];
+    expect(attach).toHaveBeenCalledWith("u-z", stream, audible, 100, {
+      gated: false,
+      suppressed: false,
+    });
+    expect((decoder as HTMLAudioElement).srcObject).toBe(stream);
+    expect((audible as HTMLAudioElement).srcObject).not.toBe(stream);
+
+    client.setPeerVolume("u-z", 150);
+    expect(setVolume).toHaveBeenCalledWith("u-z", 150);
+    expect(peerOf(client)?.playbackVolume).toBe(150);
+  });
+
+  it("deafening still mutes the audible sink of a processed voice", async () => {
+    vi.spyOn(RemoteVoiceMixer.prototype, "attach").mockReturnValue(true);
+    vi.spyOn(RemoteVoiceMixer.prototype, "resume").mockResolvedValue(true);
+    const client = build();
+    const pc = await joinWith(client);
+    arrive(pc);
+    const audible = document.querySelector("[data-stellarr-voice-audio] audio") as HTMLAudioElement;
+
+    client.setDeafened(true);
+
+    expect(audible.muted).toBe(true);
+  });
+
+  it("plays the raw stream when Web Audio is unavailable", async () => {
+    const client = build();
+    const pc = await joinWith(client);
+
+    const stream = arrive(pc);
+
+    const audible = document.querySelector("[data-stellarr-voice-audio] audio") as HTMLAudioElement;
+    expect(audible.srcObject).toBe(stream);
+    client.setPeerVolume("u-z", 50);
+    expect(audible.volume).toBeCloseTo(0.5);
+  });
+
+  it("ignores video, which this client does not display", async () => {
+    const client = build();
+    const pc = await joinWith(client);
+    const video = { ...fakeTrack(), kind: "video" } as MediaStreamTrack;
+
+    pc.ontrack?.({ track: video, streams: [fakeStream(video)] });
+
+    await vi.waitFor(() => expect(peerOf(client)).toBeDefined());
+    expect(peerOf(client)).toMatchObject({ screen: null, camera: null });
+    expect(document.querySelector("video")).toBeNull();
+  });
+
+  it("remembers how each person sounds and restores it next time", async () => {
+    const { ParticipantPreferencesStore } = await import("./participantPreferences");
+    const preferences = new ParticipantPreferencesStore(null, "u-a");
+    preferences.set("u-z", { volume: 40, gated: true, suppressed: true });
+    const client = new WebRtcVoiceClient({
+      realtime,
+      selfUserId: "u-a",
+      selfDisplayName: "Ja",
+      ice,
+      rtc: { protocolVersion: RTC_PROTOCOL_VERSION, topology: "mesh" },
+      getSettings: () => settings,
+      participantPreferences: preferences,
+    });
+    clients.push(client);
+    await joinWith(client);
+
+    await vi.waitFor(() =>
+      expect(peerOf(client)).toMatchObject({ playbackVolume: 40, gated: true, suppressed: true }),
+    );
+
+    client.setPeerVolume("u-z", 70);
+    client.setPeerGate("u-z", false);
+    client.setPeerSuppression("u-z", false);
+    expect(preferences.get("u-z")).toEqual({ volume: 70, gated: false, suppressed: false });
+    expect(peerOf(client)).toMatchObject({ playbackVolume: 70, gated: false, suppressed: false });
+  });
+
+  it("clamps an absurd volume", async () => {
+    const client = build();
+    await joinWith(client);
+
+    client.setPeerVolume("u-z", 900);
+
+    expect(peerOf(client)?.playbackVolume).toBe(200);
+  });
+});
+
+describe("live settings", () => {
+  it("applies a profile change without reopening the microphone, and renegotiates", async () => {
+    const client = build();
+    const pc = await joinWith(client);
+    pc.signalingState = "stable";
+    realtime.sent = [];
+
+    await client.applySettings({ ...settings, opusProfile: "studio" });
+
+    expect(getUserMedia).toHaveBeenCalledTimes(1);
+    expect(pc.senders[0]?.parameters.encodings[0]?.maxBitrate).toBe(256_000);
+    await vi.waitFor(() => expect(realtime.sentOfKind("offer")).toHaveLength(1));
+    expect(JSON.parse(realtime.sentOfKind("offer")[0]!.payload).sdp).toContain(
+      "maxaveragebitrate=256000",
+    );
+  });
+
+  it("moves every peer to the new microphone and stops the old device", async () => {
+    const client = build();
+    await client.join(CHANNEL);
+    announce("u-x", "u-z");
+    await vi.waitFor(() => expect(FakePeerConnection.instances).toHaveLength(2));
+    const replacement = fakeTrack();
+    getUserMedia.mockResolvedValueOnce(fakeStream(replacement));
+
+    await client.applySettings({ ...settings, inputDeviceId: "other-mic" });
+
+    for (const pc of FakePeerConnection.instances) {
+      expect(pc.senders[0]?.replaceTrack).toHaveBeenCalledWith(replacement);
+    }
+    expect(micTrack.stop).toHaveBeenCalled();
+    expect(realtime.leaveVoice).not.toHaveBeenCalled();
+    expect(client.getSnapshot().error).toBeNull();
+  });
+
+  it("tells everyone its state again once the microphone moved", async () => {
+    const client = build();
+    await joinAndSettle(client);
+    getUserMedia.mockResolvedValueOnce(fakeStream(fakeTrack()));
+
+    await client.applySettings({ ...settings, inputDeviceId: "other-mic" });
+
+    await vi.waitFor(() => expect(realtime.sentOfKind("state")).toHaveLength(1));
+    const [frame] = realtime.sentOfKind("state");
+    expect(frame?.toUserId).toBeUndefined();
+    expect(JSON.parse(frame!.payload)).toEqual({
+      muted: false,
+      screenStreamId: null,
+      cameraStreamId: null,
+    });
+  });
+
+  it("sends no state when the microphone did not move", async () => {
+    const client = build();
+    await joinAndSettle(client);
+
+    await client.applySettings({ ...settings, vadSensitivity: 80 });
+    getUserMedia.mockRejectedValueOnce(new DOMException("gone", "NotFoundError"));
+    await client.applySettings({ ...settings, vadSensitivity: 80, inputDeviceId: "unplugged" });
+
+    expect(getUserMedia).toHaveBeenCalledTimes(2);
+    expect(realtime.sentOfKind("state")).toEqual([]);
+  });
+
+  it("keeps the old microphone running when the new one cannot be opened", async () => {
+    const client = build();
+    await client.join(CHANNEL);
+    getUserMedia.mockRejectedValueOnce(new DOMException("gone", "NotFoundError"));
+
+    await client.applySettings({ ...settings, inputDeviceId: "unplugged" });
+
+    expect(client.getSnapshot()).toMatchObject({
+      connection: "connected",
+      error: { recoverable: true },
+    });
+    expect(micTrack.stop).not.toHaveBeenCalled();
+  });
+
+  it("puts every peer back when one of them refuses the new microphone", async () => {
+    const client = build();
+    await client.join(CHANNEL);
+    announce("u-x", "u-z");
+    await vi.waitFor(() => expect(FakePeerConnection.instances).toHaveLength(2));
+    const [accepting, refusing] = FakePeerConnection.instances.map((pc) => pc.senders[0]!);
+    refusing!.replaceTrack.mockRejectedValueOnce(new Error("sender closed"));
+    const replacement = fakeTrack();
+    getUserMedia.mockResolvedValueOnce(fakeStream(replacement));
+
+    await client.applySettings({ ...settings, inputDeviceId: "other-mic" });
+
+    expect(accepting!.track).toBe(micTrack);
+    expect(replacement.stop).toHaveBeenCalledOnce();
+    expect(micTrack.stop).not.toHaveBeenCalled();
+    expect(client.getSnapshot().error).toMatchObject({ kind: "mic-unavailable", recoverable: true });
+  });
+
+  it("reopens the system default when the active device ends, and forgets a dead choice", async () => {
+    settings = { ...settings, inputDeviceId: "usb-mic" };
+    const updateSettings = vi.fn();
+    const client = build("u-a", updateSettings);
+    await client.join(CHANNEL);
+    const replacement = fakeTrack();
+    getUserMedia.mockResolvedValueOnce(fakeStream(replacement));
+
+    (micTrack.onended as unknown as () => void)();
+
+    await vi.waitFor(() => expect(micTrack.stop).toHaveBeenCalled());
+    expect(updateSettings).toHaveBeenCalledWith({ inputDeviceId: null });
+    expect(replacement.stop).not.toHaveBeenCalled();
+  });
+
+  it("follows the system default when the plugged-in microphones change", async () => {
+    devices = [audioDevice("audioinput", "mic-a")];
+    const client = build();
+    await client.join(CHANNEL);
+    await vi.waitFor(() => expect(deviceChange).not.toBeNull());
+    await Promise.resolve();
+    const replacement = fakeTrack();
+    getUserMedia.mockResolvedValueOnce(fakeStream(replacement));
+
+    devices = [audioDevice("audioinput", "mic-b")];
+    deviceChange?.(new Event("devicechange"));
+
+    await vi.waitFor(() => expect(micTrack.stop).toHaveBeenCalled(), { timeout: 1000 });
+    expect(replacement.stop).not.toHaveBeenCalled();
+    expect(realtime.leaveVoice).not.toHaveBeenCalled();
+  });
+
+  it("forgets a chosen microphone that was unplugged", async () => {
+    devices = [audioDevice("audioinput", "usb-mic")];
+    settings = { ...settings, inputDeviceId: "usb-mic" };
+    const updateSettings = vi.fn();
+    const client = build("u-a", updateSettings);
+    await client.join(CHANNEL);
+    await vi.waitFor(() => expect(deviceChange).not.toBeNull());
+    await Promise.resolve();
+    getUserMedia.mockResolvedValueOnce(fakeStream(fakeTrack()));
+
+    devices = [];
+    deviceChange?.(new Event("devicechange"));
+
+    await vi.waitFor(() => expect(updateSettings).toHaveBeenCalledWith({ inputDeviceId: null }), {
+      timeout: 1000,
+    });
+    await vi.waitFor(() => expect(micTrack.stop).toHaveBeenCalled());
+  });
+
+  it("forgets a chosen camera that was unplugged, though no camera is on", async () => {
+    devices = [audioDevice("videoinput", "cam-1")];
+    settings = { ...settings, videoDeviceId: "cam-1" };
+    const updateSettings = vi.fn();
+    const client = build("u-a", updateSettings);
+    await client.join(CHANNEL);
+    await vi.waitFor(() => expect(deviceChange).not.toBeNull());
+    await Promise.resolve();
+
+    devices = [];
+    deviceChange?.(new Event("devicechange"));
+
+    await vi.waitFor(() => expect(updateSettings).toHaveBeenCalledWith({ videoDeviceId: null }), {
+      timeout: 1000,
+    });
+    expect(getUserMedia).toHaveBeenCalledTimes(1);
+    expect(micTrack.stop).not.toHaveBeenCalled();
+  });
+
+  it("applies only the newest of several quick device changes", async () => {
+    const client = build();
+    const pc = await joinWith(client);
+    const slow = deferred<MediaStream>();
+    const latest = fakeTrack();
+    const stale = fakeTrack();
+    getUserMedia.mockReturnValueOnce(slow.promise).mockResolvedValueOnce(fakeStream(latest));
+
+    const first = client.applySettings({ ...settings, inputDeviceId: "slow-mic" });
+    await vi.waitFor(() => expect(getUserMedia).toHaveBeenCalledTimes(2));
+    const second = client.applySettings({ ...settings, inputDeviceId: "latest-mic" });
+    slow.resolve(fakeStream(stale));
+    await Promise.all([first, second]);
+
+    expect(pc.senders[0]?.replaceTrack).toHaveBeenCalledTimes(1);
+    expect(pc.senders[0]?.replaceTrack).toHaveBeenCalledWith(latest);
+    expect(stale.stop).toHaveBeenCalledOnce();
+  });
+});
+
+describe("recovery", () => {
+  it("restarts ICE after a failure and re-offers from the impolite side", async () => {
+    const client = build();
+    const pc = await joinWith(client);
+    pc.signalingState = "stable";
+    realtime.sent = [];
+
+    pc.setState("failed");
+
+    await vi.waitFor(() => expect(pc.restartIce).toHaveBeenCalledTimes(1));
+    await vi.waitFor(() => expect(realtime.sentOfKind("offer")).toHaveLength(1));
+    expect(client.getSnapshot().error).toBeNull();
+  });
+
+  it("waits for a polite peer's counterpart to make the restart offer", async () => {
+    const client = build("u-z");
+    const pc = await joinWith(client, "u-a");
+
+    pc.setState("failed");
+
+    await vi.waitFor(() => expect(pc.restartIce).toHaveBeenCalled());
+    expect(realtime.sentOfKind("offer")).toHaveLength(0);
+  });
+
+  it("gives up after three restarts and says which connection was lost", async () => {
+    const client = build();
+    const pc = await joinWith(client);
+
+    pc.setState("disconnected");
+
+    await vi.waitFor(() => expect(client.getSnapshot().error?.kind).toBe("transport"), {
+      timeout: 1000,
+    });
+    expect(pc.restartIce).toHaveBeenCalledTimes(3);
+    expect(client.getSnapshot().error?.message).toContain("u-z");
+    expect(client.getSnapshot().transport.media).toBe("failed");
+  });
+
+  it("does not restart a connection that recovers on its own", async () => {
+    const client = build();
+    const pc = await joinWith(client);
+
+    pc.setState("disconnected");
+    pc.setState("connected");
+    await new Promise((resolve) => setTimeout(resolve, 80));
+
+    expect(pc.restartIce).not.toHaveBeenCalled();
+  });
+
+  it("repairs only the broken connections when the tab comes back", async () => {
+    const client = build();
+    await client.join(CHANNEL);
+    announce("u-x", "u-z");
+    await vi.waitFor(() => expect(FakePeerConnection.instances).toHaveLength(2));
+    const [healthy, broken] = FakePeerConnection.instances;
+    healthy!.connectionState = "connected";
+    broken!.connectionState = "failed";
+
+    document.dispatchEvent(new Event("visibilitychange"));
+
+    await vi.waitFor(() => expect(broken!.restartIce).toHaveBeenCalled());
+    expect(healthy!.restartIce).not.toHaveBeenCalled();
+  });
+
+  it("only calls the media connected once audio crossed both ways", async () => {
+    const client = build();
+    const pc = await joinWith(client);
+    pc.setState("connected");
+    expect(client.getSnapshot().transport).toMatchObject({
+      media: "connecting",
+      connectedPeerCount: 1,
+    });
+
+    pc.getStats.mockResolvedValue([
+      { type: "outbound-rtp", kind: "audio", packetsSent: 5, bytesSent: 400 },
+      { type: "inbound-rtp", kind: "audio", packetsReceived: 5, bytesReceived: 400 },
+    ] as never);
+    await (client as unknown as { sampleStats(): Promise<void> }).sampleStats();
+
+    expect(client.getSnapshot().transport.media).toBe("connected");
+    expect(client.getSnapshot().diagnostics).toMatchObject({ packetsSent: 5, packetsReceived: 5 });
+  });
+});
+
+describe("following the hub", () => {
+  it("leaves and says so when a newer connection replaced this session", async () => {
+    const client = build();
+    await joinWith(client);
+
+    realtime.emit("VoiceSessionReplaced", { channelId: CHANNEL });
+
+    await vi.waitFor(() => expect(client.getSnapshot().error?.kind).toBe("session-replaced"));
+    expect(client.getSnapshot().channelId).toBeNull();
+    expect(micTrack.stop).toHaveBeenCalled();
+  });
+
+  it("releases media when a moderator kicks the session", async () => {
+    const client = build();
+    await joinWith(client);
+
+    realtime.emit("VoiceChannelKicked", { channelId: CHANNEL });
+
+    await vi.waitFor(() => expect(client.getSnapshot().error?.kind).toBe("channel-kicked"));
+    expect(micTrack.stop).toHaveBeenCalled();
+  });
+
+  it("ignores events for another channel", async () => {
+    const client = build();
+    await client.join(CHANNEL);
+
+    realtime.emit("VoiceChannelKicked", { channelId: "ch-other" });
+    realtime.emit("VoiceChannelMoved", { fromChannelId: "ch-other", toChannelId: "ch-third" });
+
+    expect(client.getSnapshot()).toMatchObject({ connection: "connected", channelId: CHANNEL });
+  });
+
+  it("follows an administrator move without reopening the microphone", async () => {
+    const client = build();
+    const old = await joinWith(client);
+
+    realtime.emit("VoiceChannelMoved", { fromChannelId: CHANNEL, toChannelId: "ch-nocna" });
+
+    await vi.waitFor(() => expect(client.getSnapshot().channelId).toBe("ch-nocna"));
+    expect(realtime.joinVoice).toHaveBeenLastCalledWith("ch-nocna");
+    expect(old.close).toHaveBeenCalled();
+    expect(micTrack.stop).not.toHaveBeenCalled();
+    expect(client.getSnapshot().connection).toBe("connected");
+  });
+
+  it("ends the call when the move cannot be followed", async () => {
+    const client = build();
+    await joinWith(client);
+    realtime.joinVoice.mockRejectedValueOnce(new Error("hub"));
+
+    realtime.emit("VoiceChannelMoved", { fromChannelId: CHANNEL, toChannelId: "ch-nocna" });
+
+    await vi.waitFor(() => expect(client.getSnapshot().error?.kind).toBe("signaling"));
+    expect(client.getSnapshot().channelId).toBeNull();
+  });
+
+  it("leaves when the other person declines a direct call", async () => {
+    const client = build();
+    await client.join(CHANNEL);
+
+    realtime.emit("DirectCallDeclined", { channelId: CHANNEL, byUserId: "u-z" });
+
+    await vi.waitFor(() => expect(client.getSnapshot().channelId).toBeNull());
+    expect(realtime.leaveVoice).toHaveBeenCalled();
+  });
+
+  it("keeps healthy media through a hub reconnect and re-announces afterwards", async () => {
+    const client = build();
+    const pc = await joinWith(client);
+    realtime.joinVoice.mockClear();
+    realtime.sent = [];
+
+    realtime.setStatus("reconnecting");
+    expect(client.getSnapshot()).toMatchObject({
+      connection: "reconnecting",
+      transport: { signaling: "reconnecting" },
+    });
+    expect(pc.close).not.toHaveBeenCalled();
+
+    realtime.setStatus("connected");
+    await vi.waitFor(() => expect(realtime.joinVoice).toHaveBeenCalledWith(CHANNEL));
+    await vi.waitFor(() => expect(realtime.sentOfKind("state")).toHaveLength(1));
+    expect(client.getSnapshot().connection).toBe("connected");
+  });
+
+  it("reports a failed rejoin as recoverable", async () => {
+    const client = build();
+    await joinWith(client);
+    realtime.setStatus("reconnecting");
+    realtime.joinVoice.mockRejectedValueOnce(new Error("hub"));
+
+    realtime.setStatus("connected");
+
+    await vi.waitFor(() => expect(client.getSnapshot().error?.recoverable).toBe(true));
+    expect(client.getSnapshot().channelId).toBe(CHANNEL);
+  });
+
+  it("stops listening to the hub once the call is left", async () => {
+    const client = build();
+    await joinWith(client);
+    await client.leave();
+    const before = FakePeerConnection.instances.length;
+
+    announce("u-y");
+    realtime.signal("u-z", "offer", { type: "offer", sdp: SDP });
+    await Promise.resolve();
+
+    expect(FakePeerConnection.instances).toHaveLength(before);
+  });
+});
