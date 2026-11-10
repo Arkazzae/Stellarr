@@ -56,25 +56,27 @@ Element.prototype.scrollTo ??= vi.fn() as unknown as Element["scrollTo"];
 Element.prototype.scrollIntoView ??=
   vi.fn() as unknown as Element["scrollIntoView"];
 
-// On an opaque origin `localStorage` is absent rather than empty. An in-memory
-// map is enough, since code under test only reads back what it wrote.
-if (typeof globalThis.localStorage === "undefined") {
-  const entries = new Map<string, string>();
-  const memoryStorage: Storage = {
-    get length() {
-      return entries.size;
-    },
-    key: (index) => [...entries.keys()][index] ?? null,
-    getItem: (key) => entries.get(key) ?? null,
-    setItem: (key, value) => void entries.set(key, String(value)),
-    removeItem: (key) => void entries.delete(key),
-    clear: () => entries.clear(),
-  };
-  Object.defineProperty(globalThis, "localStorage", {
-    value: memoryStorage,
-    configurable: true,
-  });
-}
+// One in-memory `localStorage` for every test, whatever the runtime offers. Which object
+// the global is depends on the Node version: jsdom's own storage on Node 24, nothing usable
+// on Node 26, where Node's built-in one shadows it. jsdom's storage also cannot be spied on
+// (assigning `setItem` to it stores an item called "setItem"), so tests that watch writes
+// would pass on one version and fail on the other.
+const entries = new Map<string, string>();
+const memoryStorage: Storage = {
+  get length() {
+    return entries.size;
+  },
+  key: (index) => [...entries.keys()][index] ?? null,
+  getItem: (key) => entries.get(key) ?? null,
+  setItem: (key, value) => void entries.set(key, String(value)),
+  removeItem: (key) => void entries.delete(key),
+  clear: () => entries.clear(),
+};
+Object.defineProperty(globalThis, "localStorage", {
+  value: memoryStorage,
+  configurable: true,
+  writable: true,
+});
 
 if (typeof globalThis.ResizeObserver === "undefined") {
   globalThis.ResizeObserver = class {
