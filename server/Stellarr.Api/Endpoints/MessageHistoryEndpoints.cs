@@ -1,5 +1,3 @@
-using System.Buffers.Binary;
-using System.Buffers.Text;
 using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using Stellarr.Api.Auth;
@@ -50,12 +48,12 @@ public static class MessageHistoryEndpoints
         // A first request freezes the result set at the moment it was made.
         // Messages that arrive while the reader pages back therefore cannot
         // shift the offsets and make an older row be skipped or shown twice.
-        PageCursor page;
+        HistoryCursor page;
         if (cursor is null)
         {
-            page = new PageCursor(channelId, DateTime.UtcNow, 0);
+            page = new HistoryCursor(channelId, DateTime.UtcNow, 0);
         }
-        else if (!PageCursor.TryDecode(cursor, out page) || page.ChannelId != channelId)
+        else if (!HistoryCursor.TryDecode(cursor, out page) || page.ScopeId != channelId)
         {
             return Invalid("cursor", "Kursor historii wiadomości jest nieprawidłowy.");
         }
@@ -154,48 +152,4 @@ public static class MessageHistoryEndpoints
 
     private static IResult Invalid(string field, string message) =>
         Results.ValidationProblem(new Dictionary<string, string[]> { [field] = [message] });
-
-    /// <summary>
-    /// Where a reader is in a channel's history: the moment the first page
-    /// was requested, and how many messages before it have been delivered.
-    /// </summary>
-    private readonly record struct PageCursor(Guid ChannelId, DateTime Snapshot, int Offset)
-    {
-        private const int ChannelIdSize = 16;
-        private const int Size = ChannelIdSize + sizeof(long) + sizeof(int);
-
-        public string Encode()
-        {
-            Span<byte> bytes = stackalloc byte[Size];
-            ChannelId.TryWriteBytes(bytes);
-            BinaryPrimitives.WriteInt64BigEndian(bytes[ChannelIdSize..], Snapshot.Ticks);
-            BinaryPrimitives.WriteInt32BigEndian(bytes[(ChannelIdSize + sizeof(long))..], Offset);
-            return Base64Url.EncodeToString(bytes);
-        }
-
-        public static bool TryDecode(string encoded, out PageCursor cursor)
-        {
-            cursor = default;
-            if (!Base64Url.IsValid(encoded, out var decodedLength) || decodedLength != Size)
-            {
-                return false;
-            }
-
-            Span<byte> bytes = stackalloc byte[Size];
-            Base64Url.DecodeFromChars(encoded, bytes);
-
-            var ticks = BinaryPrimitives.ReadInt64BigEndian(bytes[ChannelIdSize..]);
-            var offset = BinaryPrimitives.ReadInt32BigEndian(bytes[(ChannelIdSize + sizeof(long))..]);
-            if (ticks < 0 || ticks > DateTime.MaxValue.Ticks || offset < 0)
-            {
-                return false;
-            }
-
-            cursor = new PageCursor(
-                new Guid(bytes[..ChannelIdSize]),
-                new DateTime(ticks, DateTimeKind.Utc),
-                offset);
-            return true;
-        }
-    }
 }

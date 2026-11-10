@@ -5,6 +5,18 @@ namespace Stellarr.Api.Contracts;
 /// <param name="Username">With or without a leading "@"; a null is answered like an empty name.</param>
 public sealed record CreateFriendRequestRequest(string? Username);
 
+public sealed record OpenDirectConversationRequest(Guid UserId);
+
+/// <param name="Content">Required unless attachments are sent; a null is answered like an empty text.</param>
+/// <param name="ClientMessageId">
+/// The identity the client picked for the message, so that a retried send is
+/// recognised as the same send rather than stored twice.
+/// </param>
+public sealed record CreateDirectMessageRequest(
+    string? Content,
+    IReadOnlyList<Guid>? AttachmentIds = null,
+    Guid? ClientMessageId = null);
+
 public sealed record FriendDto(UserDto User, DateTime Since);
 
 /// <param name="User">The other person, whichever way the request points.</param>
@@ -32,6 +44,12 @@ public sealed record SocialStateDto(
 /// "sent", "already-sent", "already-friends", "blocked", "self" or "unknown-user".
 /// </param>
 public sealed record FriendRequestResultDto(string Result);
+
+public sealed record OpenedConversationDto(string Id);
+
+/// <summary>One page of a conversation, oldest message first.</summary>
+/// <param name="NextCursor">Opaque; null once the first message has been reached.</param>
+public sealed record DirectMessageHistoryPageDto(IReadOnlyList<MessageDto> Messages, string? NextCursor);
 
 public static class SocialContractMappings
 {
