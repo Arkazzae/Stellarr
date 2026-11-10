@@ -26,6 +26,13 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<ImageAttachment> ImageAttachments => Set<ImageAttachment>();
     public DbSet<MessageAttachment> MessageAttachments => Set<MessageAttachment>();
     public DbSet<MessageEmbed> MessageEmbeds => Set<MessageEmbed>();
+    public DbSet<Friendship> Friendships => Set<Friendship>();
+    public DbSet<FriendRequest> FriendRequests => Set<FriendRequest>();
+    public DbSet<UserBlock> UserBlocks => Set<UserBlock>();
+    public DbSet<DirectConversation> DirectConversations => Set<DirectConversation>();
+    public DbSet<DirectMessage> DirectMessages => Set<DirectMessage>();
+    public DbSet<DirectMessageAttachment> DirectMessageAttachments => Set<DirectMessageAttachment>();
+    public DbSet<DirectConversationRead> DirectConversationReads => Set<DirectConversationRead>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder) =>
         modelBuilder.ApplyConfigurationsFromAssembly(typeof(AppDbContext).Assembly);
