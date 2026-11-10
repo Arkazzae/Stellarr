@@ -110,6 +110,29 @@ public sealed record OpsBackupsDto(
     IReadOnlyList<OpsBackupDto> Backups,
     int RetentionDays);
 
+public sealed record OpsSettingsDto(
+    string InstanceName,
+    string PublicUrl,
+    string TimeZone,
+    bool MailingEnabled,
+    string MailProvider,
+    string MailFromAddress,
+    bool ResendApiKeyConfigured,
+    bool InviteMailEnabled,
+    bool RecoveryMailEnabled,
+    bool AlertMailEnabled,
+    int BackupRetentionDays,
+    int LogRetentionDays,
+    int OrphanObjectRetentionDays,
+    bool AutomaticCleanupEnabled,
+    DateTime UpdatedAt);
+
+public sealed record OpsDesktopReleaseDto(
+    string MinimumVersion,
+    string RecommendedVersion,
+    ClientReleaseDto? Published,
+    ClientReleaseDto? AndroidPublished);
+
 public sealed record CreateOpsUserRequest(
     string? Username,
     string? DisplayName,
@@ -121,8 +144,46 @@ public sealed record SetOpsUserRoleRequest(Guid RoleId);
 
 public sealed record SetOpsUserStatusRequest(bool Disabled);
 
+public sealed record UpdateOpsSettingsRequest(
+    string? InstanceName,
+    string? PublicUrl,
+    string? TimeZone,
+    bool MailingEnabled,
+    string? MailFromAddress,
+    bool InviteMailEnabled,
+    bool RecoveryMailEnabled,
+    bool AlertMailEnabled,
+    int BackupRetentionDays,
+    int LogRetentionDays,
+    int OrphanObjectRetentionDays,
+    bool AutomaticCleanupEnabled);
+
+public sealed record UpdateOpsDesktopReleaseRequest(string? MinimumVersion, string? RecommendedVersion);
+
+public sealed record TestMailRequest(string? To);
+
 public static class OpsContractMappings
 {
+    public static OpsSettingsDto ToOpsDto(
+        this OperationsSettings settings,
+        string instanceName,
+        bool resendApiKeyConfigured) => new(
+        instanceName,
+        settings.PublicUrl,
+        settings.TimeZone,
+        settings.MailingEnabled,
+        "resend",
+        settings.MailFromAddress,
+        resendApiKeyConfigured,
+        settings.InviteMailEnabled,
+        settings.RecoveryMailEnabled,
+        settings.AlertMailEnabled,
+        settings.BackupRetentionDays,
+        settings.LogRetentionDays,
+        settings.OrphanObjectRetentionDays,
+        settings.AutomaticCleanupEnabled,
+        settings.UpdatedAt);
+
     public static OpsRoleDto ToOpsDto(this ServerRole role, int memberCount) => new(
         role.Id.ToString(),
         role.Name,

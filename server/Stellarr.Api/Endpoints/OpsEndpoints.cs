@@ -37,6 +37,11 @@ public static partial class OpsEndpoints
         ops.MapPost("/backups", CreateBackupAsync);
         ops.MapPost("/backups/{backupId}/verify", VerifyBackupAsync);
         ops.MapGet("/backups/{backupId}/download", DownloadBackup);
+        ops.MapGet("/settings", GetSettingsAsync);
+        ops.MapPut("/settings", UpdateSettingsAsync);
+        ops.MapGet("/desktop-release", GetDesktopReleaseAsync);
+        ops.MapPut("/desktop-release", UpdateDesktopReleaseAsync);
+        ops.MapPost("/mail/test", SendTestMailAsync);
         return endpoints;
     }
 

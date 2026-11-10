@@ -157,7 +157,7 @@ public static class ClientDiscoveryEndpoints
     }
 
     /// <summary>What the operator saved wins over the configured default.</summary>
-    private static string DesktopVersion(string? saved, IConfiguration configuration, string key) =>
+    internal static string DesktopVersion(string? saved, IConfiguration configuration, string key) =>
         Trimmed(saved) ?? Setting(configuration, key) ?? FallbackDesktopVersion;
 
     private static string? Setting(IConfiguration configuration, string key) => Trimmed(configuration[key]);
