@@ -1,23 +1,33 @@
 using Amazon.Runtime;
 using Amazon.S3;
+using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Stellarr.Api.Auth;
 using Stellarr.Api.Data;
+using Stellarr.Api.Endpoints;
 using Stellarr.Api.Logging;
+using Stellarr.Api.Realtime;
 using Stellarr.Api.Storage;
 
 var builder = WebApplication.CreateBuilder(args);
 
 var dataRoot = builder.Configuration["DataRoot"] ?? "data";
-Directory.CreateDirectory(dataRoot);
+var keysDirectory = Directory.CreateDirectory(Path.Combine(dataRoot, "keys"));
 
 builder.Services.AddProblemDetails();
+// The keys that protect the session cookie live on the data volume, so a
+// restart or a new container does not sign everybody out.
+builder.Services.AddDataProtection()
+    .SetApplicationName("Stellarr")
+    .PersistKeysToFileSystem(keysDirectory);
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("Database")));
 builder.Services.AddSingleton<PasswordService>();
+builder.Services.AddSingleton<PresenceTracker>();
 
 builder.Services.Configure<StorageOptions>(builder.Configuration.GetSection(StorageOptions.SectionName));
 builder.Services.AddSingleton<IAmazonS3>(services =>
@@ -32,6 +42,13 @@ builder.Services.AddSingleton<IAmazonS3>(services =>
     return new AmazonS3Client(new BasicAWSCredentials(options.AccessKey, options.SecretKey), config);
 });
 builder.Services.AddSingleton<IObjectStorage, S3ObjectStorage>();
+
+builder.Services
+    .AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    .AddSessionCookie(
+        allowPlainHttp: builder.Environment.IsDevelopment() || builder.Environment.IsEnvironment("Testing"));
+builder.Services.AddAuthorization();
+builder.Services.AddRateLimitPolicies(builder.Configuration, builder.Environment);
 
 // The instance runs behind a reverse proxy that the operator controls, so any
 // sender of X-Forwarded-* is trusted rather than a fixed list of proxies.
@@ -61,12 +78,18 @@ if (app.Environment.IsDevelopment())
 {
     app.UseCors();
 }
+app.UseRateLimiter();
+app.UseAuthentication();
+app.UseAuthorization();
 
 app.MapGet("/health/live", () => Results.Ok(new { status = "live" }));
 app.MapGet("/health/ready", async (AppDbContext db, CancellationToken cancellationToken) =>
     await db.Database.CanConnectAsync(cancellationToken)
         ? Results.Ok(new { status = "ready" })
         : Results.Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: "Database unavailable"));
+
+app.MapAuthEndpoints();
+app.MapSessionEndpoints();
 
 await InitializeApplicationAsync(app);
 await app.RunAsync();

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Stellarr.Api.Data.Schema;
 
 namespace Stellarr.Api.Data;
 
@@ -15,7 +16,10 @@ public static class DatabaseSchema
     /// can express, so a step there only adds what the model cannot: triggers
     /// and virtual tables.
     /// </summary>
-    private static readonly Func<AppDbContext, CancellationToken, Task>[] Steps = [];
+    private static readonly Func<AppDbContext, CancellationToken, Task>[] Steps =
+    [
+        AuthenticationSchema.UpgradeAsync,
+    ];
 
     public static async Task UpgradeAsync(AppDbContext db, CancellationToken cancellationToken)
     {
