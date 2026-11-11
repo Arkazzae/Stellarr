@@ -340,6 +340,18 @@ export const en = {
   "integrations.resend.testHint": "While testing, the sender can be onboarding@resend.dev and the recipient delivered@resend.dev.",
   "integrations.resend.on": "Mail now goes through Resend.",
   "integrations.resend.off": "Mail now goes through SMTP.",
+  "integrations.giphy.description":
+    "The GIF search in the web client's message field. GIPHY wants the browser to call it, so signed-in users receive the key.",
+  "integrations.giphy.key": "API key",
+  "integrations.giphy.check": "Check the connection",
+  "integrations.giphy.checkDescription": "Asks GIPHY once whether it accepts the key.",
+  "integrations.giphy.connected": "GIPHY accepted the key.",
+  "integrations.giphy.checkFailed": "Could not check the connection.",
+  "integrations.giphy.toggle": "Offer GIFs in the web client",
+  "integrations.giphy.toggleDescription": "Open tabs see the change once they are reloaded.",
+  "integrations.giphy.toggleNeedsKey": "Set the API key first.",
+  "integrations.giphy.on": "The web client now offers GIFs.",
+  "integrations.giphy.off": "The web client no longer offers GIFs.",
 
   "users.title": "Users and access",
   "users.description": "Accounts, active sessions, roles and permissions stored in the backend.",

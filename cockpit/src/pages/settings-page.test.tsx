@@ -60,6 +60,8 @@ const stored: CockpitSettings = {
   smtpUsername: "mailer",
   smtpPasswordConfigured: true,
   mailReady: true,
+  giphyEnabled: false,
+  giphyKeyConfigured: false,
   inviteMailEnabled: true,
   recoveryMailEnabled: true,
   alertMailEnabled: false,

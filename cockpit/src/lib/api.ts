@@ -252,6 +252,9 @@ export interface CockpitSettings {
   smtpPasswordConfigured: boolean;
   /** Whether the chosen transport has what it needs to send. */
   mailReady: boolean;
+  /** Whether the web client offers GIFs: switched on and with a key. */
+  giphyEnabled: boolean;
+  giphyKeyConfigured: boolean;
   inviteMailEnabled: boolean;
   recoveryMailEnabled: boolean;
   alertMailEnabled: boolean;
@@ -394,7 +397,7 @@ export const cockpitApi = {
 
   settings: (signal?: AbortSignal) => request<CockpitSettings>("/api/cockpit/settings", {}, signal),
   // The server owns publicUrl (it comes from the environment), mailProvider,
-  // resendApiKeyConfigured, smtpPasswordConfigured, mailReady and updatedAt,
+  // resendApiKeyConfigured, smtpPasswordConfigured, mailReady, giphyKeyConfigured and updatedAt,
   // so they are never sent back.
   updateSettings: (settings: CockpitSettings, signal?: AbortSignal) =>
     request<CockpitSettings>(
@@ -418,10 +421,14 @@ export const cockpitApi = {
           smtpSecurity: settings.smtpSecurity,
           smtpUsername: settings.smtpUsername,
           resendEnabled: settings.resendEnabled,
+          giphyEnabled: settings.giphyEnabled,
         },
       },
       signal,
     ),
+  /** Tries the GIPHY key with one request to GIPHY. */
+  testGiphy: (signal?: AbortSignal) =>
+    request<{ connected: boolean }>("/api/cockpit/integrations/giphy/test", { method: "POST" }, signal),
   secrets: (signal?: AbortSignal) => request<CockpitSecret[]>("/api/cockpit/secrets", {}, signal),
   setSecret: (name: CockpitSecretName, value: string, signal?: AbortSignal) =>
     request<CockpitSecret>(`/api/cockpit/secrets/${segment(name)}`, { method: "PUT", body: { value } }, signal),

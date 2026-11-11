@@ -335,6 +335,18 @@ export const pl = {
   "integrations.resend.testHint": "Na czas testów nadawcą może być onboarding@resend.dev, a odbiorcą delivered@resend.dev.",
   "integrations.resend.on": "Poczta idzie teraz przez Resend.",
   "integrations.resend.off": "Poczta idzie teraz przez SMTP.",
+  "integrations.giphy.description":
+    "Wyszukiwarka GIF-ów w polu wiadomości klienta web. GIPHY wymaga zapytań z przeglądarki, więc zalogowani użytkownicy dostają klucz.",
+  "integrations.giphy.key": "Klucz API",
+  "integrations.giphy.check": "Sprawdź połączenie",
+  "integrations.giphy.checkDescription": "Pyta GIPHY raz, czy przyjmuje klucz.",
+  "integrations.giphy.connected": "GIPHY przyjęło klucz.",
+  "integrations.giphy.checkFailed": "Nie udało się sprawdzić połączenia.",
+  "integrations.giphy.toggle": "Pokazuj GIF-y w kliencie web",
+  "integrations.giphy.toggleDescription": "Otwarte karty zobaczą zmianę po odświeżeniu.",
+  "integrations.giphy.toggleNeedsKey": "Najpierw ustaw klucz API.",
+  "integrations.giphy.on": "Klient web pokazuje teraz GIF-y.",
+  "integrations.giphy.off": "Klient web nie pokazuje już GIF-ów.",
 
   "users.title": "Użytkownicy i dostęp",
   "users.description": "Konta, aktywne sesje, role i uprawnienia zapisane w backendzie.",

@@ -52,11 +52,33 @@ describe("the runtime API key", () => {
     return (await import("./giphy")).resolveGiphyApiKey;
   }
 
-  it("returns a bundled key without asking the server", async () => {
+  it("lets the server turn GIFs off even when a key was bundled", async () => {
     const resolveGiphyApiKey = await loadResolver();
+    fetchMock.mockResolvedValue(respond({ enabled: false, apiKey: "" }));
+
+    await expect(resolveGiphyApiKey("  bundled  ")).rejects.toThrow(failure("giphy.keyMissing"));
+    expect(fetchMock).toHaveBeenCalledOnce();
+  });
+
+  it("uses a bundled key only while the server cannot be asked", async () => {
+    const resolveGiphyApiKey = await loadResolver();
+    fetchMock.mockResolvedValue(respond({}, { ok: false, status: 503 }));
 
     await expect(resolveGiphyApiKey("  bundled  ")).resolves.toBe("bundled");
-    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("hands out no key when the server says GIFs are off, whatever key it sends", async () => {
+    const resolveGiphyApiKey = await loadResolver();
+    fetchMock.mockResolvedValue(respond({ enabled: false, apiKey: "leftover" }));
+
+    await expect(resolveGiphyApiKey("")).rejects.toThrow(failure("giphy.keyMissing"));
+  });
+
+  it("uses the server's key when GIFs are on", async () => {
+    const resolveGiphyApiKey = await loadResolver();
+    fetchMock.mockResolvedValue(respond({ enabled: true, apiKey: " panel-key " }));
+
+    await expect(resolveGiphyApiKey("bundled")).resolves.toBe("panel-key");
   });
 
   it("asks the server once for callers that overlap or come later", async () => {

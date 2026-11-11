@@ -176,6 +176,8 @@ describe("routes", () => {
     smtpUsername: "cockpit",
     smtpPasswordConfigured: false,
     mailReady: true,
+    giphyEnabled: true,
+    giphyKeyConfigured: true,
     inviteMailEnabled: true,
     recoveryMailEnabled: false,
     alertMailEnabled: true,
@@ -296,6 +298,7 @@ describe("routes", () => {
       smtpSecurity: "tls",
       smtpUsername: "cockpit",
       resendEnabled: true,
+      giphyEnabled: true,
     });
   });
 

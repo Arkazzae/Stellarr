@@ -3,6 +3,7 @@ using Stellarr.Api.Auth;
 using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
 using Stellarr.Api.Domain;
+using Stellarr.Api.Integrations;
 using Stellarr.Api.Localization;
 using Stellarr.Api.Messaging;
 using Stellarr.Api.Realtime;
@@ -22,15 +23,29 @@ public static class BootstrapEndpoints
             .AddEndpointFilter<ServerMembershipFilter>();
 
         // GIPHY's browser key is a public web-integration credential. Serving it
-        // at run time means that turning GIFs on takes a restart of the container
-        // rather than a rebuild of the web client that would otherwise contain it.
-        endpoints.MapGet(
-                "/api/config/giphy",
-                async (InstanceSecrets secrets, CancellationToken cancellationToken) =>
-                    Results.Ok(new { ApiKey = (await secrets.ReadAsync(cancellationToken)).GiphyApiKey.Value }))
-            .RequireAuthorization();
+        // at run time lets the operator set it and turn GIFs on or off in
+        // Cockpit, with no rebuild of the web client and no restart.
+        endpoints.MapGet("/api/config/giphy", GetGiphyConfigAsync).RequireAuthorization();
 
         return endpoints;
+    }
+
+    /// <summary>Whether the web client offers GIFs, with the key when it does.</summary>
+    private static async Task<IResult> GetGiphyConfigAsync(
+        AppDbContext db,
+        InstanceSecrets secrets,
+        CancellationToken cancellationToken)
+    {
+        var instanceId = await db.Servers.AsNoTracking()
+            .OrderBy(x => x.CreatedAt).ThenBy(x => x.Id)
+            .Select(x => (Guid?)x.Id)
+            .FirstOrDefaultAsync(cancellationToken);
+        var settings = instanceId is null
+            ? null
+            : await db.OperationsSettings.AsNoTracking()
+                .SingleOrDefaultAsync(x => x.ServerId == instanceId, cancellationToken);
+        var giphy = GiphyState.Resolve(settings, await secrets.ReadAsync(cancellationToken));
+        return Results.Ok(new { giphy.Enabled, giphy.ApiKey });
     }
 
     private static async Task<IResult> GetBootstrapAsync(

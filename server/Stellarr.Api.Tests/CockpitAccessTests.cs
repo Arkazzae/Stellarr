@@ -288,6 +288,7 @@ public sealed class CockpitAccessTests : IClassFixture<StellarrWebApplicationFac
         Assert.Contains("DesktopRecommendedVersion", columns);
         Assert.Contains("MailSmtpHost", columns);
         Assert.Contains("MailResendEnabled", columns);
+        Assert.Contains("GiphyEnabled", columns);
         // Secrets set in Cockpit get their table on an installation that predates them.
         var secretColumns = await db.Database.SqlQueryRaw<string>(
                 "SELECT name AS Value FROM pragma_table_info('InstanceSecrets')")

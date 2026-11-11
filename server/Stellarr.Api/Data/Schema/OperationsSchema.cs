@@ -30,6 +30,11 @@ internal static class OperationsSchema
         ("MailResendEnabled", """ALTER TABLE "OperationsSettings" ADD COLUMN "MailResendEnabled" INTEGER NULL;"""),
     ];
 
+    private static readonly (string Column, string Statement)[] IntegrationColumns =
+    [
+        ("GiphyEnabled", """ALTER TABLE "OperationsSettings" ADD COLUMN "GiphyEnabled" INTEGER NULL;"""),
+    ];
+
     private static readonly (string Column, string Statement)[] DesktopColumns =
     [
         ("DesktopMinimumVersion", """ALTER TABLE "OperationsSettings" ADD COLUMN "DesktopMinimumVersion" TEXT NULL;"""),
@@ -51,6 +56,7 @@ internal static class OperationsSchema
                 "MailSmtpUsername" TEXT NOT NULL DEFAULT '',
                 "MailSmtpSecurity" TEXT NOT NULL DEFAULT 'starttls',
                 "MailResendEnabled" INTEGER NULL,
+                "GiphyEnabled" INTEGER NULL,
                 "InviteMailEnabled" INTEGER NOT NULL,
                 "RecoveryMailEnabled" INTEGER NOT NULL,
                 "AlertMailEnabled" INTEGER NOT NULL,
@@ -85,7 +91,7 @@ internal static class OperationsSchema
             }
         }
 
-        foreach (var (column, statement) in MailColumns.Concat(DesktopColumns))
+        foreach (var (column, statement) in MailColumns.Concat(IntegrationColumns).Concat(DesktopColumns))
         {
             if (!await SqliteSchema.HasColumnAsync(db, "OperationsSettings", column, cancellationToken))
             {

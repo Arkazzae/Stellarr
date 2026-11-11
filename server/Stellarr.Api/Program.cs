@@ -10,6 +10,7 @@ using Stellarr.Api.Auth;
 using Stellarr.Api.Data;
 using Stellarr.Api.Embeds;
 using Stellarr.Api.Endpoints;
+using Stellarr.Api.Integrations;
 using Stellarr.Api.Localization;
 using Stellarr.Api.Logging;
 using Stellarr.Api.Mail;
@@ -106,6 +107,15 @@ builder.Services.Configure<MailOptions>(builder.Configuration.GetSection(MailOpt
 builder.Services.AddScoped<InstanceSecrets>();
 builder.Services.AddSingleton<SmtpEmailDelivery>();
 builder.Services.AddScoped<IEmailDelivery, MailDelivery>();
+// GIPHY takes its key in the query string: this client logs nothing, so the
+// key cannot reach the log Cockpit shows.
+builder.Services.AddHttpClient<GiphyClient>(http =>
+{
+    http.BaseAddress = new Uri("https://api.giphy.com/");
+    http.Timeout = TimeSpan.FromSeconds(10);
+    http.DefaultRequestHeaders.UserAgent.ParseAdd("Stellarr/2.0");
+    http.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+}).RemoveAllLoggers();
 builder.Services.AddHttpClient<ResendEmailDelivery>(http =>
 {
     http.BaseAddress = new Uri("https://api.resend.com/");

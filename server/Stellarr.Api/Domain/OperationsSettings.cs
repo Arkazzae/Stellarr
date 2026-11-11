@@ -23,6 +23,9 @@ public sealed class OperationsSettings
 
     /// <summary>Whether Resend replaces SMTP; null when the operator never chose.</summary>
     public bool? MailResendEnabled { get; set; }
+
+    /// <summary>Whether the web client offers GIFs; null when the operator never chose, which means on while a key is set.</summary>
+    public bool? GiphyEnabled { get; set; }
     public bool InviteMailEnabled { get; set; } = true;
     public bool RecoveryMailEnabled { get; set; } = true;
     public bool AlertMailEnabled { get; set; }

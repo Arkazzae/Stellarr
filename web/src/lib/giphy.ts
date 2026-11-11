@@ -86,9 +86,16 @@ function httpsUrl(value: unknown, hosts?: ReadonlySet<string>): URL | undefined 
   }
 }
 
-let pendingRuntimeKey: Promise<string> | null = null;
+/** What Stellarr's API says about GIFs: whether the operator offers them, and the key for them. */
+export interface GiphyRuntimeConfig {
+  enabled: boolean;
+  /** Empty when GIFs are off. */
+  apiKey: string;
+}
 
-async function requestRuntimeKey(): Promise<string> {
+let pendingConfig: Promise<GiphyRuntimeConfig> | null = null;
+
+async function requestRuntimeConfig(): Promise<GiphyRuntimeConfig> {
   const response = await fetch("/api/config/giphy", {
     method: "GET",
     headers: { Accept: "application/json" },
@@ -96,30 +103,45 @@ async function requestRuntimeKey(): Promise<string> {
   if (!response.ok) throw new GiphyError("giphy.configUnreadable");
 
   const payload = (await response.json()) as unknown;
-  const apiKey = isRecord(payload) ? nonEmptyString(payload["apiKey"])?.trim() : undefined;
-  if (!apiKey) throw new GiphyError("giphy.keyMissing");
-  return apiKey;
+  if (!isRecord(payload)) return { enabled: false, apiKey: "" };
+  const apiKey = nonEmptyString(payload["apiKey"])?.trim() ?? "";
+  // An API from before the switch in Cockpit answers with the key alone; a key meant on.
+  const switchedOn = typeof payload["enabled"] === "boolean" ? payload["enabled"] : true;
+  return { enabled: switchedOn && apiKey !== "", apiKey: switchedOn ? apiKey : "" };
 }
 
 /**
- * Uses the key bundled into a standalone frontend build, or asks Stellarr's
- * API for the one set when the container started, so changing only the
- * container environment is enough to enable GIFs.
+ * Asks Stellarr's API once per page load whether GIFs are on. A change in
+ * Cockpit therefore reaches a tab when it is reloaded. A failed request is
+ * asked again by the next caller rather than remembered.
  */
-export function resolveGiphyApiKey(bundledKey: string): Promise<string> {
-  const bundled = bundledKey.trim();
-  if (bundled !== "") return Promise.resolve(bundled);
-
-  if (pendingRuntimeKey === null) {
-    const request = requestRuntimeKey();
-    pendingRuntimeKey = request;
-    // A temporary API failure must be retried the next time the picker opens,
-    // not remembered for the lifetime of the tab.
+export function readGiphyConfig(): Promise<GiphyRuntimeConfig> {
+  if (pendingConfig === null) {
+    const request = requestRuntimeConfig();
+    pendingConfig = request;
     request.catch(() => {
-      if (pendingRuntimeKey === request) pendingRuntimeKey = null;
+      if (pendingConfig === request) pendingConfig = null;
     });
   }
-  return pendingRuntimeKey;
+  return pendingConfig;
+}
+
+/**
+ * The key for GIPHY requests. Stellarr's API decides: when the operator has
+ * turned GIFs off, there is no key, even if one was bundled into the build.
+ * A bundled key stands in only while the API cannot be asked.
+ */
+export async function resolveGiphyApiKey(bundledKey: string): Promise<string> {
+  let config: GiphyRuntimeConfig;
+  try {
+    config = await readGiphyConfig();
+  } catch (error) {
+    const bundled = bundledKey.trim();
+    if (bundled !== "") return bundled;
+    throw error;
+  }
+  if (!config.enabled) throw new GiphyError("giphy.keyMissing");
+  return config.apiKey;
 }
 
 interface Rendition {

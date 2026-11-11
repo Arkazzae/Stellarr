@@ -66,6 +66,7 @@ public static partial class CockpitEndpoints
         settings.MailSmtpSecurity = request.SmtpSecurity?.Trim().ToLowerInvariant() ?? settings.MailSmtpSecurity;
         settings.MailSmtpUsername = request.SmtpUsername?.Trim() ?? settings.MailSmtpUsername;
         settings.MailResendEnabled = request.ResendEnabled ?? settings.MailResendEnabled;
+        settings.GiphyEnabled = request.GiphyEnabled ?? settings.GiphyEnabled;
         settings.UpdatedAt = DateTime.UtcNow;
         await StageAuditAsync(
             db,

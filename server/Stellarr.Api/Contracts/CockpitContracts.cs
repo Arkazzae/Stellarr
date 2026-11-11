@@ -1,5 +1,6 @@
 using Stellarr.Api.Auth;
 using Stellarr.Api.Domain;
+using Stellarr.Api.Integrations;
 using Stellarr.Api.Mail;
 using Stellarr.Api.Secrets;
 
@@ -201,7 +202,9 @@ public sealed record CockpitSettingsDto(
     string SmtpSecurity,
     string SmtpUsername,
     bool SmtpPasswordConfigured,
-    bool MailReady);
+    bool MailReady,
+    bool GiphyEnabled,
+    bool GiphyKeyConfigured);
 
 public sealed record CockpitDesktopReleaseDto(
     string MinimumVersion,
@@ -236,7 +239,8 @@ public sealed record UpdateCockpitSettingsRequest(
     int? SmtpPort = null,
     string? SmtpSecurity = null,
     string? SmtpUsername = null,
-    bool? ResendEnabled = null);
+    bool? ResendEnabled = null,
+    bool? GiphyEnabled = null);
 
 /// <summary>
 /// Whether a secret is set and where its value comes from: <c>panel</c>,
@@ -287,7 +291,9 @@ public static class CockpitContractMappings
         },
         settings.MailSmtpUsername,
         secrets.SmtpPassword.IsSet,
-        transport.Ready);
+        transport.Ready,
+        GiphyState.Resolve(settings, secrets).Enabled,
+        secrets.GiphyApiKey.IsSet);
     }
 
     public static CockpitRoleDto ToCockpitDto(this ServerRole role, int memberCount) => new(
