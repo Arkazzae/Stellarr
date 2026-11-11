@@ -73,6 +73,15 @@ public sealed class PresenceTracker(IMediaSessionCloser? mediaSessionCloser = nu
 
     public static bool IsSupportedPresence(string value) => KnownPresences.Contains(value);
 
+    /// <summary>Open hub connections of every account, on every server.</summary>
+    public int ConnectionCount()
+    {
+        lock (_gate)
+        {
+            return _userByConnection.Count;
+        }
+    }
+
     /// <summary>Registers a hub connection; true means the account just came online.</summary>
     public bool Connect(string connectionId, Guid userId, bool showPresence = true)
     {

@@ -44,6 +44,7 @@
   --text-hero--letter-spacing: -0.02em;
 
   --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
   --color-chart-track: var(--chart-track);
 
   --color-background: var(--background);
@@ -132,6 +133,8 @@
   /* The one data series: the accent, validated against both surfaces
      (dataviz validate_palette.js). The track is the empty cell behind it. */
   --chart-1: #6f65d1;
+  /* Server errors beside the series colour; the pair passes the validator on both surfaces. */
+  --chart-2: #b8272c;
   --chart-track: #ebebef;
 
   --sidebar: #f6f6f7;
@@ -172,6 +175,7 @@
     --danger: #f66f81;
     --danger-soft: rgba(244, 63, 94, 0.16);
 
+    --chart-2: #e5484d;
     --chart-track: #2a2b31;
 
     --sidebar: #161618;

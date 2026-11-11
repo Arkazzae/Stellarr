@@ -217,6 +217,23 @@ public sealed partial class CockpitDiagnosticsTests : IClassFixture<StellarrWebA
         return client;
     }
 
+    [Fact]
+    public async Task RuntimeCarriesTheProcessHistoryOfTheLastHour()
+    {
+        using var owner = Client();
+        await LoginAsync(owner, "maja", "Aurora!2026");
+
+        var runtime = await JsonAsync(await owner.GetAsync("/api/cockpit/runtime"));
+
+        Assert.Equal(30, runtime.GetProperty("sampleSeconds").GetInt32());
+        Assert.InRange(runtime.GetProperty("cpuPercent").GetDouble(), 0, 100);
+        // The sampler takes its first sample as the host starts.
+        var history = runtime.GetProperty("history").EnumerateArray().ToArray();
+        Assert.NotEmpty(history);
+        Assert.True(history[^1].GetProperty("workingSetBytes").GetInt64() > 0);
+        Assert.True(history[^1].GetProperty("requests").GetInt32() >= 0);
+    }
+
     private HttpClient Client() => Client(_factory);
 
     private static HttpClient Client(StellarrWebApplicationFactory factory) => factory.CreateClient(

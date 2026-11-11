@@ -163,6 +163,9 @@ describe("the runtime page", () => {
     voiceRooms: 2,
     databaseLatencyMs: 1234.5,
     services: [{ name: "SQLite", state: "warning", detail: "Slow" }],
+    cpuPercent: 7.25,
+    sampleSeconds: 30,
+    history: [],
   };
 
   it("formats durations, sizes, numbers and dates for English", async () => {
@@ -171,13 +174,15 @@ describe("the runtime page", () => {
 
     const metric = async (label: string) =>
       (await screen.findByRole("group", { name: label })).textContent ?? "";
-    expect(await metric("Uptime")).toContain("1 d 1 h 1 min");
-    expect(await metric("Process memory")).toContain("512 MB");
-    expect(await metric("GC heap")).toContain("12.5 MB");
-    expect(await metric("SQLite latency")).toContain("1,234.5 ms");
-    expect(await metric("Process started")).toContain(
-      new Date(runtime.startedAt).toLocaleString("en-GB"),
-    );
+    expect(await metric("Process memory")).toContain("512MB");
+    expect(await metric("Process memory")).toContain("GC heap 12.5 MB, threads: 31");
+    expect(await metric("SQLite latency")).toContain("1,234.5ms");
+    expect(await metric("CPU")).toContain("7.3%");
+    expect(
+      screen.getByText(
+        `The process has run for 1 d 1 h 1 min, since ${new Date(runtime.startedAt).toLocaleString("en-GB")}.`,
+      ),
+    ).toBeTruthy();
     expect(screen.getByText("Needs attention")).toBeTruthy();
   });
 });

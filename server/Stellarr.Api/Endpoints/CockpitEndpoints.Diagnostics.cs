@@ -22,6 +22,7 @@ public static partial class CockpitEndpoints
         HttpContext http,
         AppDbContext db,
         PresenceTracker presence,
+        RuntimeMetrics metrics,
         IConfiguration configuration,
         Messages messages,
         CancellationToken cancellationToken)
@@ -42,6 +43,7 @@ public static partial class CockpitEndpoints
         clock.Stop();
 
         using var process = Process.GetCurrentProcess();
+        var history = metrics.Samples();
         var startedAt = process.StartTime.ToUniversalTime();
         var maintenance = configuration.GetValue("Maintenance:Enabled", true);
         var storageInactive = configuration.GetValue<bool>("Storage:SkipInitialization");
@@ -72,7 +74,19 @@ public static partial class CockpitEndpoints
             realtimeConnections,
             presence.ActiveVoiceRoomIds().Count(voiceChannelIds.Contains),
             Math.Round(clock.Elapsed.TotalMilliseconds, 2),
-            services));
+            services,
+            history.Count > 0 ? history[^1].CpuPercent : 0,
+            (int)RuntimeMetrics.Interval.TotalSeconds,
+            history.Select(sample => new CockpitRuntimeSampleDto(
+                sample.At,
+                sample.WorkingSetBytes,
+                sample.GcHeapBytes,
+                sample.Threads,
+                sample.CpuPercent,
+                sample.RealtimeConnections,
+                sample.Requests,
+                sample.ClientErrors,
+                sample.ServerErrors)).ToArray()));
     }
 
     private static async Task<IResult> GetLogsAsync(

@@ -94,6 +94,19 @@ export interface CockpitRuntimeService {
   detail: string;
 }
 
+/** One sampling interval of the API process; request counts are for that interval alone. */
+export interface CockpitRuntimeSample {
+  at: string;
+  workingSetBytes: number;
+  gcHeapBytes: number;
+  threads: number;
+  cpuPercent: number;
+  realtimeConnections: number;
+  requests: number;
+  clientErrors: number;
+  serverErrors: number;
+}
+
 export interface CockpitRuntime {
   startedAt: string;
   uptimeSeconds: number;
@@ -104,6 +117,10 @@ export interface CockpitRuntime {
   voiceRooms: number;
   databaseLatencyMs: number;
   services: CockpitRuntimeService[];
+  cpuPercent: number;
+  sampleSeconds: number;
+  /** The last hour, oldest first. */
+  history: CockpitRuntimeSample[];
 }
 
 export interface CockpitLogEntry {

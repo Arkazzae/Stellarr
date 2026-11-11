@@ -78,6 +78,18 @@ public sealed record CockpitSessionDto(
 
 public sealed record CockpitRuntimeServiceDto(string Name, string State, string Detail);
 
+/// <summary>One sampling interval of the process; request counts are for that interval alone.</summary>
+public sealed record CockpitRuntimeSampleDto(
+    DateTime At,
+    long WorkingSetBytes,
+    long GcHeapBytes,
+    int Threads,
+    double CpuPercent,
+    int RealtimeConnections,
+    int Requests,
+    int ClientErrors,
+    int ServerErrors);
+
 public sealed record CockpitRuntimeDto(
     DateTime StartedAt,
     long UptimeSeconds,
@@ -87,7 +99,10 @@ public sealed record CockpitRuntimeDto(
     int RealtimeConnections,
     int VoiceRooms,
     double DatabaseLatencyMs,
-    IReadOnlyList<CockpitRuntimeServiceDto> Services);
+    IReadOnlyList<CockpitRuntimeServiceDto> Services,
+    double CpuPercent,
+    int SampleSeconds,
+    IReadOnlyList<CockpitRuntimeSampleDto> History);
 
 public sealed record CockpitLogEntryDto(
     DateTime At,

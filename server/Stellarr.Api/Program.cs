@@ -49,6 +49,8 @@ builder.Services.AddSingleton(services => new Messages(services.GetRequiredServi
 // The operator panel reads the host's recent log lines from this provider.
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddSingleton<CockpitLogBuffer>();
+builder.Services.AddSingleton<RuntimeMetrics>();
+builder.Services.AddHostedService<RuntimeSampler>();
 builder.Services.AddSingleton<ILoggerProvider>(services => services.GetRequiredService<CockpitLogBuffer>());
 // The keys that protect the session cookie live on the data volume, so a
 // restart or a new container does not sign everybody out.
@@ -162,6 +164,19 @@ var app = builder.Build();
 // built host because only there does it see every source of configuration.
 app.Services.GetRequiredService<MediaTopology>();
 
+// Outermost, so it counts the status the client gets, the exception handler's 500 included.
+var runtimeMetrics = app.Services.GetRequiredService<RuntimeMetrics>();
+app.Use(async (context, next) =>
+{
+    try
+    {
+        await next(context);
+    }
+    finally
+    {
+        runtimeMetrics.CountResponse(context.Response.StatusCode);
+    }
+});
 app.UseExceptionHandler();
 app.UseForwardedHeaders();
 if (app.Environment.IsDevelopment())

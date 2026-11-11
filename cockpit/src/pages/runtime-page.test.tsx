@@ -2,7 +2,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { cockpitApi, type CockpitRuntime } from "@/lib/api";
+import { cockpitApi, type CockpitRuntime, type CockpitRuntimeSample } from "@/lib/api";
 import { RuntimePage } from "@/pages/runtime-page";
 import { selectPolish } from "@/test/locale";
 
@@ -17,6 +17,18 @@ const runtimeMock = vi.mocked(cockpitApi.runtime);
 
 const MEGABYTE = 1024 * 1024;
 
+function sample(at: string, counts: Pick<CockpitRuntimeSample, "requests" | "clientErrors" | "serverErrors">): CockpitRuntimeSample {
+  return {
+    at,
+    workingSetBytes: 500 * MEGABYTE,
+    gcHeapBytes: 12 * MEGABYTE,
+    threads: 30,
+    cpuPercent: 10,
+    realtimeConnections: 3,
+    ...counts,
+  };
+}
+
 function runtimeWith(overrides: Partial<CockpitRuntime> = {}): CockpitRuntime {
   return {
     startedAt: "2025-03-04T10:15:00Z",
@@ -27,6 +39,12 @@ function runtimeWith(overrides: Partial<CockpitRuntime> = {}): CockpitRuntime {
     realtimeConnections: 4,
     voiceRooms: 2,
     databaseLatencyMs: 1.5,
+    cpuPercent: 12.5,
+    sampleSeconds: 30,
+    history: [
+      sample("2025-03-05T11:15:00Z", { requests: 40, clientErrors: 3, serverErrors: 1 }),
+      sample("2025-03-05T11:15:30Z", { requests: 60, clientErrors: 2, serverErrors: 4 }),
+    ],
     services: [
       { name: "SQLite", state: "healthy", detail: "Zapytanie testowe wykonane" },
       { name: "Poczta", state: "warning", detail: "Brak klucza API" },
@@ -61,23 +79,38 @@ describe("RuntimePage", () => {
 
     read.resolve(runtimeWith());
 
-    await screen.findByRole("group", { name: "Czas działania" });
+    await screen.findByRole("group", { name: "Pamięć procesu" });
     expect(screen.queryByRole("status")).toBeNull();
   });
 
-  it("shows the eight metrics of the process", async () => {
+  it("shows the six figures of the process", async () => {
     runtimeMock.mockResolvedValue(runtimeWith());
     render(<RuntimePage />);
-    await screen.findByRole("group", { name: "Czas działania" });
+    await screen.findByRole("group", { name: "Pamięć procesu" });
 
-    expect(metric("Czas działania")).toContain("1 d 1 h 1 min");
-    expect(metric("Pamięć procesu")).toMatch(/512\sMB/);
-    expect(metric("Sterta GC")).toMatch(/12,5\sMB/);
-    expect(metric("Wątki procesu")).toContain("31");
+    expect(metric("Żądania")).toContain("100");
+    expect(metric("Żądania")).toContain("w ostatniej godzinie");
+    expect(metric("Błędy serwera")).toContain("5");
+    expect(metric("Błędy serwera")).toContain("błędy klienta (4xx): 5");
+    expect(metric("CPU")).toContain("12,5%");
+    expect(metric("Pamięć procesu")).toMatch(/512MB/);
+    expect(metric("Pamięć procesu")).toMatch(/sterta GC 12,5\sMB, wątki: 31/);
     expect(metric("Połączenia realtime")).toContain("4");
-    expect(metric("Aktywne pokoje głosowe")).toContain("2");
-    expect(metric("Opóźnienie SQLite")).toContain("1,5 ms");
-    expect(metric("Start procesu")).toContain(new Date("2025-03-04T10:15:00Z").toLocaleString("pl-PL"));
+    expect(metric("Połączenia realtime")).toContain("aktywne pokoje głosowe: 2");
+    expect(metric("Opóźnienie SQLite")).toContain("1,5ms");
+  });
+
+  it("draws memory and requests over the last hour, with their values in tables", async () => {
+    runtimeMock.mockResolvedValue(runtimeWith());
+    render(<RuntimePage />);
+
+    expect(await screen.findByRole("img", { name: "Pamięć w ostatniej godzinie" })).toBeTruthy();
+    expect(screen.getByRole("img", { name: "Żądania do API" })).toBeTruthy();
+    const requests = screen.getByRole("table", { name: "Żądania do API co 30 sekund" });
+    expect(within(requests).getAllByRole("row")).toHaveLength(3);
+    expect(within(requests).getAllByRole("cell").map((cell) => cell.textContent)).toEqual(["39", "1", "56", "4"]);
+    const memory = screen.getByRole("table", { name: "Pamięć procesu co 30 sekund" });
+    expect(within(memory).getAllByRole("cell").map((cell) => cell.textContent)).toEqual(["500 MB", "500 MB"]);
   });
 
   it.each([
@@ -88,9 +121,13 @@ describe("RuntimePage", () => {
   ])("writes an uptime of %d seconds as %s", async (seconds, expected) => {
     runtimeMock.mockResolvedValue(runtimeWith({ uptimeSeconds: seconds }));
     render(<RuntimePage />);
-    await screen.findByRole("group", { name: "Czas działania" });
+    await screen.findByRole("group", { name: "Pamięć procesu" });
 
-    expect(metric("Czas działania")).toBe(`Czas działania${expected}`);
+    expect(
+      screen.getByText(
+        `Proces działa od ${expected}, uruchomiony ${new Date("2025-03-04T10:15:00Z").toLocaleString("pl-PL")}.`,
+      ),
+    ).toBeTruthy();
   });
 
   it("lists each service with its status and details", async () => {
@@ -125,18 +162,18 @@ describe("RuntimePage", () => {
     const user = userEvent.setup();
     runtimeMock.mockResolvedValueOnce(runtimeWith({ threadCount: 31 }));
     render(<RuntimePage />);
-    await screen.findByRole("group", { name: "Wątki procesu" });
+    await screen.findByRole("group", { name: "Pamięć procesu" });
 
     const second = deferred<CockpitRuntime>();
     runtimeMock.mockReturnValueOnce(second.promise);
     await user.click(screen.getByRole("button", { name: "Odśwież dane" }));
 
     expect((screen.getByRole("button", { name: "Odśwież dane" }) as HTMLButtonElement).disabled).toBe(true);
-    expect(metric("Wątki procesu")).toContain("31");
+    expect(metric("Pamięć procesu")).toContain("wątki: 31");
 
     second.resolve(runtimeWith({ threadCount: 44 }));
 
-    await waitFor(() => expect(metric("Wątki procesu")).toContain("44"));
+    await waitFor(() => expect(metric("Pamięć procesu")).toContain("wątki: 44"));
     expect(runtimeMock).toHaveBeenCalledTimes(2);
     expect((screen.getByRole("button", { name: "Odśwież dane" }) as HTMLButtonElement).disabled).toBe(false);
   });
@@ -145,13 +182,13 @@ describe("RuntimePage", () => {
     const user = userEvent.setup();
     runtimeMock.mockResolvedValueOnce(runtimeWith({ threadCount: 31 }));
     render(<RuntimePage />);
-    await screen.findByRole("group", { name: "Wątki procesu" });
+    await screen.findByRole("group", { name: "Pamięć procesu" });
 
     runtimeMock.mockRejectedValueOnce(new Error("Nie udało się połączyć z backendem Stellarr."));
     await user.click(screen.getByRole("button", { name: "Odśwież dane" }));
 
     expect(await screen.findByText("Nie udało się połączyć z backendem Stellarr.")).toBeTruthy();
-    expect(metric("Wątki procesu")).toContain("31");
+    expect(metric("Pamięć procesu")).toContain("wątki: 31");
   });
 
   it("clears the error once a refresh succeeds", async () => {
@@ -163,7 +200,7 @@ describe("RuntimePage", () => {
     runtimeMock.mockResolvedValueOnce(runtimeWith());
     await user.click(screen.getByRole("button", { name: "Odśwież dane" }));
 
-    await screen.findByRole("group", { name: "Czas działania" });
+    await screen.findByRole("group", { name: "Pamięć procesu" });
     expect(screen.queryByText("Błąd runtime")).toBeNull();
   });
 });
