@@ -1,6 +1,6 @@
 # Stellarr
 
-Self-hosted text, voice, and video chat for small groups, packaged as a single Docker container.
+[Experimental] [DEVELOPMENT] The self-hosted Discord alternative for your friends. Fast, solid, and fully yours.
 
 ## Documentation
 
