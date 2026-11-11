@@ -69,7 +69,6 @@ export const en = {
   "notFound.back": "Back to the overview",
 
   "dashboard.title": "Instance overview",
-  "dashboard.description": "Service status and live counters for {name}.",
   "dashboard.recheck": "Check again",
   "dashboard.users.detail": "{count} online",
   "dashboard.objects.title": "Stored objects",

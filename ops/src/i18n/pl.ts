@@ -64,7 +64,6 @@ export const pl = {
   "notFound.back": "Wróć do przeglądu",
 
   "dashboard.title": "Przegląd instancji",
-  "dashboard.description": "Stan usług i rzeczywiste liczniki dla {name}.",
   "dashboard.recheck": "Sprawdź ponownie",
   "dashboard.users.detail": "{count} w sieci",
   "dashboard.objects.title": "Obiekty",

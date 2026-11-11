@@ -2,7 +2,6 @@ import { useEffect, useState, type ReactNode } from "react";
 
 import { ActivityChart } from "@/components/activity-chart";
 import { Icon, type IconName } from "@/components/icons/icon";
-import { PageHeader } from "@/components/page-header";
 import { Spinner } from "@/components/spinner";
 import { StatusBadge } from "@/components/status-badge";
 import { Badge } from "@/components/ui/badge";
@@ -65,7 +64,7 @@ function MetricCard({ icon, title, value, caption }: { icon: IconName; title: st
   return (
     <Card role="group" aria-label={title} className="gap-0 py-0">
       <CardTitleRow icon={icon} title={title} />
-      <div className="px-5 pt-6 pb-5">
+      <div className="flex flex-1 flex-col justify-center px-5 py-5">
         <p className="text-hero font-semibold">{value}</p>
         <p className="mt-3 text-sm text-muted-foreground">{caption}</p>
       </div>
@@ -85,7 +84,7 @@ function ActivityCard({ activity, error }: { activity: OpsActivity | null; error
   const label = t(seriesLabel[series]);
 
   return (
-    <Card className="gap-0 py-0">
+    <Card className="h-full gap-0 py-0">
       <CardTitleRow icon="signal" title={t("dashboard.activity.title")}>
         <div role="group" aria-label={t("dashboard.activity.series")} className="flex gap-1.5">
           {(Object.keys(seriesLabel) as Series[]).map((key) => (
@@ -107,10 +106,10 @@ function ActivityCard({ activity, error }: { activity: OpsActivity | null; error
           ))}
         </div>
       </CardTitleRow>
-      <div className="px-5 pt-4 pb-5">
+      <div className="flex flex-1 flex-col px-5 pt-4 pb-5">
         {activity ? (
           <>
-            <p className="mb-8 text-sm text-muted-foreground">
+            <p className="mb-8 flex-1 text-sm text-muted-foreground">
               {t("dashboard.activity.description", { zone: activity.timeZone })}
             </p>
             <ActivityChart
@@ -192,37 +191,38 @@ export function DashboardPage() {
   }
 
   if (!bootstrap) return null;
-  const { instance, overview } = bootstrap;
+  const { overview } = bootstrap;
 
+  // On a wide screen the overview fills the window under the bar: the window
+  // less the inset frame (1rem and its 2px border), the bar (3.5rem) and the page padding (4rem).
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title={t("dashboard.title")}
-        description={t("dashboard.description", { name: instance.name })}
-        actions={
-          <Button variant="outline" onClick={() => void recheck()} disabled={rechecking}>
-            {rechecking ? <Spinner /> : null}
-            {t("dashboard.recheck")}
-          </Button>
-        }
-      />
-
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-        <MetricCard
-          icon="users"
-          title={t("common.users")}
-          value={formatNumber(overview.userCount)}
-          caption={t("dashboard.users.detail", { count: overview.onlineUserCount })}
-        />
-        <MetricCard
-          icon="send"
-          title={t("dashboard.messages.title")}
-          value={formatNumber(overview.messageCount)}
-          caption={t("dashboard.messages.detail")}
-        />
+    <div className="flex flex-col gap-4 lg:min-h-[calc(100svh-8.5rem-2px)]">
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="text-2xl font-semibold tracking-[-0.01em]">{t("dashboard.title")}</h1>
+        <Button variant="outline" onClick={() => void recheck()} disabled={rechecking}>
+          {rechecking ? <Spinner /> : null}
+          {t("dashboard.recheck")}
+        </Button>
       </div>
 
-      <ActivityCard activity={activity.data} error={activity.error} />
+      <div className="grid flex-1 grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-1 lg:grid-rows-2">
+          <MetricCard
+            icon="users"
+            title={t("common.users")}
+            value={formatNumber(overview.userCount)}
+            caption={t("dashboard.users.detail", { count: overview.onlineUserCount })}
+          />
+          <MetricCard
+            icon="send"
+            title={t("dashboard.messages.title")}
+            value={formatNumber(overview.messageCount)}
+            caption={t("dashboard.messages.detail")}
+          />
+        </div>
+
+        <ActivityCard activity={activity.data} error={activity.error} />
+      </div>
 
       <Card className="gap-0 py-0">
         <CardTitleRow icon="server" title={t("dashboard.services.title")} />

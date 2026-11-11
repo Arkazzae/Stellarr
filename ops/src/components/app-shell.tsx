@@ -1,8 +1,7 @@
 import { Fragment, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 
-import logoForDark from "@/assets/logo/small.svg";
-import logoForLight from "@/assets/logo/mono.svg";
+import { BrandMark } from "@/components/brand-mark";
 import { Icon, type IconName } from "@/components/icons/icon";
 import { Button } from "@/components/ui/button";
 import {
@@ -101,15 +100,13 @@ function NavigationLinks({ onNavigate }: { onNavigate?: () => void }) {
 }
 
 /**
- * The mark and the wordmark: the one-colour mark on light, the small mark on
- * dark, as the documentation shows them. The gap is the height of the mark's
- * shortest bar, as the brand guidelines ask.
+ * The one-colour mark in the text colour, and the wordmark. The gap is the
+ * height of the mark's shortest bar, as the brand guidelines ask.
  */
 function Brand() {
   return (
     <div className="flex h-16 shrink-0 items-center gap-1.5 px-6">
-      <img src={logoForLight} alt="" className="size-6 dark:hidden" />
-      <img src={logoForDark} alt="" className="hidden size-6 dark:block" />
+      <BrandMark className="size-6" />
       <p className="truncate text-base font-semibold">{t("app.name")}</p>
     </div>
   );

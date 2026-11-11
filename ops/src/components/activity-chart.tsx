@@ -141,23 +141,26 @@ export function ActivityChart({ points, label, tableCaption, dateHeading }: Acti
         </div>
       </div>
 
-      <table className="sr-only">
-        <caption>{tableCaption}</caption>
-        <thead>
-          <tr>
-            <th scope="col">{dateHeading}</th>
-            <th scope="col">{label}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {points.map((point) => (
-            <tr key={point.date}>
-              <th scope="row">{formatDay(point.date, longDay)}</th>
-              <td>{formatNumber(point.value)}</td>
+      {/* A table ignores the clipping of sr-only, so a block around it carries the class. */}
+      <div className="sr-only">
+        <table>
+          <caption>{tableCaption}</caption>
+          <thead>
+            <tr>
+              <th scope="col">{dateHeading}</th>
+              <th scope="col">{label}</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {points.map((point) => (
+              <tr key={point.date}>
+                <th scope="row">{formatDay(point.date, longDay)}</th>
+                <td>{formatNumber(point.value)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </figure>
   );
 }

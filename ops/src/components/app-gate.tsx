@@ -1,9 +1,8 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 
 import { Spinner } from "@/components/spinner";
-import logoForDark from "@/assets/logo/small.svg";
-import logoForLight from "@/assets/logo/mono.svg";
 import { AppShell } from "@/components/app-shell";
+import { BrandMark } from "@/components/brand-mark";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -48,8 +47,7 @@ function LoginScreen() {
     <CenteredState>
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <img src={logoForLight} alt="" className="mb-3 size-8 dark:hidden" />
-          <img src={logoForDark} alt="" className="mb-3 hidden size-8 dark:block" />
+          <BrandMark className="mb-3 size-8" />
           <CardTitle>{t("gate.login.title")}</CardTitle>
           <CardDescription>{t("gate.login.description")}</CardDescription>
         </CardHeader>

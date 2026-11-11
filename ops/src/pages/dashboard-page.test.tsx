@@ -100,13 +100,6 @@ describe("DashboardPage counters", () => {
     expect(serviceRow(/Obiekty/).textContent).toContain(expected);
   });
 
-  it("names the instance in the page description", () => {
-    answerProbes(200, 200);
-    renderDashboard();
-
-    expect(screen.getByText("Stan usług i rzeczywiste liczniki dla Domek.")).toBeTruthy();
-  });
-
   it("counts realtime connections in the services table", () => {
     answerProbes(200, 200);
     renderDashboard(sessionWith({ realtimeConnectionCount: 4 }));
