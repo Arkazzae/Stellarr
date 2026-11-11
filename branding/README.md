@@ -1,6 +1,6 @@
 # Stellarr branding
 
-Logo, mascot, color palette, typography, and usage rules for Stellarr. Use the SVG assets as provided without redrawing or recoloring them.
+Logo, mascot, UI icons, color palette, typography, and usage rules for Stellarr. Use the logo and mascot SVG assets as provided without redrawing or recoloring them; UI icons inherit the interface color.
 
 ## Assets
 
@@ -12,6 +12,7 @@ Logo, mascot, color palette, typography, and usage rules for Stellarr. Use the S
 | `logo/tile.svg` | Application icon: primary mark centered on a rounded 512 px `#09090b` tile |
 | `mascot/` | Astronaut mascot in `mark.svg`, `small.svg`, `mono.svg`, and `tile.svg` variants |
 | `mascot/expressions/` | Eight state expressions: `speaking`, `idle`, `listening`, `happy`, `muted`, `away`, `connecting`, `failed` |
+| [`icons/`](icons/) | 92 standalone UI icons, including formatting and noise-suppression modes; 24 × 24 SVGs with a 1.5 px `currentColor` stroke |
 | `guidelines/stellarr-brand-guidelines.pdf` | Brand guidelines PDF (v1.0 draft) |
 | `guidelines/index.html` | HTML source of the brand guidelines (uses `guidelines/fonts/` for Outfit and JetBrains Mono) |
 

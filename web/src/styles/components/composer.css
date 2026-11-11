@@ -282,10 +282,6 @@
   }
   .fmt-btn:hover{background:var(--surface-overlay);color:var(--text)}
   .fmt-btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
-  .fmt-btn.bold{font-weight:800}
-  .fmt-btn.italic{font-style:italic;font-family:Georgia, serif}
-  .fmt-btn.strike{text-decoration:line-through}
-  .fmt-btn.code{font:600 12px/1 var(--font-mono, monospace)}
   .composer .comp-mobile-more{display:none}
   .composer .attach:hover{background:var(--surface-overlay);color:var(--text)}
   .composer .attach:active{background:var(--surface-raised);color:var(--text)}

@@ -273,7 +273,7 @@
   --rail-w: 248px;
   --roster-w: 264px;
   --roster-mini-w: 60px;
-  /* The servers / DM column, when it is open. */
+  /* The persistent servers / DM column. */
   --servers-rail-w: 68px;
   --header-h: 52px;
 

@@ -2,20 +2,20 @@
 
 import type { Ref } from "react";
 
+import { Icon, type IconName } from "@/components/icons/Icon";
 import type { MessageKey, Translator } from "@/i18n";
 
 const FORMATS: readonly {
   marker: string;
-  glyph: string;
-  className: string;
+  icon: IconName;
   label: MessageKey;
   shortcut?: string;
 }[] = [
-  { marker: "**", glyph: "B", className: "bold", label: "composer.formatBold", shortcut: "Ctrl+B" },
-  { marker: "*", glyph: "I", className: "italic", label: "composer.formatItalic", shortcut: "Ctrl+I" },
-  { marker: "~~", glyph: "S", className: "strike", label: "composer.formatStrike" },
-  { marker: "||", glyph: "▒", className: "spoiler", label: "composer.formatSpoiler" },
-  { marker: "`", glyph: "</>", className: "code", label: "composer.formatCode" },
+  { marker: "**", icon: "bold", label: "composer.formatBold", shortcut: "Ctrl+B" },
+  { marker: "*", icon: "italic", label: "composer.formatItalic", shortcut: "Ctrl+I" },
+  { marker: "~~", icon: "strike", label: "composer.formatStrike" },
+  { marker: "||", icon: "spoiler", label: "composer.formatSpoiler" },
+  { marker: "`", icon: "inlineCode", label: "composer.formatCode" },
 ];
 
 export interface ComposerFormatPanelProps {
@@ -28,16 +28,16 @@ export interface ComposerFormatPanelProps {
 export function ComposerFormatPanel({ panelRef, onFormat, t }: ComposerFormatPanelProps) {
   return (
     <div className="fmt-pop" ref={panelRef} role="toolbar" aria-label={t("composer.format")}>
-      {FORMATS.map(({ marker, glyph, className, label, shortcut }) => (
+      {FORMATS.map(({ marker, icon, label, shortcut }) => (
         <button
           key={marker}
           type="button"
-          className={`fmt-btn ${className}`}
+          className="fmt-btn"
           aria-label={t(label)}
           title={shortcut === undefined ? t(label) : `${t(label)} (${shortcut})`}
           onClick={() => onFormat(marker)}
         >
-          {glyph}
+          <Icon name={icon} size={17} />
         </button>
       ))}
     </div>

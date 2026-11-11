@@ -921,17 +921,6 @@
       color var(--dur-fast) var(--ease-standard);
   }
 
-  .pf-format.strong {
-    font-weight: 750;
-  }
-
-  .pf-format.emphasis {
-    font-family: serif;
-    font-size: 16px;
-    font-style: italic;
-    font-weight: 650;
-  }
-
   .pf-format:hover:not(:disabled),
   .pf-format.on {
     background: var(--surface-overlay);

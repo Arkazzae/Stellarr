@@ -220,8 +220,7 @@
     min-width: 0;
   }
 
-  .ctx-gate-label svg,
-  .ctx-gate-label .icon-image { color: var(--text-faint) }
+  .ctx-gate-label svg { color: var(--text-faint) }
 
   @media (pointer: coarse) {
     .ctx-item { min-height: 44px }

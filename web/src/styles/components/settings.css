@@ -251,7 +251,6 @@
   }
   .seg-i:hover .seg-ico{color:var(--text-muted)}
   .seg-i.on .seg-ico{color:var(--accent-text);background:var(--accent-soft)}
-  .seg-ico .icon-image{color:inherit}
   .seg-i:disabled .seg-ico{opacity:0.6}
   /* The one line the row costs: what the current choice actually means. */
   .seg-note{

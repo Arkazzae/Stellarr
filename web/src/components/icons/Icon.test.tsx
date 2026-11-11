@@ -1,11 +1,7 @@
-import { existsSync } from "node:fs";
-import { join } from "node:path";
-
 import { render } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
 import { Icon, type IconName } from "./Icon";
-import { NOISE_IMAGES } from "./noiseImages";
 import { ICON_PATHS } from "./paths";
 
 function renderIcon(name: IconName, props: { size?: number; className?: string } = {}) {
@@ -23,19 +19,11 @@ describe("Icon", () => {
       for (const path of paths) {
         expect(path.getAttribute("d"), name).toBeTruthy();
         expect(path.getAttribute("stroke")).toBe("currentColor");
+        expect(path.getAttribute("stroke-width")).toBe("1.5");
+        expect(path.getAttribute("stroke-linecap")).toBe("round");
+        expect(path.getAttribute("stroke-linejoin")).toBe("round");
       }
     }
-  });
-
-  it("uses a heavier or lighter stroke only where the table asks for one", () => {
-    const widths = (name: IconName) =>
-      Array.from(renderIcon(name).querySelectorAll("path"), (path) =>
-        path.getAttribute("stroke-width"),
-      );
-
-    expect(widths("hash")).toEqual(["1.5", "1.5", "1.5", "1.5"]);
-    expect(widths("pin")).toEqual(["2", "2", "2"]);
-    expect(widths("cinemaOff")).toEqual(["1", "1", "1", "1"]);
   });
 
   it("sizes the box and passes the class on", () => {
@@ -52,19 +40,15 @@ describe("Icon", () => {
     expect(renderIcon("noiseRnnoise")).toHaveAttribute("aria-hidden", "true");
   });
 
-  it("masks the noise-suppression images with the current colour", () => {
-    const node = renderIcon("noiseRnnoise", { size: 20, className: "extra" });
+  it("renders every noise mode as a scalable glyph without an image request", () => {
+    for (const name of ["noiseOff", "noiseBrowser", "noiseSpeex", "noiseRnnoise", "noiseGtcrn"] as const) {
+      const node = renderIcon(name, { size: 24, className: "noise-icon" });
 
-    expect(node.tagName).toBe("SPAN");
-    expect(node).toHaveClass("icon-image", "extra");
-    expect(node.style.width).toBe("20px");
-    expect(node.style.backgroundColor).toBe("currentcolor");
-    expect(node.getAttribute("style")).toContain(NOISE_IMAGES.noiseRnnoise);
-  });
-
-  it("points every noise image at a file the app serves", () => {
-    for (const url of Object.values(NOISE_IMAGES)) {
-      expect(existsSync(join(process.cwd(), "public", url)), url).toBe(true);
+      expect(node.tagName).toBe("svg");
+      expect(node).toHaveClass("noise-icon");
+      expect(node).toHaveAttribute("viewBox", "0 0 24 24");
+      expect(node).toHaveAttribute("width", "24");
+      expect(node.querySelector("image")).toBeNull();
     }
   });
 });

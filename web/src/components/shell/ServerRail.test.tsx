@@ -39,10 +39,6 @@ describe("ServerRail launcher", () => {
     setup();
 
     expect(launcher()).toHaveAttribute("aria-expanded", "false");
-    expect(launcher().querySelector("path")).toHaveAttribute(
-      "d",
-      "M19 2H17C15 2 14 3 14 5V7C14 9 15 10 17 10H19C21 10 22 9 22 7V5",
-    );
     expect(screen.queryByRole("button", { name: /Utwórz serwer/ })).toBeNull();
   });
 

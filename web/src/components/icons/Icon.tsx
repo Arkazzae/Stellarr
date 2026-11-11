@@ -1,9 +1,6 @@
-import { NOISE_IMAGES } from "./noiseImages";
-import { ICON_PATHS, type IconName as PathIconName } from "./paths";
+import { ICON_PATHS, type IconName } from "./paths";
 
-type NoiseIconName = keyof typeof NOISE_IMAGES;
-
-export type IconName = PathIconName | NoiseIconName;
+export type { IconName } from "./paths";
 
 export interface IconProps {
   name: IconName;
@@ -12,39 +9,8 @@ export interface IconProps {
   className?: string;
 }
 
-const DEFAULT_STROKE_WIDTH = 1.5;
-
-function isNoiseIcon(name: IconName): name is NoiseIconName {
-  return Object.hasOwn(NOISE_IMAGES, name);
-}
-
-/**
- * Icons are decorative: the control that holds one carries the accessible name,
- * so the glyph stays hidden from assistive tech instead of being read twice.
- */
+/** The control carries the accessible name; its glyph is decorative. */
 export function Icon({ name, size = 16, className }: IconProps) {
-  if (isNoiseIcon(name)) {
-    // The PNG is used as a mask over `currentColor`, so it follows the theme
-    // and the disabled state like the stroked icons do.
-    const mask = `url("${NOISE_IMAGES[name]}") center / contain no-repeat`;
-    return (
-      <span
-        className={className ? `icon-image ${className}` : "icon-image"}
-        aria-hidden="true"
-        style={{
-          display: "inline-block",
-          flexShrink: 0,
-          width: size,
-          height: size,
-          verticalAlign: "middle",
-          backgroundColor: "currentColor",
-          mask,
-          WebkitMask: mask,
-        }}
-      />
-    );
-  }
-
   return (
     <svg
       width={size}
@@ -58,9 +24,9 @@ export function Icon({ name, size = 16, className }: IconProps) {
       {ICON_PATHS[name].map((path, index) => (
         <path
           key={index}
-          d={typeof path === "string" ? path : path.d}
+          d={path}
           stroke="currentColor"
-          strokeWidth={typeof path === "string" ? DEFAULT_STROKE_WIDTH : path.width}
+          strokeWidth={1.5}
           strokeLinecap="round"
           strokeLinejoin="round"
         />

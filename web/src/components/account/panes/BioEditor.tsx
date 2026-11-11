@@ -138,23 +138,23 @@ export function BioEditor({ value, customEmoji, onChange }: BioEditorProps) {
             >
               <button
                 type="button"
-                className="pf-format strong"
+                className="pf-format"
                 aria-label={t("account.bold")}
                 title={t("account.bold")}
                 disabled={preview}
                 onClick={() => wrapSelection("**", "**", t("account.bold"))}
               >
-                B
+                <Icon name="bold" size={17} />
               </button>
               <button
                 type="button"
-                className="pf-format emphasis"
+                className="pf-format"
                 aria-label={t("account.italic")}
                 title={t("account.italic")}
                 disabled={preview}
                 onClick={() => wrapSelection("*", "*", t("account.italic"))}
               >
-                I
+                <Icon name="italic" size={17} />
               </button>
               <button
                 type="button"
