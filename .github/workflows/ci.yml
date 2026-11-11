@@ -30,6 +30,7 @@ jobs:
       server: ${{ steps.filter.outputs.server }}
       web: ${{ steps.filter.outputs.web }}
       ops: ${{ steps.filter.outputs.ops }}
+      media: ${{ steps.filter.outputs.media }}
       image: ${{ steps.filter.outputs.image }}
     steps:
       - uses: actions/checkout@v7
@@ -62,7 +63,8 @@ jobs:
           check server '^(server/|Stellarr\.slnx$|Directory\.Build\.props$|global\.json$|\.github/workflows/ci\.yml$)'
           check web '^(web/|\.github/workflows/ci\.yml$)'
           check ops '^(ops/|\.github/workflows/ci\.yml$)'
-          check image '^(Dockerfile$|\.dockerignore$|infra/|server/.*\.csproj$|server/.*packages\.lock\.json$|(web|ops)/package(-lock)?\.json$|global\.json$|Directory\.Build\.props$|\.github/workflows/ci\.yml$)'
+          check media '^(media/|\.github/workflows/ci\.yml$)'
+          check image '^(Dockerfile$|\.dockerignore$|infra/|server/.*\.csproj$|server/.*packages\.lock\.json$|(web|ops)/package(-lock)?\.json$|media/Cargo\.(toml|lock)$|global\.json$|Directory\.Build\.props$|\.github/workflows/ci\.yml$)'
 
   server:
     needs: changes
@@ -125,6 +127,28 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+
+  media:
+    needs: changes
+    if: needs.changes.outputs.media == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: media
+    steps:
+      - uses: actions/checkout@v7
+      # The runner image ships rustup. This moves it to the current stable
+      # release, the one the image build takes from rust:1-slim-bookworm.
+      - run: rustup toolchain install stable --profile minimal --component rustfmt,clippy && rustup default stable
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          workspaces: media
+      - run: cargo fmt --check
+      # --locked fails when Cargo.lock no longer matches Cargo.toml, as the
+      # image build would.
+      - run: cargo clippy --locked --all-targets -- -D warnings
+      - run: cargo test --locked
 
   # Builds the image without pushing it, when the Dockerfile, the container
   # configuration or a dependency list changes. On main it also refreshes the
