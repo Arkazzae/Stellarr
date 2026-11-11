@@ -1,7 +1,7 @@
 import { useState, type KeyboardEvent } from "react";
 
 import { formatDay, formatNumber } from "@/i18n/format";
-import { axisTop, CHART_GAP, CHART_MIN_HEIGHT, CHART_ROWS, litCells } from "@/lib/chart-scale";
+import { axisTop, CHART_GAP, CHART_MIN_HEIGHT, CHART_ROWS, litCells, rem } from "@/lib/chart-scale";
 import { cn } from "@/lib/utils";
 
 export interface ActivityPoint {
@@ -66,7 +66,7 @@ export function ActivityChart({ points, label, tableCaption, dateHeading }: Acti
       <div className="grid flex-1 grid-cols-[auto_minmax(0,1fr)] grid-rows-[minmax(0,1fr)_auto] gap-x-3">
         <div
           className="flex flex-col justify-between text-right text-xs text-muted-foreground tabular-nums"
-          style={{ minHeight: CHART_MIN_HEIGHT }}
+          style={{ minHeight: rem(CHART_MIN_HEIGHT) }}
           aria-hidden="true"
         >
           {ticks.map((tick) => (
@@ -76,7 +76,7 @@ export function ActivityChart({ points, label, tableCaption, dateHeading }: Acti
           ))}
         </div>
 
-        <div className="relative" style={{ minHeight: CHART_MIN_HEIGHT }}>
+        <div className="relative" style={{ minHeight: rem(CHART_MIN_HEIGHT) }}>
           <div
             role="img"
             aria-label={label}
@@ -87,7 +87,7 @@ export function ActivityChart({ points, label, tableCaption, dateHeading }: Acti
             onPointerLeave={() => setActive(null)}
             className="grid h-full rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
             style={{
-              columnGap: CHART_GAP,
+              columnGap: rem(CHART_GAP),
               gridTemplateColumns: `repeat(${points.length}, minmax(0, 1fr))`,
             }}
           >
@@ -98,7 +98,7 @@ export function ActivityChart({ points, label, tableCaption, dateHeading }: Acti
                   key={point.date}
                   onPointerEnter={() => setActive(index)}
                   className="flex h-full flex-col-reverse items-center"
-                  style={{ gap: CHART_GAP }}
+                  style={{ gap: rem(CHART_GAP) }}
                 >
                   {Array.from({ length: CHART_ROWS }, (_, row) => (
                     <span

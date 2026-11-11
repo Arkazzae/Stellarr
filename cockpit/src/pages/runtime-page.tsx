@@ -21,7 +21,11 @@ import { cn } from "@/lib/utils";
 
 const HOUR_MS = 60 * 60 * 1000;
 
-/** Room the request chart takes outside its plot: the legend and the time axis. */
+/**
+ * Room the request chart takes outside its plot (the legend and the time
+ * axis) and its least plot height, in px at the default font size; they grow
+ * with the panel's scale.
+ */
 const REQUEST_CHART_CHROME = 56;
 const MIN_PLOT = 64;
 
@@ -128,7 +132,8 @@ function MetricTiles({ data }: { data: CockpitRuntime }) {
 
 /** Requests per sample over the hour, filling the height it is given. */
 function RequestsChart({ data, className }: { data: CockpitRuntime; className?: string }) {
-  const [plot, height] = useMeasuredHeight<HTMLDivElement>(64 + REQUEST_CHART_CHROME);
+  const [plot, height, remPx] = useMeasuredHeight<HTMLDivElement>(MIN_PLOT + REQUEST_CHART_CHROME);
+  const scale = remPx / 16;
   return (
     <Card className={cn("gap-0 py-0", className)}>
       <CardTitleRow icon="signal" title={t("runtime.chart.requests")}>
@@ -149,7 +154,7 @@ function RequestsChart({ data, className }: { data: CockpitRuntime; className?: 
             formatTime={formatClock}
             tableCaption={t("runtime.chart.requestsTable")}
             timeHeading={t("runtime.chart.time")}
-            height={Math.max(MIN_PLOT, height - REQUEST_CHART_CHROME)}
+            height={Math.max(MIN_PLOT * scale, height - REQUEST_CHART_CHROME * scale)}
           />
         </div>
       </div>

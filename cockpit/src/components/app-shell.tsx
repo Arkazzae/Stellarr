@@ -226,7 +226,7 @@ export function AppShell() {
           {/* Pages fill this area and scroll inside their own lists; it scrolls
               itself only when a page cannot shrink to fit. */}
           <main className="relative flex min-h-0 flex-1 flex-col overflow-y-auto">
-            <div className="mx-auto flex min-h-0 w-full max-w-[1400px] flex-1 flex-col px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+            <div className="mx-auto flex min-h-0 w-full max-w-[87.5rem] flex-1 flex-col px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
               <Outlet />
             </div>
           </main>
