@@ -1,5 +1,4 @@
 import type { Translator } from "@/i18n";
-import type { UserId } from "@/lib/api/types";
 import {
   cameraEncoding,
   captureCamera,
@@ -26,14 +25,15 @@ import {
   screenQualityPartialError,
   screenShareError,
 } from "./webrtcErrors";
-import { sendEncodings, type Peer } from "./webrtcPeer";
+import { addSender, sendEncodings, type Link } from "./webrtcPeer";
 
 /** What the camera and the screen share need from the call they are part of. */
 export interface LocalVideoEnv {
   /** Words what goes wrong, in the language the person has now. */
   readonly translate: Translator;
   readonly store: VoiceStateStore;
-  readonly peers: ReadonlyMap<UserId, Peer>;
+  /** The links the picture and the shared sound are sent on. */
+  links(): Iterable<Link>;
   settings(): VoiceSettings;
   /** The session of the call being joined, or null when there is none. */
   session(): number | null;
@@ -54,7 +54,7 @@ export interface LocalCameraEnv extends LocalVideoEnv {
 }
 
 /**
- * The camera this client sends: video only, one sender per peer.
+ * The camera this client sends: video only, one sender per link.
  *
  * The capture owns the device, so a swap opens the new one before letting go
  * of the old, and a failed swap leaves the picture the others see untouched.
@@ -89,7 +89,7 @@ export class LocalCamera {
     }
 
     this.adopt(capture, session);
-    for (const peer of env.peers.values()) this.addTo(peer);
+    for (const link of env.links()) this.addTo(link);
     env.store.set({ cameraPending: false, localCamera: this.local });
     env.announce();
   }
@@ -100,8 +100,8 @@ export class LocalCamera {
     this.capture = null;
     capture.video.onended = null;
 
-    for (const peer of this.env.peers.values()) {
-      peer.cameraSender = removeSender(peer, peer.cameraSender);
+    for (const link of this.env.links()) {
+      link.cameraSender = removeSender(link, link.cameraSender);
     }
     capture.dispose();
     this.env.store.set({ localCamera: null, cameraPending: false });
@@ -109,13 +109,13 @@ export class LocalCamera {
     await this.env.renegotiate();
   }
 
-  /** Put the camera on a connection that was just made. */
-  addTo(peer: Peer): void {
+  /** Put the camera on a link that was just made. */
+  addTo(link: Link): void {
     const capture = this.capture;
-    if (!capture || peer.cameraSender) return;
+    if (!capture || link.cameraSender) return;
     try {
-      peer.cameraSender = peer.connection.addTrack(capture.video, capture.stream);
-      void tuneCameraSender(peer.cameraSender, this.env.settings().cameraQuality);
+      link.cameraSender = addSender(link, capture.video, capture.stream);
+      void tuneCameraSender(link.cameraSender, this.env.settings().cameraQuality);
     } catch {
       // A closing connection cannot take it; the rebuilt one will.
     }
@@ -211,8 +211,8 @@ export class LocalCamera {
       return;
     }
 
-    const senders = [...env.peers.values()].flatMap((peer) =>
-      peer.cameraSender ? [peer.cameraSender] : [],
+    const senders = [...env.links()].flatMap((link) =>
+      link.cameraSender ? [link.cameraSender] : [],
     );
     const moves = await Promise.allSettled(senders.map((sender) => carry(sender, capture)));
     if (superseded()) {
@@ -296,7 +296,7 @@ export class LocalScreen {
       };
     }
 
-    for (const peer of env.peers.values()) this.addTo(peer);
+    for (const link of env.links()) this.addTo(link);
     env.store.set({ screenSharePending: false, localScreen: this.local });
     env.announce();
   }
@@ -308,9 +308,9 @@ export class LocalScreen {
     capture.video.onended = null;
     if (capture.audio) capture.audio.onended = null;
 
-    for (const peer of this.env.peers.values()) {
-      peer.screenVideoSender = removeSender(peer, peer.screenVideoSender);
-      peer.screenAudioSender = removeSender(peer, peer.screenAudioSender);
+    for (const link of this.env.links()) {
+      link.screenVideoSender = removeSender(link, link.screenVideoSender);
+      link.screenAudioSender = removeSender(link, link.screenAudioSender);
     }
     stopTracks(capture);
     this.env.store.set({ localScreen: null, screenSharePending: false });
@@ -318,16 +318,16 @@ export class LocalScreen {
     await this.env.renegotiate();
   }
 
-  /** Put the share on a connection that was just made. */
-  addTo(peer: Peer): void {
+  /** Put the share on a link that was just made. */
+  addTo(link: Link): void {
     const capture = this.capture;
-    if (!capture || peer.screenVideoSender) return;
+    if (!capture || link.screenVideoSender) return;
     try {
-      peer.screenVideoSender = peer.connection.addTrack(capture.video, capture.stream);
+      link.screenVideoSender = addSender(link, capture.video, capture.stream);
       if (capture.audio) {
-        peer.screenAudioSender = peer.connection.addTrack(capture.audio, capture.stream);
+        link.screenAudioSender = addSender(link, capture.audio, capture.stream);
       }
-      void this.tune(peer, this.env.settings().screenShareQuality);
+      void this.tune(link, this.env.settings().screenShareQuality);
     } catch {
       // A closing connection cannot take it; the rebuilt one will.
     }
@@ -346,9 +346,7 @@ export class LocalScreen {
     } catch {
       captureUpdated = false;
     }
-    const tuned = await Promise.all(
-      [...this.env.peers.values()].map((peer) => this.tune(peer, quality)),
-    );
+    const tuned = await Promise.all([...this.env.links()].map((link) => this.tune(link, quality)));
 
     const { store, translate } = this.env;
     if (captureUpdated && tuned.every(Boolean)) {
@@ -379,8 +377,8 @@ export class LocalScreen {
     audio.onended = null;
     capture.audio = null;
 
-    for (const peer of this.env.peers.values()) {
-      peer.screenAudioSender = removeSender(peer, peer.screenAudioSender);
+    for (const link of this.env.links()) {
+      link.screenAudioSender = removeSender(link, link.screenAudioSender);
     }
     this.env.store.set({ localScreen: this.local });
     this.env.publish();
@@ -391,10 +389,10 @@ export class LocalScreen {
    * VP9 first, then the encoder's ceiling for the preset. True when the browser
    * took the parameters; the codec order is an optimisation and never decides that.
    */
-  private async tune(peer: Peer, quality: ScreenShareQualityId): Promise<boolean> {
-    const sender = peer.screenVideoSender;
+  private async tune(link: Link, quality: ScreenShareQualityId): Promise<boolean> {
+    const sender = link.screenVideoSender;
     if (!sender) return true;
-    preferScreenCodecs(peer, sender);
+    preferScreenCodecs(link, sender);
 
     let parameters: RTCRtpSendParameters;
     try {
@@ -430,9 +428,9 @@ export class LocalScreen {
   }
 }
 
-function preferScreenCodecs(peer: Peer, sender: RTCRtpSender): void {
+function preferScreenCodecs(link: Link, sender: RTCRtpSender): void {
   try {
-    const transceiver = peer.connection.getTransceivers().find((item) => item.sender === sender);
+    const transceiver = link.connection.getTransceivers().find((item) => item.sender === sender);
     const capabilities =
       typeof RTCRtpSender !== "undefined" && RTCRtpSender.getCapabilities
         ? RTCRtpSender.getCapabilities("video")
@@ -469,10 +467,10 @@ async function carry(sender: RTCRtpSender, capture: CameraCapture): Promise<void
   sender.setStreams?.(capture.stream);
 }
 
-function removeSender(peer: Peer, sender: RTCRtpSender | null): null {
+function removeSender(link: Link, sender: RTCRtpSender | null): null {
   if (sender) {
     try {
-      peer.connection.removeTrack(sender);
+      link.connection.removeTrack(sender);
     } catch {
       // A closing connection has already released it.
     }

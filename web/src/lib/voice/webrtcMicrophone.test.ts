@@ -8,7 +8,7 @@ import { DEFAULT_SETTINGS, type VoiceSettings } from "./settings";
 import { VoiceStateStore } from "./store";
 import type { SpeechDetector } from "./vad";
 import { LocalMicrophone } from "./webrtcMicrophone";
-import type { Peer } from "./webrtcPeer";
+import type { Link } from "./webrtcPeer";
 
 vi.mock("./micPipeline", async (importOriginal) => ({
   ...(await importOriginal<typeof MicPipeline>()),
@@ -39,7 +39,7 @@ let store: VoiceStateStore;
 let speech: { add: ReturnType<typeof vi.fn>; remove: ReturnType<typeof vi.fn> };
 let onDeviceLost: Mock<() => void>;
 let microphone: LocalMicrophone;
-let peers: Map<string, Peer>;
+let peers: Map<string, Link>;
 
 beforeEach(() => {
   vi.mocked(captureMicrophone).mockReset();
@@ -52,9 +52,9 @@ beforeEach(() => {
     selfUserId: "u-a",
     store,
     speech: speech as unknown as SpeechDetector,
-    peers,
+    links: () => peers.values(),
     applyEncoding: vi.fn(async () => undefined),
-    rebuildPeer: vi.fn(async () => undefined),
+    rebuildLink: vi.fn(async () => undefined),
     onDeviceLost,
   });
 });
@@ -188,7 +188,7 @@ describe("LocalMicrophone", () => {
 
     function peerWithSender(): { sender: { replaceTrack: Mock } } {
       const sender = { replaceTrack: vi.fn(async () => undefined) };
-      peers.set("u-z", { micSender: sender } as unknown as Peer);
+      peers.set("u-z", { micSender: sender } as unknown as Link);
       return { sender };
     }
 

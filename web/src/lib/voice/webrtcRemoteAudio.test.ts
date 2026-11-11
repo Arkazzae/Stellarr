@@ -4,7 +4,7 @@ import { DEFAULT_PARTICIPANT_PREFERENCE } from "./participantPreferences";
 import { RemoteVoiceMixer } from "./remoteMixer";
 import { DEFAULT_SETTINGS, type VoiceSettings } from "./settings";
 import type { SpeechDetector } from "./vad";
-import { createPeer, type Peer } from "./webrtcPeer";
+import { createParticipant, type Participant } from "./webrtcParticipant";
 import { RemoteAudio } from "./webrtcRemoteAudio";
 
 let streamCounter = 0;
@@ -22,20 +22,17 @@ function endTrack(track: MediaStreamTrack): void {
 }
 
 let settings: VoiceSettings;
-let peers: Map<string, Peer>;
+let peers: Map<string, Participant>;
 let speech: { add: ReturnType<typeof vi.fn>; remove: ReturnType<typeof vi.fn> };
 let changed: Mock<() => void>;
 let forgetOutputDevice: Mock<() => void>;
 let audio: RemoteAudio;
 
-function addPeer(userId = "u-z"): Peer {
-  const peer = createPeer({
+function addPeer(userId = "u-z"): Participant {
+  const peer = createParticipant({
     user: { userId, displayName: "Ola", muted: false },
-    selfUserId: "u-a",
-    iceServers: [],
     preference: { ...DEFAULT_PARTICIPANT_PREFERENCE },
     createVoice: () => audio.createVoice(),
-    recovery: { graceMs: 10, maxAttempts: 3, onEscalate: vi.fn(), onExhausted: vi.fn() },
   });
   peers.set(userId, peer);
   return peer;
@@ -59,15 +56,8 @@ beforeEach(() => {
   speech = { add: vi.fn(async () => true), remove: vi.fn() };
   changed = vi.fn<() => void>();
   forgetOutputDevice = vi.fn<() => void>();
-  vi.stubGlobal(
-    "RTCPeerConnection",
-    class {
-      remoteDescription = null;
-      addIceCandidate = vi.fn();
-    },
-  );
   audio = new RemoteAudio({
-    peers,
+    people: peers,
     speech: speech as unknown as SpeechDetector,
     settings: () => settings,
     forgetOutputDevice,
@@ -344,7 +334,7 @@ describe("RemoteAudio stream lifecycle", () => {
 });
 
 describe("RemoteAudio shared-screen sound", () => {
-  const announceScreen = (peer: Peer, streamId: string | null) =>
+  const announceScreen = (peer: Participant, streamId: string | null) =>
     peer.media.announce({ screenStreamId: streamId, cameraStreamId: null });
 
   function screenSinks(): HTMLAudioElement[] {

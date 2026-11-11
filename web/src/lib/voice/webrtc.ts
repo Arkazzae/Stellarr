@@ -2,11 +2,7 @@ import type { Translator } from "@/i18n";
 import { translateForDocument } from "@/i18n/defaultLocale";
 import type { ChannelId, RtcConfig, UserId } from "@/lib/api/types";
 import type { RealtimeClient, VoiceSignal } from "@/lib/realtime/types";
-import {
-  encodeRtcDescription,
-  encodeRtcState,
-  RTC_PROTOCOL_VERSION,
-} from "@/lib/rtc/protocol";
+import { decodeRtcState, encodeRtcState, RTC_PROTOCOL_VERSION } from "@/lib/rtc/protocol";
 import { profileFor } from "./audioProfiles";
 import { AdaptiveBitrateController } from "./bitrate";
 import { cameraIsSupported } from "./camera";
@@ -35,9 +31,16 @@ import { CallHealth } from "./webrtcHealth";
 import { LocalCamera, LocalScreen, type LocalVideoEnv } from "./webrtcLocalVideo";
 import { LocalMicrophone } from "./webrtcMicrophone";
 import { Mesh } from "./webrtcMesh";
-import { Negotiator, type Peer } from "./webrtcPeer";
+import {
+  receiveRemoteState,
+  receiveRemoteTrack,
+  type Participant,
+  type ParticipantMediaEnv,
+} from "./webrtcParticipant";
 import { RemoteAudio } from "./webrtcRemoteAudio";
 import { planDeviceChange, SettingsQueue, type SettingsChange } from "./webrtcSettings";
+import { Sfu } from "./webrtcSfu";
+import type { CallTopology } from "./webrtcTopology";
 
 export { degradedNotice, rtcIncompatibility } from "./webrtcErrors";
 
@@ -67,8 +70,16 @@ export interface WebRtcVoiceClientOptions {
   participantPreferences?: ParticipantPreferencesStore;
   /** Stats cadence. Observational only: media never depends on it. */
   statsIntervalMs?: number;
-  /** Grace before a `disconnected` peer is nudged with an ICE restart. */
+  /**
+   * Grace before a `disconnected` peer is nudged with an ICE restart, or,
+   * behind a media server, before its connection is replaced.
+   */
   recoveryGraceMs?: number;
+  /**
+   * Behind a media server: the pause before a lost connection is replaced.
+   * Each further replacement in a row waits twice as long.
+   */
+  mediaReplacementPauseMs?: number;
   /** Bootstrap contract used to refuse an incompatible media implementation. */
   rtc: Pick<RtcConfig, "protocolVersion" | "topology"> & {
     capabilities?: Pick<RtcConfig["capabilities"], "camera">;
@@ -76,32 +87,38 @@ export interface WebRtcVoiceClientOptions {
 }
 
 /**
- * Peer-to-peer voice over WebRTC, signalled through the SignalR hub.
+ * Voice over WebRTC, signalled through the SignalR hub.
  *
- * Every person in the channel gets a direct connection to every other: a full
- * mesh, which suits a handful of friends on one instance. This class is the
- * facade the UI sees through `VoiceClient`; the work lives in its siblings:
- * `webrtcPeer` (connections and negotiation), `webrtcRemoteAudio` and
- * `webrtcRemoteMedia` (what the others sound like and which of their streams
- * is which), `webrtcMicrophone`, `webrtcLocalVideo` (what they hear and see),
- * `webrtcSettings` (live changes) and `webrtcHealth` (proof that audio flows,
- * and recovery).
+ * This class is the facade the UI sees through `VoiceClient`. It keeps apart
+ * the two things a call is made of. The people (`webrtcParticipant`,
+ * `webrtcRemoteAudio`, `webrtcRemoteMedia`) are what the others sound like and
+ * which of their streams is which. The connections belong to a `CallTopology`
+ * (`webrtcTopology`), the one the bootstrap names: a full mesh (`webrtcMesh`,
+ * `webrtcMeshHealth`), where every person in the channel gets a direct
+ * connection to every other, which suits a handful of friends on one instance;
+ * or one connection to Stellarr Media (`webrtcSfu`, `webrtcSfuDirectory`,
+ * `webrtcSfuHealth`), which forwards everybody's tracks. Around both sit
+ * `webrtcPeer` (a connection and its negotiation), `webrtcMicrophone` and
+ * `webrtcLocalVideo` (what the others hear and see), `webrtcSettings` (live
+ * changes) and `webrtcHealth` (the stats and credential clocks, and the proof
+ * that audio flows).
  */
 export class WebRtcVoiceClient implements VoiceClient {
   private readonly store = new VoiceStateStore();
-  private readonly peers = new Map<UserId, Peer>();
+  /** Everyone else in the call. Only the topology adds or removes a person. */
+  private readonly people = new Map<UserId, Participant>();
   private readonly unsubscribes: Array<() => void> = [];
   private readonly speech: SpeechDetector;
   private readonly lifecycle: LifecycleWatcher;
   private readonly bitrate: AdaptiveBitrateController;
   private readonly preferences: ParticipantPreferencesStore;
-  private readonly negotiator: Negotiator;
   private readonly remoteAudio: RemoteAudio;
+  private readonly personMedia: ParticipantMediaEnv;
   private readonly microphone: LocalMicrophone;
   private readonly camera: LocalCamera;
   private readonly screen: LocalScreen;
   private readonly health: CallHealth;
-  private readonly mesh: Mesh;
+  private readonly topology: CallTopology;
   private readonly settingsQueue: SettingsQueue;
   private readonly t: Translator;
 
@@ -136,10 +153,10 @@ export class WebRtcVoiceClient implements VoiceClient {
           this.selfLevel = reading.level;
           this.selfSpeaking = reading.speaking && !this.store.getSnapshot().muted;
         } else {
-          const peer = this.peers.get(id);
-          if (!peer) return;
-          peer.level = reading.level;
-          peer.speaking = reading.speaking;
+          const person = this.people.get(id);
+          if (!person) return;
+          person.level = reading.level;
+          person.speaking = reading.speaking;
         }
         this.publishPeers();
       },
@@ -151,29 +168,25 @@ export class WebRtcVoiceClient implements VoiceClient {
       },
     });
 
-    this.negotiator = new Negotiator({
-      settings: () => this.settings,
-      bitrate: () => this.bitrate.getBitrate(),
-      send: (peer, type, sdp) =>
-        this.send({ kind: type, toUserId: peer.userId, payload: encodeRtcDescription(type, sdp) }),
-      remoteMediaLearned: (peer) => this.remoteAudio.route(peer),
-      screenAudioStereo: () => this.screen.stereo,
-    });
     this.remoteAudio = new RemoteAudio({
-      peers: this.peers,
+      people: this.people,
       speech: this.speech,
       settings: () => this.settings,
       forgetOutputDevice: () => options.updateSettings?.({ outputDeviceId: null }),
       changed: () => this.publishPeers(),
     });
+    this.personMedia = {
+      remoteAudio: this.remoteAudio,
+      changed: () => this.publishPeers(),
+    };
     this.microphone = new LocalMicrophone({
       translate: this.t,
       selfUserId: options.selfUserId,
       store: this.store,
       speech: this.speech,
-      peers: this.peers,
-      applyEncoding: () => this.mesh.applyMicEncoding(),
-      rebuildPeer: (peer) => this.mesh.rebuild(peer),
+      links: () => this.topology.links(),
+      applyEncoding: () => this.topology.applyMicEncoding(),
+      rebuildLink: (link) => this.topology.rebuild(link),
       onDeviceLost: () => {
         void this.recaptureAfterDeviceLoss();
       },
@@ -183,18 +196,15 @@ export class WebRtcVoiceClient implements VoiceClient {
       realtime: options.realtime,
       ice: options.ice,
       store: this.store,
-      peers: this.peers,
       bitrate: this.bitrate,
       statsIntervalMs: options.statsIntervalMs,
-      recoveryGraceMs: options.recoveryGraceMs,
       activeSession: () => this.activeSession(),
-      reoffer: (peer) => this.negotiator.offer(peer),
-      applyMicEncoding: () => this.mesh.applyMicEncoding(),
+      topology: () => this.topology,
     });
     const video: LocalVideoEnv = {
       translate: this.t,
       store: this.store,
-      peers: this.peers,
+      links: () => this.topology.links(),
       settings: () => this.settings,
       session: () => this.activeSession(),
       isStale: (session) => this.isStale(session),
@@ -203,7 +213,7 @@ export class WebRtcVoiceClient implements VoiceClient {
         this.publishPeers();
         void this.broadcastState();
       },
-      renegotiate: () => this.mesh.renegotiateAll(),
+      renegotiate: () => this.topology.renegotiate(),
     };
     this.camera = new LocalCamera({
       ...video,
@@ -217,30 +227,74 @@ export class WebRtcVoiceClient implements VoiceClient {
         }),
     });
     this.screen = new LocalScreen(video);
-    this.mesh = new Mesh(this.peers, {
-      selfUserId: options.selfUserId,
-      ice: options.ice,
-      preferences: this.preferences,
-      negotiator: this.negotiator,
-      remoteAudio: this.remoteAudio,
-      microphone: this.microphone,
-      camera: this.camera,
-      screen: this.screen,
-      health: this.health,
-      bitrate: () => this.bitrate.getBitrate(),
-      send: (signal) => this.send(signal),
-      announceTo: (peer) => {
-        void this.send({ kind: "state", toUserId: peer.userId, payload: this.statePayload() });
-      },
-      session: () => this.session,
-      isStale: (session) => this.isStale(session),
-      changed: () => this.publishPeers(),
-    });
+    // `rtcIncompatibility` lets a call start with these two topologies only,
+    // so whatever else the bootstrap says never gets a connection.
+    this.topology =
+      options.rtc.topology === "sfu" ? this.createSfu() : this.createMesh();
     this.settingsQueue = new SettingsQueue(
       (change) => this.applySettingsNow(change),
       () => this.disposed,
     );
     this.store.set({ cameraSupported: this.cameraIsSupported() });
+  }
+
+  private createMesh(): Mesh {
+    const { options } = this;
+    return new Mesh(this.people, {
+      selfUserId: options.selfUserId,
+      translate: this.t,
+      store: this.store,
+      ice: options.ice,
+      preferences: this.preferences,
+      remoteAudio: this.remoteAudio,
+      microphone: this.microphone,
+      camera: this.camera,
+      screen: this.screen,
+      recoveryGraceMs: options.recoveryGraceMs,
+      settings: () => this.settings,
+      bitrate: () => this.bitrate.getBitrate(),
+      screenAudioStereo: () => this.screen.stereo,
+      send: (signal) => this.send(signal),
+      announceTo: (userId) => {
+        void this.send({ kind: "state", toUserId: userId, payload: this.statePayload() });
+      },
+      receiveTrack: (person, track, stream) =>
+        receiveRemoteTrack(this.personMedia, person, track, stream),
+      session: () => this.session,
+      activeSession: () => this.activeSession(),
+      isStale: (session) => this.isStale(session),
+      changed: () => this.publishPeers(),
+      transportChanged: () => this.health.syncTransport(),
+    });
+  }
+
+  private createSfu(): Sfu {
+    const { options } = this;
+    return new Sfu(this.people, {
+      selfUserId: options.selfUserId,
+      translate: this.t,
+      store: this.store,
+      realtime: options.realtime,
+      ice: options.ice,
+      preferences: this.preferences,
+      remoteAudio: this.remoteAudio,
+      personMedia: this.personMedia,
+      microphone: this.microphone,
+      camera: this.camera,
+      screen: this.screen,
+      recoveryGraceMs: options.recoveryGraceMs,
+      replacementPauseMs: options.mediaReplacementPauseMs,
+      settings: () => this.settings,
+      bitrate: () => this.bitrate.getBitrate(),
+      screenAudioStereo: () => this.screen.stereo,
+      channelId: () => this.channelId,
+      announceTo: (userId) => {
+        void this.send({ kind: "state", toUserId: userId, payload: this.statePayload() });
+      },
+      activeSession: () => this.activeSession(),
+      changed: () => this.publishPeers(),
+      transportChanged: () => this.health.syncTransport(),
+    });
   }
 
   getSnapshot = (): VoiceState => this.store.getSnapshot();
@@ -301,12 +355,10 @@ export class WebRtcVoiceClient implements VoiceClient {
     }
     this.store.set({
       connection: "connecting",
-      transport: {
-        signaling: "connecting",
-        media: "ready",
-        peerCount: 0,
-        connectedPeerCount: 0,
-      },
+      // Nobody is connected yet. That reads `ready` in the mesh, where a
+      // correct join with nobody else needs no connection, and `connecting`
+      // behind a media server, which this side has to reach first.
+      transport: { signaling: "connecting", ...this.topology.transport() },
     });
 
     // Refresh the ICE configuration *before* anything can use it. The server's
@@ -334,6 +386,7 @@ export class WebRtcVoiceClient implements VoiceClient {
 
     this.markConnected();
     this.health.startStats();
+    await this.topology.seated();
   }
 
   async leave(): Promise<void> {
@@ -342,7 +395,7 @@ export class WebRtcVoiceClient implements VoiceClient {
     this.session += 1;
 
     for (const unsubscribe of this.unsubscribes.splice(0)) unsubscribe();
-    this.mesh.dropAll();
+    this.topology.dropAll();
 
     this.health.stop();
     this.lifecycle.stop();
@@ -385,32 +438,32 @@ export class WebRtcVoiceClient implements VoiceClient {
   }
 
   setPeerVolume(userId: UserId, volume: number): void {
-    const peer = this.peers.get(userId);
+    const person = this.people.get(userId);
     const next = clampParticipantVolume(volume);
-    if (!peer || peer.playbackVolume === next) return;
-    peer.playbackVolume = next;
+    if (!person || person.playbackVolume === next) return;
+    person.playbackVolume = next;
     this.preferences.set(userId, { volume: next });
-    this.remoteAudio.applyVolume(peer);
+    this.remoteAudio.applyVolume(person);
     this.publishPeers();
   }
 
   setPeerGate(userId: UserId, gated: boolean): void {
-    const peer = this.peers.get(userId);
+    const person = this.people.get(userId);
     const next = Boolean(gated);
-    if (!peer || peer.gated === next) return;
-    peer.gated = next;
+    if (!person || person.gated === next) return;
+    person.gated = next;
     this.preferences.set(userId, { gated: next });
-    this.remoteAudio.applyGate(peer);
+    this.remoteAudio.applyGate(person);
     this.publishPeers();
   }
 
   setPeerSuppression(userId: UserId, suppressed: boolean): void {
-    const peer = this.peers.get(userId);
+    const person = this.people.get(userId);
     const next = Boolean(suppressed);
-    if (!peer || peer.suppressed === next) return;
-    peer.suppressed = next;
+    if (!person || person.suppressed === next) return;
+    person.suppressed = next;
     this.preferences.set(userId, { suppressed: next });
-    this.remoteAudio.applySuppression(peer);
+    this.remoteAudio.applySuppression(person);
     this.publishPeers();
   }
 
@@ -470,9 +523,9 @@ export class WebRtcVoiceClient implements VoiceClient {
     if (previous.opusProfile !== next.opusProfile) {
       const profile = profileFor(next);
       this.bitrate.setCeiling(profile.maxBitrate, profile.minBitrate);
-      await this.mesh.applyMicEncoding();
+      await this.topology.applyMicEncoding();
       // The fmtp ceiling lives in the SDP, so the profile change needs a pass.
-      await this.mesh.renegotiateAll();
+      await this.topology.renegotiate();
     }
 
     if (previous.screenShareQuality !== next.screenShareQuality) {
@@ -487,7 +540,7 @@ export class WebRtcVoiceClient implements VoiceClient {
       change.recaptureMic,
       () => this.isStale(session) || this.supersedesCapture(next),
     );
-    // A peer that missed an earlier state frame is caught up by this one.
+    // A person who missed an earlier state frame is caught up by this one.
     if (swapped) void this.broadcastState();
   }
 
@@ -594,7 +647,7 @@ export class WebRtcVoiceClient implements VoiceClient {
         void this.handleDevicesChanged(devices);
       }),
       realtime.on("VoiceParticipantChanged", (event) => {
-        if (event.channelId === this.channelId) void this.mesh.reconcile(event.participants);
+        if (event.channelId === this.channelId) void this.topology.reconcile(event.participants);
       }),
       realtime.on("VoiceSessionReplaced", (event) => {
         if (event.channelId === this.channelId) void this.endWithError(sessionReplacedError);
@@ -609,10 +662,36 @@ export class WebRtcVoiceClient implements VoiceClient {
         if (event.channelId === this.channelId) void this.leave();
       }),
       realtime.on("VoiceSignal", (signal) => {
-        if (signal.channelId === this.channelId) void this.mesh.handleSignal(signal);
+        if (signal.channelId !== this.channelId) return;
+        if (signal.kind === "state") this.receiveState(signal);
+        else void this.topology.handleSignal(signal);
+      }),
+      realtime.on("MediaSignal", (signal) => {
+        if (signal.channelId === this.channelId) void this.topology.handleMediaSignal(signal);
+      }),
+      realtime.on("MediaSessionClosed", (event) => {
+        if (event.channelId === this.channelId) this.topology.mediaSessionClosed(event);
       }),
       realtime.subscribeStatus(() => this.onRealtimeStatus()),
     );
+  }
+
+  /**
+   * Another person's account of themselves. It travels from browser to
+   * browser in every topology, so it is about the person and never about how
+   * their media reaches this side.
+   */
+  private receiveState(signal: VoiceSignal): void {
+    const from = signal.fromUserId;
+    if (!from || from === this.options.selfUserId) return;
+    const person = this.people.get(from);
+    if (!person) return;
+    try {
+      const state = decodeRtcState(signal.payload);
+      if (state) receiveRemoteState(this.personMedia, person, state);
+    } catch {
+      // A single bad frame must not tear down the session.
+    }
   }
 
   /** Leave, then show why: the server ended this seat, not the person. */
@@ -627,20 +706,21 @@ export class WebRtcVoiceClient implements VoiceClient {
    *
    * The HTTP endpoint has already moved this SignalR connection's authoritative
    * seat. Re-invoking JoinVoice confirms that state and asks the hub for the
-   * target snapshot; only peer connections are rebuilt, because they belong to
-   * the old room.
+   * target snapshot; only the connections and the people are dropped, because
+   * they belong to the old room. Behind a media server the new seat then
+   * opens a media session of its own.
    */
   private async followMove(targetChannelId: ChannelId): Promise<void> {
     if (this.channelId === null || this.channelId === targetChannelId) return;
 
-    this.mesh.dropAll();
+    this.topology.dropAll();
     this.channelId = targetChannelId;
     this.store.set({
       channelId: targetChannelId,
       connection: "connecting",
       transport: {
         signaling: "connecting",
-        media: this.microphone.capture === null ? "idle" : "ready",
+        media: this.microphone.capture === null ? "idle" : this.topology.transport().media,
         peerCount: 0,
         connectedPeerCount: 0,
       },
@@ -656,15 +736,19 @@ export class WebRtcVoiceClient implements VoiceClient {
     }
     if (this.disposed || this.channelId !== targetChannelId) return;
     this.markConnected();
+    // The seat in the new room needs a media session of its own.
+    await this.topology.seated();
   }
 
   /**
    * Follow the hub without tearing down healthy media.
    *
-   * A SignalR reconnect says nothing about the peer connections: they are
-   * direct, and they usually keep working perfectly while the hub is away. So
-   * the state shows "reconnecting" for honesty, and on recovery we rejoin the
-   * voice group and re-announce, rather than rebuilding anything that is fine.
+   * In the mesh a SignalR reconnect says nothing about the peer connections:
+   * they are direct, and they usually keep working perfectly while the hub is
+   * away. So the state shows "reconnecting" for honesty, and on recovery we
+   * rejoin the voice group and re-announce, rather than rebuilding anything
+   * that is fine. Behind a media server the reconnect ended the seat and its
+   * media session with it, so the rejoin opens a new one.
    */
   private onRealtimeStatus(): void {
     if (!this.channelId) return;
@@ -698,14 +782,17 @@ export class WebRtcVoiceClient implements VoiceClient {
     this.store.set({ connection: "connected", error: null });
     // Whoever joined while we were away has no idea what our state is.
     void this.broadcastState();
-    await this.health.repairUnhealthy();
+    // The reconnect ended the seat, and with it a media session if there was
+    // one; the mesh's direct connections outlive it.
+    await this.topology.seated();
+    await this.topology.repairUnhealthy();
   }
 
   private async send(signal: Omit<VoiceSignal, "channelId" | "protocolVersion">): Promise<void> {
     const channelId = this.channelId;
     if (!channelId) return;
     const session = this.session;
-    if (signal.toUserId !== undefined && !this.peers.has(signal.toUserId)) return;
+    if (signal.toUserId !== undefined && !this.people.has(signal.toUserId)) return;
     try {
       await this.options.realtime.sendVoiceSignal({
         ...signal,
@@ -757,7 +844,7 @@ export class WebRtcVoiceClient implements VoiceClient {
     }
     await this.speech.resume();
     await this.remoteAudio.resume();
-    await this.health.repairUnhealthy();
+    await this.topology.repairUnhealthy();
   }
 
   /** Synchronous by design: callers invoke it from an active user gesture. */
@@ -834,18 +921,18 @@ export class WebRtcVoiceClient implements VoiceClient {
     this.store.set({
       peers: [
         this.selfPeer(this.selfSpeaking),
-        ...[...this.peers.values()].map((peer) => ({
-          userId: peer.userId,
-          displayName: peer.displayName,
-          muted: peer.muted,
-          speaking: peer.speaking && !peer.muted,
-          level: peer.level,
-          playbackVolume: peer.playbackVolume,
-          gated: peer.gated,
-          suppressed: peer.suppressed,
+        ...[...this.people.values()].map((person) => ({
+          userId: person.userId,
+          displayName: person.displayName,
+          muted: person.muted,
+          speaking: person.speaking && !person.muted,
+          level: person.level,
+          playbackVolume: person.playbackVolume,
+          gated: person.gated,
+          suppressed: person.suppressed,
           self: false,
-          screen: peer.media.screen,
-          camera: peer.media.camera,
+          screen: person.media.screen,
+          camera: person.media.camera,
         })),
       ],
     });

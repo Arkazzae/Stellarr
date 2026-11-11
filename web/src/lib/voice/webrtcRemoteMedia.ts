@@ -32,13 +32,27 @@ export class RemoteMedia {
   private screenId: string | null = null;
   private cameraId: string | null = null;
 
-  addAudio(stream: MediaStream): void {
-    this.audio.set(stream.id, stream);
-    this.soundIds.add(stream.id);
+  /**
+   * File an audio stream under `id`. That is the stream's own id unless the
+   * one who knows whose track it is names another, as a media server's
+   * directory does: there the browser's stream id is only a hint fixed when
+   * the section was made.
+   */
+  addAudio(stream: MediaStream, id: string = stream.id): void {
+    this.audio.set(id, stream);
+    this.soundIds.add(id);
   }
 
   hasAudio(streamId: string): boolean {
     return this.audio.has(streamId);
+  }
+
+  /** Whether this very stream is filed as audio, under whatever id. */
+  holdsAudio(stream: MediaStream): boolean {
+    for (const filed of this.audio.values()) {
+      if (filed === stream) return true;
+    }
+    return false;
   }
 
   /** False when the stream was not known, so a late `ended` event does nothing. */
@@ -47,11 +61,12 @@ export class RemoteMedia {
     return this.audio.delete(streamId);
   }
 
-  addVideo(stream: MediaStream): void {
-    this.video.set(stream.id, stream);
-    this.videoIds.add(stream.id);
+  /** File a video stream under `id`; see `addAudio` for when that is not its own id. */
+  addVideo(stream: MediaStream, id: string = stream.id): void {
+    this.video.set(id, stream);
+    this.videoIds.add(id);
     // The browser puts a stream's tracks on it before it reports any of them.
-    if (stream.getAudioTracks().length > 0) this.soundIds.add(stream.id);
+    if (stream.getAudioTracks().length > 0) this.soundIds.add(id);
   }
 
   /**
@@ -70,7 +85,15 @@ export class RemoteMedia {
 
   /** The remote description names the video msids before any track event fires. */
   learnFromSdp(sdp: string | undefined | null): void {
-    for (const id of videoStreamIds(sdp)) this.videoIds.add(id);
+    for (const id of videoStreamIds(sdp)) this.learnVideo(id);
+  }
+
+  /**
+   * A stream id is known to carry video before its track arrives, from a
+   * remote description or a media server's directory.
+   */
+  learnVideo(streamId: string): void {
+    this.videoIds.add(streamId);
   }
 
   /**

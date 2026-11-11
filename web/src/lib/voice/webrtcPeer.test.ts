@@ -2,14 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { DEFAULT_PARTICIPANT_PREFERENCE } from "./participantPreferences";
 import { DEFAULT_SETTINGS, type VoiceSettings } from "./settings";
-import {
-  applyEncoding,
-  createPeer,
-  Negotiator,
-  type NegotiatorEnv,
-  type Peer,
-  type PeerInit,
-} from "./webrtcPeer";
+import { createPeer, type PeerInit } from "./webrtcMesh";
+import { applyEncoding, Negotiator, type Link, type NegotiatorEnv } from "./webrtcPeer";
+import { RemoteMedia } from "./webrtcRemoteMedia";
 
 const SDP = [
   "v=0",
@@ -68,20 +63,26 @@ let created: FakeConnection[];
 let settings: VoiceSettings;
 let sent: Array<{ type: string; sdp: string }>;
 let env: NegotiatorEnv;
-let learned: Peer[];
+let learned: Link[];
+/** What the people behind the link are known to send, fed by `remoteMediaLearned`. */
+let remoteMedia: RemoteMedia;
 
 beforeEach(() => {
   created = [];
   settings = { ...DEFAULT_SETTINGS };
   sent = [];
   learned = [];
+  remoteMedia = new RemoteMedia();
   env = {
     settings: () => settings,
     bitrate: () => 96_000,
-    send: async (_peer, type, sdp) => {
+    send: async (_link, type, sdp) => {
       sent.push({ type, sdp });
     },
-    remoteMediaLearned: (peer) => learned.push(peer),
+    remoteMediaLearned: (link, sdp) => {
+      remoteMedia.learnFromSdp(sdp);
+      learned.push(link);
+    },
     screenAudioStereo: () => true,
   };
   vi.stubGlobal(
@@ -124,13 +125,14 @@ function peerInit(overrides: Partial<PeerInit> = {}): PeerInit {
   };
 }
 
-function newPeer(userId = "u-z", selfUserId = "u-a"): Peer {
+/** The connection to a mesh peer, which is what negotiation works on. */
+function newPeer(userId = "u-z", selfUserId = "u-a"): Link {
   return createPeer(
     peerInit({ user: { userId, displayName: "Ola", muted: false }, selfUserId }),
-  );
+  ).link;
 }
 
-function fake(peer: Peer): FakeConnection {
+function fake(peer: Link): FakeConnection {
   return peer.connection as unknown as FakeConnection;
 }
 
@@ -172,7 +174,7 @@ describe("createPeer", () => {
       }),
     );
 
-    expect(peer).toMatchObject({
+    expect(peer.person).toMatchObject({
       displayName: "Ola",
       muted: true,
       playbackVolume: 40,
@@ -201,11 +203,11 @@ describe("createPeer", () => {
       peerInit({ recovery: { graceMs: 10, maxAttempts: 1, onEscalate, onExhausted: vi.fn() } }),
     );
 
-    peer.watchdog.arm();
+    peer.link.watchdog.arm();
     vi.advanceTimersByTime(10);
 
-    expect(onEscalate).toHaveBeenCalledWith(peer);
-    peer.watchdog.dispose();
+    expect(onEscalate).toHaveBeenCalledWith(peer.link);
+    peer.link.watchdog.dispose();
     vi.useRealTimers();
   });
 });
@@ -394,8 +396,8 @@ describe("Negotiator.receive", () => {
 
     await new Negotiator(env).receive(peer, { type: "offer", sdp: withVideo });
 
-    expect(peer.media.roleOf("share-stream")).toBe("screen");
-    expect(peer.media.roleOf("mic-stream")).toBe("microphone");
+    expect(remoteMedia.roleOf("share-stream")).toBe("screen");
+    expect(remoteMedia.roleOf("mic-stream")).toBe("microphone");
   });
 
   it("applies queued candidates in order once the description is in", async () => {

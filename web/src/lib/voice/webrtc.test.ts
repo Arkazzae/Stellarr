@@ -1204,6 +1204,50 @@ describe("WebRtcVoiceClient — live settings changes", () => {
     client.dispose();
   });
 
+  it("rebuilds the one connection whose sender refuses even the rollback", async () => {
+    const client = build();
+    await client.join(CHANNEL);
+    realtime.emit("VoiceParticipantChanged", {
+      channelId: CHANNEL,
+      participants: [
+        { userId: "u-x", displayName: "X", muted: false },
+        { userId: "u-z", displayName: "Z", muted: false },
+      ],
+    });
+    await vi.waitFor(() => expect(FakePeerConnection.instances).toHaveLength(2));
+    const [brokenPc, refusingPc] = FakePeerConnection.instances;
+    const broken = brokenPc!.transceivers[0]!.sender;
+    // The swap goes through on the first connection, and its way back does not.
+    broken.replaceTrack
+      .mockResolvedValueOnce(undefined)
+      .mockRejectedValueOnce(new Error("connection broken"));
+    refusingPc!.transceivers[0]!.sender.replaceTrack.mockRejectedValueOnce(
+      new Error("sender closed"),
+    );
+    const replacement = fakeTrack();
+    vi.mocked(navigator.mediaDevices.getUserMedia).mockResolvedValueOnce(
+      fakeStream(replacement),
+    );
+
+    await client.applySettings({ ...settings, inputDeviceId: "other-mic" });
+
+    expect(brokenPc!.close).toHaveBeenCalled();
+    expect(refusingPc!.close).not.toHaveBeenCalled();
+    expect(FakePeerConnection.instances).toHaveLength(3);
+    // The person stays in the call, on a new connection that carries the
+    // microphone still running.
+    expect(
+      client
+        .getSnapshot()
+        .peers.filter((peer) => !peer.self)
+        .map((peer) => peer.userId)
+        .sort(),
+    ).toEqual(["u-x", "u-z"]);
+    expect(FakePeerConnection.instances[2]!.transceivers[0]!.sender.track).toBe(track);
+    expect(replacement.stop).toHaveBeenCalledOnce();
+    client.dispose();
+  });
+
   it("persists the default-device fallback when the active microphone ends", async () => {
     settings = { ...settings, inputDeviceId: "usb-mic" };
     const updateSettings = vi.fn();

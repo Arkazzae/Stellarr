@@ -5,7 +5,7 @@ import { polish } from "@/test/translators";
 import { DEFAULT_SETTINGS, type VoiceSettings } from "./settings";
 import { VoiceStateStore } from "./store";
 import { LocalCamera, LocalScreen, type LocalCameraEnv } from "./webrtcLocalVideo";
-import type { Peer } from "./webrtcPeer";
+import type { Link } from "./webrtcPeer";
 
 function track(kind: "audio" | "video", channelCount = 2): MediaStreamTrack {
   return {
@@ -56,21 +56,20 @@ class FakeConnection {
     this.senders.map((sender) => ({ sender, mid: null, setCodecPreferences: vi.fn() }));
 }
 
-function peer(id: string): Peer {
+function fakeLink(): Link {
   return {
-    userId: id,
     connection: new FakeConnection(),
     cameraSender: null,
     screenVideoSender: null,
     screenAudioSender: null,
-  } as unknown as Peer;
+  } as unknown as Link;
 }
 
-const connectionOf = (item: Peer) => item.connection as unknown as FakeConnection;
+const connectionOf = (item: Link) => item.connection as unknown as FakeConnection;
 const senderOf = (sender: RTCRtpSender | null) => sender as unknown as FakeSender;
 
 let store: VoiceStateStore;
-let peers: Map<string, Peer>;
+let peers: Map<string, Link>;
 let settings: VoiceSettings;
 let session: number | null;
 let publish: Mock<() => void>;
@@ -104,7 +103,7 @@ beforeEach(() => {
   const env: LocalCameraEnv = {
     translate: polish,
     store,
-    peers,
+    links: () => peers.values(),
     settings: () => settings,
     session: () => session,
     isStale: (candidate) => candidate !== session,
@@ -122,8 +121,8 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function addPeer(id = "u-z"): Peer {
-  const added = peer(id);
+function addPeer(id = "u-z"): Link {
+  const added = fakeLink();
   peers.set(id, added);
   return added;
 }
@@ -267,7 +266,7 @@ describe("LocalCamera.stop and release", () => {
   it("gives a connection made later the camera that is on", async () => {
     nextCamera();
     await camera.start();
-    const late = peer("u-late");
+    const late = fakeLink();
 
     camera.addTo(late);
     camera.addTo(late);
