@@ -46,8 +46,9 @@ WORKDIR /src/server/Stellarr.Api
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble AS final
 
 # musl: the RustFS binary comes from an Alpine-based image.
+# libatomic1: the Node binary copied below links against it.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates coturn curl musl nginx openssl supervisor \
+    && apt-get install -y --no-install-recommends ca-certificates coturn curl libatomic1 musl nginx openssl supervisor \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=rustfs-bin /usr/bin/rustfs /usr/bin/rustfs
@@ -70,8 +71,9 @@ ENV STELLARR_DATA_ROOT=/data/stellarr
 EXPOSE 80 443 3478/tcp 3478/udp 5349/tcp 5349/udp 49000/udp 49160-49200/udp
 VOLUME ["/data/stellarr"]
 
+# Healthy means both the API and the web client answer: either can fail on its own.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=5 \
-  CMD curl -kfsS https://127.0.0.1/health >/dev/null || exit 1
+  CMD curl -kfsS -o /dev/null https://127.0.0.1/health && curl -kfsS -o /dev/null https://127.0.0.1/login || exit 1
 
 ARG VERSION=dev
 ARG REVISION=unknown
