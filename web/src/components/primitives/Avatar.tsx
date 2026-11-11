@@ -115,7 +115,7 @@ export function Avatar({
       {initials ?? toInitials(displayName)}
       {pictureUrl === undefined ? null : (
         // Not `next/image`: uploads come from an unknown self-hosted origin,
-        // which `DESIGN.md` §10 keeps off the optimiser. Not draggable either:
+        // which stays off the image optimiser. Not draggable either:
         // a native image drag, started by grabbing a person to move them
         // between calls, kills the pointer stream and can drop the picture
         // into the transcript as an attachment.

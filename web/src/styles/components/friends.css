@@ -17,7 +17,7 @@
    * different header, and the transcript and composer are the same components
    * the channels use. Only the parts that genuinely differ live here.
    *
-   * Accent stays rationed, as `DESIGN.md` requires. On this surface it marks
+   * Accent stays rationed. On this surface it marks
    * exactly two things: the row you are on, and a request waiting for an
    * answer. An unread count is *not* one of them — it is carried by weight and
    * a neutral pill, so a rail with six unread threads does not turn into six

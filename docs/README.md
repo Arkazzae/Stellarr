@@ -15,9 +15,7 @@ data of an instance stays on your own server.
 - [Localization](LOCALIZATION.md): how the interface language, the instance
   default and the translation of messages work, and how to add a language.
 
-Two documents live next to the code they describe:
+One document lives next to the files it describes:
 
-- [Design specification](../DESIGN.md): layout, colour, type, components and
-  accessibility rules of the web client.
 - [Branding](../branding/README.md): the logo, the mascot, the colours and the
   rules for using the name.

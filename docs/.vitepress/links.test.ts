@@ -29,8 +29,8 @@ test('a link to the map goes to the home page, which is served as index', () => 
 })
 
 test('a link to a file outside docs goes to that file on GitHub', () => {
-  assert.deepEqual(render('[design](../DESIGN.md#colour)', 'ARCHITECTURE.md').hrefs, [
-    `${repository}/blob/main/DESIGN.md#colour`,
+  assert.deepEqual(render('[panel](../ops/README.md#language)', 'ARCHITECTURE.md').hrefs, [
+    `${repository}/blob/main/ops/README.md#language`,
   ])
   assert.deepEqual(render('[compose](../../docker-compose.yml)', 'install/quick-start.md').hrefs, [
     `${repository}/blob/main/docker-compose.yml`,
