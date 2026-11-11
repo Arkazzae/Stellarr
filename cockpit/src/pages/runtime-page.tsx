@@ -180,7 +180,7 @@ export function RuntimePage() {
   }, [refresh]);
 
   return (
-    <div className="flex flex-col gap-3 lg:min-h-[calc(100svh-8.5rem-2px)]">
+    <div className="flex min-h-0 flex-1 flex-col gap-3">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
           <h1 className="text-2xl font-semibold tracking-[-0.01em]">{t("runtime.title")}</h1>
@@ -223,10 +223,10 @@ export function RuntimePage() {
             <Charts data={data} />
           </div>
 
-          <Card className="gap-0 py-0">
+          <Card className="min-h-0 gap-0 py-0">
             <CardTitleRow icon="server" title={t("runtime.services.title")} />
-            <div className="px-3 pt-1 pb-2 sm:px-5">
-              <Table>
+            <div className="relative min-h-0 flex-1 overflow-auto px-3 pb-2 sm:px-5">
+              <Table containerClassName="overflow-visible">
                 <TableHeader>
                   <TableRow>
                     <TableHead>{t("common.service")}</TableHead>

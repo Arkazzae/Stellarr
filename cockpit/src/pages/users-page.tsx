@@ -44,7 +44,7 @@ export function UsersPage() {
   const [roleSheet, setRoleSheet] = useState<RoleSheet>(null);
 
   return (
-    <div className="space-y-6">
+    <div className="flex min-h-0 flex-1 flex-col gap-6">
       <PageHeader
         title={t("users.title")}
         description={t("users.description")}
@@ -94,7 +94,7 @@ export function UsersPage() {
             }}
             perform={perform}
           />
-          <Tabs defaultValue="users">
+          <Tabs defaultValue="users" className="min-h-0 flex-1">
             <TabsList aria-label={t("users.areas")}>
               <TabsTrigger value="users">{t("common.users")}</TabsTrigger>
               <TabsTrigger value="sessions">
@@ -102,7 +102,7 @@ export function UsersPage() {
               </TabsTrigger>
               <TabsTrigger value="roles">{t("users.tab.roles")}</TabsTrigger>
             </TabsList>
-            <TabsContent value="users">
+            <TabsContent value="users" className="min-h-0 flex-1 flex-col data-[state=active]:flex">
               <AccountsTab
                 users={data.users}
                 roles={data.roles}
@@ -111,10 +111,10 @@ export function UsersPage() {
                 perform={perform}
               />
             </TabsContent>
-            <TabsContent value="sessions">
+            <TabsContent value="sessions" className="min-h-0 flex-1 flex-col data-[state=active]:flex">
               <SessionsTab sessions={data.sessions} perform={perform} />
             </TabsContent>
-            <TabsContent value="roles">
+            <TabsContent value="roles" className="min-h-0 flex-1 flex-col data-[state=active]:flex">
               <RolesTab
                 roles={data.roles}
                 onCreate={() => setRoleSheet({ role: null })}

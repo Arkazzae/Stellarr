@@ -135,7 +135,7 @@ export function LogsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex min-h-0 flex-1 flex-col gap-6">
       <PageHeader
         title={t("logs.title")}
         description={t("logs.description")}
@@ -226,7 +226,7 @@ export function LogsPage() {
         ) : null}
       </div>
 
-      <Card className="gap-0 py-0">
+      <Card className="min-h-0 flex-1 gap-0 py-0">
         <CardTitleRow icon="list" title={t("logs.list")}>
           {feed.entries.length > 0 ? (
             <span className="text-sm text-muted-foreground tabular-nums">
@@ -241,9 +241,14 @@ export function LogsPage() {
             {t("logs.loading")}
           </div>
         ) : (
-          <div className={cn("px-3 pt-1 pb-2 transition-opacity sm:px-5", loading && "opacity-60")}>
+          <div
+            className={cn(
+              "relative min-h-0 flex-1 overflow-auto px-3 pb-2 transition-opacity sm:px-5",
+              loading && "opacity-60",
+            )}
+          >
             {/* Fixed columns, so a long message wraps inside its own instead of widening the table. */}
-            <Table className="min-w-full table-fixed">
+            <Table className="min-w-full table-fixed" containerClassName="overflow-visible">
               <TableHeader>
                 <TableRow>
                   <TableHead className="w-24">{t("logs.col.time")}</TableHead>

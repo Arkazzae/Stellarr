@@ -183,10 +183,9 @@ export function DashboardPage() {
   if (!bootstrap) return null;
   const { overview } = bootstrap;
 
-  // On a wide screen the overview fills the window under the bar: the window
-  // less the inset frame (1rem and its 2px border), the bar (3.5rem) and the page padding (4rem).
+  // The overview fills the area under the bar; the services table gives way and scrolls when space runs short.
   return (
-    <div className="flex flex-col gap-4 lg:min-h-[calc(100svh-8.5rem-2px)]">
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-semibold tracking-[-0.01em]">{t("dashboard.title")}</h1>
         <Button variant="outline" onClick={() => void recheck()} disabled={rechecking}>
@@ -214,10 +213,10 @@ export function DashboardPage() {
         <ActivityCard activity={activity.data} error={activity.error} />
       </div>
 
-      <Card className="gap-0 py-0">
+      <Card className="min-h-0 gap-0 py-0">
         <CardTitleRow icon="server" title={t("dashboard.services.title")} />
-        <div className="px-3 pt-1 pb-2 sm:px-5">
-          <Table>
+        <div className="relative min-h-0 flex-1 overflow-auto px-3 pb-2 sm:px-5">
+          <Table containerClassName="overflow-visible">
             <TableHeader>
               <TableRow>
                 <TableHead>{t("common.service")}</TableHead>

@@ -373,7 +373,7 @@ export function SettingsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex min-h-0 flex-1 flex-col gap-6">
       <PageHeader
         title={t("settings.title")}
         description={t("settings.description")}
@@ -418,7 +418,7 @@ export function SettingsPage() {
         <form
           id="cockpit-settings-form"
           onSubmit={(event) => void save(event)}
-          className="grid items-start gap-6 lg:grid-cols-2"
+          className="relative grid min-h-0 flex-1 items-start gap-6 overflow-y-auto lg:grid-cols-2"
         >
           <div className="space-y-6">
             <InstanceCard settings={settings} update={update} errors={fieldErrors} />

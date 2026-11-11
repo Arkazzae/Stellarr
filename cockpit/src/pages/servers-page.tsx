@@ -239,7 +239,7 @@ export function ServersPage() {
   const [deleting, setDeleting] = useState<CockpitServer | null>(null);
 
   return (
-    <div className="space-y-6">
+    <div className="flex min-h-0 flex-1 flex-col gap-6">
       <PageHeader title={t("servers.title")} description={t("servers.description")} />
 
       {error ? (
@@ -262,12 +262,12 @@ export function ServersPage() {
       ) : null}
 
       {data ? (
-        <Card className="gap-0 py-0">
+        <Card className="min-h-0 flex-1 gap-0 py-0">
           <CardTitleRow icon="server" title={t("servers.list")}>
             <span className="text-sm text-muted-foreground">{formatNumber(data.length)}</span>
           </CardTitleRow>
-          <div className="px-3 pt-1 pb-2 sm:px-5">
-            <Table>
+          <div className="relative min-h-0 flex-1 overflow-auto px-3 pb-2 sm:px-5">
+            <Table containerClassName="overflow-visible">
               <TableHeader>
                 <TableRow>
                   <TableHead>{t("servers.col.server")}</TableHead>

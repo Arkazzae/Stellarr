@@ -172,15 +172,16 @@ export function AppShell() {
   const onLogout = () => void logout();
 
   return (
-    <div className="min-h-svh bg-sidebar">
+    // The window never scrolls: the bar stays, and the page scrolls in its own areas.
+    <div className="relative h-svh overflow-hidden bg-sidebar">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-68 lg:block">
         <Sidebar operator={operator} onLogout={onLogout} />
       </aside>
 
       {/* On wide screens the page sits in an inset panel beside the sidebar. */}
-      <div className="lg:py-2 lg:pr-2 lg:pl-68">
-        <div className="min-h-svh bg-background lg:min-h-[calc(100svh-1rem)] lg:rounded-xl lg:border">
-          <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b bg-background px-4 sm:px-6 lg:rounded-t-xl">
+      <div className="flex h-full flex-col lg:py-2 lg:pr-2 lg:pl-68">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-background lg:rounded-xl lg:border">
+          <header className="flex h-14 shrink-0 items-center gap-3 border-b bg-background px-4 sm:px-6">
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild>
                 <Button
@@ -219,8 +220,12 @@ export function AppShell() {
             </a>
           </header>
 
-          <main className="mx-auto w-full max-w-[1400px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
-            <Outlet />
+          {/* Pages fill this area and scroll inside their own lists; it scrolls
+              itself only when a page cannot shrink to fit. */}
+          <main className="relative flex min-h-0 flex-1 flex-col overflow-y-auto">
+            <div className="mx-auto flex min-h-0 w-full max-w-[1400px] flex-1 flex-col px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+              <Outlet />
+            </div>
           </main>
         </div>
       </div>

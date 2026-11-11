@@ -50,7 +50,7 @@ export function AccountsTab({ users, roles, filter, onFilterChange, perform }: A
   const visible = users.filter((user) => matchesFilter(user, filter));
 
   return (
-    <Card>
+    <Card className="min-h-0 flex-1">
       <CardHeader className="gap-4 sm:flex sm:flex-row sm:items-center sm:justify-between">
         <div>
           <CardTitle>{t("accounts.title")}</CardTitle>
@@ -84,8 +84,8 @@ export function AccountsTab({ users, roles, filter, onFilterChange, perform }: A
           </select>
         </div>
       </CardHeader>
-      <CardContent className="px-4 sm:px-6">
-        <Table>
+      <CardContent className="relative min-h-0 flex-1 overflow-auto px-4 sm:px-6">
+        <Table containerClassName="overflow-visible">
           <TableHeader>
             <TableRow>
               <TableHead>{t("common.user")}</TableHead>

@@ -39,13 +39,13 @@ interface SessionsTabProps {
 
 export function SessionsTab({ sessions, perform }: SessionsTabProps) {
   return (
-    <Card>
+    <Card className="min-h-0 flex-1">
       <CardHeader>
         <CardTitle>{t("sessions.title")}</CardTitle>
         <CardDescription>{t("sessions.description")}</CardDescription>
       </CardHeader>
-      <CardContent className="px-4 sm:px-6">
-        <Table>
+      <CardContent className="relative min-h-0 flex-1 overflow-auto px-4 sm:px-6">
+        <Table containerClassName="overflow-visible">
           <TableHeader>
             <TableRow>
               <TableHead>{t("common.user")}</TableHead>

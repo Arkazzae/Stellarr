@@ -104,7 +104,7 @@ export function BackupsPage() {
   const error = actionError ?? loadError;
 
   return (
-    <div className="space-y-6">
+    <div className="flex min-h-0 flex-1 flex-col gap-6">
       <PageHeader
         title={t("backups.title")}
         description={t("backups.description")}
@@ -146,13 +146,13 @@ export function BackupsPage() {
         />
       </StatGrid>
 
-      <Card>
+      <Card className="min-h-0 flex-1">
         <CardHeader>
           <CardTitle>{t("backups.table.title")}</CardTitle>
           <CardDescription>{t("backups.table.description")}</CardDescription>
         </CardHeader>
-        <CardContent className="px-4 sm:px-6">
-          <Table>
+        <CardContent className="relative min-h-0 flex-1 overflow-auto px-4 sm:px-6">
+          <Table containerClassName="overflow-visible">
             <TableHeader>
               <TableRow>
                 <TableHead>{t("backups.col.id")}</TableHead>

@@ -20,7 +20,7 @@ interface RolesTabProps {
 
 export function RolesTab({ roles, onCreate, onEdit }: RolesTabProps) {
   return (
-    <Card>
+    <Card className="min-h-0 flex-1">
       <CardHeader className="sm:flex sm:flex-row sm:items-center sm:justify-between">
         <div>
           <CardTitle>{t("roles.title")}</CardTitle>
@@ -30,8 +30,8 @@ export function RolesTab({ roles, onCreate, onEdit }: RolesTabProps) {
           {t("roles.add")}
         </Button>
       </CardHeader>
-      <CardContent className="px-4 sm:px-6">
-        <Table>
+      <CardContent className="relative min-h-0 flex-1 overflow-auto px-4 sm:px-6">
+        <Table containerClassName="overflow-visible">
           <TableHeader>
             <TableRow>
               <TableHead>{t("common.role")}</TableHead>
