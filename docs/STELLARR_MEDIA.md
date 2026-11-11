@@ -154,6 +154,10 @@ directory does:
   apart still applies, per person;
 - a track whose `mid` is not in the directory is not played. A browser holds
   such a track until a directory names it;
+- the directory and the occupancy snapshot travel on different paths. An entry
+  that names a person the browser has not yet seen in `VoiceParticipantChanged`
+  is held until the snapshot names them, and an entry of a person the snapshot
+  no longer lists is not played;
 - when a publisher replaces a device and the stream id changes, the media
   server sends a new `tracks` list. No SDP exchange is needed for that.
 
@@ -311,7 +315,14 @@ response carries at most 256 events, in order.
   gets `reset: true` as well; the API then calls `POST /v1/reset` and treats
   its sessions the same way;
 - when the media server cannot be reached, the API retries with a pause and
-  treats the first successful response as it would a new epoch.
+  treats the first successful response as it would a new epoch;
+- the API remembers, for every session, the `epoch` that `POST /v1/sessions`
+  returned. A reset ends only the sessions of an older epoch, so a session
+  opened in the new epoch before the poll noticed the restart survives;
+- `404 unknown-session` on an offer, an answer or a candidate means the media
+  server no longer has the session. The hub does not fail the call: it forgets
+  the session and sends `MediaSessionClosed` with `media-restarted` to that
+  connection.
 
 ### Stats
 
