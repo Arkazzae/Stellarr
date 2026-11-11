@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { RTC_PROTOCOL_VERSION } from "@/lib/rtc/protocol";
-import { HUB_DECODERS, parseVoiceSignal } from "./hubPayloads";
+import {
+  HUB_DECODERS,
+  parseMediaSessionClosed,
+  parseMediaSessionOpened,
+  parseMediaSignal,
+  parseVoiceSignal,
+} from "./hubPayloads";
 
 describe("hub payload decoders", () => {
   it("drops anything that is not a record", () => {
@@ -128,5 +134,78 @@ describe("parseVoiceSignal", () => {
     });
     expect(parsed).not.toHaveProperty("fromUserId");
     expect(parsed).not.toHaveProperty("toUserId");
+  });
+});
+
+describe("parseMediaSignal", () => {
+  const signal = {
+    protocolVersion: RTC_PROTOCOL_VERSION,
+    channelId: "v1",
+    sessionId: "session-1",
+    kind: "tracks",
+    payload: '{"tracks":[]}',
+  };
+
+  it("accepts every kind the media server sends", () => {
+    for (const kind of ["offer", "answer", "tracks"]) {
+      expect(parseMediaSignal({ ...signal, kind })).toEqual({ ...signal, kind });
+    }
+    expect(HUB_DECODERS.MediaSignal(signal)).toEqual(signal);
+  });
+
+  it("drops a candidate, which the media server never trickles", () => {
+    expect(parseMediaSignal({ ...signal, kind: "candidate" })).toBeNull();
+  });
+
+  it("drops an unknown version or kind and a missing session", () => {
+    for (const bad of [
+      { ...signal, protocolVersion: 2 },
+      { ...signal, kind: "state" },
+      { ...signal, sessionId: "" },
+      { ...signal, sessionId: 7 },
+      { ...signal, channelId: null },
+      { ...signal, payload: { tracks: [] } },
+      "signal",
+    ]) {
+      expect(parseMediaSignal(bad)).toBeNull();
+    }
+  });
+
+  it("keeps only the envelope's own fields", () => {
+    expect(parseMediaSignal({ ...signal, fromUserId: "u-1" })).not.toHaveProperty("fromUserId");
+  });
+});
+
+describe("parseMediaSessionClosed", () => {
+  it("accepts the three reasons of the contract", () => {
+    for (const reason of ["media-restarted", "transport-timeout", "error"]) {
+      expect(
+        HUB_DECODERS.MediaSessionClosed({ channelId: "v1", sessionId: "session-1", reason }),
+      ).toEqual({ channelId: "v1", sessionId: "session-1", reason });
+    }
+  });
+
+  it("drops a closure it cannot attribute or explain", () => {
+    for (const bad of [
+      { channelId: "v1", sessionId: "session-1", reason: "left" },
+      { channelId: "v1", sessionId: "session-1" },
+      { channelId: "v1", sessionId: "", reason: "error" },
+      { sessionId: "session-1", reason: "error" },
+      null,
+    ]) {
+      expect(parseMediaSessionClosed(bad)).toBeNull();
+    }
+  });
+});
+
+describe("parseMediaSessionOpened", () => {
+  it("reads the session id out of the hub's answer", () => {
+    expect(parseMediaSessionOpened({ sessionId: "session-1" })).toBe("session-1");
+  });
+
+  it("refuses an answer without a session id", () => {
+    for (const bad of [undefined, null, "session-1", {}, { sessionId: "" }, { sessionId: 1 }]) {
+      expect(parseMediaSessionOpened(bad)).toBeNull();
+    }
   });
 });

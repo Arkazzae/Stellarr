@@ -148,6 +148,8 @@ class FakeRealtime implements RealtimeClient {
   sendVoiceSignal = vi.fn(async (signal: VoiceSignal) => {
     this.sent.push(signal);
   });
+  openMediaSession = vi.fn(async () => "media-session-1");
+  sendMediaSignal = vi.fn(async () => {});
   playSoundboard = vi.fn(async () => {});
   getRtcClock = vi.fn(async () => Date.now());
 

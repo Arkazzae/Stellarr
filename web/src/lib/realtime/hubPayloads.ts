@@ -11,11 +11,20 @@ import { isRecord } from "@/lib/api/expect";
 import { isPresence, SERVER_PERMISSION_VALUES } from "@/lib/api/types";
 import type { ServerPermission } from "@/lib/api/types";
 import {
+  isMediaServerSignalKind,
+  isMediaSessionCloseReason,
   isRtcSignalKind,
   RTC_HUB,
   RTC_PROTOCOL_VERSION,
+  type MediaServerSignalKind,
 } from "@/lib/rtc/protocol";
-import type { RealtimeEventMap, RealtimeEventName, VoiceSignal } from "./types";
+import type {
+  MediaSessionClosedEvent,
+  MediaSignal,
+  RealtimeEventMap,
+  RealtimeEventName,
+  VoiceSignal,
+} from "./types";
 
 /**
  * Turns the untrusted argument of one hub event into its typed payload, or
@@ -139,6 +148,39 @@ export function parseVoiceSignal(payload: unknown): VoiceSignal | null {
   };
 }
 
+/** A session id is opaque, but an empty one could never be quoted back. */
+const isSessionId = (value: unknown): value is string =>
+  typeof value === "string" && value.length > 0;
+
+/**
+ * A signal from the media server. Only the kinds it sends get through: it
+ * never trickles a candidate, so a `candidate` here is a protocol violation.
+ */
+export function parseMediaSignal(payload: unknown): MediaSignal<MediaServerSignalKind> | null {
+  if (!isRecord(payload)) return null;
+  const { protocolVersion, channelId, sessionId, kind } = payload;
+  const body = payload["payload"];
+  if (protocolVersion !== RTC_PROTOCOL_VERSION) return null;
+  if (typeof channelId !== "string" || !isSessionId(sessionId)) return null;
+  if (!isMediaServerSignalKind(kind) || typeof body !== "string") return null;
+  return { protocolVersion, channelId, sessionId, kind, payload: body };
+}
+
+/** A reason outside the contract is dropped with the rest of the event. */
+export function parseMediaSessionClosed(payload: unknown): MediaSessionClosedEvent | null {
+  if (!isRecord(payload)) return null;
+  const { channelId, sessionId, reason } = payload;
+  if (typeof channelId !== "string" || !isSessionId(sessionId)) return null;
+  return isMediaSessionCloseReason(reason) ? { channelId, sessionId, reason } : null;
+}
+
+/** The result of `OpenMediaSession`, `{ sessionId }`, or null when it is not one. */
+export function parseMediaSessionOpened(result: unknown): string | null {
+  if (!isRecord(result)) return null;
+  const { sessionId } = result;
+  return isSessionId(sessionId) ? sessionId : null;
+}
+
 export function parseSoundboardPlayed(
   payload: unknown,
 ): RealtimeEventMap["SoundboardPlayed"] | null {
@@ -190,6 +232,8 @@ export const HUB_DECODERS: { [E in RealtimeEventName]: HubDecoder<E> } = {
   VoiceChannelMoved: strings("fromChannelId", "toChannelId"),
   [RTC_HUB.events.directCallDeclined]: strings("channelId", "byUserId"),
   [RTC_HUB.events.signal]: parseVoiceSignal,
+  [RTC_HUB.events.mediaSignal]: parseMediaSignal,
+  [RTC_HUB.events.mediaSessionClosed]: parseMediaSessionClosed,
   [RTC_HUB.events.soundboardPlayed]: parseSoundboardPlayed,
   [RTC_HUB.events.joinSoundPlayed]: parseSoundboardPlayed,
   [RTC_HUB.events.soundboardChanged]: strings("serverId"),

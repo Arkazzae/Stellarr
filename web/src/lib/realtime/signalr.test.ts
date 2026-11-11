@@ -2,6 +2,8 @@ import { HubConnectionState, type HubConnection } from "@microsoft/signalr";
 import { describe, expect, it, vi } from "vitest";
 import { RTC_PROTOCOL_VERSION } from "@/lib/rtc/protocol";
 import {
+  parseMediaSessionClosed,
+  parseMediaSignal,
   parseSoundboardPlayed,
   parseVoiceSignal,
   SignalRRealtimeClient,
@@ -172,5 +174,104 @@ describe("SignalR soundboard envelope", () => {
 
   it("drops an event without a finite shared start time", () => {
     expect(parseSoundboardPlayed({ ...event, startsAtUnixMs: "soon" })).toBeNull();
+  });
+});
+
+describe("SignalR media session", () => {
+  /** A connection that opens for real, so `invoke` reaches the hub. */
+  function openConnection(invoke: (method: string, ...args: unknown[]) => Promise<unknown>) {
+    const handlers = new Map<string, (payload: unknown) => void>();
+    const connection = {
+      state: HubConnectionState.Disconnected,
+      on: vi.fn((event: string, handler: (payload: unknown) => void) => {
+        handlers.set(event, handler);
+      }),
+      onreconnecting: vi.fn(),
+      onreconnected: vi.fn(),
+      onclose: vi.fn(),
+      start: vi.fn(async () => {
+        connection.state = HubConnectionState.Connected;
+      }),
+      stop: vi.fn(async () => undefined),
+      invoke: vi.fn(invoke),
+    };
+    const client = new SignalRRealtimeClient(() => connection as unknown as HubConnection);
+    return { client, connection, handlers };
+  }
+
+  it("opens a session for the seat and returns its id", async () => {
+    const { client, connection } = openConnection(async () => ({ sessionId: "session-7" }));
+    await client.start();
+
+    await expect(client.openMediaSession("voice-1")).resolves.toBe("session-7");
+    expect(connection.invoke).toHaveBeenCalledWith("OpenMediaSession", "voice-1");
+  });
+
+  it("refuses a hub answer that carries no session id", async () => {
+    const { client } = openConnection(async () => ({ id: "session-7" }));
+    await client.start();
+
+    await expect(client.openMediaSession("voice-1")).rejects.toThrow("no session id");
+  });
+
+  it("passes on the hub's refusal in the mesh topology", async () => {
+    const { client } = openConnection(async () => {
+      throw new Error("Media server is not enabled.");
+    });
+    await client.start();
+
+    await expect(client.openMediaSession("voice-1")).rejects.toThrow("not enabled");
+  });
+
+  it("sends a media signal through SendMediaSignal unchanged", async () => {
+    const { client, connection } = openConnection(async () => undefined);
+    await client.start();
+    const signal = {
+      protocolVersion: RTC_PROTOCOL_VERSION,
+      channelId: "voice-1",
+      sessionId: "session-7",
+      kind: "candidate" as const,
+      payload: "null",
+    };
+
+    await client.sendMediaSignal(signal);
+
+    expect(connection.invoke).toHaveBeenCalledWith("SendMediaSignal", signal);
+  });
+
+  it("relays only well-formed signals and closures from the media server", async () => {
+    const { client, handlers } = openConnection(async () => undefined);
+    const signals = vi.fn();
+    const closures = vi.fn();
+    client.on("MediaSignal", signals);
+    client.on("MediaSessionClosed", closures);
+    await client.start();
+    const signal = {
+      protocolVersion: RTC_PROTOCOL_VERSION,
+      channelId: "voice-1",
+      sessionId: "session-7",
+      kind: "answer",
+      payload: '{"type":"answer","sdp":"v=0"}',
+    };
+
+    handlers.get("MediaSignal")?.(signal);
+    handlers.get("MediaSignal")?.({ ...signal, kind: "candidate" });
+    handlers.get("MediaSignal")?.({ ...signal, protocolVersion: 2 });
+    handlers.get("MediaSessionClosed")?.({
+      channelId: "voice-1",
+      sessionId: "session-7",
+      reason: "media-restarted",
+    });
+    handlers.get("MediaSessionClosed")?.({ channelId: "voice-1", sessionId: "session-7" });
+
+    expect(signals.mock.calls).toEqual([[signal]]);
+    expect(closures.mock.calls).toEqual([
+      [{ channelId: "voice-1", sessionId: "session-7", reason: "media-restarted" }],
+    ]);
+  });
+
+  it("re-exports the media parsers next to the voice ones", () => {
+    expect(parseMediaSignal(null)).toBeNull();
+    expect(parseMediaSessionClosed(null)).toBeNull();
   });
 });

@@ -7,10 +7,11 @@ import {
 } from "@microsoft/signalr";
 import { ACTIVE_SERVER_STORAGE_KEY } from "@/lib/api/client";
 import type { ChannelId, Presence, RtcConfig } from "@/lib/api/types";
-import { RTC_HUB } from "@/lib/rtc/protocol";
+import { RTC_HUB, type BrowserMediaSignalKind } from "@/lib/rtc/protocol";
 import { ChangeNotifier, Emitter } from "./emitter";
-import { HUB_DECODERS } from "./hubPayloads";
+import { HUB_DECODERS, parseMediaSessionOpened } from "./hubPayloads";
 import type {
+  MediaSignal,
   RealtimeClient,
   RealtimeEventMap,
   RealtimeEventName,
@@ -18,7 +19,12 @@ import type {
   VoiceSignal,
 } from "./types";
 
-export { parseSoundboardPlayed, parseVoiceSignal } from "./hubPayloads";
+export {
+  parseMediaSessionClosed,
+  parseMediaSignal,
+  parseSoundboardPlayed,
+  parseVoiceSignal,
+} from "./hubPayloads";
 
 const RETRY_DELAYS_MS = [0, 2_000, 5_000, 10_000, 20_000, 30_000] as const;
 /** The restart timer never fires sooner than this, whatever the backoff says. */
@@ -216,6 +222,21 @@ export class SignalRRealtimeClient implements RealtimeClient {
 
   sendVoiceSignal(signal: VoiceSignal): Promise<void> {
     return this.invoke(RTC_HUB.methods.signal, signal);
+  }
+
+  async openMediaSession(channelId: ChannelId): Promise<string> {
+    // `invoke<T>` only names a type; the hub's answer is checked like any
+    // other wire payload before a session id is taken from it.
+    const result = await this.invoke<unknown>(RTC_HUB.methods.openMediaSession, channelId);
+    const sessionId = parseMediaSessionOpened(result);
+    if (sessionId === null) {
+      throw new Error(`${RTC_HUB.methods.openMediaSession} returned no session id`);
+    }
+    return sessionId;
+  }
+
+  sendMediaSignal(signal: MediaSignal<BrowserMediaSignalKind>): Promise<void> {
+    return this.invoke(RTC_HUB.methods.mediaSignal, signal);
   }
 
   playSoundboard(channelId: ChannelId, soundId: string): Promise<void> {

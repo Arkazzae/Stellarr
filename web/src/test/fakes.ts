@@ -3,12 +3,14 @@ import type { ApiClient } from "@/lib/api/client";
 import type { Bootstrap, Channel, Presence, Server, User } from "@/lib/api/types";
 import { ChangeNotifier, Emitter } from "@/lib/realtime/emitter";
 import type {
+  MediaSignal,
   RealtimeClient,
   RealtimeEventMap,
   RealtimeEventName,
   RealtimeStatus,
   VoiceSignal,
 } from "@/lib/realtime/types";
+import type { BrowserMediaSignalKind } from "@/lib/rtc/protocol";
 import { IDLE_VOICE_STATE, type VoiceClient, type VoiceState } from "@/lib/voice/types";
 import type { VoiceSettings } from "@/lib/voice/settings";
 
@@ -225,6 +227,7 @@ export function fakeApi(overrides: Partial<ApiClient> = {}): ApiClient {
 /** In-memory SignalR stand-in kept strictly inside the test source tree. */
 export class FakeRealtimeClient implements RealtimeClient {
   private status: RealtimeStatus = "idle";
+  private mediaSessions = 0;
   private readonly events = new Emitter<RealtimeEventMap>();
   private readonly statusNotifier = new ChangeNotifier();
 
@@ -266,6 +269,14 @@ export class FakeRealtimeClient implements RealtimeClient {
   async leaveVoice(): Promise<void> {}
   async declineDirectCall(_conversationId: string): Promise<void> {}
   async sendVoiceSignal(_signal: VoiceSignal): Promise<void> {}
+
+  /** A fresh id per call, as the hub hands out after closing the previous one. */
+  async openMediaSession(_channelId: string): Promise<string> {
+    this.mediaSessions += 1;
+    return `media-session-${this.mediaSessions}`;
+  }
+
+  async sendMediaSignal(_signal: MediaSignal<BrowserMediaSignalKind>): Promise<void> {}
   async playSoundboard(_channelId: string, _soundId: string): Promise<void> {}
 
   async getRtcClock(): Promise<number> {
