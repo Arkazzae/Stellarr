@@ -38,7 +38,6 @@ const navigation: readonly NavigationItem[] = [
   { labelKey: "nav.runtime", href: "/runtime" },
   { labelKey: "nav.logs", href: "/logs" },
   { labelKey: "nav.backups", href: "/backups" },
-  { labelKey: "nav.releases", href: "/desktop-release" },
   { labelKey: "nav.settings", href: "/settings" },
 ];
 

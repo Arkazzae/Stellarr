@@ -46,7 +46,6 @@ export const pl = {
   "nav.runtime": "Runtime",
   "nav.logs": "Logi i audyt",
   "nav.backups": "Backup",
-  "nav.releases": "Wydania",
   "nav.settings": "Ustawienia",
 
   "shell.navigationLabel": "Nawigacja OPs",
@@ -79,16 +78,6 @@ export const pl = {
   "dashboard.services.originBackend": "backend",
   "dashboard.services.originProcess": "pamięć procesu",
   "dashboard.services.connections": "{count} połączeń",
-  "dashboard.contract.title": "Zakres kontraktu",
-  "dashboard.contract.description": "Co panel odczytuje dzisiaj.",
-  "dashboard.contract.connected": "Podłączone",
-  "dashboard.contract.connectedDetail":
-    "Właściciel, instancja, użytkownicy, role, obecność, liczniki treści i ustawienia.",
-  "dashboard.contract.pending": "Jeszcze bez modelu domenowego",
-  "dashboard.contract.pendingDetail": "TURN pozostaje widokiem projektowym.",
-  "dashboard.notice.title": "Panel nie zgaduje stanu procesów",
-  "dashboard.notice.description":
-    "Brakujące obszary dostaną dane dopiero z dedykowanych kontraktów i trwałych modeli backendu.",
 
   "runtime.title": "Runtime",
   "runtime.description": "Metryki procesu API, bazy danych, realtime i usług infrastruktury.",
@@ -169,30 +158,6 @@ export const pl = {
   "backups.scope.description":
     "Backup obejmuje bazę SQLite. Obiekty z zewnętrznego storage oraz sekrety środowiskowe nie są kopiowane przez ten endpoint.",
 
-  "release.title": "Wydania aplikacji",
-  "release.description":
-    "Paczki Android i Arch Linux, które operator umieścił w katalogu wydań serwera.",
-  "release.loadFailed": "Nie udało się odczytać wydania.",
-  "release.loadError": "Nie udało się wczytać wydań",
-  "release.loading": "Wczytywanie wydań…",
-  "release.downloadApk": "Pobierz APK",
-  "release.downloadPackage": "Pobierz paczkę",
-  "release.missing": "Brak opublikowanego wydania dla {platform}.",
-  "release.published.title": "Opublikowane aplikacje",
-  "release.published.description":
-    "Pliki są czytane z trwałego katalogu wydań i dostępne w WebUI.",
-  "release.published.count": "Opublikowano {count} z 2",
-  "release.compatibility.title": "Kompatybilność klienta",
-  "release.compatibility.description":
-    "Klient Arch odrzuci wersję niższą od minimalnej i zaproponuje aktualizację poniżej wersji zalecanej.",
-  "release.minimumVersion": "Wersja minimalna",
-  "release.recommendedVersion": "Wersja zalecana",
-  "release.saveFailed": "Nie udało się zapisać wersji klienta desktopowego.",
-  "release.saveError": "Nie zapisano wersji",
-  "release.saved.title": "Wersje zapisane",
-  "release.saved.description": "Nowe wartości są już zwracane klientom w publicznym handshake.",
-  "release.save": "Zapisz wersje",
-  "release.saving": "Zapisywanie…",
 
   "settings.title": "Ustawienia instancji",
   "settings.description":

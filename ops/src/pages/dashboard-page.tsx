@@ -4,7 +4,6 @@ import { useEffect, useState, type ReactNode } from "react";
 import { PageHeader } from "@/components/page-header";
 import { Stat, StatGrid } from "@/components/stats";
 import { StatusBadge } from "@/components/status-badge";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -137,75 +136,47 @@ export function DashboardPage() {
         />
       </StatGrid>
 
-      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.8fr)]">
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("dashboard.services.title")}</CardTitle>
-            <CardDescription>{t("dashboard.services.description")}</CardDescription>
-          </CardHeader>
-          <CardContent className="px-4 sm:px-6">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>{t("common.service")}</TableHead>
-                  <TableHead>{t("common.status")}</TableHead>
-                  <TableHead className="text-right">{t("dashboard.services.source")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <ServiceRow
-                  name="API"
-                  endpoint="/health/live"
-                  status={<HealthBadge state={health.api} />}
-                  origin={t("dashboard.services.originBackend")}
-                />
-                <ServiceRow
-                  name="SQLite"
-                  endpoint="/health/ready"
-                  status={<HealthBadge state={health.database} />}
-                  origin={t("dashboard.services.originBackend")}
-                />
-                <ServiceRow
-                  name={t("common.realtime")}
-                  endpoint="PresenceTracker"
-                  status={
-                    <Badge variant="outline">
-                      {t("dashboard.services.connections", { count: overview.realtimeConnectionCount })}
-                    </Badge>
-                  }
-                  origin={t("dashboard.services.originProcess")}
-                />
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle>{t("dashboard.contract.title")}</CardTitle>
-            <CardDescription>{t("dashboard.contract.description")}</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4 text-sm">
-            <div>
-              <p className="font-medium">{t("dashboard.contract.connected")}</p>
-              <p className="mt-1 leading-6 text-muted-foreground">
-                {t("dashboard.contract.connectedDetail")}
-              </p>
-            </div>
-            <div className="border-t pt-4">
-              <p className="font-medium">{t("dashboard.contract.pending")}</p>
-              <p className="mt-1 leading-6 text-muted-foreground">
-                {t("dashboard.contract.pendingDetail")}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Alert>
-        <AlertTitle>{t("dashboard.notice.title")}</AlertTitle>
-        <AlertDescription>{t("dashboard.notice.description")}</AlertDescription>
-      </Alert>
+      <Card>
+        <CardHeader>
+          <CardTitle>{t("dashboard.services.title")}</CardTitle>
+          <CardDescription>{t("dashboard.services.description")}</CardDescription>
+        </CardHeader>
+        <CardContent className="px-4 sm:px-6">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t("common.service")}</TableHead>
+                <TableHead>{t("common.status")}</TableHead>
+                <TableHead className="text-right">{t("dashboard.services.source")}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <ServiceRow
+                name="API"
+                endpoint="/health/live"
+                status={<HealthBadge state={health.api} />}
+                origin={t("dashboard.services.originBackend")}
+              />
+              <ServiceRow
+                name="SQLite"
+                endpoint="/health/ready"
+                status={<HealthBadge state={health.database} />}
+                origin={t("dashboard.services.originBackend")}
+              />
+              <ServiceRow
+                name={t("common.realtime")}
+                endpoint="PresenceTracker"
+                status={
+                  <Badge variant="outline">
+                    {t("dashboard.services.connections", { count: overview.realtimeConnectionCount })}
+                  </Badge>
+                }
+                origin={t("dashboard.services.originProcess")}
+              />
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 }

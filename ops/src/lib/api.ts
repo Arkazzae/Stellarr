@@ -143,25 +143,6 @@ export interface OpsSettings {
   updatedAt: string;
 }
 
-export interface OpsPublishedClientRelease {
-  version: string;
-  publishedAt: string;
-  notes: string;
-  platform: "android" | "arch";
-  architecture: "arm64-v8a" | "x86_64";
-  fileName: string;
-  sizeBytes: number;
-  sha256: string;
-  downloadUrl: string;
-}
-
-export interface OpsDesktopRelease {
-  minimumVersion: string;
-  recommendedVersion: string;
-  published: OpsPublishedClientRelease | null;
-  androidPublished: OpsPublishedClientRelease | null;
-}
-
 interface ProblemDetails {
   title?: string;
   detail?: string;
@@ -306,12 +287,6 @@ export const opsApi = {
   sendTestMail: (to: string, signal?: AbortSignal) =>
     request<{ id: string }>("/api/ops/mail/test", { method: "POST", body: { to } }, signal),
 
-  desktopRelease: (signal?: AbortSignal) =>
-    request<OpsDesktopRelease>("/api/ops/desktop-release", {}, signal),
-  updateDesktopRelease: (
-    input: Pick<OpsDesktopRelease, "minimumVersion" | "recommendedVersion">,
-    signal?: AbortSignal,
-  ) => request<OpsDesktopRelease>("/api/ops/desktop-release", { method: "PUT", body: input }, signal),
 
   requestPasswordReset: (email: string, signal?: AbortSignal) =>
     request<void>("/api/auth/password/forgot", { method: "POST", body: { email } }, signal),

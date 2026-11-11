@@ -51,7 +51,6 @@ export const en = {
   "nav.runtime": "Runtime",
   "nav.logs": "Logs and audit",
   "nav.backups": "Backups",
-  "nav.releases": "Releases",
   "nav.settings": "Settings",
 
   "shell.navigationLabel": "OPs navigation",
@@ -84,16 +83,6 @@ export const en = {
   "dashboard.services.originBackend": "backend",
   "dashboard.services.originProcess": "process memory",
   "dashboard.services.connections": "Connections: {count}",
-  "dashboard.contract.title": "Contract scope",
-  "dashboard.contract.description": "What the panel reads today.",
-  "dashboard.contract.connected": "Connected",
-  "dashboard.contract.connectedDetail":
-    "Owner, instance, users, roles, presence, content counters and settings.",
-  "dashboard.contract.pending": "No domain model yet",
-  "dashboard.contract.pendingDetail": "TURN is still a design-only view.",
-  "dashboard.notice.title": "The panel does not guess process state",
-  "dashboard.notice.description":
-    "Missing areas will show data only once dedicated contracts and persistent backend models exist.",
 
   "runtime.title": "Runtime",
   "runtime.description": "Metrics for the API process, the database, realtime and infrastructure services.",
@@ -174,30 +163,6 @@ export const en = {
   "backups.scope.description":
     "A backup covers the SQLite database. Objects in external storage and environment secrets are not copied by this endpoint.",
 
-  "release.title": "App releases",
-  "release.description":
-    "The Android and Arch Linux packages the operator has placed in the server's release directory.",
-  "release.loadFailed": "Could not read the release.",
-  "release.loadError": "Could not load the releases",
-  "release.loading": "Loading releases…",
-  "release.downloadApk": "Download APK",
-  "release.downloadPackage": "Download package",
-  "release.missing": "No release has been published for {platform}.",
-  "release.published.title": "Published apps",
-  "release.published.description":
-    "Files are read from the persistent release directory and offered in the web UI.",
-  "release.published.count": "Published {count} of 2",
-  "release.compatibility.title": "Client compatibility",
-  "release.compatibility.description":
-    "The Arch client refuses to run below the minimum version and offers an update below the recommended one.",
-  "release.minimumVersion": "Minimum version",
-  "release.recommendedVersion": "Recommended version",
-  "release.saveFailed": "Could not save the desktop client versions.",
-  "release.saveError": "Versions not saved",
-  "release.saved.title": "Versions saved",
-  "release.saved.description": "Clients now receive the new values in the public handshake.",
-  "release.save": "Save versions",
-  "release.saving": "Saving…",
 
   "settings.title": "Instance settings",
   "settings.description":

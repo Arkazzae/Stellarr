@@ -209,14 +209,6 @@ describe("routes", () => {
     ["verifyBackup", () => opsApi.verifyBackup("b1"), "POST", "/api/ops/backups/b1/verify", undefined],
     ["settings", () => opsApi.settings(), "GET", "/api/ops/settings", undefined],
     ["sendTestMail", () => opsApi.sendTestMail("a@b.c"), "POST", "/api/ops/mail/test", { to: "a@b.c" }],
-    ["desktopRelease", () => opsApi.desktopRelease(), "GET", "/api/ops/desktop-release", undefined],
-    [
-      "updateDesktopRelease",
-      () => opsApi.updateDesktopRelease({ minimumVersion: "1.0.0", recommendedVersion: "1.2.0" }),
-      "PUT",
-      "/api/ops/desktop-release",
-      { minimumVersion: "1.0.0", recommendedVersion: "1.2.0" },
-    ],
     [
       "requestPasswordReset",
       () => opsApi.requestPasswordReset("a@b.c"),
