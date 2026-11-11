@@ -8,9 +8,10 @@ shopt -s inherit_errexit
 
 data_root="${STELLARR_DATA_ROOT:-/data/stellarr}"
 # STELLARR_DOMAIN is the name people reach the instance at; PUBLIC_HOST is its
-# older name. It is exported under that name too, so tls-maintenance.sh issues
-# the certificate for the same host.
-public_host="${STELLARR_DOMAIN:-${PUBLIC_HOST:-localhost}}"
+# older name. Without either, TLS and TURN use localhost. The host is exported
+# as PUBLIC_HOST too, so tls-maintenance.sh issues the certificate for it.
+configured_domain="${STELLARR_DOMAIN:-${PUBLIC_HOST:-}}"
+public_host="${configured_domain:-localhost}"
 export PUBLIC_HOST="$public_host"
 public_https_port="${PUBLIC_HTTPS_PORT:-443}"
 
@@ -139,12 +140,18 @@ export Rtc__PublicHost="$public_host"
 # The address in mail links and the desktop client's canonical origin: the
 # domain on the HTTPS port browsers use. Behind a proxy that is 443, not the
 # port this container publishes. STELLARR_PUBLIC_URL, when set, overrides it.
+# Without a domain or a URL there is no public address: reset links stay off
+# and desktop clients keep the address they connected to.
 public_port="${STELLARR_PUBLIC_PORT:-$public_https_port}"
 require_port STELLARR_PUBLIC_PORT "$public_port"
-public_url="$(public_url_for "$public_host" "$public_port" "${STELLARR_PUBLIC_URL:-}")"
-export Operations__PublicUrl="$public_url"
-export Desktop__CanonicalOrigin="$public_url"
-echo "The public address of this instance is $public_url." >&2
+if [[ -n "$configured_domain" || -n "${STELLARR_PUBLIC_URL:-}" ]]; then
+  public_url="$(public_url_for "$public_host" "$public_port" "${STELLARR_PUBLIC_URL:-}")"
+  export Operations__PublicUrl="$public_url"
+  export Desktop__CanonicalOrigin="$public_url"
+  echo "The public address of this instance is $public_url." >&2
+else
+  echo "STELLARR_DOMAIN is not set, so the instance has no public address: reset links stay off and desktop clients keep the address they connected to." >&2
+fi
 export TURN_SHARED_SECRET="$turn_secret"
 export Rtc__TurnSharedSecret="$turn_secret"
 

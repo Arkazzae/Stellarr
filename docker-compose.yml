@@ -32,7 +32,7 @@ services:
       # The entrypoint builds the public address in mail links and the desktop
       # handshake from them; STELLARR_PUBLIC_URL, when set, overrides it.
       # PUBLIC_HOST is the older name of STELLARR_DOMAIN.
-      STELLARR_DOMAIN: ${STELLARR_DOMAIN:-${PUBLIC_HOST:-localhost}}
+      STELLARR_DOMAIN: ${STELLARR_DOMAIN:-${PUBLIC_HOST:-}}
       STELLARR_PUBLIC_PORT: ${STELLARR_PUBLIC_PORT:-${STELLARR_HTTPS_PORT:-8443}}
       STELLARR_PUBLIC_URL: ${STELLARR_PUBLIC_URL:-}
       PUBLIC_IP: ${PUBLIC_IP:-}

@@ -71,7 +71,7 @@ Media](../STELLARR_MEDIA.md) describes the topology and what it does not do yet.
 
 ## Name and certificate
 
-`STELLARR_DOMAIN` is `localhost` by default, which works on the machine itself.
+Without `STELLARR_DOMAIN` the instance uses `localhost`, which works on the machine itself.
 Everyone else needs a DNS name, or the host's IP address, that points at the
 host. On the first start the container generates a self-signed certificate for
 that name, and browsers show a warning for it.
