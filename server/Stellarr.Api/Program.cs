@@ -55,6 +55,7 @@ builder.Services.AddSingleton<RegistrationGate>();
 builder.Services.AddSingleton<ServerMutationGate>();
 builder.Services.AddSingleton<PresenceTracker>();
 builder.Services.AddSingleton<TurnCredentialService>();
+AddMediaServer(builder.Services);
 builder.Services.AddSingleton<SlowModeGate>();
 builder.Services.AddSingleton<SoundboardPlaybackGate>();
 builder.Services.AddSingleton(TimeProvider.System);
@@ -147,6 +148,11 @@ if (builder.Environment.IsDevelopment())
 }
 
 var app = builder.Build();
+
+// Read once before anything is served, so an unknown Rtc:Topology stops the
+// API at start instead of at the first call that needs it. It is read from the
+// built host because only there does it see every source of configuration.
+app.Services.GetRequiredService<MediaTopology>();
 
 app.UseExceptionHandler();
 app.UseForwardedHeaders();
@@ -243,6 +249,43 @@ static async Task InitializeApplicationAsync(WebApplication app)
             await Task.Delay(TimeSpan.FromSeconds(1), stopping);
         }
     }
+}
+
+// Stellarr Media, the selective forwarding unit of the sfu topology. Everything
+// is registered in both topologies; in the mesh topology the background
+// services return at once and no seat ever holds a media session, so the API
+// never calls the media server.
+static void AddMediaServer(IServiceCollection services)
+{
+    services.AddSingleton(provider => MediaTopology.Load(provider.GetRequiredService<IConfiguration>()));
+    services.AddSingleton<MediaControlTiming>();
+    services
+        .AddHttpClient(MediaControlClient.HttpClientName, (provider, http) =>
+        {
+            http.BaseAddress = provider.GetRequiredService<MediaTopology>().ControlUrl;
+            // Each call sets its own, shorter limit; this only catches one
+            // that slipped past it.
+            http.Timeout = TimeSpan.FromMinutes(1);
+        })
+        // The control API listens next to the API, never behind a proxy, and a
+        // refused connection there means the media server is down, which is
+        // worth knowing at once.
+        .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
+        {
+            UseProxy = false,
+            ConnectTimeout = TimeSpan.FromSeconds(2),
+        })
+        // The event poll alone would log four lines every 25 seconds, and a
+        // media server that is down several each retry. The media code logs
+        // the changes of state that matter itself.
+        .RemoveAllLoggers();
+    services.AddSingleton<MediaControlClient>();
+    services.AddSingleton<MediaEventOutbox>();
+    services.AddSingleton<MediaPlane>();
+    services.AddSingleton<MediaSessionCloser>();
+    services.AddSingleton<IMediaSessionCloser>(provider => provider.GetRequiredService<MediaSessionCloser>());
+    services.AddHostedService(provider => provider.GetRequiredService<MediaSessionCloser>());
+    services.AddHostedService<MediaEventPump>();
 }
 
 // Both clients that read other people's pages connect through the handler that

@@ -15,4 +15,21 @@ public static class RtcProtocol
 
     public static readonly FrozenSet<string> SignalKinds =
         new[] { "offer", "answer", "candidate", "state" }.ToFrozenSet(StringComparer.Ordinal);
+
+    /// <summary>
+    /// The kinds of <see cref="SignalKinds"/> that set up a direct connection
+    /// between browsers. The sfu topology refuses them on <c>SendVoiceSignal</c>,
+    /// so browsers cannot connect behind the media server and learn each
+    /// other's addresses.
+    /// </summary>
+    public static readonly FrozenSet<string> PeerConnectionKinds =
+        new[] { "offer", "answer", "candidate" }.ToFrozenSet(StringComparer.Ordinal);
+
+    /// <summary>What a browser may send the media server with <c>SendMediaSignal</c>.</summary>
+    public static readonly FrozenSet<string> MediaSignalKinds =
+        new[] { "offer", "answer", "candidate" }.ToFrozenSet(StringComparer.Ordinal);
+
+    /// <summary>What the media server may send a browser as <c>MediaSignal</c>.</summary>
+    public static readonly FrozenSet<string> MediaServerSignalKinds =
+        new[] { "offer", "answer", "tracks" }.ToFrozenSet(StringComparer.Ordinal);
 }

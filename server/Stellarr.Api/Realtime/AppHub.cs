@@ -17,7 +17,11 @@ namespace Stellarr.Api.Realtime;
 public sealed partial class AppHub(
     AppDbContext db,
     PresenceTracker presence,
-    SoundboardPlaybackGate soundboardGate) : Hub
+    SoundboardPlaybackGate soundboardGate,
+    MediaTopology mediaTopology,
+    MediaPlane mediaPlane,
+    MediaControlClient mediaControl,
+    ILogger<AppHub> logger) : Hub
 {
     private static readonly TimeSpan TypingLifetime = TimeSpan.FromSeconds(6);
 

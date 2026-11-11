@@ -19,16 +19,41 @@ public sealed record VoiceJoinResult(
 
 public sealed record VoiceMoveResult(IReadOnlyList<string> ConnectionIds, bool Moved);
 
+/// <summary>A session of the media server: its opaque id and the run of the media server that created it.</summary>
+public sealed record MediaSession(string SessionId, string Epoch);
+
+/// <summary>A media session and the seat that holds it.</summary>
+public sealed record SeatedMediaSession(string ConnectionId, Guid ChannelId, MediaSession Session);
+
 /// <summary>
-/// Process-local state of the authenticated hub connections and of who sits
-/// in which voice room.
+/// Closes, in the media server, the sessions whose seat ended. The tracker
+/// calls it while it holds its own lock, so an implementation only takes note
+/// and returns; it never waits and never calls back into the tracker.
+/// </summary>
+public interface IMediaSessionCloser
+{
+    void Close(MediaSession session);
+}
+
+/// <summary>
+/// Process-local state of the authenticated hub connections, of who sits
+/// in which voice room and of the media session each seat holds.
 /// </summary>
 /// <remarks>
 /// Presence belongs to a user, while a voice seat belongs to one concrete
 /// connection. A newer tab takes the seat of an older one, because the
 /// signalling protocol names peers by user id and cannot hold two of them.
+/// <para>
+/// In the sfu topology a seat also holds the session the media server keeps
+/// for it, and the session lives exactly as long as the seat stays in its
+/// room. That rule is kept here rather than by the hub methods and endpoints
+/// that move people around: every change of a seat goes through
+/// <see cref="SetSeatLocked"/>, which hands the session it ends to the
+/// <see cref="IMediaSessionCloser"/>. A new way of ending a seat therefore
+/// cannot forget to stop the media.
+/// </para>
 /// </remarks>
-public sealed class PresenceTracker
+public sealed class PresenceTracker(IMediaSessionCloser? mediaSessionCloser = null)
 {
     public const string Online = "online";
     public const string Idle = "idle";
@@ -193,12 +218,16 @@ public sealed class PresenceTracker
                 .ToArray();
             foreach (var seat in displaced)
             {
-                _seatByConnection.Remove(seat.ConnectionId);
+                SetSeatLocked(seat.ConnectionId, null);
             }
 
+            // Joining the room the connection already sits in keeps the seat
+            // as it is, its mute state and its media session included.
             _seatByConnection.TryGetValue(connectionId, out var current);
-            var keepsMute = current is { } held && held.ChannelId == channelId && held.Muted;
-            _seatByConnection[connectionId] = new Seat(userId, channelId, keepsMute);
+            if (current is null || current.ChannelId != channelId)
+            {
+                SetSeatLocked(connectionId, new Seat(userId, channelId, Muted: false));
+            }
             return new VoiceJoinResult(
                 current is { } left && left.ChannelId != channelId ? left.ChannelId : null,
                 displaced);
@@ -243,7 +272,7 @@ public sealed class PresenceTracker
             var connectionIds = SeatConnectionsLocked(seat => seat.UserId == userId && seat.ChannelId == sourceChannelId);
             foreach (var connectionId in connectionIds)
             {
-                _seatByConnection[connectionId] = _seatByConnection[connectionId] with { ChannelId = targetChannelId };
+                SetSeatLocked(connectionId, _seatByConnection[connectionId] with { ChannelId = targetChannelId });
             }
 
             return new VoiceMoveResult(connectionIds, connectionIds.Length > 0);
@@ -264,7 +293,7 @@ public sealed class PresenceTracker
         {
             if (_seatByConnection.TryGetValue(connectionId, out var seat))
             {
-                _seatByConnection[connectionId] = seat with { Muted = muted };
+                SetSeatLocked(connectionId, seat with { Muted = muted });
             }
         }
     }
@@ -304,9 +333,97 @@ public sealed class PresenceTracker
             var connectionIds = SeatConnectionsLocked(seat => seat.ChannelId == channelId);
             foreach (var connectionId in connectionIds)
             {
-                _seatByConnection.Remove(connectionId);
+                SetSeatLocked(connectionId, null);
             }
             return connectionIds;
+        }
+    }
+
+    /// <summary>
+    /// Gives the connection's seat in <paramref name="channelId"/> its media
+    /// session, closing one it held before. False when the connection no
+    /// longer sits there, which happens when the seat ended while the media
+    /// server was creating the session; the caller then closes the session.
+    /// </summary>
+    public bool AttachMediaSession(string connectionId, Guid channelId, MediaSession session)
+    {
+        lock (_gate)
+        {
+            if (!_seatByConnection.TryGetValue(connectionId, out var seat) || seat.ChannelId != channelId)
+            {
+                return false;
+            }
+
+            SetSeatLocked(connectionId, seat with { Media = session });
+            return true;
+        }
+    }
+
+    /// <summary>Closes the media session the connection's seat holds, if it holds one; the seat stays.</summary>
+    public void CloseMediaSession(string connectionId)
+    {
+        lock (_gate)
+        {
+            if (_seatByConnection.TryGetValue(connectionId, out var seat) && seat.Media is not null)
+            {
+                SetSeatLocked(connectionId, seat with { Media = null });
+            }
+        }
+    }
+
+    /// <summary>The media session of the connection's seat in this room; null without a seat there or without a session.</summary>
+    public MediaSession? MediaSessionOf(string connectionId, Guid channelId)
+    {
+        lock (_gate)
+        {
+            return _seatByConnection.TryGetValue(connectionId, out var seat) && seat.ChannelId == channelId
+                ? seat.Media
+                : null;
+        }
+    }
+
+    /// <summary>The seat that holds a media session, which is where its signals go; null when none does.</summary>
+    public SeatedMediaSession? FindMediaSession(string sessionId)
+    {
+        lock (_gate)
+        {
+            foreach (var (connectionId, seat) in _seatByConnection)
+            {
+                if (seat.Media is { } media && media.SessionId == sessionId)
+                {
+                    return new SeatedMediaSession(connectionId, seat.ChannelId, media);
+                }
+            }
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Takes a media session off its seat without closing it, because the
+    /// media plane already ended it. Null when no seat holds it any more: of
+    /// two paths that learn about the same end, only the first one gets it and
+    /// tells the browser.
+    /// </summary>
+    public SeatedMediaSession? ForgetMediaSession(string sessionId) =>
+        ForgetMediaSessions(media => media.SessionId == sessionId) is [var forgotten, ..] ? forgotten : null;
+
+    /// <summary>Takes every media session <paramref name="ended"/> picks off its seat without closing it.</summary>
+    public IReadOnlyList<SeatedMediaSession> ForgetMediaSessions(Func<MediaSession, bool> ended)
+    {
+        lock (_gate)
+        {
+            var forgotten = _seatByConnection
+                .Where(entry => entry.Value.Media is { } media && ended(media))
+                .Select(entry => new SeatedMediaSession(entry.Key, entry.Value.ChannelId, entry.Value.Media!))
+                .ToArray();
+            // Written directly rather than through SetSeatLocked: the session
+            // is gone from the media server, and closing it there again would
+            // only be one more request to a process that may be down.
+            foreach (var session in forgotten)
+            {
+                _seatByConnection[session.ConnectionId] = _seatByConnection[session.ConnectionId] with { Media = null };
+            }
+            return forgotten;
         }
     }
 
@@ -337,10 +454,46 @@ public sealed class PresenceTracker
     private string PresenceLocked(Guid userId) =>
         _connectionsByUser.ContainsKey(userId) ? ChosenLocked(userId) : Offline;
 
-    private VoiceDeparture? TakeSeat(string connectionId) =>
-        _seatByConnection.Remove(connectionId, out var seat)
-            ? new VoiceDeparture(seat.UserId, seat.ChannelId)
-            : null;
+    private VoiceDeparture? TakeSeat(string connectionId)
+    {
+        if (!_seatByConnection.TryGetValue(connectionId, out var seat))
+        {
+            return null;
+        }
+
+        SetSeatLocked(connectionId, null);
+        return new VoiceDeparture(seat.UserId, seat.ChannelId);
+    }
+
+    /// <summary>
+    /// The one way a seat is written, null meaning that it ends. A media
+    /// session that the seat no longer holds afterwards, because the seat
+    /// ended, moved to another room or took a newer session, is handed to the
+    /// closer.
+    /// </summary>
+    private void SetSeatLocked(string connectionId, Seat? next)
+    {
+        _seatByConnection.TryGetValue(connectionId, out var current);
+        if (next is not null && next.ChannelId != current?.ChannelId)
+        {
+            // A session belongs to one room; the client opens a new one in the next.
+            next = next with { Media = null };
+        }
+
+        if (current?.Media is { } media && media != next?.Media)
+        {
+            mediaSessionCloser?.Close(media);
+        }
+
+        if (next is null)
+        {
+            _seatByConnection.Remove(connectionId);
+        }
+        else
+        {
+            _seatByConnection[connectionId] = next;
+        }
+    }
 
     private string[] SeatConnectionsLocked(Func<Seat, bool> predicate) =>
         [.. _seatByConnection.Where(entry => predicate(entry.Value)).Select(entry => entry.Key)];
@@ -351,5 +504,5 @@ public sealed class PresenceTracker
             .Select(seat => new VoiceParticipantState(seat.UserId, channelId, seat.Muted))
             .OrderBy(participant => participant.UserId)];
 
-    private sealed record Seat(Guid UserId, Guid ChannelId, bool Muted);
+    private sealed record Seat(Guid UserId, Guid ChannelId, bool Muted, MediaSession? Media = null);
 }

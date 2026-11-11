@@ -296,12 +296,49 @@ public sealed partial class VoiceRoomTests
     }
 
     /// <summary>An application of its own, and the hub connections opened against it.</summary>
-    private sealed class VoiceApp : IAsyncDisposable
+    /// <param name="mediaServer">
+    /// Stands in for Stellarr Media. Given alone it puts the application in the
+    /// sfu topology; <paramref name="topology"/> can still say otherwise.
+    /// </param>
+    private sealed class VoiceApp(FakeMediaServer? mediaServer = null, string? topology = null) : IAsyncDisposable
     {
-        private readonly StellarrWebApplicationFactory _factory = new();
+        private readonly StellarrWebApplicationFactory _factory = new(
+            loadTestData: true,
+            configuration: new Dictionary<string, string?>
+            {
+                ["Rtc:Topology"] = topology ?? (mediaServer is null ? null : MediaTopology.Sfu),
+                ["Rtc:MediaControlSecret"] = FakeMediaServer.Secret,
+            },
+            configureServices: services => mediaServer?.Install(services));
         private readonly List<Peer> _peers = [];
 
         public PresenceTracker Presence => _factory.Services.GetRequiredService<PresenceTracker>();
+
+        public T Service<T>() where T : notnull => _factory.Services.GetRequiredService<T>();
+
+        /// <summary>Waits until the event pump has reset the media server, before which no session opens.</summary>
+        public async Task MediaReadyAsync()
+        {
+            using var timeout = new CancellationTokenSource(Patience);
+            while (!Service<MediaPlane>().IsReady)
+            {
+                await Task.Delay(10, timeout.Token);
+            }
+        }
+
+        /// <summary>A signed-in HTTP client, for the endpoints that change seats.</summary>
+        public async Task<HttpClient> HttpAsync(string username)
+        {
+            var client = _factory.CreateClient(new WebApplicationFactoryClientOptions
+            {
+                AllowAutoRedirect = false,
+                HandleCookies = true,
+            });
+            (await client.PostAsJsonAsync(
+                "/api/auth/login",
+                new { username, password = Accounts[username].Password })).EnsureSuccessStatusCode();
+            return client;
+        }
 
         public async Task<Peer> ConnectAsync(string username, Guid? serverId = null)
         {
@@ -386,7 +423,10 @@ public sealed partial class VoiceRoomTests
     private sealed class Peer : IAsyncDisposable
     {
         private static readonly string[] Events =
-            ["PresenceChanged", "VoiceParticipantChanged", "VoiceSignal", "VoiceSessionReplaced", "DirectCallDeclined"];
+        [
+            "PresenceChanged", "VoiceParticipantChanged", "VoiceSignal", "VoiceSessionReplaced", "DirectCallDeclined",
+            "VoiceChannelKicked", "VoiceChannelMoved", "MediaSignal", "MediaSessionClosed",
+        ];
 
         private readonly Dictionary<string, Inbox> _inboxes = [];
 
@@ -433,6 +473,25 @@ public sealed partial class VoiceRoomTests
                 protocolVersion = version,
                 channelId = room,
                 toUserId,
+                kind,
+                payload,
+            });
+
+        /// <summary>Opens the media session of this connection's seat and returns its id.</summary>
+        public async Task<string> OpenMediaAsync(string room) =>
+            (await Connection.InvokeAsync<JsonElement>("OpenMediaSession", room)).GetProperty("sessionId").GetString()!;
+
+        public Task MediaSignalAsync(
+            string room,
+            string? sessionId,
+            string? kind,
+            string? payload,
+            int version = RtcProtocol.Version) =>
+            Connection.InvokeAsync("SendMediaSignal", new
+            {
+                protocolVersion = version,
+                channelId = room,
+                sessionId,
                 kind,
                 payload,
             });

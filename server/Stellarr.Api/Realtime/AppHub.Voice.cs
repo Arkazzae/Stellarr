@@ -98,7 +98,10 @@ public sealed partial class AppHub
 
         var roomId = ParseGuid(signal.ChannelId, nameof(signal.ChannelId));
         var senderId = Context.User!.RequireUserId();
+        // Behind the media server only the state travels from browser to
+        // browser; a direct connection would bypass it and give away addresses.
         if (!IsRelayable(signal) ||
+            (mediaTopology.IsSfu && RtcProtocol.PeerConnectionKinds.Contains(signal.Kind)) ||
             !presence.IsConnectionInVoice(Context.ConnectionId, roomId) ||
             !(await VoiceRoomAccessAsync(roomId, senderId)).Allowed)
         {

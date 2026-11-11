@@ -36,6 +36,7 @@ public static class BootstrapEndpoints
         AppDbContext db,
         PresenceTracker presence,
         TurnCredentialService turnCredentials,
+        MediaTopology mediaTopology,
         IConfiguration configuration,
         CancellationToken cancellationToken)
     {
@@ -99,7 +100,7 @@ public static class BootstrapEndpoints
             messages.OrderBy(x => x.CreatedAt).Select(x => x.ToDto(userId)).ToArray(),
             reads,
             voice,
-            BuildRtcConfiguration(configuration, turnCredentials.Create(userId)),
+            BuildRtcConfiguration(configuration, turnCredentials.Create(userId), mediaTopology),
             ServerAccess.ToNames(permissions)));
     }
 
@@ -152,7 +153,15 @@ public static class BootstrapEndpoints
         }
     }
 
-    private static RtcConfigurationDto BuildRtcConfiguration(IConfiguration configuration, TurnCredentials turn)
+    /// <remarks>
+    /// Capabilities and ICE servers are the same in both topologies; TURN
+    /// stays in the list in the sfu topology too, for browsers on networks
+    /// that block UDP.
+    /// </remarks>
+    private static RtcConfigurationDto BuildRtcConfiguration(
+        IConfiguration configuration,
+        TurnCredentials turn,
+        MediaTopology mediaTopology)
     {
         var host = configuration["Rtc:PublicHost"] ?? "localhost";
         var turnPort = configuration.GetValue("Rtc:TurnPort", 3478);
@@ -186,7 +195,7 @@ public static class BootstrapEndpoints
 
         return new RtcConfigurationDto(
             ProtocolVersion: RtcProtocol.Version,
-            Topology: "mesh",
+            Topology: mediaTopology.Name,
             Capabilities: new RtcCapabilitiesDto(
                 AudioCodecs: ["opus"],
                 VideoCodecs: ["vp9", "vp8", "h264"],
@@ -196,6 +205,6 @@ public static class BootstrapEndpoints
                 ScreenAudio: true),
             IceServers: iceServers,
             SignalingHub: "/hubs/app",
-            MediaServer: "");
+            MediaServer: mediaTopology.PublicEndpoint(host));
     }
 }
