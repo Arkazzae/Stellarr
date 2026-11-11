@@ -1,5 +1,5 @@
 # Production stack: one container runs Nginx, the API, the web client, RustFS
-# object storage and coturn.
+# object storage, coturn and the Stellarr Media server.
 #
 #   docker compose up -d           pulls the published image
 #   docker compose up -d --build   builds the image from this checkout
@@ -34,6 +34,13 @@ services:
       Rtc__TurnsPort: ${STELLARR_TURNS_PORT:-5349}
       Rtc__TurnTcpEnabled: ${STELLARR_TURN_TCP_ENABLED:-false}
       Rtc__TurnsEnabled: ${STELLARR_TURNS_ENABLED:-false}
+      # mesh: the browsers of a call send their media to each other. sfu: each
+      # browser sends it once to Stellarr Media, which forwards it to the rest
+      # of the room; it needs PUBLIC_IP and the media port forwarded. See
+      # docs/STELLARR_MEDIA.md for what sfu does not do yet.
+      Rtc__Topology: ${STELLARR_RTC_TOPOLOGY:-mesh}
+      # The host port of 49000/udp below; the media server advertises it.
+      Rtc__MediaPort: ${STELLARR_MEDIA_PORT:-49000}
       Logging__LogLevel__Microsoft.EntityFrameworkCore.Database.Command: ${STELLARR_EF_COMMAND_LOG_LEVEL:-Warning}
       ASPNETCORE_ENVIRONMENT: Production
       GIPHY_API_KEY: ${GIPHY_API_KEY:-}
@@ -70,6 +77,8 @@ services:
       - "${STELLARR_TURN_PORT:-3478}:3478/udp"
       - "${STELLARR_TURNS_PORT:-5349}:5349/tcp"
       - "${STELLARR_TURNS_PORT:-5349}:5349/udp"
+      # Stellarr Media: every call in the sfu topology, idle in mesh. The router
+      # must forward the same external port, because that is the one advertised.
       - "${STELLARR_MEDIA_PORT:-49000}:49000/udp"
       - "${STELLARR_TURN_RELAY_RANGE:-49160-49200}:49160-49200/udp"
     volumes:

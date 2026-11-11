@@ -28,6 +28,9 @@ no-tlsv1_1
 no-cli
 stale-nonce=600
 max-allocate-lifetime=300
+# Peers on private addresses must stay allowed: in the sfu topology a relayed
+# browser reaches the media server at this container's own address. Loopback
+# peers stay refused, which is coturn's default.
 no-multicast-peers
 response-origin-only-with-rfc5780
 
