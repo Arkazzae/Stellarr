@@ -50,7 +50,7 @@ function Field({ id, label, hint, errors, ...input }: FieldProps) {
       <Label htmlFor={id}>{label}</Label>
       <Input id={id} aria-invalid={Boolean(error)} {...input} />
       {hint ? <p className="text-xs text-muted-foreground">{hint}</p> : null}
-      {error ? <p className="text-xs text-destructive">{error}</p> : null}
+      {error ? <p className="text-xs text-danger">{error}</p> : null}
     </div>
   );
 }
@@ -272,7 +272,7 @@ function TestMail({ settings }: { settings: OpsSettings }) {
         </p>
       ) : null}
       {failure ? (
-        <p className="text-xs text-destructive" role="alert">
+        <p className="text-xs text-danger" role="alert">
           {failure}
         </p>
       ) : null}
