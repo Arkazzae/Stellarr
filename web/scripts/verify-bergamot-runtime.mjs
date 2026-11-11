@@ -48,7 +48,31 @@ const fixturePage = `<!doctype html>
 
 let proxiedModelFiles = 0;
 
-async function proxyModel(path, response) {
+// The proxy fetches only the files the bundled registry names, as
+// "<pair>/<file>". The address is built from the registry's own entry, never
+// from the request, so a request cannot point the proxy anywhere else.
+async function loadModelFiles() {
+  const registry = JSON.parse(
+    await readFile(join(publicRoot, "bergamot-models", "registry.json"), "utf8"),
+  );
+  const files = new Map();
+  for (const [pair, entries] of Object.entries(registry)) {
+    for (const { name } of Object.values(entries)) {
+      const path = `${pair}/${name}`;
+      files.set(path, path);
+    }
+  }
+  return files;
+}
+
+const modelFiles = await loadModelFiles();
+
+async function proxyModel(requested, response) {
+  const path = modelFiles.get(requested);
+  if (path === undefined) {
+    response.writeHead(404).end();
+    return;
+  }
   proxiedModelFiles += 1;
   const upstream = await fetch(`${modelBucket}/${path}`);
   if (!upstream.ok) {
@@ -69,7 +93,15 @@ async function serveStatic(pathname, response) {
     response.writeHead(404).end();
     return;
   }
-  const body = await readFile(file);
+  let body;
+  try {
+    body = await readFile(file);
+  } catch (error) {
+    // Chromium asks for /favicon.ico, which public/ does not have.
+    if (error?.code !== "ENOENT") throw error;
+    response.writeHead(404).end();
+    return;
+  }
   response.writeHead(200, {
     "content-type": mimeTypes[extname(file)] ?? "application/octet-stream",
     "content-length": body.byteLength,
@@ -92,8 +124,10 @@ const server = createServer(async (request, response) => {
       await serveStatic(pathname, response);
     }
   } catch (error) {
+    // The detail goes to this terminal; the page only learns that it failed.
+    console.error("[bergamot] stand-in server:", error);
     response.writeHead(500, { "content-type": "text/plain; charset=utf-8" });
-    response.end(error instanceof Error ? error.message : String(error));
+    response.end("Internal error");
   }
 });
 
