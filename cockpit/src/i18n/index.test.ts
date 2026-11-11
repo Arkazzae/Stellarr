@@ -76,7 +76,7 @@ describe("setLocale", () => {
 describe("t", () => {
   it("fills named placeholders, numbers included", () => {
     expect(t("backups.created", { id: "backup-1" })).toBe("Created backup-1.");
-    expect(t("logs.tab.logs", { count: 0 })).toBe("Logs (0)");
+    expect(t("logs.shown", { count: 0 })).toBe("0 shown");
   });
 
   it("leaves a placeholder without a value as it is", () => {

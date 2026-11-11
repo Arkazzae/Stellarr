@@ -50,7 +50,7 @@ describe("AppShell navigation", () => {
       "Użytkownicy",
       "Serwery",
       "Runtime",
-      "Logi i audyt",
+      "Logi",
       "Backup",
       "Ustawienia",
     ]);
@@ -68,7 +68,7 @@ describe("AppShell navigation", () => {
     ["/users/user-1", "Użytkownicy"],
     ["/servers", "Serwery"],
     ["/runtime", "Runtime"],
-    ["/logs", "Logi i audyt"],
+    ["/logs", "Logi"],
     ["/backups", "Backup"],
     ["/settings", "Ustawienia"],
   ])("marks the item for %s as the only active one and names it in the header", (path, label) => {

@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -76,8 +77,15 @@ public sealed class CockpitServersTests
             .Single(x => x.GetProperty("id").GetString() == corner);
         Assert.Equal("ada", after.GetProperty("owner").GetProperty("username").GetString());
         Assert.Equal(2, after.GetProperty("memberCount").GetInt32());
-        var log = await (await owner.GetAsync("/api/cockpit/logs")).Content.ReadAsStringAsync();
-        Assert.Contains("Jo's corner", log, StringComparison.Ordinal);
+        await using (var scope = factory.OpenScope(out var db))
+        {
+            Assert.Contains(
+                await db.ServerAuditEntries.AsNoTracking()
+                    .Where(entry => entry.ServerId == TestData.ServerId)
+                    .Select(entry => entry.Summary)
+                    .ToListAsync(),
+                summary => summary == "Maja przekazał(a) serwer Jo's corner użytkownikowi Ada");
+        }
     }
 
     [Fact]

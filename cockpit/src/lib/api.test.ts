@@ -152,7 +152,7 @@ describe("failures", () => {
   ])("reports the status code for %s", async (_label, respond) => {
     fetchMock.mockResolvedValueOnce(respond());
 
-    const error = await failureOf(cockpitApi.logs());
+    const error = await failureOf(cockpitApi.logs({ levels: [], source: "", search: "" }, null));
 
     expect(error.status).toBe(502);
     expect(error.message).toBe("Backend odpowiedział kodem 502.");
@@ -214,7 +214,14 @@ describe("routes", () => {
     ["sessions", () => cockpitApi.sessions(), "GET", "/api/cockpit/sessions", undefined],
     ["revokeSession", () => cockpitApi.revokeSession("s1"), "DELETE", "/api/cockpit/sessions/s1", undefined],
     ["runtime", () => cockpitApi.runtime(), "GET", "/api/cockpit/runtime", undefined],
-    ["logs", () => cockpitApi.logs(), "GET", "/api/cockpit/logs", undefined],
+    ["logs", () => cockpitApi.logs({ levels: [], source: "", search: "" }, null), "GET", "/api/cockpit/logs", undefined],
+    [
+      "logs with filters and a cursor",
+      () => cockpitApi.logs({ levels: ["warn", "error"], source: "Stellarr.Api", search: " disk full " }, 42),
+      "GET",
+      "/api/cockpit/logs?before=42&level=warn%2Cerror&source=Stellarr.Api&search=disk+full",
+      undefined,
+    ],
     ["backups", () => cockpitApi.backups(), "GET", "/api/cockpit/backups", undefined],
     ["createBackup", () => cockpitApi.createBackup(), "POST", "/api/cockpit/backups", undefined],
     ["verifyBackup", () => cockpitApi.verifyBackup("b1"), "POST", "/api/cockpit/backups/b1/verify", undefined],
@@ -281,7 +288,10 @@ describe("routes", () => {
   });
 
   it("builds download links without calling the server", () => {
-    expect(cockpitApi.logExportUrl).toBe("/api/cockpit/logs/export");
+    expect(cockpitApi.logExportUrl({ levels: [], source: "", search: "" })).toBe("/api/cockpit/logs/export");
+    expect(cockpitApi.logExportUrl({ levels: ["error"], source: "", search: "" })).toBe(
+      "/api/cockpit/logs/export?level=error",
+    );
     expect(cockpitApi.backupDownloadUrl("a/b")).toBe("/api/cockpit/backups/a%2Fb/download");
     expect(fetchMock).not.toHaveBeenCalled();
   });

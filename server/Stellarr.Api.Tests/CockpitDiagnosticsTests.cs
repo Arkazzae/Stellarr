@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
@@ -22,6 +23,12 @@ public sealed partial class CockpitDiagnosticsTests : IClassFixture<StellarrWebA
 
     [LoggerMessage(EventId = 2, Level = LogLevel.Debug, Message = "{Marker}")]
     private static partial void LogDebug(ILogger logger, string marker);
+
+    [LoggerMessage(EventId = 3, Level = LogLevel.Error, Message = "{Marker}")]
+    private static partial void LogError(ILogger logger, string marker);
+
+    [LoggerMessage(EventId = 4, Level = LogLevel.Information, Message = "{Marker}")]
+    private static partial void LogInformation(ILogger logger, string marker);
 
     [Theory]
     [InlineData("/api/cockpit/runtime")]
@@ -84,7 +91,7 @@ public sealed partial class CockpitDiagnosticsTests : IClassFixture<StellarrWebA
     }
 
     [Fact]
-    public async Task LogsReturnTheNewestLinesFirstTogetherWithTheAuditTrail()
+    public async Task LogsReturnTheNewestLinesFirst()
     {
         using var owner = await OwnerAsync();
         var marker = $"marker-{Guid.NewGuid():N}";
@@ -93,33 +100,74 @@ public sealed partial class CockpitDiagnosticsTests : IClassFixture<StellarrWebA
         LogWarning(logger, lines[0]);
         LogWarning(logger, lines[1]);
         LogDebug(logger, lines[2]);
-        var username = $"audyt{Guid.NewGuid():N}"[..16];
-        (await owner.PostAsJsonAsync("/api/cockpit/users", new
-        {
-            username,
-            displayName = "Audit Subject",
-            password = "Nowe-haslo-2026",
-            roleId = await MemberRoleIdAsync(owner),
-        })).EnsureSuccessStatusCode();
 
-        var logs = await JsonAsync(await owner.GetAsync("/api/cockpit/logs?limit=2000"));
+        var logs = await JsonAsync(await owner.GetAsync($"/api/cockpit/logs?search={marker}&source={Category}"));
 
-        var entries = logs.GetProperty("logs").EnumerateArray().ToArray();
-        var first = Array.FindIndex(entries, entry => entry.GetProperty("message").GetString() == lines[0]);
-        var second = Array.FindIndex(entries, entry => entry.GetProperty("message").GetString() == lines[1]);
-        Assert.True(second >= 0 && second < first, "the newer line comes before the older one");
-        Assert.Equal("warn", entries[first].GetProperty("level").GetString());
-        Assert.Equal(Category, entries[first].GetProperty("source").GetString());
-        Assert.Equal("background", entries[first].GetProperty("traceId").GetString());
-        Assert.DoesNotContain(entries, entry => entry.GetProperty("message").GetString() == lines[2]);
-
-        var audit = logs.GetProperty("audit").EnumerateArray().First();
-        Assert.Equal("Maja", audit.GetProperty("actor").GetString());
-        Assert.Equal("Maja utworzył(a) konto Audit Subject", audit.GetProperty("summary").GetString());
+        var entries = logs.GetProperty("entries").EnumerateArray().ToArray();
+        Assert.Equal([lines[1], lines[0]], entries.Select(entry => entry.GetProperty("message").GetString()));
+        Assert.Equal("warn", entries[0].GetProperty("level").GetString());
+        Assert.Equal(Category, entries[0].GetProperty("source").GetString());
+        Assert.Equal("background", entries[0].GetProperty("traceId").GetString());
+        Assert.True(entries[0].GetProperty("sequence").GetInt64() > entries[1].GetProperty("sequence").GetInt64());
+        Assert.Equal(JsonValueKind.Null, logs.GetProperty("nextBefore").ValueKind);
+        Assert.Equal(10_000, logs.GetProperty("capacity").GetInt32());
+        Assert.False(logs.TryGetProperty("audit", out _));
     }
 
     [Fact]
-    public async Task LogsHonourTheLimitAndHoldItBetweenOneAndTwoThousand()
+    public async Task LogsArePagedOlderFromTheCursor()
+    {
+        using var owner = await OwnerAsync();
+        var marker = $"page-{Guid.NewGuid():N}";
+        var logger = _factory.Services.GetRequiredService<ILoggerFactory>().CreateLogger(Category);
+        for (var number = 1; number <= 5; number++)
+        {
+            LogWarning(logger, $"{marker} {number}");
+        }
+
+        var seen = new List<string>();
+        string? cursor = null;
+        do
+        {
+            var page = await JsonAsync(await owner.GetAsync(
+                $"/api/cockpit/logs?search={marker}&source={Category}&limit=2{(cursor is null ? "" : $"&before={cursor}")}"));
+            seen.AddRange(page.GetProperty("entries").EnumerateArray().Select(entry => entry.GetProperty("message").GetString()!));
+            var next = page.GetProperty("nextBefore");
+            cursor = next.ValueKind == JsonValueKind.Null ? null : next.GetInt64().ToString(CultureInfo.InvariantCulture);
+        }
+        while (cursor is not null);
+
+        Assert.Equal(Enumerable.Range(1, 5).Reverse().Select(number => $"{marker} {number}"), seen);
+    }
+
+    [Fact]
+    public async Task LogsFilterByLevelSourceAndSearch()
+    {
+        using var owner = await OwnerAsync();
+        var marker = $"Filter-{Guid.NewGuid():N}";
+        var logger = _factory.Services.GetRequiredService<ILoggerFactory>().CreateLogger(Category);
+        var other = _factory.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Other.Source");
+        LogWarning(logger, $"{marker} warned");
+        var failed = $"{marker} failed";
+        LogError(logger, failed);
+        LogWarning(other, $"{marker} elsewhere");
+
+        var errors = await JsonAsync(await owner.GetAsync($"/api/cockpit/logs?search={marker.ToUpperInvariant()}&level=error"));
+        Assert.Equal([$"{marker} failed"], errors.GetProperty("entries").EnumerateArray().Select(x => x.GetProperty("message").GetString()));
+        // The counts follow the search but not the chosen level.
+        Assert.Equal(2, errors.GetProperty("levels").GetProperty("warn").GetInt32());
+        Assert.Equal(1, errors.GetProperty("levels").GetProperty("error").GetInt32());
+
+        var fromSource = await JsonAsync(await owner.GetAsync($"/api/cockpit/logs?search={marker}&source=Other.Source"));
+        Assert.Equal([$"{marker} elsewhere"], fromSource.GetProperty("entries").EnumerateArray().Select(x => x.GetProperty("message").GetString()));
+        Assert.Contains(fromSource.GetProperty("sources").EnumerateArray(), x => x.GetProperty("name").GetString() == "Other.Source");
+
+        var both = await JsonAsync(await owner.GetAsync($"/api/cockpit/logs?search={marker}&level=warn,error,bogus"));
+        Assert.Equal(3, both.GetProperty("entries").GetArrayLength());
+    }
+
+    [Fact]
+    public async Task LogsHoldTheLimitBetweenOneAndFiveHundred()
     {
         using var owner = await OwnerAsync();
         var logger = _factory.Services.GetRequiredService<ILoggerFactory>().CreateLogger(Category);
@@ -127,11 +175,11 @@ public sealed partial class CockpitDiagnosticsTests : IClassFixture<StellarrWebA
         LogWarning(logger, "two");
 
         Assert.Single((await JsonAsync(await owner.GetAsync("/api/cockpit/logs?limit=1")))
-            .GetProperty("logs").EnumerateArray());
+            .GetProperty("entries").EnumerateArray());
         Assert.Single((await JsonAsync(await owner.GetAsync("/api/cockpit/logs?limit=-5")))
-            .GetProperty("logs").EnumerateArray());
+            .GetProperty("entries").EnumerateArray());
         Assert.True((await JsonAsync(await owner.GetAsync("/api/cockpit/logs?limit=1000000")))
-            .GetProperty("logs").GetArrayLength() <= 2_000);
+            .GetProperty("entries").GetArrayLength() <= 500);
     }
 
     [Fact]
@@ -161,6 +209,22 @@ public sealed partial class CockpitDiagnosticsTests : IClassFixture<StellarrWebA
     }
 
     [Fact]
+    public async Task ExportKeepsOnlyTheLinesTheFiltersKeep()
+    {
+        using var owner = await OwnerAsync();
+        var marker = $"exported-{Guid.NewGuid():N}";
+        var logger = _factory.Services.GetRequiredService<ILoggerFactory>().CreateLogger(Category);
+        LogWarning(logger, $"{marker} kept");
+        var dropped = $"{marker} dropped";
+        LogInformation(logger, dropped);
+
+        var text = await (await owner.GetAsync($"/api/cockpit/logs/export?search={marker}&level=warn")).Content.ReadAsStringAsync();
+
+        Assert.Contains($"{marker} kept", text, StringComparison.Ordinal);
+        Assert.DoesNotContain($"{marker} dropped", text, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void BufferKeepsOnlyTheNewestLinesOnceFull()
     {
         var buffer = new CockpitLogBuffer(new HttpContextAccessor());
@@ -177,6 +241,25 @@ public sealed partial class CockpitDiagnosticsTests : IClassFixture<StellarrWebA
         Assert.Equal($"line {CockpitLogBuffer.Capacity + 100}", lines[0].Message);
         Assert.Equal("line 101", lines[^1].Message);
         Assert.Single(buffer.Snapshot(0));
+    }
+
+    [Fact]
+    public void BufferPagesFromTheCursorAndSaysWhetherMoreRemain()
+    {
+        var buffer = new CockpitLogBuffer(new HttpContextAccessor());
+        var logger = buffer.CreateLogger(Category);
+        for (var number = 1; number <= 6; number++)
+        {
+            LogWarning(logger, $"line {number}");
+        }
+
+        var even = buffer.Page(null, 2, line => line.Message.EndsWith('2') || line.Message.EndsWith('4') || line.Message.EndsWith('6'));
+        Assert.Equal(["line 6", "line 4"], even.Lines.Select(line => line.Message));
+        Assert.True(even.HasMore);
+        var rest = buffer.Page(even.Lines[^1].Sequence, 2, line => line.Message.EndsWith('2') || line.Message.EndsWith('4') || line.Message.EndsWith('6'));
+        Assert.Equal(["line 2"], rest.Lines.Select(line => line.Message));
+        Assert.False(rest.HasMore);
+        Assert.Equal(5, buffer.Page(null, 10, _ => true).Lines[0].Sequence);
     }
 
     [Fact]

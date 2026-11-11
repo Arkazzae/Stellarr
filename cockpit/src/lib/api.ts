@@ -146,24 +146,45 @@ export interface CockpitRuntime {
   history: CockpitRuntimeSample[];
 }
 
+export type CockpitLogLevel = "info" | "warn" | "error";
+
 export interface CockpitLogEntry {
+  /** The line's place in everything the process has logged; the paging cursor. */
+  sequence: number;
   at: string;
-  level: "info" | "warn" | "error";
+  level: CockpitLogLevel;
   source: string;
   message: string;
   traceId: string;
 }
 
-export interface CockpitAuditEntry {
-  id: string;
-  actor: string;
-  summary: string;
-  at: string;
+/** A page of log lines, newest first. */
+export interface CockpitLogs {
+  entries: CockpitLogEntry[];
+  /** Asks for the next, older page; null when no older line matches. */
+  nextBefore: number | null;
+  /** Lines of each level that match the source and the search, whatever level is chosen. */
+  levels: Record<CockpitLogLevel, number>;
+  /** Sources in the buffer, the busiest first. */
+  sources: { name: string; count: number }[];
+  /** How many lines the server keeps. */
+  capacity: number;
 }
 
-export interface CockpitLogs {
-  logs: CockpitLogEntry[];
-  audit: CockpitAuditEntry[];
+export interface CockpitLogFilters {
+  levels: CockpitLogLevel[];
+  source: string;
+  search: string;
+}
+
+/** The filters as a query string, empty ones left out. */
+function logQuery(filters: CockpitLogFilters, extra: Record<string, string> = {}): string {
+  const query = new URLSearchParams(extra);
+  if (filters.levels.length > 0) query.set("level", filters.levels.join(","));
+  if (filters.source) query.set("source", filters.source);
+  if (filters.search.trim()) query.set("search", filters.search.trim());
+  const text = query.toString();
+  return text ? `?${text}` : "";
 }
 
 export interface CockpitBackup {
@@ -311,8 +332,13 @@ export const cockpitApi = {
 
   runtime: (signal?: AbortSignal) => request<CockpitRuntime>("/api/cockpit/runtime", {}, signal),
 
-  logs: (signal?: AbortSignal) => request<CockpitLogs>("/api/cockpit/logs", {}, signal),
-  logExportUrl: "/api/cockpit/logs/export",
+  logs: (filters: CockpitLogFilters, before: number | null, signal?: AbortSignal) =>
+    request<CockpitLogs>(
+      `/api/cockpit/logs${logQuery(filters, before === null ? {} : { before: String(before) })}`,
+      {},
+      signal,
+    ),
+  logExportUrl: (filters: CockpitLogFilters) => `/api/cockpit/logs/export${logQuery(filters)}`,
 
   backups: (signal?: AbortSignal) => request<CockpitBackups>("/api/cockpit/backups", {}, signal),
   createBackup: (signal?: AbortSignal) =>

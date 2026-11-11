@@ -2,7 +2,7 @@
 
 Cockpit is the instance owner's panel, a separate front end: an overview with the
 last thirty days of activity, users with their sessions and roles, metrics of the
-running process, logs and audit, backups and instance settings.
+running process, a searchable log, backups and instance settings.
 
 ## Running it
 

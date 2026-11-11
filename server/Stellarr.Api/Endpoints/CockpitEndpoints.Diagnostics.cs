@@ -15,8 +15,9 @@ namespace Stellarr.Api.Endpoints;
 // How the process is doing, what it logged and who did what.
 public static partial class CockpitEndpoints
 {
-    private const int DefaultLogLimit = 500;
-    private const int MaxLogLimit = CockpitLogBuffer.Capacity;
+    private const int DefaultLogLimit = 100;
+    private const int MaxLogLimit = 500;
+    private const int MaxLogSources = 50;
 
     private static async Task<IResult> GetRuntimeAsync(
         HttpContext http,
@@ -89,33 +90,47 @@ public static partial class CockpitEndpoints
                 sample.ServerErrors)).ToArray()));
     }
 
-    private static async Task<IResult> GetLogsAsync(
+    /// <summary>
+    /// A page of the log buffer, newest first, filtered by level (a comma-separated
+    /// list of info, warn and error), source and a search in the message, source
+    /// and trace id. <paramref name="before"/> is the cursor of the previous page.
+    /// </summary>
+    private static IResult GetLogs(
+        long? before,
         int? limit,
-        HttpContext http,
-        AppDbContext db,
-        CockpitLogBuffer logBuffer,
-        CancellationToken cancellationToken)
+        string? level,
+        string? source,
+        string? search,
+        CockpitLogBuffer logBuffer)
     {
-        var serverId = http.RequireInstanceServer().Id;
-        var take = Math.Clamp(limit ?? DefaultLogLimit, 1, MaxLogLimit);
-        var audit = await db.ServerAuditEntries.AsNoTracking()
-            .Where(x => x.ServerId == serverId)
-            .OrderByDescending(x => x.CreatedAt)
-            .Take(take)
-            .Select(x => new CockpitAuditEntryDto(x.Id.ToString(), x.Actor.DisplayName, x.Summary, x.CreatedAt))
-            .ToArrayAsync(cancellationToken);
+        var filter = LogFilter.From(level, source, search);
+        var page = logBuffer.Page(before, Math.Clamp(limit ?? DefaultLogLimit, 1, MaxLogLimit), filter.Matches);
+        var all = logBuffer.All();
+        var counted = all.Where(filter.MatchesIgnoringLevel).Select(line => LevelName(line.Level)).ToArray();
+        var sources = all
+            .GroupBy(line => line.Category, StringComparer.Ordinal)
+            .Select(group => new CockpitLogSourceDto(group.Key, group.Count()))
+            .OrderByDescending(x => x.Count).ThenBy(x => x.Name, StringComparer.Ordinal)
+            .Take(MaxLogSources)
+            .ToArray();
 
         return Results.Ok(new CockpitLogsDto(
-            logBuffer.Snapshot(take)
-                .Select(x => new CockpitLogEntryDto(x.At, LevelName(x.Level), x.Category, x.Message, x.TraceId))
+            page.Lines
+                .Select(x => new CockpitLogEntryDto(x.Sequence, x.At, LevelName(x.Level), x.Category, x.Message, x.TraceId))
                 .ToArray(),
-            audit));
+            page.HasMore ? page.Lines[^1].Sequence : null,
+            new CockpitLogLevelCountsDto(
+                counted.Count(x => x == "info"),
+                counted.Count(x => x == "warn"),
+                counted.Count(x => x == "error")),
+            sources,
+            CockpitLogBuffer.Capacity));
     }
 
-    /// <summary>The whole buffer as tab-separated text, oldest line first.</summary>
-    private static IResult ExportLogs(CockpitLogBuffer logBuffer)
+    /// <summary>Every line of the buffer that the filters keep, as tab-separated text, oldest line first.</summary>
+    private static IResult ExportLogs(string? level, string? source, string? search, CockpitLogBuffer logBuffer)
     {
-        var lines = logBuffer.Snapshot(MaxLogLimit);
+        var lines = logBuffer.Page(null, CockpitLogBuffer.Capacity, LogFilter.From(level, source, search).Matches).Lines;
         var export = new StringBuilder("at\tlevel\tsource\ttrace\tmessage\n");
         for (var index = lines.Count - 1; index >= 0; index--)
         {
@@ -131,6 +146,35 @@ public static partial class CockpitEndpoints
             Encoding.UTF8.GetBytes(export.ToString()),
             "text/tab-separated-values; charset=utf-8",
             $"stellarr-logs-{DateTime.UtcNow:yyyyMMdd-HHmmss}.tsv");
+    }
+
+    /// <summary>The filters of the logs page; an empty value lets every line through.</summary>
+    private readonly record struct LogFilter(IReadOnlySet<string>? Levels, string? Source, string? Search)
+    {
+        private static readonly string[] KnownLevels = ["info", "warn", "error"];
+
+        public static LogFilter From(string? level, string? source, string? search)
+        {
+            var levels = (level ?? "")
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Select(x => x.ToLowerInvariant())
+                .Where(KnownLevels.Contains)
+                .ToHashSet(StringComparer.Ordinal);
+            return new LogFilter(
+                levels.Count == 0 ? null : levels,
+                string.IsNullOrWhiteSpace(source) ? null : source.Trim(),
+                string.IsNullOrWhiteSpace(search) ? null : search.Trim());
+        }
+
+        public bool Matches(CockpitLogRecord line) =>
+            (Levels is null || Levels.Contains(LevelName(line.Level))) && MatchesIgnoringLevel(line);
+
+        public bool MatchesIgnoringLevel(CockpitLogRecord line) =>
+            (Source is null || string.Equals(line.Category, Source, StringComparison.Ordinal)) &&
+            (Search is null ||
+                line.Message.Contains(Search, StringComparison.OrdinalIgnoreCase) ||
+                line.Category.Contains(Search, StringComparison.OrdinalIgnoreCase) ||
+                line.TraceId.Contains(Search, StringComparison.OrdinalIgnoreCase));
     }
 
     private static string LevelName(LogLevel level) => level switch

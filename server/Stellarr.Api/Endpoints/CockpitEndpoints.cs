@@ -36,7 +36,7 @@ public static partial class CockpitEndpoints
         cockpit.MapGet("/sessions", GetSessionsAsync);
         cockpit.MapDelete("/sessions/{sessionId:guid}", RevokeSessionAsync);
         cockpit.MapGet("/runtime", GetRuntimeAsync);
-        cockpit.MapGet("/logs", GetLogsAsync);
+        cockpit.MapGet("/logs", GetLogs);
         cockpit.MapGet("/logs/export", ExportLogs);
         cockpit.MapGet("/backups", GetBackupsAsync);
         cockpit.MapPost("/backups", CreateBackupAsync);

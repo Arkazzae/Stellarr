@@ -99,11 +99,11 @@ describe("the navigation shell", () => {
       "Users",
       "Servers",
       "Runtime",
-      "Logs and audit",
+      "Logs",
       "Backups",
       "Settings",
     ]);
-    expect(within(screen.getByRole("banner")).getByText("Logs and audit")).toBeTruthy();
+    expect(within(screen.getByRole("banner")).getByText("Logs")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Open navigation" })).toBeTruthy();
   });
 });

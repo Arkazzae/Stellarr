@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using System.Net;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
@@ -95,10 +96,12 @@ public sealed class CockpitSettingsTests
         Assert.Equal(90, (await JsonAsync(second)).GetProperty("logRetentionDays").GetInt32());
         var bootstrap = await JsonAsync(await owner.GetAsync("/api/cockpit/bootstrap"));
         Assert.Equal("Orbit Ops", bootstrap.GetProperty("instance").GetProperty("name").GetString());
-        var logs = await JsonAsync(await owner.GetAsync("/api/cockpit/logs"));
-        Assert.Contains(
-            logs.GetProperty("audit").EnumerateArray(),
-            entry => entry.GetProperty("summary").GetString() == "Maja zaktualizował(a) ustawienia Cockpitu");
+        await using (var scope = factory.OpenScope(out var db))
+        {
+            Assert.Contains(
+                await db.ServerAuditEntries.AsNoTracking().Select(entry => entry.Summary).ToListAsync(),
+                summary => summary == "Maja zaktualizował(a) ustawienia Cockpitu");
+        }
     }
 
     [Fact]

@@ -122,22 +122,31 @@ public sealed record CockpitRuntimeDto(
     int SampleSeconds,
     IReadOnlyList<CockpitRuntimeSampleDto> History);
 
+/// <summary>One log line; <c>Sequence</c> is its place in everything the process has logged, and the paging cursor.</summary>
 public sealed record CockpitLogEntryDto(
+    long Sequence,
     DateTime At,
     string Level,
     string Source,
     string Message,
     string TraceId);
 
-public sealed record CockpitAuditEntryDto(
-    string Id,
-    string Actor,
-    string Summary,
-    DateTime At);
+/// <summary>How many lines of each level match the source and the search, whatever level is chosen.</summary>
+public sealed record CockpitLogLevelCountsDto(int Info, int Warn, int Error);
 
+public sealed record CockpitLogSourceDto(string Name, int Count);
+
+/// <summary>
+/// A page of log lines, newest first. <c>NextBefore</c> asks for the page after
+/// it and is null when no older line matches. <c>Sources</c> lists the categories
+/// in the buffer, the busiest first.
+/// </summary>
 public sealed record CockpitLogsDto(
-    IReadOnlyList<CockpitLogEntryDto> Logs,
-    IReadOnlyList<CockpitAuditEntryDto> Audit);
+    IReadOnlyList<CockpitLogEntryDto> Entries,
+    long? NextBefore,
+    CockpitLogLevelCountsDto Levels,
+    IReadOnlyList<CockpitLogSourceDto> Sources,
+    int Capacity);
 
 public sealed record CockpitBackupDto(
     string Id,

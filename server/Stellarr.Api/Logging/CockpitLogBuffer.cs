@@ -1,11 +1,16 @@
 namespace Stellarr.Api.Logging;
 
+/// <summary>One log line. <c>Sequence</c> numbers every line the process has logged, from 0, so it stays a stable cursor.</summary>
 public sealed record CockpitLogRecord(
+    long Sequence,
     DateTime At,
     LogLevel Level,
     string Category,
     string Message,
     string TraceId);
+
+/// <summary>A page of lines, newest first, and whether older matching lines remain in the buffer.</summary>
+public sealed record CockpitLogPage(IReadOnlyList<CockpitLogRecord> Lines, bool HasMore);
 
 /// <summary>
 /// The most recent log lines, kept in memory for the operator panel. It is a
@@ -14,7 +19,7 @@ public sealed record CockpitLogRecord(
 /// </summary>
 public sealed class CockpitLogBuffer(IHttpContextAccessor httpContextAccessor) : ILoggerProvider
 {
-    public const int Capacity = 2_000;
+    public const int Capacity = 10_000;
 
     /// <summary>Trace id of a line that was not logged while serving a request.</summary>
     private const string BackgroundTraceId = "background";
@@ -45,17 +50,47 @@ public sealed class CockpitLogBuffer(IHttpContextAccessor httpContextAccessor) :
         }
     }
 
-    private void Append(LogLevel level, string category, string message)
+    /// <summary>
+    /// Up to <paramref name="limit"/> lines that <paramref name="matches"/> accepts,
+    /// newest first, all older than the line numbered <paramref name="before"/>, or
+    /// the newest ones when it is null.
+    /// </summary>
+    public CockpitLogPage Page(long? before, int limit, Func<CockpitLogRecord, bool> matches)
     {
-        var line = new CockpitLogRecord(
-            DateTime.UtcNow,
-            level,
-            category,
-            message,
-            httpContextAccessor.HttpContext?.TraceIdentifier ?? BackgroundTraceId);
         lock (_gate)
         {
-            _ring[_written % Capacity] = line;
+            var oldest = Math.Max(0, _written - Capacity);
+            var lines = new List<CockpitLogRecord>(limit);
+            for (var sequence = Math.Min(before ?? _written, _written) - 1; sequence >= oldest; sequence--)
+            {
+                var line = _ring[sequence % Capacity]!;
+                if (!matches(line))
+                {
+                    continue;
+                }
+
+                if (lines.Count == limit)
+                {
+                    return new CockpitLogPage(lines, HasMore: true);
+                }
+
+                lines.Add(line);
+            }
+
+            return new CockpitLogPage(lines, HasMore: false);
+        }
+    }
+
+    /// <summary>Every line still in the buffer, newest first, for counting.</summary>
+    public IReadOnlyList<CockpitLogRecord> All() => Snapshot(Capacity);
+
+    private void Append(LogLevel level, string category, string message)
+    {
+        var traceId = httpContextAccessor.HttpContext?.TraceIdentifier ?? BackgroundTraceId;
+        var at = DateTime.UtcNow;
+        lock (_gate)
+        {
+            _ring[_written % Capacity] = new CockpitLogRecord(_written, at, level, category, message, traceId);
             _written++;
         }
     }
