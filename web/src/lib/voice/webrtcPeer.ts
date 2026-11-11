@@ -1,8 +1,6 @@
-import type { UserId, VoiceOccupant } from "@/lib/api/types";
 import { AUDIO_PROFILES, opusParameters, profileFor } from "./audioProfiles";
 import { RemoteCandidateQueue } from "./candidates";
 import { RecoveryWatchdog } from "./lifecycle";
-import type { ParticipantPreference } from "./participantPreferences";
 import {
   opusFirstCodecList,
   tuneLocalDescription,
@@ -10,22 +8,6 @@ import {
   type AudioTuningPlan,
 } from "./sdp";
 import type { VoiceSettings } from "./settings";
-import { RemoteMedia } from "./webrtcRemoteMedia";
-
-/**
- * What plays one remote audio source, a microphone or a screen share's sound:
- * an audible sink and a muted decoding sink.
- */
-export interface RemoteVoice {
-  /** The audible element. Holds the mixer's output, or the raw stream as a fallback. */
-  audio: HTMLAudioElement;
-  /** Muted direct sink that keeps Chromium's WebRTC jitter buffer decoding. */
-  decoder: HTMLAudioElement;
-  /** False when Web Audio was unavailable and the raw remote stream is playing. */
-  processed: boolean;
-  /** The stream currently attached, if any. */
-  streamId: string | null;
-}
 
 /** Whether audio really moves across a connection that claims to be up. */
 export interface MediaFlow {
@@ -41,28 +23,19 @@ export interface MediaFlow {
   recoveryFailed: boolean;
 }
 
-/** One other person in the call: a connection and everything hanging off it. */
-export interface Peer {
-  readonly userId: UserId;
-  displayName: string;
-  muted: boolean;
-  speaking: boolean;
-  /** Smoothed input level, 0..1. */
-  level: number;
-  /** Local receiver-side strip, 0..200 percent. */
-  playbackVolume: number;
-  /** Local receiver-side gate on this person's strip. */
-  gated: boolean;
-  /** Local receiver-side suppressor on this person's strip. */
-  suppressed: boolean;
+/**
+ * One `RTCPeerConnection` and what this side does with it: the senders it
+ * publishes on, the candidates waiting for a description, the negotiation
+ * flags, the recovery watchdog and the proof that media flows.
+ *
+ * Nothing here says whose media arrives on it. In the mesh there is one link
+ * per other person; behind a media server there is one link in total, and it
+ * carries everybody.
+ */
+export interface Link {
   readonly connection: RTCPeerConnection;
-  readonly voice: RemoteVoice;
-  /** Sinks for their shared-screen sound, which never shares an element with the voice. */
-  screenAudio: RemoteVoice | null;
-  /** Every remote stream seen, so routing can be re-evaluated at will. */
-  readonly media: RemoteMedia;
   readonly candidates: RemoteCandidateQueue;
-  /** What this side sends to this person; each is null while it is off. */
+  /** What this side sends on the link; each is null while it is off. */
   micSender: RTCRtpSender | null;
   cameraSender: RTCRtpSender | null;
   screenVideoSender: RTCRtpSender | null;
@@ -73,52 +46,38 @@ export interface Peer {
   makingOffer: boolean;
   settingRemoteAnswerPending: boolean;
   readonly flow: MediaFlow;
+  /** Each published track gets a send-only transceiver of its own; see `addSender`. */
+  readonly sendOnly: boolean;
 }
 
-export interface PeerRecovery {
-  /** How long a peer may stay unhealthy before the next attempt. */
+export interface LinkRecovery {
+  /** How long a link may stay unhealthy before the next attempt. */
   graceMs: number;
   maxAttempts: number;
-  onEscalate(peer: Peer): void;
-  onExhausted(peer: Peer): void;
+  onEscalate(link: Link): void;
+  onExhausted(link: Link): void;
 }
 
-export interface PeerInit {
-  user: VoiceOccupant;
-  selfUserId: UserId;
+export interface LinkInit {
   iceServers: RTCIceServer[];
-  /** How this account last heard the person. */
-  preference: ParticipantPreference;
-  /**
-   * Builds the peer's sinks. Called once the connection exists, so a
-   * connection that cannot be constructed leaves no audio element behind.
-   */
-  createVoice(): RemoteVoice;
-  recovery: PeerRecovery;
+  /** Which side yields when both offer at once; the topology decides. */
+  polite: boolean;
+  recovery: LinkRecovery;
+  /** Publish on send-only transceivers, as a link to a media server must. */
+  sendOnly?: boolean;
 }
 
-export function createPeer(init: PeerInit): Peer {
-  const { user, preference, recovery } = init;
+export function createLink(init: LinkInit): Link {
+  const { recovery } = init;
   const connection = new RTCPeerConnection({
     iceServers: init.iceServers,
-    // Every Stellarr peer speaks BUNDLE. Gathering one transport avoids
+    // Every Stellarr connection speaks BUNDLE. Gathering one transport avoids
     // multiplying TURN allocations when more tracks are added later.
     bundlePolicy: "max-bundle",
   });
 
-  const peer: Peer = {
-    userId: user.userId,
-    displayName: user.displayName,
-    muted: user.muted,
-    speaking: false,
-    level: 0,
-    playbackVolume: preference.volume,
-    gated: preference.gated,
-    suppressed: preference.suppressed,
+  const link: Link = {
     connection,
-    voice: init.createVoice(),
-    screenAudio: null,
-    media: new RemoteMedia(),
     candidates: new RemoteCandidateQueue({
       hasRemoteDescription: () => connection.remoteDescription !== null,
       addIceCandidate: (candidate) => connection.addIceCandidate(candidate ?? undefined),
@@ -130,11 +89,10 @@ export function createPeer(init: PeerInit): Peer {
     watchdog: new RecoveryWatchdog({
       graceMs: recovery.graceMs,
       maxAttempts: recovery.maxAttempts,
-      onEscalate: () => recovery.onEscalate(peer),
-      onExhausted: () => recovery.onExhausted(peer),
+      onEscalate: () => recovery.onEscalate(link),
+      onExhausted: () => recovery.onExhausted(link),
     }),
-    // Deterministic roles: the lexicographically larger id is the polite side.
-    polite: init.selfUserId > user.userId,
+    polite: init.polite,
     makingOffer: false,
     settingRemoteAnswerPending: false,
     flow: {
@@ -145,24 +103,58 @@ export function createPeer(init: PeerInit): Peer {
       lastReceived: 0,
       recoveryFailed: false,
     },
+    sendOnly: init.sendOnly ?? false,
   };
-  return peer;
+  return link;
 }
+
+/**
+ * Start sending `track` on `link`.
+ *
+ * Between browsers `addTrack` is right: the other side sends back on the same
+ * section. Behind a media server it is not. Once the media server has added a
+ * section to forward somebody's track, `addTrack` reuses that section for the
+ * new track, and a section the media server created never carries what the
+ * browser sends, so the track would silently go nowhere. A send-only
+ * transceiver of its own is always a new section the media server accepts.
+ */
+export function addSender(link: Link, track: MediaStreamTrack, stream: MediaStream): RTCRtpSender {
+  if (!link.sendOnly) return link.connection.addTrack(track, stream);
+  return link.connection.addTransceiver(track, { direction: "sendonly", streams: [stream] }).sender;
+}
+
+/**
+ * What an audio section carries when the link's senders cannot say: speech,
+ * the sound this side shares, or shared sound it receives from somebody else.
+ */
+export type AudioSectionUse = "speech" | "shared-sound" | "received-shared-sound";
 
 export interface NegotiatorEnv {
   settings(): VoiceSettings;
   /** The send ceiling the adaptive controller currently allows. */
   bitrate(): number;
-  /** Delivers a finished local description to the other side. */
-  send(peer: Peer, type: "offer" | "answer", sdp: string): Promise<void>;
-  /** The remote description told more about what the peer's streams carry. */
-  remoteMediaLearned(peer: Peer): void;
+  /** Delivers a finished local description to the other end of `link`. */
+  send(link: Link, type: "offer" | "answer", sdp: string): Promise<void>;
+  /**
+   * A remote description was applied to `link`. Its SDP names the streams
+   * that carry video, which whoever knows the people behind the link can use
+   * before the first track event fires.
+   */
+  remoteMediaLearned(link: Link, sdp: string | undefined): void;
   /** Whether the shared sound being sent has two channels. */
   screenAudioStereo(): boolean;
+  /**
+   * Optional: what an audio section of `link` carries, for a section its
+   * senders do not claim by mid. Without it such a section takes the speech
+   * profile. A media server repeats each browser's own Opus parameters back to
+   * it, so there the offer that first carries a share's sound already sets its
+   * encoder, and the answer for somebody else's share sets the decoder.
+   */
+  audioUse?(link: Link, section: { mid: string | null; streamId: string | null }): AudioSectionUse | null;
 }
 
 /**
- * Offers and answers for every peer, following the WebRTC spec's perfect
+ * Offers and answers on any link, following the WebRTC spec's perfect
  * negotiation recipe.
  *
  * Both sides may offer at once, because the hub hands every participant the
@@ -176,27 +168,27 @@ export class Negotiator {
    * Create, apply and send an offer. Never rejects: whatever failed here is
    * retried by the next `negotiationneeded` or by the recovery watchdog.
    */
-  async offer(peer: Peer): Promise<void> {
-    peer.makingOffer = true;
+  async offer(link: Link): Promise<void> {
+    link.makingOffer = true;
     try {
-      await this.describe(peer, "offer");
+      await this.describe(link, "offer");
     } catch {
       // See above.
     } finally {
-      peer.makingOffer = false;
+      link.makingOffer = false;
     }
   }
 
   /** Apply a description from the other side and answer it when it is an offer. */
-  async receive(peer: Peer, description: RTCSessionDescriptionInit): Promise<void> {
-    const { connection } = peer;
+  async receive(link: Link, description: RTCSessionDescriptionInit): Promise<void> {
+    const { connection } = link;
     const readyForOffer =
-      !peer.makingOffer &&
-      (connection.signalingState === "stable" || peer.settingRemoteAnswerPending);
+      !link.makingOffer &&
+      (connection.signalingState === "stable" || link.settingRemoteAnswerPending);
     const collision = description.type === "offer" && !readyForOffer;
-    if (collision && !peer.polite) return;
+    if (collision && !link.polite) return;
 
-    peer.settingRemoteAnswerPending = description.type === "answer";
+    link.settingRemoteAnswerPending = description.type === "answer";
     try {
       await connection.setRemoteDescription(description);
     } catch (error) {
@@ -205,29 +197,28 @@ export class Negotiator {
       await connection.setLocalDescription({ type: "rollback" });
       await connection.setRemoteDescription(description);
     } finally {
-      peer.settingRemoteAnswerPending = false;
+      link.settingRemoteAnswerPending = false;
     }
 
     // The description names the msids that carry video and lands before any
     // track event, so routing can be right the first time.
-    peer.media.learnFromSdp(connection.remoteDescription?.sdp);
-    this.env.remoteMediaLearned(peer);
+    this.env.remoteMediaLearned(link, connection.remoteDescription?.sdp);
 
-    await peer.candidates.flush();
+    await link.candidates.flush();
 
     if (description.type === "offer") {
-      this.tuneMicSender(peer);
-      await this.describe(peer, "answer");
+      this.tuneMicSender(link);
+      await this.describe(link, "answer");
     }
   }
 
   /** Opus first in the codec list, then the encoder ceiling. */
-  tuneMicSender(peer: Peer): void {
-    const sender = peer.micSender;
+  tuneMicSender(link: Link): void {
+    const sender = link.micSender;
     if (!sender) return;
 
     try {
-      const transceiver = peer.connection
+      const transceiver = link.connection
         .getTransceivers()
         .find((item) => item.sender === sender);
       const capabilities =
@@ -246,11 +237,16 @@ export class Negotiator {
     void applyEncoding(sender, this.env.bitrate());
   }
 
-  private async describe(peer: Peer, type: "offer" | "answer"): Promise<void> {
-    const { connection } = peer;
+  private async describe(link: Link, type: "offer" | "answer"): Promise<void> {
+    const { connection } = link;
     const description =
       type === "offer" ? await connection.createOffer() : await connection.createAnswer();
-    const plan = audioTuningPlan(peer, this.env.settings(), this.env.screenAudioStereo());
+    const plan = audioTuningPlan(
+      link,
+      this.env.settings(),
+      this.env.screenAudioStereo(),
+      this.env.audioUse?.bind(this.env),
+    );
     const tuned = tuneLocalDescription(description, plan);
 
     try {
@@ -261,18 +257,24 @@ export class Negotiator {
     }
 
     const local = connection.localDescription;
-    if (local) await this.env.send(peer, type, local.sdp ?? "");
+    if (local) await this.env.send(link, type, local.sdp ?? "");
   }
 }
 
 /**
- * Which Opus settings each audio section of this peer's connection gets.
+ * Which Opus settings each audio section of a link gets.
  *
  * Speech and shared sound share a connection but not a profile. Quality speech
  * stays mono and continuous to protect onsets; shared content keeps stereo when
- * its source really has two channels.
+ * its source really has two channels. A section this side does not send on
+ * takes the speech profile, unless `audioUse` knows better.
  */
-function audioTuningPlan(peer: Peer, settings: VoiceSettings, stereo: boolean): AudioTuningPlan {
+function audioTuningPlan(
+  link: Link,
+  settings: VoiceSettings,
+  stereo: boolean,
+  audioUse?: NegotiatorEnv["audioUse"],
+): AudioTuningPlan {
   const speech = profileFor(settings);
   const speechTuning: AudioSectionTuning = {
     parameters: opusParameters(speech),
@@ -285,15 +287,35 @@ function audioTuningPlan(peer: Peer, settings: VoiceSettings, stereo: boolean): 
   };
 
   const byMid = new Map<string, AudioSectionTuning>();
-  for (const transceiver of peer.connection.getTransceivers()) {
+  for (const transceiver of link.connection.getTransceivers()) {
     if (!transceiver.mid) continue;
-    if (peer.screenAudioSender && transceiver.sender === peer.screenAudioSender) {
+    if (link.screenAudioSender && transceiver.sender === link.screenAudioSender) {
       byMid.set(transceiver.mid, musicTuning);
-    } else if (peer.micSender && transceiver.sender === peer.micSender) {
+    } else if (link.micSender && transceiver.sender === link.micSender) {
       byMid.set(transceiver.mid, speechTuning);
     }
   }
-  return { byMid, fallback: speechTuning };
+  if (!audioUse) return { byMid, fallback: speechTuning };
+
+  // Whatever somebody else shares may have two channels; saying so costs
+  // nothing when it has one.
+  const receivedTuning: AudioSectionTuning = {
+    parameters: opusParameters(music, true),
+    ptime: music.ptime,
+  };
+  const tunings: Record<AudioSectionUse, AudioSectionTuning> = {
+    speech: speechTuning,
+    "shared-sound": musicTuning,
+    "received-shared-sound": receivedTuning,
+  };
+  return {
+    byMid,
+    bySection: (mid, streamId) => {
+      const found = audioUse(link, { mid, streamId });
+      return found === null ? null : tunings[found];
+    },
+    fallback: speechTuning,
+  };
 }
 
 /** The encodings of a sender, or one blank encoding for a browser that reports none. */

@@ -32,7 +32,7 @@ export function rtcIncompatibility(
       supported: RTC_PROTOCOL_VERSION,
     });
   }
-  if (config.topology !== "mesh") {
+  if (config.topology !== "mesh" && config.topology !== "sfu") {
     return t("voiceClient.rtcTopology", { topology: config.topology });
   }
   return null;
@@ -163,6 +163,26 @@ export function peerLostError(t: Translator, displayName: string): VoiceError {
     recoverable: true,
   };
 }
+
+/**
+ * Behind a media server there is one connection, so when it carries nothing
+ * nobody can be named: the fault is the connection's, not a person's.
+ */
+export const mediaServerStalledError = (t: Translator): VoiceError => ({
+  kind: "transport",
+  message: t("voiceClient.mediaServerStalled"),
+  recoverable: true,
+});
+
+/**
+ * Every replacement of the connection to the media server failed. The seat is
+ * kept, so joining again from the notice starts over.
+ */
+export const mediaServerLostError = (t: Translator): VoiceError => ({
+  kind: "transport",
+  message: t("voiceClient.mediaServerLost"),
+  recoverable: true,
+});
 
 const SUPPRESSOR_NAME: Record<WorkletSuppressor, string> = {
   rnnoise: "RNNoise",

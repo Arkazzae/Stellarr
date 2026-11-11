@@ -25,6 +25,9 @@ data of an instance stays on your own server.
   check when voice does not work.
 - [Stellarr RTC v1](RTC_STANDARD.md): the versioned contract between the web
   client, the API and the voice layer.
+- [Stellarr Media](STELLARR_MEDIA.md): the media server of the `sfu` voice
+  topology, its contract with the API and the browser, and what it does not do
+  yet.
 - [Localization](LOCALIZATION.md): how the interface language, the instance
   default and the translation of messages work, and how to add a language.
 

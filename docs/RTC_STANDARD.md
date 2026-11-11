@@ -2,12 +2,13 @@
 
 Status: **binding base contract**  
 Wire protocol version: **1**  
-Current topology: **mesh**  
-Planned topology: **Stellarr's own SFU written in Rust (Stellarr Media)**
+Default topology: **mesh**  
+Optional topology: **sfu**, through Stellarr's own SFU written in Rust (Stellarr Media), defined in [`STELLARR_MEDIA.md`](./STELLARR_MEDIA.md)
 
 This document defines the stable boundary on which later versions of voice and
 video are built. The implementation may change; the meaning of the contract
-must not change silently.
+must not change silently. Both topologies share it; `STELLARR_MEDIA.md` adds
+only what the `sfu` topology needs on top.
 
 ## Layers
 
@@ -28,13 +29,13 @@ VoiceClient + VoiceState             stable product API
     v
 RTC protocol v1 over SignalR         versioned control plane
     |
-    +-- today: browser mesh
-    `-- planned: Stellarr Media SFU
+    +-- mesh (default): browser to browser
+    `-- sfu: one connection to Stellarr Media, which forwards to the room
 ```
 
 The UI may use only `VoiceClient` and the immutable `VoiceState`. Components
-must not import SignalR, `RTCPeerConnection`, DSP worklets or the API of the
-planned SFU directly.
+must not import SignalR, `RTCPeerConnection`, DSP worklets or anything of the
+media server directly.
 
 ## Bootstrap contract
 
@@ -61,6 +62,11 @@ planned SFU directly.
 `iceServers` is filled in per request: a STUN entry, a TURN entry with
 time-limited credentials, and, when `Rtc__TurnsEnabled` is on, a TURNS entry.
 The empty list above only shows the shape.
+
+`topology` is the value of `Rtc:Topology`, `mesh` or `sfu`. `mediaServer` is
+empty in the mesh topology; in the `sfu` topology it names the public media
+endpoint, as `STELLARR_MEDIA.md` defines. Capabilities and `iceServers` are the
+same in both.
 
 The client checks the version and the topology before it opens a device. An
 unsupported contract ends the attempt with a readable `unsupported` error; the
@@ -135,6 +141,14 @@ The names are fixed in `web/src/lib/rtc/protocol.ts` and implemented by
 `sequence` orders occupancy snapshots of one room. A client drops a snapshot
 older than the last one it applied instead of tearing down live peers.
 
+The `sfu` topology adds the methods `OpenMediaSession` and `SendMediaSignal`
+and the events `MediaSignal` and `MediaSessionClosed`.
+[`STELLARR_MEDIA.md`](./STELLARR_MEDIA.md) defines them, their payloads and the
+negotiation with the media server. In that topology `SendVoiceSignal` still
+carries `state` from browser to browser, but the hub refuses `offer`, `answer`
+and `candidate` on it, so browsers cannot open a direct connection to each
+other.
+
 ### Soundboard in a voice channel
 
 The soundboard uses the same authenticated control plane and the list of
@@ -204,10 +218,17 @@ work independently:
 correct join with no remote peer. With several peers, a mix of working and
 failing connections gives `degraded`.
 
+In the `sfu` topology a browser has one connection, to the media server, so the
+fields keep their names but count people: `peerCount` is the other people
+seated in the room and `connectedPeerCount` those of them whose microphone
+packets are arriving. `STELLARR_MEDIA.md` ("State in the `sfu` topology")
+defines each `transport.media` state for that topology.
+
 The mesh identifies a peer by `userId`, so an account can have only one active
 voice session. Joining from a newer tab atomically removes the older
 connection from the recipient list and sends it `VoiceSessionReplaced`; the
-account's ordinary presence stays multi-tab.
+account's ordinary presence stays multi-tab. The media server keeps the same
+rule: at most one media session per account.
 
 ## Audio standard v1
 
@@ -260,7 +281,9 @@ not keep their own copies of the numbers.
 - the bitrates are ceilings. The browser's congestion control still decides
   the actual rate;
 - in the mesh topology the bitrate is sent separately to each remote
-  participant.
+  participant. In the `sfu` topology it is sent once, and the media server
+  forwards the same stream to every receiver; it does not yet adapt it to a
+  receiver on a weak downlink.
 
 The source of truth for the profiles is `web/src/lib/voice/screenShare.ts`.
 
@@ -290,7 +313,10 @@ The source of truth for camera capture and encoding is `web/src/lib/voice/camera
 | wire version, signal kinds, payload codecs | `web/src/lib/rtc/protocol.ts`, `server/Stellarr.Api/Realtime/RtcProtocol.cs` |
 | UI API | `web/src/lib/voice/types.ts` (`VoiceClient`) |
 | session and transport state | `VoiceStateStore` in `web/src/lib/voice/store.ts`, the `VoiceClient` implementation |
-| browser mesh | `web/src/lib/voice/webrtc.ts` |
+| `VoiceClient` implementation, which picks the topology the bootstrap names | `web/src/lib/voice/webrtc.ts` |
+| what a topology provides, and the people of a call apart from their connections | `web/src/lib/voice/webrtcTopology.ts` (`CallTopology`), `web/src/lib/voice/webrtcParticipant.ts` |
+| browser mesh | `web/src/lib/voice/webrtcMesh.ts`, `web/src/lib/voice/webrtcMeshHealth.ts` |
+| client of the `sfu` topology: the media session, negotiation and replacement; the directory; the state table | `web/src/lib/voice/webrtcSfu.ts`, `web/src/lib/voice/webrtcSfuDirectory.ts`, `web/src/lib/voice/webrtcSfuHealth.ts` |
 | catalogue, trimming and synchronised clips | `web/src/adapters/soundboard.ts`, ASP.NET `SoundboardEndpoints` + `AppHub` |
 | arrival sound: choice, 5 s window and cooldown | `web/src/containers/useJoinSound.ts`, ASP.NET `JoinSound` + `AccountEndpoints` + `AppHub` |
 | Opus profiles | `web/src/lib/voice/audioProfiles.ts` |
@@ -300,19 +326,32 @@ The source of truth for camera capture and encoding is `web/src/lib/voice/camera
 | speech detector and input gate | `web/src/lib/voice/vad.ts`, `web/public/audio/vad-processor.js` |
 | ICE/TURN lifecycle | `web/src/lib/voice/iceSession.ts` |
 | control plane | ASP.NET `AppHub` |
-| NAT traversal | coturn |
+| topology switch, media sessions and the control API client of the `sfu` topology | in `server/Stellarr.Api/Realtime/`: `MediaTopology` (the switch), `AppHub.Media.cs` (the hub leg), `PresenceTracker` (a seat and its session), `MediaPlane`, `MediaControlClient`, `MediaEventPump`, `MediaEventOutbox` and `MediaSessionCloser` |
+| media server: ICE-lite, DTLS, SRTP, rooms, the directory, negotiation and forwarding | `media/` (Stellarr Media, Rust) |
+| NAT traversal | coturn; in the `sfu` topology it relays to the media server |
 
 ## Moving from mesh to SFU
 
-An SFU changes neither the components nor the public `VoiceClient`. The new
-implementation:
+`Rtc:Topology` chooses the topology of an instance. The `sfu` topology, defined
+in [`STELLARR_MEDIA.md`](./STELLARR_MEDIA.md), changes neither the components
+nor the public `VoiceClient`. Against the mesh it:
 
 1. fetches the bootstrap with `topology: "sfu"` and `mediaServer`;
-2. keeps the same session states, errors and diagnostics;
+2. keeps the same session states, errors and diagnostics, with the counters of
+   the state model counting people;
 3. replaces N peer connections with one connection to Stellarr Media;
-4. keeps Opus without transcoding in the SFU;
-5. moves route selection, RTCP feedback and telemetry to the media plane;
-6. raises the protocol version only when v1 cannot be extended compatibly.
+4. forwards Opus and the video codecs without decoding, mixing or transcoding
+   them;
+5. handles RTCP feedback (NACK, RTX, transport-wide congestion feedback and
+   keyframe requests) per connection in the media server, which reports
+   per-session counters on its control API; the operator panel does not show
+   them yet;
+6. stays on protocol version 1. The version is raised only when v1 cannot be
+   extended compatibly.
+
+The mesh client stays in the code base, and `mesh` stays the default until the
+first gap that `STELLARR_MEDIA.md` lists under "Not in this version", adapting
+a stream to a slow receiver, is closed.
 
 ## Quality gate before release
 
@@ -329,8 +368,14 @@ Every RTC change must pass:
 7. screen share start and stop, renegotiation, and no doubled audio;
 8. local and remote camera, device change, a denied permission, and independent
    recognition of the camera and the screen;
-9. `typecheck`, the web tests, the .NET tests, the image build and the
-   container health check.
+9. `typecheck`, the web tests, the .NET tests, the media server's checks
+   (`cargo fmt --check`, clippy without warnings and `cargo test`), the image
+   build and the container health check.
+
+A change to the `sfu` topology must also pass the gate in
+[`STELLARR_MEDIA.md`](./STELLARR_MEDIA.md) ("Quality gate"); there the
+two-account test also shows that the two browsers have no candidate pair
+between them, and the forced-TURN test ends the relay at the media server.
 
 A change is not considered done only because the hub lists the participants or
 the UI shows "Connected". The media criterion is two-way RTP traffic and the

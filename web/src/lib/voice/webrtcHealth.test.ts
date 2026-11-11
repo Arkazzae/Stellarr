@@ -6,8 +6,10 @@ import { AdaptiveBitrateController } from "./bitrate";
 import { TURN_SAFETY_MARGIN_MS, type VoiceIceProvider } from "./iceSession";
 import { DEFAULT_PARTICIPANT_PREFERENCE } from "./participantPreferences";
 import { VoiceStateStore } from "./store";
-import { CallHealth, type CallHealthEnv } from "./webrtcHealth";
-import { createPeer, type Peer } from "./webrtcPeer";
+import { CallHealth, readLink, type CallHealthEnv } from "./webrtcHealth";
+import { createPeer, type MeshPeer } from "./webrtcMesh";
+import { MeshHealth } from "./webrtcMeshHealth";
+import { createLink, type Link } from "./webrtcPeer";
 
 const GRACE = 50;
 
@@ -34,13 +36,16 @@ const audio = (sent: number, received: number) => [
 ];
 
 let store: VoiceStateStore;
-let peers: Map<UserId, Peer>;
+let peers: Map<UserId, MeshPeer>;
 let session: number | null;
 let ice: VoiceIceProvider & { beginSession: Mock<() => Promise<RTCIceServer[]>> };
-let reoffer: Mock<(peer: Peer) => Promise<void>>;
+let reoffer: Mock<(link: Link) => Promise<void>>;
 let applyMicEncoding: Mock<() => Promise<void>>;
 let getRtcClock: Mock<() => Promise<number>>;
 let bitrate: AdaptiveBitrateController;
+/** The mesh's own judgement of each connection: proof, recovery, the media state. */
+let mesh: MeshHealth;
+/** The call-wide clocks and diagnostics, reading the mesh as its topology. */
 let health: CallHealth;
 
 function build(overrides: Partial<CallHealthEnv> = {}): CallHealth {
@@ -49,17 +54,19 @@ function build(overrides: Partial<CallHealthEnv> = {}): CallHealth {
     realtime: { getRtcClock },
     ice,
     store,
-    peers,
     bitrate,
-    recoveryGraceMs: GRACE,
     activeSession: () => session,
-    reoffer,
-    applyMicEncoding,
+    topology: () => ({
+      links: () => [...peers.values()].map((peer) => peer.link),
+      transport: () => mesh.transport(),
+      sample: () => mesh.sample(),
+      applyMicEncoding,
+    }),
     ...overrides,
   });
 }
 
-function addPeer(userId = "u-z", selfUserId = "u-a", muted = false): Peer {
+function addPeer(userId = "u-z", selfUserId = "u-a", muted = false): MeshPeer {
   const peer = createPeer({
     user: { userId, displayName: `Osoba ${userId}`, muted },
     selfUserId,
@@ -71,19 +78,19 @@ function addPeer(userId = "u-z", selfUserId = "u-a", muted = false): Peer {
       processed: false,
       streamId: null,
     }),
-    recovery: health.recovery,
+    recovery: mesh.recovery,
   });
   peers.set(userId, peer);
   return peer;
 }
 
-function link(peer: Peer): FakeConnection {
-  return peer.connection as unknown as FakeConnection;
+function link(peer: MeshPeer): FakeConnection {
+  return peer.link.connection as unknown as FakeConnection;
 }
 
-function setState(peer: Peer, state: RTCPeerConnectionState): void {
+function setState(peer: MeshPeer, state: RTCPeerConnectionState): void {
   link(peer).connectionState = state;
-  health.onConnectionState(peer);
+  mesh.onConnectionState(peer.link);
 }
 
 beforeEach(() => {
@@ -100,12 +107,21 @@ beforeEach(() => {
   applyMicEncoding = vi.fn(async () => undefined);
   getRtcClock = vi.fn(async () => Date.now());
   bitrate = new AdaptiveBitrateController({ ceiling: 128_000, floor: 64_000 });
+  mesh = new MeshHealth({
+    translate: polish,
+    store,
+    peers,
+    recoveryGraceMs: GRACE,
+    activeSession: () => session,
+    reoffer,
+    transportChanged: () => health.syncTransport(),
+  });
   health = build();
 });
 
 afterEach(() => {
   health.stop();
-  for (const peer of peers.values()) peer.watchdog.dispose();
+  for (const peer of peers.values()) peer.link.watchdog.dispose();
   vi.useRealTimers();
   vi.restoreAllMocks();
   vi.unstubAllGlobals();
@@ -426,17 +442,17 @@ describe("CallHealth recovery", () => {
 
   it("lets the impolite side carry the restart in a fresh offer", async () => {
     const impolite = addPeer("u-z", "u-a");
-    expect(impolite.polite).toBe(false);
+    expect(impolite.link.polite).toBe(false);
 
     setState(impolite, "failed");
     await vi.advanceTimersByTimeAsync(0);
 
-    expect(reoffer).toHaveBeenCalledWith(impolite);
+    expect(reoffer).toHaveBeenCalledWith(impolite.link);
   });
 
   it("leaves the restart offer to the other side when this side is polite", async () => {
     const peer = addPeer("u-a", "u-z");
-    expect(peer.polite).toBe(true);
+    expect(peer.link.polite).toBe(true);
 
     setState(peer, "failed");
     await vi.advanceTimersByTimeAsync(0);
@@ -460,8 +476,8 @@ describe("CallHealth recovery", () => {
     link(closed).connectionState = "closed";
     session = null;
 
-    await health.repairUnhealthy();
-    health.onConnectionState(closed);
+    await mesh.repairUnhealthy();
+    mesh.onConnectionState(closed.link);
     vi.advanceTimersByTime(GRACE * 5);
 
     expect(link(closed).restartIce).not.toHaveBeenCalled();
@@ -475,7 +491,7 @@ describe("CallHealth recovery", () => {
     link(broken).connectionState = "failed";
     link(drifting).connectionState = "disconnected";
 
-    await health.repairUnhealthy();
+    await mesh.repairUnhealthy();
 
     expect(link(healthy).restartIce).not.toHaveBeenCalled();
     expect(link(broken).restartIce).toHaveBeenCalledTimes(1);
@@ -487,9 +503,9 @@ describe("CallHealth recovery", () => {
     (link(peer) as { restartIce?: unknown }).restartIce = undefined;
     link(peer).connectionState = "failed";
 
-    await health.repairUnhealthy();
+    await mesh.repairUnhealthy();
 
-    expect(reoffer).toHaveBeenCalledWith(peer);
+    expect(reoffer).toHaveBeenCalledWith(peer.link);
   });
 });
 
@@ -629,5 +645,99 @@ describe("CallHealth ICE credential refresh", () => {
     await health.refreshIce(1);
 
     expect(link(peer).setConfiguration).not.toHaveBeenCalled();
+  });
+});
+
+describe("CallHealth with one link shared by several people", () => {
+  // The shape a media server gives a call: whatever the topology says about
+  // the people behind the link is published as it is.
+  function sharedLink() {
+    const shared = createLink({
+      iceServers: [],
+      polite: false,
+      recovery: { graceMs: GRACE, maxAttempts: 3, onEscalate: vi.fn(), onExhausted: vi.fn() },
+    });
+    const settle = vi.fn<(selfMuted: boolean) => void>();
+    const topology = {
+      links: () => [shared],
+      transport: () => ({ media: "degraded" as const, peerCount: 3, connectedPeerCount: 2 }),
+      sample: async () => ({ readings: [await readLink(shared)], settle }),
+      applyMicEncoding,
+    };
+    const fake = shared.connection as unknown as FakeConnection;
+    return { shared, fake, settle, call: build({ topology: () => topology }) };
+  }
+
+  it("publishes the topology's media state and keeps the signalling state", () => {
+    store.set({
+      transport: { signaling: "connected", media: "ready", peerCount: 0, connectedPeerCount: 0 },
+    });
+    const { call } = sharedLink();
+
+    call.syncTransport();
+
+    expect(store.getSnapshot().transport).toEqual({
+      signaling: "connected",
+      media: "degraded",
+      peerCount: 3,
+      connectedPeerCount: 2,
+    });
+  });
+
+  it("settles a round with this side's mute and reports its counters", async () => {
+    store.set({ muted: true });
+    const { fake, settle, call } = sharedLink();
+    fake.stats = audio(5, 7);
+
+    await call.sample();
+
+    expect(settle).toHaveBeenCalledWith(true);
+    expect(store.getSnapshot().diagnostics).toMatchObject({ packetsSent: 5, packetsReceived: 7 });
+  });
+
+  it("does not settle a round that finished after the call ended", async () => {
+    const { fake, settle, call } = sharedLink();
+    fake.getStats.mockImplementation(async () => {
+      session = 2;
+      return audio(1, 1);
+    });
+
+    await call.sample();
+
+    expect(settle).not.toHaveBeenCalled();
+  });
+
+  it("gives the fresh servers to the topology's link and wakes it when it is down", async () => {
+    const { shared, fake, call } = sharedLink();
+    fake.connectionState = "failed";
+    const arm = vi.spyOn(shared.watchdog, "arm");
+
+    await call.refreshIce(1);
+
+    expect(fake.setConfiguration).toHaveBeenCalledWith(
+      expect.objectContaining({ iceServers: [{ urls: "stun:fresh.example" }] }),
+    );
+    expect(arm).toHaveBeenCalledWith(true);
+    shared.watchdog.dispose();
+  });
+});
+
+describe("readLink", () => {
+  it("keeps the whole report for a topology that needs more than the summary", async () => {
+    const link = createLink({
+      iceServers: [],
+      polite: false,
+      recovery: { graceMs: GRACE, maxAttempts: 3, onEscalate: vi.fn(), onExhausted: vi.fn() },
+    });
+    const fake = link.connection as unknown as FakeConnection;
+    fake.stats = audio(2, 3);
+
+    const reading = await readLink(link);
+
+    expect(reading.report).toBe(fake.stats);
+    expect(reading.media).toMatchObject({ packetsSent: 2, packetsReceived: 3 });
+
+    fake.getStats.mockRejectedValue(new Error("closed"));
+    expect(await readLink(link)).toEqual({ link, network: null, media: null, report: null });
   });
 });

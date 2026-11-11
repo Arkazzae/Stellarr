@@ -1581,6 +1581,8 @@ export const en = {
   "voiceClient.screenQualityPartial": "The browser did not apply the full video profile. Sharing continues with the previous settings.",
   "voiceClient.peerStalled": "The connection with {name} is not carrying any audio.",
   "voiceClient.peerLost": "Lost the audio connection with {name}.",
+  "voiceClient.mediaServerStalled": "The connection to the media server is not carrying any audio.",
+  "voiceClient.mediaServerLost": "Lost the connection to the media server. Reconnect to continue.",
   "voiceClient.suppressorFellBackToBrowser": "Could not start {name}. The browser's noise suppression is running instead.",
   "voiceClient.suppressorFellBackToOther": "Could not start {name}. {other} is running instead.",
   "voiceClient.suppressorFailed": "Could not start {name} or the browser's noise suppression. The audio is unprocessed.",

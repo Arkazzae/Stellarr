@@ -458,12 +458,17 @@ public sealed class SignalRFlowTests : IClassFixture<StellarrWebApplicationFacto
 
         await using var observer = await BuildConnectionAsync("ada", "Quasar!2026");
         await using var actor = await BuildConnectionAsync("maja", "Aurora!2026");
+        var observerReady = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
         var hidden = new TaskCompletionSource<JsonElement>(
             TaskCreationOptions.RunContinuationsAsynchronously);
         using var subscription = observer.On<JsonElement>("PresenceChanged", payload =>
         {
-            if (payload.GetProperty("userId").GetString() == MajaId &&
-                payload.GetProperty("presence").GetString() == "offline")
+            var userId = payload.GetProperty("userId").GetString();
+            if (userId == AdaId)
+            {
+                observerReady.TrySetResult();
+            }
+            else if (userId == MajaId && payload.GetProperty("presence").GetString() == "offline")
             {
                 hidden.TrySetResult(payload);
             }
@@ -471,7 +476,12 @@ public sealed class SignalRFlowTests : IClassFixture<StellarrWebApplicationFacto
 
         try
         {
+            // StartAsync returns after the handshake, before the hub has put
+            // the observer in its server's group. The hub sends a connection
+            // its own presence last, so once that arrives the observer is in
+            // the group and cannot miss the actor's announcement.
             await observer.StartAsync();
+            await observerReady.Task.WaitAsync(TimeSpan.FromSeconds(5));
             await actor.StartAsync();
             await hidden.Task.WaitAsync(TimeSpan.FromSeconds(2));
             await actor.InvokeAsync("SetPresence", "dnd");

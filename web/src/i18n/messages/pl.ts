@@ -1579,6 +1579,8 @@ export const pl = {
   "voiceClient.screenQualityPartial": "Przeglądarka nie zastosowała pełnego profilu obrazu. Udostępnianie działa dalej z poprzednimi parametrami.",
   "voiceClient.peerStalled": "Połączenie z {name} nie przesyła pakietów audio.",
   "voiceClient.peerLost": "Utracono połączenie audio z: {name}.",
+  "voiceClient.mediaServerStalled": "Połączenie z serwerem mediów nie przesyła pakietów audio.",
+  "voiceClient.mediaServerLost": "Utracono połączenie z serwerem mediów. Połącz się ponownie.",
   "voiceClient.suppressorFellBackToBrowser": "Nie udało się uruchomić {name}. Działa redukcja szumu przeglądarki.",
   "voiceClient.suppressorFellBackToOther": "Nie udało się uruchomić {name}. Działa {other}.",
   "voiceClient.suppressorFailed": "Nie udało się uruchomić {name} ani redukcji szumu przeglądarki. Dźwięk jest nieprzetworzony.",

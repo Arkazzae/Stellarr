@@ -86,6 +86,14 @@ coverage.cobertura.xml
 /web/public/audio/speex.wasm
 
 # ---------------------------------------------------------------------------
+# Rust
+# ---------------------------------------------------------------------------
+/media/target/
+# **/bin/ above is .NET build output, but src/bin holds extra binaries of a
+# Rust crate.
+!/media/src/bin/
+
+# ---------------------------------------------------------------------------
 # Editors, operating systems and temporary files
 # ---------------------------------------------------------------------------
 .vs/

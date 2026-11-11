@@ -250,3 +250,35 @@ describe("a share or camera that ends", () => {
     expect(media.screen).toBeNull();
   });
 });
+
+describe("streams filed under an id they were given", () => {
+  // Behind a media server the browser's stream id is only a hint fixed when
+  // the section was made; the directory says what the person calls it now.
+  it("matches the announcement against the given id, not the stream's own", () => {
+    const hint = stream("msid-when-made");
+    media.announce({ screenStreamId: null, cameraStreamId: "face-now" });
+
+    media.addVideo(hint, "face-now");
+
+    expect(media.camera).toEqual({ streamId: "face-now", stream: hint });
+  });
+
+  it("knows a stream by the object, under whatever id it is filed", () => {
+    const sound = stream("msid-when-made");
+    media.addAudio(sound, "share-now");
+
+    expect(media.holdsAudio(sound)).toBe(true);
+    expect(media.hasAudio("msid-when-made")).toBe(false);
+    expect(media.removeAudio("share-now")).toBe(true);
+    expect(media.holdsAudio(sound)).toBe(false);
+  });
+
+  it("takes a sound for a share's once it is known to carry a picture, before the picture", () => {
+    media.addAudio(stream("x"), "share-now");
+    expect(media.roleOf("share-now")).toBe("microphone");
+
+    media.learnVideo("share-now");
+
+    expect(media.roleOf("share-now")).toBe("screen");
+  });
+});

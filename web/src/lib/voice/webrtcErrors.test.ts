@@ -26,8 +26,20 @@ describe("rtcIncompatibility", () => {
     expect(rtcIncompatibility(polish, { protocolVersion: 2, topology: "mesh" })).toContain("(2)");
   });
 
+  it("accepts the sfu topology too", () => {
+    expect(rtcIncompatibility(polish, { protocolVersion: 1, topology: "sfu" })).toBeNull();
+  });
+
   it("refuses a topology it cannot join, naming it", () => {
-    expect(rtcIncompatibility(polish, { protocolVersion: 1, topology: "sfu" })).toContain("sfu");
+    expect(rtcIncompatibility(polish, { protocolVersion: 1, topology: "quantum" })).toContain(
+      "quantum",
+    );
+  });
+
+  it("refuses a missing topology, which the bootstrap parser reads as unknown", () => {
+    expect(rtcIncompatibility(polish, { protocolVersion: 1, topology: "unknown" })).toContain(
+      "unknown",
+    );
   });
 
   it("checks the version before the topology", () => {

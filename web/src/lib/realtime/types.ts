@@ -15,7 +15,14 @@ import type {
   UserId,
   VoiceOccupant,
 } from "@/lib/api/types";
-import type { RtcProtocolVersion, RtcSignalKind } from "@/lib/rtc/protocol";
+import type {
+  BrowserMediaSignalKind,
+  MediaServerSignalKind,
+  MediaSessionCloseReason,
+  MediaSignalKind,
+  RtcProtocolVersion,
+  RtcSignalKind,
+} from "@/lib/rtc/protocol";
 import type { NotificationInboxChangedEvent } from "@/ports/notifications";
 
 export type RealtimeStatus =
@@ -78,6 +85,29 @@ export interface VoiceSignal {
   payload: string;
 }
 
+/**
+ * One signal between this browser and the media server of the `sfu` topology,
+ * relayed by the hub. Like `VoiceSignal`, `payload` is a JSON string the hub
+ * does not interpret; `@/lib/rtc/protocol` has a codec for each kind and
+ * direction. `K` narrows the kinds: what a browser may send is not what the
+ * media server sends.
+ */
+export interface MediaSignal<K extends MediaSignalKind = MediaSignalKind> {
+  protocolVersion: RtcProtocolVersion;
+  channelId: ChannelId;
+  /** The session `openMediaSession` returned; a signal for another one is stale. */
+  sessionId: string;
+  kind: K;
+  payload: string;
+}
+
+/** The media plane ended a session that the seat still needs. */
+export interface MediaSessionClosedEvent {
+  channelId: ChannelId;
+  sessionId: string;
+  reason: MediaSessionCloseReason;
+}
+
 export interface SoundboardChangedEvent {
   serverId: string;
 }
@@ -120,6 +150,9 @@ export interface RealtimeEventMap {
   VoiceChannelMoved: VoiceChannelMovedEvent;
   DirectCallDeclined: DirectCallDeclinedEvent;
   VoiceSignal: VoiceSignal;
+  /** One signal from the media server; only its kinds of signal get through. */
+  MediaSignal: MediaSignal<MediaServerSignalKind>;
+  MediaSessionClosed: MediaSessionClosedEvent;
   SoundboardPlayed: SoundboardPlayedEvent;
   /**
    * Somebody walked into this voice room and has a clip of their own. Same
@@ -151,7 +184,7 @@ export type RealtimeEventName = keyof RealtimeEventMap;
  *
  * Client events are the keys of `RealtimeEventMap`. Server methods are
  * SetPresence, JoinChannel, SendTyping, JoinVoice, LeaveVoice,
- * DeclineDirectCall and SendVoiceSignal.
+ * DeclineDirectCall, SendVoiceSignal, OpenMediaSession and SendMediaSignal.
  */
 export interface RealtimeClient {
   /** Configures the bootstrap-issued hub; call before the first `start()`. */
@@ -172,6 +205,13 @@ export interface RealtimeClient {
   leaveVoice(): Promise<void>;
   declineDirectCall(conversationId: ChannelId): Promise<void>;
   sendVoiceSignal(signal: VoiceSignal): Promise<void>;
+  /**
+   * Creates the media session of this connection's seat in `channelId`, which
+   * must already be held, and resolves to its id. Only the `sfu` topology has
+   * one; the hub refuses in the mesh topology.
+   */
+  openMediaSession(channelId: ChannelId): Promise<string>;
+  sendMediaSignal(signal: MediaSignal<BrowserMediaSignalKind>): Promise<void>;
   playSoundboard(channelId: ChannelId, soundId: SoundboardSound["id"]): Promise<void>;
   getRtcClock(): Promise<number>;
 }

@@ -274,6 +274,13 @@ export function preferOpusInSdp(sdp: string | undefined | null): string {
  */
 export interface AudioTuningPlan {
   byMid?: ReadonlyMap<string, AudioSectionTuning>;
+  /**
+   * Asked about a section `byMid` does not name, with the section's mid and
+   * the stream id of its `a=msid`, before `fallback` is used. A transceiver
+   * has no mid until the offer that first carries it is applied, so on that
+   * offer its stream is the only thing that tells which section is which.
+   */
+  bySection?: (mid: string | null, streamId: string | null) => AudioSectionTuning | null;
   fallback: AudioSectionTuning;
 }
 
@@ -289,11 +296,26 @@ export function tuneLocalDescription(
   if (!description.sdp) return description;
 
   const promoted = preferOpusInSdp(description.sdp);
-  const sdp = tuneAudioSections(promoted, ({ mid }) => {
+  const streams = plan.bySection ? audioSectionStreamIds(promoted) : [];
+  const sdp = tuneAudioSections(promoted, ({ mid }, audioIndex) => {
     const tuning = mid === null ? undefined : plan.byMid?.get(mid);
-    return tuning ?? plan.fallback;
+    return tuning ?? plan.bySection?.(mid, streams[audioIndex] ?? null) ?? plan.fallback;
   });
   return sdp === description.sdp ? description : { ...description, sdp };
+}
+
+/** The `a=msid` stream id of every audio section in order, null where it names none. */
+function audioSectionStreamIds(sdp: string): Array<string | null> {
+  const { lines } = parseSdp(sdp);
+  return mediaSections(lines)
+    .filter((section) => section.kind === "audio")
+    .map((section) => {
+      for (const line of lines.slice(section.start, section.end)) {
+        const id = (MSID_LINE.exec(line) ?? SSRC_MSID_LINE.exec(line))?.[1];
+        if (id !== undefined) return id === "-" ? null : id;
+      }
+      return null;
+    });
 }
 
 /**

@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { summariseMediaCounters, summariseStats, type StatsEntry } from "./stats";
+import {
+  receivedAudioByMid,
+  summariseMediaCounters,
+  summariseStats,
+  type StatsEntry,
+} from "./stats";
 
 /** The shape of a real RTCStatsReport: a Map keyed by id, with forEach over the values. */
 function report(...entries: StatsEntry[]): Map<string, StatsEntry> {
@@ -80,5 +85,28 @@ describe("summariseMediaCounters", () => {
       packetsReceived: 0,
     });
     expect(summariseMediaCounters([{ type: "outbound-rtp", kind: "video", packetsSent: 9 }])).toBeNull();
+  });
+});
+
+describe("receivedAudioByMid", () => {
+  it("counts the audio packets of each receiving section apart", () => {
+    const byMid = receivedAudioByMid(
+      report(
+        { type: "inbound-rtp", kind: "audio", mid: "b1", packetsReceived: 40 },
+        { type: "inbound-rtp", kind: "audio", mid: "c1", packetsReceived: 7 },
+        { type: "inbound-rtp", kind: "video", mid: "b2", packetsReceived: 900 },
+        { type: "outbound-rtp", kind: "audio", mid: "0", packetsSent: 50 },
+        { type: "inbound-rtp", kind: "audio", packetsReceived: 3 },
+      ),
+    );
+
+    expect([...byMid]).toEqual([
+      ["b1", 40],
+      ["c1", 7],
+    ]);
+  });
+
+  it("reads a missing counter as nothing received", () => {
+    expect(receivedAudioByMid([{ type: "inbound-rtp", kind: "audio", mid: "b1" }]).get("b1")).toBe(0);
   });
 });

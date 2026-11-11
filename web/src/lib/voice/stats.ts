@@ -117,6 +117,22 @@ export function summariseMediaCounters(report: StatsLike): MediaCounters | null 
   return found ? totals : null;
 }
 
+/**
+ * Cumulative audio packets received on each receiving section, by `mid`.
+ * Behind a media server one connection carries everybody, so the link's total
+ * says nothing about one person; the section their microphone arrives on does.
+ */
+export function receivedAudioByMid(report: StatsLike): Map<string, number> {
+  const byMid = new Map<string, number>();
+  for (const entry of entriesOf(report)) {
+    if (entry.type !== "inbound-rtp" || (entry.kind ?? entry.mediaType) !== "audio") continue;
+    const { mid } = entry;
+    if (typeof mid !== "string") continue;
+    byMid.set(mid, (byMid.get(mid) ?? 0) + counter(entry.packetsReceived));
+  }
+  return byMid;
+}
+
 /** Worst reading across a mesh: the call is only as good as its weakest leg. */
 export function worstSample(samples: readonly NetworkSample[]): NetworkSample | null {
   if (samples.length === 0) return null;

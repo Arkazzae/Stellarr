@@ -1,7 +1,6 @@
 import type { Translator } from "@/i18n";
-import type { UserId } from "@/lib/api/types";
 import type { RealtimeClient } from "@/lib/realtime/types";
-import { classify, type AdaptiveBitrateController, type NetworkSample } from "./bitrate";
+import { classify, type AdaptiveBitrateController } from "./bitrate";
 import { TURN_SAFETY_MARGIN_MS, turnCredentialExpiry, type VoiceIceProvider } from "./iceSession";
 import {
   summariseMediaCounters,
@@ -10,20 +9,13 @@ import {
   type MediaCounters,
 } from "./stats";
 import type { VoiceStateStore } from "./store";
-import type { VoiceMediaState } from "./types";
-import {
-  iceRefreshFailedError,
-  iceRefreshPartialError,
-  peerLostError,
-  peerStalledError,
-} from "./webrtcErrors";
-import type { MediaFlow, Peer, PeerRecovery } from "./webrtcPeer";
+import { iceRefreshFailedError, iceRefreshPartialError } from "./webrtcErrors";
+import type { Link, MediaFlow } from "./webrtcPeer";
+import type { CallTopology, LinkReading } from "./webrtcTopology";
 
 const DEFAULT_STATS_INTERVAL_MS = 3000;
-const DEFAULT_RECOVERY_GRACE_MS = 10_000;
-const MAX_ICE_RESTARTS = 3;
 const ICE_REFRESH_RETRY_MS = 30_000;
-/** Samples a connected peer may go without RTP proof before it counts as silent. */
+/** Samples a connected link may go without RTP proof before it counts as silent. */
 const SILENT_SAMPLE_LIMIT = 3;
 // Browsers and Node clamp larger timeouts to roughly 24.8 days. Rescheduling a
 // checkpoint avoids turning a far-future static credential into a 1 ms loop.
@@ -35,58 +27,35 @@ export interface CallHealthEnv {
   readonly realtime: Pick<RealtimeClient, "getRtcClock">;
   readonly ice: VoiceIceProvider;
   readonly store: VoiceStateStore;
-  readonly peers: ReadonlyMap<UserId, Peer>;
   readonly bitrate: AdaptiveBitrateController;
   /** Stats cadence. Observational only: media never depends on it. */
   statsIntervalMs?: number;
-  /** Grace before a `disconnected` peer is nudged with an ICE restart. */
-  recoveryGraceMs?: number;
   /** The session in progress, or null between calls. */
   activeSession(): number | null;
-  /** Make and send a fresh offer, e.g. to carry an ICE restart. Never rejects. */
-  reoffer(peer: Peer): Promise<void>;
-  /** Push the controller's current ceiling to every microphone sender. */
-  applyMicEncoding(): Promise<void>;
-}
-
-interface Reading {
-  peer: Peer;
-  network: NetworkSample | null;
-  media: MediaCounters | null;
+  /** How the call is connected. Asked every time, never kept. */
+  topology(): Pick<CallTopology, "links" | "transport" | "sample" | "applyMicEncoding">;
 }
 
 /**
- * Whether the call is really working, and getting it working again.
+ * What the dock says about the call, and the clocks that keep the call
+ * working, whatever its topology.
  *
- * ICE and DTLS saying "connected" proves nothing about audio, so a peer only
- * counts once its cumulative RTP counters have moved in both expected
- * directions. A peer that drops is nudged with at most three ICE restarts,
- * each given a grace window, before it is reported lost. TURN credentials are
- * swapped in before they expire.
+ * The topology decides what counts as working: which links there are, when
+ * media is proven, and how a broken link is repaired. This class publishes
+ * what it reports, samples it on a timer, turns the samples into diagnostics
+ * and the adaptive bitrate, and swaps TURN credentials in before they expire.
  */
 export class CallHealth {
-  /** Handed to every peer, which arms the watchdog when its connection falters. */
-  readonly recovery: PeerRecovery;
-
   private statsTimer: ReturnType<typeof setInterval> | null = null;
   private refreshTimer: ReturnType<typeof setTimeout> | null = null;
 
-  constructor(private readonly env: CallHealthEnv) {
-    this.recovery = {
-      graceMs: env.recoveryGraceMs ?? DEFAULT_RECOVERY_GRACE_MS,
-      maxAttempts: MAX_ICE_RESTARTS,
-      onEscalate: (peer) => {
-        void this.restartIce(peer);
-      },
-      onExhausted: (peer) => this.failPeer(peer),
-    };
-  }
+  constructor(private readonly env: CallHealthEnv) {}
 
   // ------------------------------------------------------------- transport
 
-  /** Recompute the media state the dock shows from what every peer has proven. */
+  /** Publish the media state the topology reports, or idle between calls. */
   syncTransport(): void {
-    const { store, peers } = this.env;
+    const { store } = this.env;
     const current = store.getSnapshot().transport;
     if (this.env.activeSession() === null) {
       store.set({
@@ -100,91 +69,8 @@ export class CallHealth {
       return;
     }
 
-    const all = [...peers.values()];
-    const connected = all.filter((peer) => peer.connection.connectionState === "connected");
-    const flowing = connected.filter((peer) => peer.flow.verified).length;
-    const unusable = all.filter(
-      (peer) => peer.flow.recoveryFailed || isSilent(peer),
-    ).length;
-
-    let media: VoiceMediaState;
-    if (all.length === 0) media = "ready";
-    else if (flowing === all.length) media = "connected";
-    else if (unusable === all.length) media = "failed";
-    else if (flowing > 0 || unusable > 0) media = "degraded";
-    else media = "connecting";
-
-    store.set({
-      transport: {
-        ...current,
-        media,
-        peerCount: all.length,
-        connectedPeerCount: connected.length,
-      },
-    });
-  }
-
-  /** React to a peer connection's state change, except `closed`, which drops the peer. */
-  onConnectionState(peer: Peer): void {
-    const state = peer.connection.connectionState;
-
-    if (state === "connected") {
-      peer.watchdog.disarm();
-      peer.flow.recoveryFailed = false;
-      this.syncTransport();
-    } else if (state === "disconnected") {
-      // Transient by design: a Wi-Fi handover or a sleeping tab produces this
-      // routinely and ICE usually recovers unaided. Wait before intervening.
-      expectFreshMedia(peer.flow);
-      peer.watchdog.arm();
-      this.syncTransport();
-    } else if (state === "failed") {
-      expectFreshMedia(peer.flow);
-      // Once the budget is spent the watchdog owns the final grace window and
-      // reports the peer lost, unless a connected event disarms it first.
-      if (!peer.watchdog.exhausted) {
-        // A direct `connected -> failed` skips the disconnected branch that
-        // normally arms the chain. Its immediate attempt still counts against
-        // the same budget.
-        peer.watchdog.arm(true);
-        this.syncTransport();
-      }
-    }
-  }
-
-  /** Restart ICE on every peer that is down, leaving working ones alone. */
-  async repairUnhealthy(): Promise<void> {
-    await Promise.all(
-      [...this.env.peers.values()].map(async (peer) => {
-        const state = peer.connection.connectionState;
-        if (state === "failed" || state === "disconnected") await this.restartIce(peer);
-      }),
-    );
-  }
-
-  private async restartIce(peer: Peer): Promise<void> {
-    const { connection } = peer;
-    if (this.env.activeSession() === null || connection.connectionState === "closed") return;
-    expectFreshMedia(peer.flow);
-    this.syncTransport();
-
-    try {
-      if (typeof connection.restartIce === "function") connection.restartIce();
-    } catch {
-      // Bounded by the watchdog; nothing further to try here.
-    }
-    // The impolite side owns the restart offer; the polite side would only
-    // create glare with nothing to gain.
-    if (!peer.polite && connection.signalingState === "stable") {
-      await this.env.reoffer(peer);
-    }
-  }
-
-  private failPeer(peer: Peer): void {
-    if (this.env.peers.get(peer.userId) !== peer) return;
-    peer.flow.recoveryFailed = true;
-    this.syncTransport();
-    this.env.store.set({ error: peerLostError(this.env.translate, peer.displayName) });
+    const { media, peerCount, connectedPeerCount } = this.env.topology().transport();
+    store.set({ transport: { ...current, media, peerCount, connectedPeerCount } });
   }
 
   // ----------------------------------------------------------------- stats
@@ -206,59 +92,27 @@ export class CallHealth {
     if (session === null) return;
     const { store } = this.env;
 
-    const [readings, signalingRttMs] = await Promise.all([
-      Promise.all([...this.env.peers.values()].map((peer) => this.read(peer))),
+    const [round, signalingRttMs] = await Promise.all([
+      this.env.topology().sample(),
       this.measureSignalingRtt(),
     ]);
     if (this.env.activeSession() !== session) return;
 
     const totals = { bytesSent: 0, bytesReceived: 0, packetsSent: 0, packetsReceived: 0 };
-    const selfMuted = store.getSnapshot().muted;
-    for (const { peer, media } of readings) {
-      if (media) {
-        totals.bytesSent += media.bytesSent;
-        totals.bytesReceived += media.bytesReceived;
-        totals.packetsSent += media.packetsSent;
-        totals.packetsReceived += media.packetsReceived;
-      }
-      if (peer.connection.connectionState === "connected") {
-        proveMediaFlow(peer, media, selfMuted);
-      }
+    for (const { media } of round.readings) {
+      if (!media) continue;
+      totals.bytesSent += media.bytesSent;
+      totals.bytesReceived += media.bytesReceived;
+      totals.packetsSent += media.packetsSent;
+      totals.packetsReceived += media.packetsReceived;
     }
 
-    this.syncTransport();
-    this.reportStalledPeer(readings.map(({ peer }) => peer));
-    await this.publishDiagnostics(readings, totals, signalingRttMs);
-  }
-
-  private async read(peer: Peer): Promise<Reading> {
-    try {
-      const report = await peer.connection.getStats();
-      return {
-        peer,
-        network: summariseStats(report),
-        media: summariseMediaCounters(report),
-      };
-    } catch {
-      return { peer, network: null, media: null };
-    }
-  }
-
-  private reportStalledPeer(peers: readonly Peer[]): void {
-    const { store, translate } = this.env;
-    const stalled = peers.find((peer) => isSilent(peer));
-    if (stalled) {
-      store.set({ error: peerStalledError(translate, stalled.displayName) });
-    } else if (
-      store.getSnapshot().transport.media === "connected" &&
-      store.getSnapshot().error?.kind === "transport"
-    ) {
-      store.set({ error: null });
-    }
+    round.settle(store.getSnapshot().muted);
+    await this.publishDiagnostics(round.readings, totals, signalingRttMs);
   }
 
   private async publishDiagnostics(
-    readings: readonly Reading[],
+    readings: readonly LinkReading[],
     totals: MediaCounters,
     signalingRttMs: number | null,
   ): Promise<void> {
@@ -267,7 +121,7 @@ export class CallHealth {
     const worst = worstSample(readings.flatMap(({ network }) => (network ? [network] : [])));
 
     if (!worst) {
-      // Before a peer reports end-to-end timing, the signalling round trip
+      // Before a link reports end-to-end timing, the signalling round trip
       // keeps the dock informative.
       const rttMs = signalingRttMs;
       store.set({
@@ -297,7 +151,7 @@ export class CallHealth {
         ...totals,
       },
     });
-    if (decision.changed) await this.env.applyMicEncoding();
+    if (decision.changed) await this.env.topology().applyMicEncoding();
   }
 
   private async measureSignalingRtt(): Promise<number | null> {
@@ -335,10 +189,10 @@ export class CallHealth {
   }
 
   /**
-   * Fetch fresh ICE servers and give them to every connection.
+   * Fetch fresh ICE servers and give them to every link.
    *
    * New credentials are for the next gathering phase, so a healthy path keeps
-   * running and is not torn up once an hour. A peer that is already down can
+   * running and is not torn up once an hour. A link that is already down can
    * use the fresh list immediately.
    */
   async refreshIce(session: number): Promise<void> {
@@ -359,19 +213,19 @@ export class CallHealth {
     }
     if (this.env.activeSession() !== session) return;
 
-    let appliedToEveryPeer = true;
-    for (const peer of this.env.peers.values()) {
+    let appliedToEveryLink = true;
+    for (const link of this.env.topology().links()) {
       try {
-        const { connection } = peer;
+        const { connection } = link;
         connection.setConfiguration({ ...connection.getConfiguration(), iceServers: servers });
         const state = connection.connectionState;
-        if (state === "failed" || state === "disconnected") peer.watchdog.arm(state === "failed");
+        if (state === "failed" || state === "disconnected") link.watchdog.arm(state === "failed");
       } catch {
-        appliedToEveryPeer = false;
+        appliedToEveryLink = false;
       }
     }
 
-    if (!appliedToEveryPeer) {
+    if (!appliedToEveryLink) {
       store.set({ error: iceRefreshPartialError(this.env.translate) });
     } else if (store.getSnapshot().error?.kind === "ice-config") {
       store.set({ error: null });
@@ -398,20 +252,46 @@ export class CallHealth {
   }
 }
 
+// The proof of flow belongs to links, whichever topology made them. These are
+// the pieces every topology needs to prove it.
+
+/** Read one link's statistics. Never rejects: a link that cannot report reads as empty. */
+export async function readLink(link: Link): Promise<LinkReading> {
+  try {
+    const report = await link.connection.getStats();
+    return {
+      link,
+      network: summariseStats(report),
+      media: summariseMediaCounters(report),
+      report,
+    };
+  } catch {
+    return { link, network: null, media: null, report: null };
+  }
+}
+
 /** Connected for a while, yet no audio has been proven to cross. */
-function isSilent(peer: Peer): boolean {
+export function isSilent(link: Link): boolean {
   return (
-    peer.connection.connectionState === "connected" &&
-    !peer.flow.verified &&
-    peer.flow.silentSamples >= SILENT_SAMPLE_LIMIT
+    link.connection.connectionState === "connected" &&
+    !link.flow.verified &&
+    link.flow.silentSamples >= SILENT_SAMPLE_LIMIT
   );
 }
 
 /** After an outage the old counters prove nothing; they have to move again. */
-function expectFreshMedia(flow: MediaFlow): void {
+export function expectFreshMedia(flow: MediaFlow): void {
   flow.verified = false;
   flow.silentSamples = 0;
   flow.requireFresh = true;
+}
+
+/** Who is excused from carrying audio in one direction. */
+export interface FlowExpectation {
+  /** This side is muted, so it is not expected to send. */
+  selfMuted: boolean;
+  /** The other side is muted, so it is not expected to be heard. */
+  remoteMuted: boolean;
 }
 
 /**
@@ -419,8 +299,11 @@ function expectFreshMedia(flow: MediaFlow): void {
  * expected to send. After an outage the counters must advance, not merely
  * be positive.
  */
-function proveMediaFlow(peer: Peer, media: MediaCounters | null, selfMuted: boolean): void {
-  const { flow } = peer;
+export function proveMediaFlow(
+  flow: MediaFlow,
+  media: MediaCounters | null,
+  { selfMuted, remoteMuted }: FlowExpectation,
+): void {
   const sentCounter = media ? media.packetsSent + media.bytesSent : 0;
   const receivedCounter = media ? media.packetsReceived + media.bytesReceived : 0;
   const sent = flow.requireFresh
@@ -433,7 +316,7 @@ function proveMediaFlow(peer: Peer, media: MediaCounters | null, selfMuted: bool
   flow.lastReceived = receivedCounter;
 
   const outbound = selfMuted || sent;
-  const inbound = peer.muted || received;
+  const inbound = remoteMuted || received;
   if ((sent || received) && outbound && inbound) {
     flow.verified = true;
     flow.silentSamples = 0;

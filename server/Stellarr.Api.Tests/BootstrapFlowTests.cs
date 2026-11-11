@@ -453,6 +453,98 @@ public sealed class BootstrapFlowTests
     }
 
     [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("mesh")]
+    public async Task TheMeshTopologyIsTheDefaultAndNamesNoMediaServer(string? topology)
+    {
+        using var factory = new StellarrWebApplicationFactory(
+            loadTestData: true,
+            configuration: new Dictionary<string, string?> { ["Rtc:Topology"] = topology });
+        using var client = await SignInAsync(factory, "maja", "Aurora!2026");
+
+        var rtc = (await client.GetFromJsonAsync<JsonElement>("/api/bootstrap")).GetProperty("rtc");
+
+        Assert.Equal("mesh", rtc.GetProperty("topology").GetString());
+        Assert.Equal("", rtc.GetProperty("mediaServer").GetString());
+    }
+
+    [Theory]
+    [InlineData(null, "udp://relay.example.test:49000")]
+    [InlineData("49001", "udp://relay.example.test:49001")]
+    public async Task TheSfuTopologyNamesThePublicMediaEndpointAndKeepsEverythingElse(string? mediaPort, string expected)
+    {
+        var media = new FakeMediaServer();
+        using var sfu = new StellarrWebApplicationFactory(
+            loadTestData: true,
+            configuration: new Dictionary<string, string?>
+            {
+                ["Rtc:Topology"] = "sfu",
+                ["Rtc:PublicHost"] = "relay.example.test",
+                ["Rtc:MediaPort"] = mediaPort,
+                ["Rtc:MediaControlSecret"] = FakeMediaServer.Secret,
+            },
+            configureServices: media.Install);
+        using var mesh = new StellarrWebApplicationFactory(
+            loadTestData: true,
+            configuration: new Dictionary<string, string?> { ["Rtc:PublicHost"] = "relay.example.test" });
+        using var sfuClient = await SignInAsync(sfu, "maja", "Aurora!2026");
+        using var meshClient = await SignInAsync(mesh, "maja", "Aurora!2026");
+
+        var sfuRtc = (await sfuClient.GetFromJsonAsync<JsonElement>("/api/bootstrap")).GetProperty("rtc");
+        var meshRtc = (await meshClient.GetFromJsonAsync<JsonElement>("/api/bootstrap")).GetProperty("rtc");
+
+        Assert.Equal("sfu", sfuRtc.GetProperty("topology").GetString());
+        Assert.Equal(expected, sfuRtc.GetProperty("mediaServer").GetString());
+        Assert.Equal(1, sfuRtc.GetProperty("protocolVersion").GetInt32());
+        Assert.Equal("/hubs/app", sfuRtc.GetProperty("signalingHub").GetString());
+        Assert.Equal(meshRtc.GetProperty("capabilities").GetRawText(), sfuRtc.GetProperty("capabilities").GetRawText());
+        Assert.Equal(
+            meshRtc.GetProperty("iceServers").EnumerateArray().SelectMany(Urls),
+            sfuRtc.GetProperty("iceServers").EnumerateArray().SelectMany(Urls));
+    }
+
+    [Theory]
+    [InlineData("p2p")]
+    [InlineData("SFU")]
+    [InlineData("Mesh")]
+    [InlineData("sfu ")]
+    public void AnUnknownTopologyStopsTheApiAtStart(string topology)
+    {
+        using var factory = new StellarrWebApplicationFactory(
+            loadTestData: true,
+            configuration: new Dictionary<string, string?> { ["Rtc:Topology"] = topology });
+
+        var failure = Assert.ThrowsAny<Exception>(() => factory.CreateClient());
+
+        Assert.Contains("Rtc:Topology", failure.ToString(), StringComparison.Ordinal);
+    }
+
+    [Theory]
+    [InlineData("Rtc:MediaPort", "0")]
+    [InlineData("Rtc:MediaPort", "70000")]
+    [InlineData("Rtc:MediaControlUrl", "not an address")]
+    [InlineData("Rtc:MediaControlUrl", "ftp://127.0.0.1:5200")]
+    public async Task AnUnusableMediaServerSettingStopsOnlyTheSfuTopology(string setting, string value)
+    {
+        var media = new FakeMediaServer();
+        using var sfu = new StellarrWebApplicationFactory(
+            loadTestData: true,
+            configuration: new Dictionary<string, string?> { ["Rtc:Topology"] = "sfu", [setting] = value },
+            configureServices: media.Install);
+        using var mesh = new StellarrWebApplicationFactory(
+            loadTestData: true,
+            configuration: new Dictionary<string, string?> { [setting] = value });
+
+        var failure = Assert.ThrowsAny<Exception>(() => sfu.CreateClient());
+
+        Assert.Contains(setting, failure.ToString(), StringComparison.Ordinal);
+        using var client = await SignInAsync(mesh, "maja", "Aurora!2026");
+        Assert.Equal(HttpStatusCode.OK, (await client.GetAsync("/api/bootstrap")).StatusCode);
+        Assert.Empty(media.Requests);
+    }
+
+    [Theory]
     [InlineData("Rtc:TurnPort", "0")]
     [InlineData("Rtc:TurnPort", "70000")]
     [InlineData("Rtc:TurnsPort", "0")]

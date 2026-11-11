@@ -6,7 +6,7 @@ import { needsRecapture, type VoiceSettings } from "./settings";
 import type { VoiceStateStore } from "./store";
 import type { SpeechDetector } from "./vad";
 import { degradedNotice, micError, micSwapFailedError } from "./webrtcErrors";
-import type { Peer } from "./webrtcPeer";
+import { addSender, type Link } from "./webrtcPeer";
 
 export interface LocalMicrophoneEnv {
   readonly selfUserId: UserId;
@@ -15,11 +15,12 @@ export interface LocalMicrophoneEnv {
   readonly store: VoiceStateStore;
   /** Lights the speaking ring from the audio before the input gate. */
   readonly speech: SpeechDetector;
-  readonly peers: ReadonlyMap<UserId, Peer>;
+  /** The links the microphone is sent on. */
+  links(): Iterable<Link>;
   /** Cap every microphone sender at the adaptive controller's ceiling. */
   applyEncoding(): Promise<void>;
-  /** Replace a peer whose connection refused even to take the swap back. */
-  rebuildPeer(peer: Peer): Promise<void>;
+  /** Replace a link whose sender refused even to take the swap back. */
+  rebuildLink(link: Link): Promise<void>;
   /** The device ended underneath the call, e.g. a headset was unplugged. */
   onDeviceLost(): void;
 }
@@ -70,6 +71,17 @@ export class LocalMicrophone {
     capture.rawTrack.onended = () => this.env.onDeviceLost();
   }
 
+  /** Put the microphone on a link that was just made. */
+  addTo(link: Link): void {
+    const capture = this.active;
+    if (!capture || link.micSender) return;
+    try {
+      link.micSender = addSender(link, capture.track, capture.stream);
+    } catch {
+      // A connection that cannot take the track is about to be rebuilt.
+    }
+  }
+
   /** Stop the device and forget the capture. */
   release(): void {
     this.env.speech.remove(this.env.selfUserId);
@@ -106,10 +118,10 @@ export class LocalMicrophone {
   }
 
   /**
-   * Reopen the microphone for `next` and move every peer onto it.
+   * Reopen the microphone for `next` and move every link onto it.
    *
    * Without `force`, only a capture-affecting change does anything. If the new
-   * device cannot be opened, or one peer cannot take it, the old capture is
+   * device cannot be opened, or one link cannot take it, the old capture is
    * still running, so the call goes on and the error is reported as
    * recoverable rather than fatal. `superseded` is asked after the slow part:
    * a newer request makes this result stale, and a stale capture is never
@@ -141,7 +153,7 @@ export class LocalMicrophone {
     // change swaps the track under a running call, and two graphs never meet
     // at the same sample or settle at the same loudness.
     capture.fadeIn();
-    if (!(await this.moveAllPeers(capture.track, previous.track))) {
+    if (!(await this.moveAllLinks(capture.track, previous.track))) {
       capture.dispose();
       this.env.store.set({ error: micSwapFailedError(this.env.translate) });
       return false;
@@ -161,15 +173,15 @@ export class LocalMicrophone {
    * even the rollback belongs to a broken connection, which is rebuilt while
    * `active` still points at the old capture.
    */
-  private async moveAllPeers(
+  private async moveAllLinks(
     track: MediaStreamTrack,
     previousTrack: MediaStreamTrack,
   ): Promise<boolean> {
-    const targets = [...this.env.peers.values()].filter(
-      (peer): peer is Peer & { micSender: RTCRtpSender } => peer.micSender !== null,
+    const targets = [...this.env.links()].filter(
+      (link): link is Link & { micSender: RTCRtpSender } => link.micSender !== null,
     );
     const attempts = await Promise.allSettled(
-      targets.map((peer) => peer.micSender.replaceTrack(track)),
+      targets.map((link) => link.micSender.replaceTrack(track)),
     );
     if (attempts.every((result) => result.status === "fulfilled")) {
       await this.env.applyEncoding();
@@ -178,10 +190,10 @@ export class LocalMicrophone {
 
     const moved = targets.filter((_, index) => attempts[index]?.status === "fulfilled");
     const rollbacks = await Promise.allSettled(
-      moved.map((peer) => peer.micSender.replaceTrack(previousTrack)),
+      moved.map((link) => link.micSender.replaceTrack(previousTrack)),
     );
-    for (const [index, peer] of moved.entries()) {
-      if (rollbacks[index]?.status === "rejected") await this.env.rebuildPeer(peer);
+    for (const [index, link] of moved.entries()) {
+      if (rollbacks[index]?.status === "rejected") await this.env.rebuildLink(link);
     }
     return false;
   }

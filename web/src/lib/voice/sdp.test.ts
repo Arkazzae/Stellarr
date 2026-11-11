@@ -446,3 +446,64 @@ describe("screenVideoCodecList", () => {
     ]);
   });
 });
+
+describe("tuning a section by its stream", () => {
+  // A share's sound on the offer that first carries it: the browser has not
+  // given its transceiver a mid yet, so only its msid says what it is.
+  const NEW_SHARE = [
+    "v=0",
+    "m=audio 9 UDP/TLS/RTP/SAVPF 111",
+    "a=mid:0",
+    "a=msid:mic-stream track-1",
+    "a=rtpmap:111 opus/48000/2",
+    "a=fmtp:111 minptime=10;useinbandfec=1",
+    "m=audio 9 UDP/TLS/RTP/SAVPF 111",
+    "a=mid:1",
+    "a=msid:share-stream track-2",
+    "a=rtpmap:111 opus/48000/2",
+    "a=fmtp:111 minptime=10;useinbandfec=1",
+    "m=audio 9 UDP/TLS/RTP/SAVPF 111",
+    "a=mid:2",
+    "a=msid:- track-3",
+    "a=rtpmap:111 opus/48000/2",
+    "",
+  ].join("\r\n");
+  const speech = AUDIO_PROFILES.premium;
+  const music = AUDIO_PROFILES.music;
+
+  it("asks for the section's mid and stream id when the plan's mids do not name it", () => {
+    const asked: Array<[string | null, string | null]> = [];
+    const tuned = tuneLocalDescription(
+      { type: "offer", sdp: NEW_SHARE },
+      {
+        byMid: new Map([["0", { parameters: opusParameters(speech), ptime: speech.ptime }]]),
+        bySection: (mid, streamId) => {
+          asked.push([mid, streamId]);
+          return streamId === "share-stream"
+            ? { parameters: opusParameters(music), ptime: music.ptime }
+            : null;
+        },
+        fallback: { parameters: opusParameters(AUDIO_PROFILES.economy), ptime: 20 },
+      },
+    );
+
+    // "-" names no stream.
+    expect(asked).toEqual([
+      ["1", "share-stream"],
+      ["2", null],
+    ]);
+    const [, mic, share, rest] = (tuned.sdp ?? "").split("m=");
+    expect(mic).toContain("maxaveragebitrate=128000");
+    expect(share).toContain("stereo=1");
+    expect(share).toContain("maxaveragebitrate=160000");
+    expect(rest).toContain("maxaveragebitrate=32000");
+  });
+
+  it("is never asked when the plan has no such resolver", () => {
+    const tuned = tuneLocalDescription(
+      { type: "offer", sdp: NEW_SHARE },
+      { fallback: { parameters: opusParameters(speech), ptime: speech.ptime } },
+    );
+    expect(tuned.sdp?.match(/maxaveragebitrate=128000/g)).toHaveLength(3);
+  });
+});
