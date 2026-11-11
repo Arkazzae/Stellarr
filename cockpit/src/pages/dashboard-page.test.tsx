@@ -244,7 +244,7 @@ describe("DashboardPage refreshing", () => {
     Reflect.deleteProperty(document, "visibilityState");
   });
 
-  it("reads everything again every 30 seconds", async () => {
+  it("reads the state again every 30 seconds and the activity every 5 minutes", async () => {
     answerProbes(200, 200);
     const value = cockpitValue();
     renderDashboard(value);
@@ -254,8 +254,15 @@ describe("DashboardPage refreshing", () => {
     });
 
     expect(value.reload).toHaveBeenCalledOnce();
-    expect(activityMock).toHaveBeenCalledTimes(2);
     expect(runtimeMock).toHaveBeenCalledTimes(2);
+    expect(activityMock).toHaveBeenCalledOnce();
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(9 * 30_000);
+    });
+
+    expect(runtimeMock).toHaveBeenCalledTimes(11);
+    expect(activityMock).toHaveBeenCalledTimes(2);
   });
 
   it("skips the refresh while the tab is hidden", async () => {
@@ -269,7 +276,7 @@ describe("DashboardPage refreshing", () => {
     });
 
     expect(value.reload).not.toHaveBeenCalled();
-    expect(activityMock).toHaveBeenCalledOnce();
+    expect(runtimeMock).toHaveBeenCalledOnce();
   });
 
   it("stops refreshing when the page goes away", async () => {
@@ -281,7 +288,7 @@ describe("DashboardPage refreshing", () => {
       await vi.advanceTimersByTimeAsync(60_000);
     });
 
-    expect(activityMock).toHaveBeenCalledOnce();
+    expect(runtimeMock).toHaveBeenCalledOnce();
   });
 });
 

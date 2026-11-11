@@ -1,5 +1,5 @@
 import * as TabsPrimitive from "@radix-ui/react-tabs";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ActivityChart } from "@/components/activity-chart";
 import { CardTitleRow } from "@/components/card-title-row";
@@ -22,8 +22,13 @@ type Health = Pick<HealthSnapshot, "api" | "database">;
 const CHECKING: Health = { api: "checking", database: "checking" };
 const UNAVAILABLE: Health = { api: "unavailable", database: "unavailable" };
 
-/** How often the overview reads everything again: once per runtime sample. */
+/** How often the overview reads its state again: once per runtime sample. */
 const REFRESH_MS = 30_000;
+/**
+ * Activity counts days, so it is read on every tenth refresh only (5 min):
+ * each read goes over a month of messages.
+ */
+const ACTIVITY_EVERY = 10;
 
 const BYTE_UNITS = ["B", "KB", "MB", "GB"];
 
@@ -178,10 +183,15 @@ export function DashboardPage() {
 
   // The last state stays on screen while the next one loads, so a refresh
   // every 30 s does not blink every badge to "checking".
-  const refresh = useCallback(async () => {
+  const refresh = useCallback(async (withActivity: boolean) => {
     setRefreshing(true);
     try {
-      const [next] = await Promise.all([readHealth(), reload(), refreshActivity(), refreshRuntime()]);
+      const [next] = await Promise.all([
+        readHealth(),
+        reload(),
+        withActivity ? refreshActivity() : undefined,
+        refreshRuntime(),
+      ]);
       setHealth(next);
       setUpdatedAt(next.checkedAt);
     } finally {
@@ -189,9 +199,12 @@ export function DashboardPage() {
     }
   }, [reload, refreshActivity, refreshRuntime]);
 
+  const ticks = useRef(0);
   useEffect(() => {
     const timer = window.setInterval(() => {
-      if (document.visibilityState === "visible") void refresh();
+      if (document.visibilityState !== "visible") return;
+      ticks.current += 1;
+      void refresh(ticks.current % ACTIVITY_EVERY === 0);
     }, REFRESH_MS);
     return () => window.clearInterval(timer);
   }, [refresh]);
@@ -218,7 +231,7 @@ export function DashboardPage() {
                 size="icon-sm"
                 aria-label={t("dashboard.refresh")}
                 disabled={refreshing}
-                onClick={() => void refresh()}
+                onClick={() => void refresh(true)}
               >
                 <Icon name="refresh" size={16} className={cn(refreshing && "animate-spin")} />
               </Button>
