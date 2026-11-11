@@ -6,39 +6,39 @@ export type MessageKey = keyof typeof pl;
 export type MessageValues = Record<string, string | number>;
 
 const catalogs: Record<Locale, Record<MessageKey, string>> = { pl, en };
-const LOCALE_COOKIE = "stellarr_locale";
+/** Where this browser keeps the panel's language. */
+const LOCALE_KEY = "stellarr.cockpit.locale";
 
-function asLocale(value: string | undefined): Locale | null {
+export const LOCALES: readonly Locale[] = ["en", "pl"];
+
+function asLocale(value: string | null): Locale | null {
   return value === "pl" || value === "en" ? value : null;
 }
 
-function localeFromCookie(cookie: string): Locale | null {
-  for (const entry of cookie.split(";")) {
-    const [name, value] = entry.trim().split("=");
-    if (name === LOCALE_COOKIE) return asLocale(value);
-  }
-  return null;
-}
-
-/** The first browser language that is Polish or English, regardless of region. */
-function localeFromLanguages(languages: readonly string[]): Locale | null {
-  for (const tag of languages) {
-    const locale = asLocale(tag.toLowerCase().split("-")[0]);
-    if (locale) return locale;
-  }
-  return null;
-}
-
 /**
- * The language to show: the cookie the web client writes, then the browser's languages,
- * then English.
+ * The panel's language: the one chosen in its settings, else English. The
+ * panel does not follow the browser or the web client; the operator picks.
  */
-export function resolveLocale(cookie: string, languages: readonly string[]): Locale {
-  return localeFromCookie(cookie) ?? localeFromLanguages(languages) ?? "en";
+export function resolveLocale(stored: string | null): Locale {
+  return asLocale(stored) ?? "en";
 }
 
 export function detectLocale(): Locale {
-  return resolveLocale(document.cookie, navigator.languages);
+  try {
+    return resolveLocale(localStorage.getItem(LOCALE_KEY));
+  } catch {
+    // Storage can be off (a private window, blocked site data): English it is.
+    return "en";
+  }
+}
+
+/** Remembers the panel's language in this browser. */
+export function saveLocale(locale: Locale): void {
+  try {
+    localStorage.setItem(LOCALE_KEY, locale);
+  } catch {
+    // Without storage the choice holds until the page is closed.
+  }
 }
 
 let active: Locale = "en";

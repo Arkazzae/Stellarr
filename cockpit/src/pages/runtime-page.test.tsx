@@ -17,7 +17,11 @@ const runtimeMock = vi.mocked(cockpitApi.runtime);
 
 const MEGABYTE = 1024 * 1024;
 
-function sample(at: string, counts: Pick<CockpitRuntimeSample, "requests" | "clientErrors" | "serverErrors">): CockpitRuntimeSample {
+function sample(
+  at: string,
+  counts: Pick<CockpitRuntimeSample, "requests" | "clientErrors" | "serverErrors">,
+  checks: Partial<Pick<CockpitRuntimeSample, "databaseUp" | "storageUp">> = {},
+): CockpitRuntimeSample {
   return {
     at,
     workingSetBytes: 500 * MEGABYTE,
@@ -25,7 +29,11 @@ function sample(at: string, counts: Pick<CockpitRuntimeSample, "requests" | "cli
     threads: 30,
     cpuPercent: 10,
     realtimeConnections: 3,
+    databaseUp: true,
+    databaseLatencyMs: 0.4,
+    storageUp: null,
     ...counts,
+    ...checks,
   };
 }
 
@@ -46,8 +54,8 @@ function runtimeWith(overrides: Partial<CockpitRuntime> = {}): CockpitRuntime {
       sample("2025-03-05T11:15:30Z", { requests: 60, clientErrors: 2, serverErrors: 4 }),
     ],
     services: [
-      { name: "SQLite", state: "healthy", detail: "Zapytanie testowe wykonane" },
-      { name: "Poczta", state: "warning", detail: "Brak klucza API" },
+      { name: "SQLite", state: "healthy", detail: "Zapytanie testowe wykonane", id: "database" },
+      { name: "Magazyn obiektów", state: "warning", detail: "Bucket nie odpowiedział", id: "storage" },
     ],
     ...overrides,
   };
@@ -94,23 +102,20 @@ describe("RuntimePage", () => {
     expect(metric("Błędy serwera")).toContain("błędy klienta (4xx): 5");
     expect(metric("CPU")).toContain("12,5%");
     expect(metric("Pamięć procesu")).toMatch(/512MB/);
-    expect(metric("Pamięć procesu")).toMatch(/sterta GC 12,5\sMB, wątki: 31/);
-    expect(metric("Połączenia realtime")).toContain("4");
-    expect(metric("Połączenia realtime")).toContain("aktywne pokoje głosowe: 2");
+    expect(metric("Pamięć procesu")).toMatch(/sterta 12,5\sMB, wątki: 31/);
+    expect(metric("Połączenia")).toContain("4");
+    expect(metric("Połączenia")).toContain("realtime, pokoje głosowe: 2");
     expect(metric("Opóźnienie SQLite")).toContain("1,5ms");
   });
 
-  it("draws memory and requests over the last hour, with their values in tables", async () => {
+  it("draws the requests of the last hour, with their values in a table", async () => {
     runtimeMock.mockResolvedValue(runtimeWith());
     render(<RuntimePage />);
 
-    expect(await screen.findByRole("img", { name: "Pamięć w ostatniej godzinie" })).toBeTruthy();
-    expect(screen.getByRole("img", { name: "Żądania do API" })).toBeTruthy();
+    expect(await screen.findByRole("img", { name: "Żądania do API" })).toBeTruthy();
     const requests = screen.getByRole("table", { name: "Żądania do API co 30 sekund" });
     expect(within(requests).getAllByRole("row")).toHaveLength(3);
     expect(within(requests).getAllByRole("cell").map((cell) => cell.textContent)).toEqual(["39", "1", "56", "4"]);
-    const memory = screen.getByRole("table", { name: "Pamięć procesu co 30 sekund" });
-    expect(within(memory).getAllByRole("cell").map((cell) => cell.textContent)).toEqual(["500 MB", "500 MB"]);
   });
 
   it.each([
@@ -130,16 +135,35 @@ describe("RuntimePage", () => {
     ).toBeTruthy();
   });
 
-  it("lists each service with its status and details", async () => {
+  it("shows each service with its state, its detail and its share of the last hour", async () => {
     runtimeMock.mockResolvedValue(runtimeWith());
     render(<RuntimePage />);
 
-    const sqlite = await screen.findByRole("row", { name: /SQLite/ });
+    const sqlite = await screen.findByRole("group", { name: "SQLite" });
     expect(within(sqlite).getByText("Działa")).toBeTruthy();
     expect(within(sqlite).getByText("Zapytanie testowe wykonane")).toBeTruthy();
-    const mail = screen.getByRole("row", { name: /Poczta/ });
-    expect(within(mail).getByText("Wymaga uwagi")).toBeTruthy();
-    expect(within(mail).getByText("Brak klucza API")).toBeTruthy();
+    expect(within(sqlite).getByText("100%")).toBeTruthy();
+    const storage = screen.getByRole("group", { name: "Magazyn obiektów" });
+    expect(within(storage).getByText("Wymaga uwagi")).toBeTruthy();
+    expect(within(storage).getByText("Bucket nie odpowiedział")).toBeTruthy();
+    // No sample checked the store, so there is nothing to show yet rather than a made-up 100%.
+    expect(within(storage).getByText("brak danych")).toBeTruthy();
+  });
+
+  it("draws a service's last hour from the checks its samples took", async () => {
+    runtimeMock.mockResolvedValue(
+      runtimeWith({
+        history: [
+          sample("2025-03-05T11:14:00Z", { requests: 1, clientErrors: 0, serverErrors: 0 }, { storageUp: true }),
+          sample("2025-03-05T11:15:00Z", { requests: 1, clientErrors: 0, serverErrors: 0 }, { storageUp: false, databaseUp: false }),
+        ],
+      }),
+    );
+    render(<RuntimePage />);
+
+    const storage = await screen.findByRole("group", { name: "Magazyn obiektów" });
+    expect(within(storage).getByText("50%")).toBeTruthy();
+    expect(within(screen.getByRole("group", { name: "SQLite" })).getByText("50%")).toBeTruthy();
   });
 
   it("shows the reason when the first read fails", async () => {

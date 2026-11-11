@@ -1,5 +1,8 @@
 using Stellarr.Api.Auth;
 using Stellarr.Api.Domain;
+using Stellarr.Api.Integrations;
+using Stellarr.Api.Mail;
+using Stellarr.Api.Secrets;
 
 namespace Stellarr.Api.Contracts;
 
@@ -19,13 +22,30 @@ public sealed record CockpitOverviewDto(
     int OnlineUserCount,
     int RealtimeConnectionCount,
     long StoredObjectBytes,
-    int MessageCount);
+    int MessageCount,
+    int ServerCount,
+    int PublicServerCount);
 
-/// <summary>One day of the overview's activity chart; <c>Date</c> is the instance's local date.</summary>
-public sealed record CockpitActivityDayDto(string Date, int Messages, int NewMembers);
+/// <summary>
+/// One day of the overview's activity chart; <c>Date</c> is the instance's local
+/// date. Messages, active users, joins and reactions are the instance server's;
+/// uploads and sign-ins are the whole instance's.
+/// </summary>
+public sealed record CockpitActivityDayDto(
+    string Date,
+    int Messages,
+    int NewMembers,
+    int ActiveUsers,
+    int Reactions,
+    int Uploads,
+    int SignIns);
 
-/// <summary>Daily activity, oldest day first and today last, in the named time zone.</summary>
-public sealed record CockpitActivityDto(string TimeZone, IReadOnlyList<CockpitActivityDayDto> Days);
+/// <summary>
+/// Daily activity, oldest day first and today last, in the named time zone.
+/// <c>ActiveUsers</c> counts each person who wrote in the window once, which
+/// the daily counts cannot add up to.
+/// </summary>
+public sealed record CockpitActivityDto(string TimeZone, IReadOnlyList<CockpitActivityDayDto> Days, int ActiveUsers);
 
 public sealed record CockpitServerPersonDto(string Id, string Username, string DisplayName);
 
@@ -94,7 +114,12 @@ public sealed record CockpitSessionDto(
     DateTime ExpiresAt,
     bool Current);
 
-public sealed record CockpitRuntimeServiceDto(string Name, string State, string Detail);
+/// <summary>
+/// A service the API reports on. <c>Id</c> names it for the panel (api,
+/// database, realtime, maintenance, storage), which draws its availability
+/// from the samples: realtime and maintenance run inside the API process.
+/// </summary>
+public sealed record CockpitRuntimeServiceDto(string Name, string State, string Detail, string Id);
 
 /// <summary>One sampling interval of the process; request counts are for that interval alone.</summary>
 public sealed record CockpitRuntimeSampleDto(
@@ -106,7 +131,10 @@ public sealed record CockpitRuntimeSampleDto(
     int RealtimeConnections,
     int Requests,
     int ClientErrors,
-    int ServerErrors);
+    int ServerErrors,
+    bool DatabaseUp,
+    double DatabaseLatencyMs,
+    bool? StorageUp);
 
 public sealed record CockpitRuntimeDto(
     DateTime StartedAt,
@@ -148,15 +176,38 @@ public sealed record CockpitLogsDto(
     IReadOnlyList<CockpitLogSourceDto> Sources,
     int Capacity);
 
+/// <summary>
+/// One backup. <c>Parts</c> says what it holds: <c>database</c>, <c>objects</c>,
+/// <c>keys</c>, <c>instance</c>. A plain <c>.db</c> file holds the database alone.
+/// <c>MissingObjects</c> counts objects the store could not give when it was made.
+/// </summary>
 public sealed record CockpitBackupDto(
     string Id,
     long SizeBytes,
     DateTime CreatedAt,
-    DateTime? VerifiedAt);
+    DateTime? VerifiedAt,
+    IReadOnlyList<string> Parts,
+    int MissingObjects);
+
+/// <summary>The backup being written, and how far it has got.</summary>
+public sealed record CockpitBackupJobDto(
+    string Id,
+    IReadOnlyList<string> Parts,
+    DateTime StartedAt,
+    string Phase,
+    int ObjectsDone,
+    int ObjectsTotal);
+
+public sealed record CockpitBackupFailureDto(string Id, string Message, DateTime At);
 
 public sealed record CockpitBackupsDto(
     IReadOnlyList<CockpitBackupDto> Backups,
-    int RetentionDays);
+    int RetentionDays,
+    CockpitBackupJobDto? Job,
+    CockpitBackupFailureDto? LastFailure);
+
+/// <summary>What to back up. A request without a body asks for the database alone, as a plain SQLite file.</summary>
+public sealed record CreateCockpitBackupRequest(bool Database, bool Objects, bool Keys, bool Instance = false);
 
 public sealed record CockpitSettingsDto(
     string InstanceName,
@@ -173,7 +224,16 @@ public sealed record CockpitSettingsDto(
     int LogRetentionDays,
     int OrphanObjectRetentionDays,
     bool AutomaticCleanupEnabled,
-    DateTime UpdatedAt);
+    DateTime UpdatedAt,
+    bool ResendEnabled,
+    string SmtpHost,
+    int SmtpPort,
+    string SmtpSecurity,
+    string SmtpUsername,
+    bool SmtpPasswordConfigured,
+    bool MailReady,
+    bool GiphyEnabled,
+    bool GiphyKeyConfigured);
 
 public sealed record CockpitDesktopReleaseDto(
     string MinimumVersion,
@@ -203,7 +263,22 @@ public sealed record UpdateCockpitSettingsRequest(
     int BackupRetentionDays,
     int LogRetentionDays,
     int OrphanObjectRetentionDays,
-    bool AutomaticCleanupEnabled);
+    bool AutomaticCleanupEnabled,
+    string? SmtpHost = null,
+    int? SmtpPort = null,
+    string? SmtpSecurity = null,
+    string? SmtpUsername = null,
+    bool? ResendEnabled = null,
+    bool? GiphyEnabled = null);
+
+/// <summary>
+/// Whether a secret is set and where its value comes from: <c>panel</c>,
+/// <c>environment</c> or <c>none</c>. The value itself never leaves the server.
+/// <c>Variable</c> is what an operator would set in <c>.env</c> instead.
+/// </summary>
+public sealed record CockpitSecretDto(string Name, bool Configured, string Source, string Variable, DateTime? UpdatedAt);
+
+public sealed record SetCockpitSecretRequest(string? Value);
 
 public sealed record UpdateCockpitDesktopReleaseRequest(string? MinimumVersion, string? RecommendedVersion);
 
@@ -215,14 +290,17 @@ public static class CockpitContractMappings
         this OperationsSettings settings,
         string instanceName,
         string publicUrl,
-        bool resendApiKeyConfigured) => new(
+        ResolvedSecrets secrets)
+    {
+        var transport = MailTransports.Resolve(settings, secrets);
+        return new(
         instanceName,
         publicUrl,
         settings.TimeZone,
         settings.MailingEnabled,
-        "resend",
+        MailTransports.NameOf(transport.Provider),
         settings.MailFromAddress,
-        resendApiKeyConfigured,
+        secrets.ResendApiKey.IsSet,
         settings.InviteMailEnabled,
         settings.RecoveryMailEnabled,
         settings.AlertMailEnabled,
@@ -230,7 +308,22 @@ public static class CockpitContractMappings
         settings.LogRetentionDays,
         settings.OrphanObjectRetentionDays,
         settings.AutomaticCleanupEnabled,
-        settings.UpdatedAt);
+        settings.UpdatedAt,
+        transport.Provider == MailProvider.Resend,
+        settings.MailSmtpHost,
+        settings.MailSmtpPort,
+        MailTransports.ParseSecurity(settings.MailSmtpSecurity) switch
+        {
+            SmtpSecurity.Tls => MailTransports.TlsName,
+            SmtpSecurity.None => MailTransports.NoneName,
+            _ => MailTransports.StartTlsName,
+        },
+        settings.MailSmtpUsername,
+        secrets.SmtpPassword.IsSet,
+        transport.Ready,
+        GiphyState.Resolve(settings, secrets).Enabled,
+        secrets.GiphyApiKey.IsSet);
+    }
 
     public static CockpitRoleDto ToCockpitDto(this ServerRole role, int memberCount) => new(
         role.Id.ToString(),

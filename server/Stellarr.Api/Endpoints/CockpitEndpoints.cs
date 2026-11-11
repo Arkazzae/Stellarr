@@ -47,6 +47,10 @@ public static partial class CockpitEndpoints
         cockpit.MapGet("/desktop-release", GetDesktopReleaseAsync);
         cockpit.MapPut("/desktop-release", UpdateDesktopReleaseAsync);
         cockpit.MapPost("/mail/test", SendTestMailAsync);
+        cockpit.MapPost("/integrations/giphy/test", TestGiphyAsync);
+        cockpit.MapGet("/secrets", GetSecretsAsync);
+        cockpit.MapPut("/secrets/{name}", SetSecretAsync);
+        cockpit.MapDelete("/secrets/{name}", ClearSecretAsync);
         return endpoints;
     }
 
@@ -72,6 +76,8 @@ public static partial class CockpitEndpoints
             .CountAsync(
                 x => db.Channels.Any(channel => channel.Id == x.ChannelId && channel.ServerId == server.Id),
                 cancellationToken);
+        var serverCount = await db.Servers.AsNoTracking().CountAsync(cancellationToken);
+        var publicServerCount = await db.Servers.AsNoTracking().CountAsync(x => x.IsPublic, cancellationToken);
 
         return Results.Ok(new CockpitBootstrapDto(
             new CockpitOperatorDto(
@@ -85,7 +91,9 @@ public static partial class CockpitEndpoints
                 memberIds.Count(id => presence.PublicPresenceOf(id) != PresenceTracker.Offline),
                 memberIds.Sum(id => presence.ConnectionIds(id).Count),
                 attachmentBytes + emojiBytes,
-                messageCount)));
+                messageCount,
+                serverCount,
+                publicServerCount)));
     }
 
     /// <summary>
@@ -114,7 +122,7 @@ public static partial class CockpitEndpoints
     }
 
     /// <summary>Stages a line of the audit log; the caller saves it with the change it records.</summary>
-    private static async Task StageAuditAsync(
+    internal static async Task StageAuditAsync(
         AppDbContext db,
         Guid serverId,
         Guid actorId,

@@ -23,6 +23,9 @@ public sealed record StoredObject(
     long TotalLength,
     ByteRange? Range);
 
+/// <summary>An object as a listing names it.</summary>
+public sealed record StoredObjectInfo(string Key, long Size);
+
 public interface IObjectStorage
 {
     Task EnsureBucketAsync(CancellationToken cancellationToken);
@@ -40,6 +43,15 @@ public interface IObjectStorage
     Task<StoredObject> GetAsync(string key, ByteRange? range, CancellationToken cancellationToken);
 
     Task DeleteAsync(string key, CancellationToken cancellationToken);
+
+    /// <summary>Every object in the bucket, page by page, so a backup misses none a table forgot.</summary>
+    IAsyncEnumerable<StoredObjectInfo> ListAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Asks the store whether the bucket answers, without changing anything;
+    /// throws when it does not. Cockpit's availability bars take one every 30 s.
+    /// </summary>
+    Task ProbeAsync(CancellationToken cancellationToken);
 }
 
 public sealed class S3ObjectStorage(IAmazonS3 client, IOptions<StorageOptions> options) : IObjectStorage
@@ -105,6 +117,29 @@ public sealed class S3ObjectStorage(IAmazonS3 client, IOptions<StorageOptions> o
 
     public Task DeleteAsync(string key, CancellationToken cancellationToken) =>
         client.DeleteObjectAsync(_bucket, key, cancellationToken);
+
+    public Task ProbeAsync(CancellationToken cancellationToken) =>
+        client.ListObjectsV2Async(new ListObjectsV2Request { BucketName = _bucket, MaxKeys = 1 }, cancellationToken);
+
+    public async IAsyncEnumerable<StoredObjectInfo> ListAsync(
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        string? continuation = null;
+        do
+        {
+            var page = await client.ListObjectsV2Async(
+                new ListObjectsV2Request { BucketName = _bucket, ContinuationToken = continuation },
+                cancellationToken);
+            // The SDK leaves an empty page's collection null.
+            foreach (var item in page.S3Objects ?? [])
+            {
+                yield return new StoredObjectInfo(item.Key, item.Size ?? 0);
+            }
+
+            continuation = page.IsTruncated == true ? page.NextContinuationToken : null;
+        }
+        while (continuation is not null);
+    }
 
     /// <summary>
     /// Reads the <c>bytes from-to/total</c> form. A range outside its object,

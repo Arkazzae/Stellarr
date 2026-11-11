@@ -47,13 +47,16 @@ Per-file limits by media type: images 10 MiB, audio 25 MiB, documents/other 25 M
 
 ## Mail
 
-Password-reset and test emails are sent via the Resend HTTPS API. No email is sent until `STELLARR_RESEND_API_KEY` is configured.
+Password-reset, invitation and test emails go through an SMTP server by default. Its host, port, encryption (STARTTLS, TLS or none) and login are set in Cockpit under **Settings**. Resend's HTTPS API can replace SMTP: turn it on under **Integrations**. An installation that never chose keeps sending through Resend while it has a Resend key and no SMTP host, as it did before SMTP existed.
+
+The SMTP password and the Resend key can be set in Cockpit or in the environment. A value set in Cockpit is stored encrypted with the instance's data-protection keys and takes precedence; removing it there falls back to the environment's. Cockpit never shows a secret again, only whether it is set and where from.
 
 | Variable | Type | Default | Description |
 | --- | --- | --- | --- |
 | `STELLARR_MAIL_ENABLED` | `true` \| `false` | `true` | **Seed** for the mailing toggle in Cockpit settings. |
-| `STELLARR_RESEND_API_KEY` | string | empty | Resend API key. Never exposed in API responses; Cockpit only reports whether a key is set. |
-| `STELLARR_MAIL_FROM` | email | `onboarding@resend.dev` | **Seed** for the sender address. Use an address on a Resend-verified domain in production. |
+| `STELLARR_SMTP_PASSWORD` | string | empty | SMTP password, used when Cockpit holds none. |
+| `STELLARR_RESEND_API_KEY` | string | empty | Resend API key, used when Cockpit holds none. |
+| `STELLARR_MAIL_FROM` | email | empty | **Seed** for the sender address. `onboarding@resend.dev` works only through Resend, for testing. |
 | `STELLARR_MAIL_FROM_NAME` | string | `Stellarr` | Sender display name. |
 
 ## Single sign-on (OIDC)
@@ -91,7 +94,7 @@ See [Localization](../LOCALIZATION.md).
 
 | Variable | Type | Default | Description |
 | --- | --- | --- | --- |
-| `GIPHY_API_KEY` | string | empty | GIPHY web-integration API key provided to authenticated browser clients for GIF search (also passed as a build arg when building from source). |
+| `GIPHY_API_KEY` | string | empty | GIPHY web-integration key for the GIF search, handed to signed-in browser clients. It can also be set in Cockpit under **Integrations**, which takes precedence, checks the key against GIPHY and turns GIFs on or off. Changes reach open tabs when they reload; no restart is needed. When building from source, the same value is passed as a build argument and is used only while the API cannot be asked. |
 | `STELLARR_EF_COMMAND_LOG_LEVEL` | .NET log level | `Warning` | Log level for `Microsoft.EntityFrameworkCore.Database.Command` (`Information` logs SQL queries). |
 
 ## Container resource limits

@@ -1,8 +1,9 @@
-using Microsoft.EntityFrameworkCore;
 using System.Net;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
+using Stellarr.Api.Mail;
 
 namespace Stellarr.Api.Tests;
 
@@ -58,6 +59,100 @@ public sealed class CockpitSettingsTests
         Assert.False(settings.GetProperty("resendApiKeyConfigured").GetBoolean());
     }
 
+    [Fact]
+    public async Task SmtpSettingsAreStoredAndSendTheTestMail()
+    {
+        using var factory = new StellarrWebApplicationFactory(
+            loadTestData: true,
+            new Dictionary<string, string?> { ["Mail:SmtpPassword"] = "smtp-secret" });
+        using var owner = await OwnerAsync(factory);
+        var settings = ValidSettings();
+        settings["mailingEnabled"] = true;
+        settings["mailFromAddress"] = "sender@example.net";
+        settings["smtpHost"] = " smtp.example.net ";
+        settings["smtpPort"] = 465;
+        settings["smtpSecurity"] = "TLS";
+        settings["smtpUsername"] = "mailer";
+        settings["resendEnabled"] = false;
+
+        var response = await owner.PutAsJsonAsync("/api/cockpit/settings", settings);
+
+        var text = await response.Content.ReadAsStringAsync();
+        response.EnsureSuccessStatusCode();
+        Assert.DoesNotContain("smtp-secret", text, StringComparison.Ordinal);
+        var saved = await JsonAsync(response);
+        Assert.Equal("smtp", saved.GetProperty("mailProvider").GetString());
+        Assert.Equal("smtp.example.net", saved.GetProperty("smtpHost").GetString());
+        Assert.Equal(465, saved.GetProperty("smtpPort").GetInt32());
+        Assert.Equal("tls", saved.GetProperty("smtpSecurity").GetString());
+        Assert.Equal("mailer", saved.GetProperty("smtpUsername").GetString());
+        Assert.True(saved.GetProperty("smtpPasswordConfigured").GetBoolean());
+        Assert.False(saved.GetProperty("resendEnabled").GetBoolean());
+        Assert.True(saved.GetProperty("mailReady").GetBoolean());
+
+        var test = await JsonAsync(await owner.PostAsJsonAsync("/api/cockpit/mail/test", new { to = "person@example.net" }));
+
+        Assert.Equal("smtp", test.GetProperty("provider").GetString());
+        var transport = Assert.Single(factory.EmailDelivery.Transports);
+        Assert.Equal(MailProvider.Smtp, transport.Provider);
+        Assert.Equal(new SmtpConnection("smtp.example.net", 465, SmtpSecurity.Tls, "mailer", "smtp-secret"), transport.Smtp);
+    }
+
+    [Fact]
+    public async Task ChoosingResendSendsThroughItAndLeavingFieldsOutKeepsThem()
+    {
+        using var factory = new StellarrWebApplicationFactory();
+        using var owner = await OwnerAsync(factory);
+        var settings = ValidSettings();
+        settings["mailingEnabled"] = true;
+        settings["smtpHost"] = "smtp.example.net";
+        settings["resendEnabled"] = true;
+        (await owner.PutAsJsonAsync("/api/cockpit/settings", settings)).EnsureSuccessStatusCode();
+        var withoutMailFields = ValidSettings();
+        withoutMailFields["mailingEnabled"] = true;
+
+        var saved = await JsonAsync(await owner.PutAsJsonAsync("/api/cockpit/settings", withoutMailFields));
+        (await owner.PostAsJsonAsync("/api/cockpit/mail/test", new { to = "person@example.net" })).EnsureSuccessStatusCode();
+
+        Assert.Equal("resend", saved.GetProperty("mailProvider").GetString());
+        Assert.Equal("smtp.example.net", saved.GetProperty("smtpHost").GetString());
+        Assert.Equal(MailProvider.Resend, Assert.Single(factory.EmailDelivery.Transports).Provider);
+    }
+
+    [Fact]
+    public async Task TestMailWaitsForAnSmtpServerOnceSmtpIsChosen()
+    {
+        using var factory = new StellarrWebApplicationFactory();
+        using var owner = await OwnerAsync(factory);
+        var settings = ValidSettings();
+        settings["mailingEnabled"] = true;
+        settings["resendEnabled"] = false;
+        (await owner.PutAsJsonAsync("/api/cockpit/settings", settings)).EnsureSuccessStatusCode();
+
+        var response = await owner.PostAsJsonAsync("/api/cockpit/mail/test", new { to = "person@example.net" });
+
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+        Assert.Contains("SMTP", (await ProblemAsync(response)).GetProperty("detail").GetString(), StringComparison.Ordinal);
+        Assert.Empty(factory.EmailDelivery.Messages);
+    }
+
+    [Fact]
+    public async Task ARefusedTestMailSaysWhatTheProviderAnswered()
+    {
+        using var factory = new StellarrWebApplicationFactory();
+        using var owner = await OwnerAsync(factory);
+        var settings = ValidSettings();
+        settings["mailingEnabled"] = true;
+        (await owner.PutAsJsonAsync("/api/cockpit/settings", settings)).EnsureSuccessStatusCode();
+        factory.EmailDelivery.Failure = new MailDeliveryException("SMTP smtp.example.net:587: 535 Authentication failed");
+
+        var response = await owner.PostAsJsonAsync("/api/cockpit/mail/test", new { to = "person@example.net" });
+
+        Assert.Equal(HttpStatusCode.BadGateway, response.StatusCode);
+        var problem = await ProblemAsync(response);
+        Assert.Equal("SMTP smtp.example.net:587: 535 Authentication failed", problem.GetProperty("detail").GetString());
+    }
+
     [Theory]
     [InlineData("instanceName", "", "instanceName")]
     [InlineData("timeZone", "Mars/Olympus", "timeZone")]
@@ -65,6 +160,9 @@ public sealed class CockpitSettingsTests
     [InlineData("backupRetentionDays", 0, "backupRetentionDays")]
     [InlineData("logRetentionDays", 3651, "logRetentionDays")]
     [InlineData("orphanObjectRetentionDays", -1, "orphanObjectRetentionDays")]
+    [InlineData("smtpPort", 0, "smtpPort")]
+    [InlineData("smtpPort", 65536, "smtpPort")]
+    [InlineData("smtpSecurity", "ssl3", "smtpSecurity")]
     public async Task SettingsRefuseAnInvalidField(string field, object value, string reportedField)
     {
         using var factory = new StellarrWebApplicationFactory();
@@ -223,6 +321,13 @@ public sealed class CockpitSettingsTests
         var current = await JsonAsync(await owner.GetAsync("/api/cockpit/desktop-release"));
         Assert.Equal("0.2.0", current.GetProperty("minimumVersion").GetString());
         Assert.Equal("0.2.1", current.GetProperty("recommendedVersion").GetString());
+    }
+
+    /// <summary>The body of a response that is not a success, read as JSON.</summary>
+    private static async Task<JsonElement> ProblemAsync(HttpResponseMessage response)
+    {
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        return document.RootElement.Clone();
     }
 
     private static Dictionary<string, object?> ValidSettings() => new()

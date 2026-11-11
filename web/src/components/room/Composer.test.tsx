@@ -427,11 +427,11 @@ describe("Composer GIF browser", () => {
       ],
       pagination: { offset: 0, count: 1, total_count: 1 },
     };
-    vi.spyOn(globalThis, "fetch").mockResolvedValue({
-      ok: true,
-      status: 200,
-      json: async () => response,
-    } as Response);
+    // Stellarr's API says GIFs are on; every other request is GIPHY's.
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const body = String(input) === "/api/config/giphy" ? { enabled: true, apiKey: "test-key" } : response;
+      return { ok: true, status: 200, json: async () => body } as Response;
+    });
 
     render(
       <Composer

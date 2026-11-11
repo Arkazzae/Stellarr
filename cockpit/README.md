@@ -2,13 +2,16 @@
 
 Stellarr Cockpit is the instance operator panel (`cockpit/`), built as a standalone React + Vite single-page application. It provides:
 
-- **Overview**: 30-day message/join activity and service status.
+- **Overview**: headline counts, 30-day activity in six series, and the last hour of the API's and the database's availability. It refreshes itself every 30 s.
 - **Users**: account management, active sessions, and built-in roles.
 - **Servers**: list of servers on the instance with ownership transfer and deletion.
-- **Runtime**: 1-hour process telemetry (memory, GC heap, CPU, threads, SignalR connections, and HTTP response rates).
+- **Runtime**: the last hour of the process (requests, errors, CPU, memory, connections, database latency) and of every service's availability, a bar per minute.
 - **Logs**: paged, searchable, and filterable 10,000-line in-memory log stream with TSV export.
-- **Backups**: online SQLite snapshots and retention cleanup.
-- **Settings**: instance name, time zone, retention policies, and Resend email configuration.
+- **Backups**: database snapshots, or full archives with the stored files, the keys and the instance files, made in the background; verification and retention.
+- **Integrations**: Resend for mail, and GIPHY for the web client's GIF search, with their keys.
+- **Settings**: instance name, time zone, retention, the SMTP server and its password, and the panel's language.
+
+Secrets set in Cockpit (the SMTP password, the Resend and GIPHY keys) are stored encrypted and never shown again. The panel opens in English; its language is chosen in **Settings** and kept in the browser. On a desktop it keeps the same proportions at any zoom-out level.
 
 ## Development
 

@@ -28,6 +28,11 @@ export function formatShortDateTime(value: string): string {
   return new Date(value).toLocaleString(intlTag(), { dateStyle: "medium", timeStyle: "short" });
 }
 
+/** A time of day down to the second, as the overview says when it last refreshed. */
+export function formatClock(value: Date): string {
+  return value.toLocaleTimeString(intlTag(), { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+}
+
 export function formatDate(value: string): string {
   return new Date(value).toLocaleDateString(intlTag());
 }

@@ -3,6 +3,7 @@
 import { useCallback, useSyncExternalStore } from "react";
 
 import { Composer } from "@/components/room/Composer";
+import { useGifsEnabled } from "@/hooks/useGifsEnabled";
 import type { Translator } from "@/i18n";
 import { captureMicrophone, MicCaptureError } from "@/lib/voice/micPipeline";
 import { VoiceMessageCaptureError } from "@/ports";
@@ -28,6 +29,9 @@ interface RoomComposerProps {
  */
 export function RoomComposer({ channelName, threadRootId }: RoomComposerProps) {
   const chat = useChat();
+  const giphyApiKey = process.env.NEXT_PUBLIC_GIPHY_API_KEY ?? "";
+  // Cockpit can turn GIFs off; then the composer offers no GIF button.
+  const gifsEnabled = useGifsEnabled(giphyApiKey);
   const { user } = useSession();
   const { members } = useDirectory();
   const { emoji: customEmoji } = useEmoji();
@@ -75,9 +79,9 @@ export function RoomComposer({ channelName, threadRootId }: RoomComposerProps) {
       onTyping={chat.notifyTyping}
       customEmoji={customEmoji}
       mentionCandidates={members}
-      giphyApiKey={process.env.NEXT_PUBLIC_GIPHY_API_KEY ?? ""}
+      giphyApiKey={giphyApiKey}
       giphyCustomerId={user?.id ?? "stellarr"}
-      onGif={chat.sendGif}
+      {...(gifsEnabled ? { onGif: chat.sendGif } : {})}
       locale={locale}
       t={t}
       {...(inThread

@@ -1,9 +1,16 @@
 /** Cells in a full column of the activity chart. */
 export const CHART_ROWS = 14;
-/** One cell's height and the gap between cells, in pixels. */
-export const CHART_CELL = 10;
+/**
+ * The gap between cells and the least height of the plot (14 cells of 6 px and
+ * their gaps), in px at the default font size. Drawn in rem through `rem()`,
+ * so the chart follows the panel's scale. Cells share whatever height the
+ * chart is given.
+ */
 export const CHART_GAP = 3;
-export const CHART_HEIGHT = CHART_ROWS * CHART_CELL + (CHART_ROWS - 1) * CHART_GAP;
+export const CHART_MIN_HEIGHT = CHART_ROWS * 6 + (CHART_ROWS - 1) * CHART_GAP;
+
+/** A size in px at the default font size, as rem. */
+export const rem = (px: number) => `${px / 16}rem`;
 
 /** The axis top: the smallest clean number at or above the largest value. */
 export function axisTop(max: number): number {

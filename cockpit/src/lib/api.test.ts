@@ -73,7 +73,7 @@ describe("request basics", () => {
   it("sends a JSON content type only together with a body", async () => {
     fetchMock.mockImplementation(async () => jsonResponse({}));
 
-    await cockpitApi.createBackup();
+    await cockpitApi.verifyBackup("b1");
     expect(sentRequest().headers).toEqual({ Accept: "application/json", ...CLIENT_HEADERS });
     expect(sentRequest().body).toBeUndefined();
 
@@ -169,6 +169,15 @@ describe("routes", () => {
     mailProvider: "resend",
     mailFromAddress: "cockpit@example.com",
     resendApiKeyConfigured: true,
+    resendEnabled: true,
+    smtpHost: "smtp.example.com",
+    smtpPort: 465,
+    smtpSecurity: "tls",
+    smtpUsername: "cockpit",
+    smtpPasswordConfigured: false,
+    mailReady: true,
+    giphyEnabled: true,
+    giphyKeyConfigured: true,
     inviteMailEnabled: true,
     recoveryMailEnabled: false,
     alertMailEnabled: true,
@@ -223,7 +232,13 @@ describe("routes", () => {
       undefined,
     ],
     ["backups", () => cockpitApi.backups(), "GET", "/api/cockpit/backups", undefined],
-    ["createBackup", () => cockpitApi.createBackup(), "POST", "/api/cockpit/backups", undefined],
+    [
+      "createBackup",
+      () => cockpitApi.createBackup({ database: true, objects: true, keys: false, instance: true }),
+      "POST",
+      "/api/cockpit/backups",
+      { database: true, objects: true, keys: false, instance: true },
+    ],
     ["verifyBackup", () => cockpitApi.verifyBackup("b1"), "POST", "/api/cockpit/backups/b1/verify", undefined],
     ["settings", () => cockpitApi.settings(), "GET", "/api/cockpit/settings", undefined],
     ["sendTestMail", () => cockpitApi.sendTestMail("a@b.c"), "POST", "/api/cockpit/mail/test", { to: "a@b.c" }],
@@ -265,7 +280,7 @@ describe("routes", () => {
     expect(sentRequest().url).toBe(`/api/cockpit/backups/${encoded}/verify`);
   });
 
-  it("sends only the twelve editable settings, never the server-owned ones", async () => {
+  it("sends the editable settings, never the server-owned ones nor an integration switch nobody flipped", async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse(settings));
 
     await cockpitApi.updateSettings(settings);
@@ -284,7 +299,20 @@ describe("routes", () => {
       logRetentionDays: 30,
       orphanObjectRetentionDays: 7,
       automaticCleanupEnabled: false,
+      smtpHost: "smtp.example.com",
+      smtpPort: 465,
+      smtpSecurity: "tls",
+      smtpUsername: "cockpit",
     });
+  });
+
+  it("sends an integration switch the operator flipped", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(settings));
+
+    await cockpitApi.updateSettings(settings, { giphyEnabled: false });
+
+    expect(sentRequest().body).toMatchObject({ giphyEnabled: false });
+    expect(sentRequest().body).not.toHaveProperty("resendEnabled");
   });
 
   it("builds download links without calling the server", () => {

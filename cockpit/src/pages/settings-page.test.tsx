@@ -2,10 +2,14 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { getLocale, setLocale } from "@/i18n";
+
 import { CockpitApiError, cockpitApi, type CockpitSettings } from "@/lib/api";
 import { SettingsPage } from "@/pages/settings-page";
 import { CockpitContext, type CockpitContextValue } from "@/state/cockpit-context";
+import { LocaleProvider } from "@/state/locale-provider";
 import { selectPolish } from "@/test/locale";
+import { secret, secrets } from "@/test/secrets";
 import { cockpitValue } from "@/test/cockpit-fixtures";
 
 selectPolish();
@@ -14,7 +18,14 @@ vi.mock("@/lib/api", async (importOriginal) => {
   const original = await importOriginal<typeof import("@/lib/api")>();
   return {
     ...original,
-    cockpitApi: { ...original.cockpitApi, settings: vi.fn(), updateSettings: vi.fn(), sendTestMail: vi.fn() },
+    cockpitApi: {
+      ...original.cockpitApi,
+      settings: vi.fn(),
+      updateSettings: vi.fn(),
+      sendTestMail: vi.fn(),
+      secrets: vi.fn(),
+      setSecret: vi.fn(),
+    },
   };
 });
 
@@ -31,15 +42,26 @@ vi.stubGlobal(
 const settingsMock = vi.mocked(cockpitApi.settings);
 const updateMock = vi.mocked(cockpitApi.updateSettings);
 const testMailMock = vi.mocked(cockpitApi.sendTestMail);
+const secretsMock = vi.mocked(cockpitApi.secrets);
+const setSecretMock = vi.mocked(cockpitApi.setSecret);
 
 const stored: CockpitSettings = {
   instanceName: "Domek",
   publicUrl: "https://domek.example.net",
   timeZone: "Europe/Warsaw",
   mailingEnabled: true,
-  mailProvider: "resend",
+  mailProvider: "smtp",
   mailFromAddress: "stellarr@example.net",
   resendApiKeyConfigured: true,
+  resendEnabled: false,
+  smtpHost: "smtp.example.net",
+  smtpPort: 587,
+  smtpSecurity: "starttls",
+  smtpUsername: "mailer",
+  smtpPasswordConfigured: true,
+  mailReady: true,
+  giphyEnabled: false,
+  giphyKeyConfigured: false,
   inviteMailEnabled: true,
   recoveryMailEnabled: true,
   alertMailEnabled: false,
@@ -62,7 +84,9 @@ async function renderLoaded(settings: CockpitSettings = stored, context: Cockpit
   settingsMock.mockResolvedValue(settings);
   render(
     <CockpitContext.Provider value={context}>
-      <SettingsPage />
+      <LocaleProvider>
+        <SettingsPage />
+      </LocaleProvider>
     </CockpitContext.Provider>,
   );
   await screen.findByLabelText("Nazwa instancji");
@@ -82,6 +106,9 @@ beforeEach(() => {
   settingsMock.mockReset();
   updateMock.mockReset();
   testMailMock.mockReset();
+  secretsMock.mockReset();
+  secretsMock.mockResolvedValue(secrets({ "mail.smtp-password": "environment" }));
+  setSecretMock.mockReset();
 });
 
 describe("SettingsPage loading", () => {
@@ -89,7 +116,9 @@ describe("SettingsPage loading", () => {
     settingsMock.mockReturnValue(new Promise(() => {}));
     render(
       <CockpitContext.Provider value={cockpitValue()}>
+        <LocaleProvider>
         <SettingsPage />
+      </LocaleProvider>
       </CockpitContext.Provider>,
     );
 
@@ -102,7 +131,9 @@ describe("SettingsPage loading", () => {
     settingsMock.mockRejectedValue(new Error("Backend odpowiedział kodem 500."));
     render(
       <CockpitContext.Provider value={cockpitValue()}>
+        <LocaleProvider>
         <SettingsPage />
+      </LocaleProvider>
       </CockpitContext.Provider>,
     );
 
@@ -130,11 +161,22 @@ describe("SettingsPage loading", () => {
     expect(button("Zapisz ustawienia").disabled).toBe(false);
   });
 
-  it("tells whether the mail key is configured", async () => {
-    await renderLoaded({ ...stored, resendApiKeyConfigured: false });
+  it("tells whether the SMTP password is set and which transport is active", async () => {
+    secretsMock.mockResolvedValue(secrets());
+    await renderLoaded({ ...stored, smtpPasswordConfigured: false });
 
-    expect(screen.getByText("Brak sekretu")).toBeTruthy();
-    expect(screen.queryByText("Skonfigurowany")).toBeNull();
+    expect(await screen.findByText("Nie ustawiony")).toBeTruthy();
+    expect(screen.getByText("STELLARR_SMTP_PASSWORD")).toBeTruthy();
+    expect(screen.getByText("SMTP · gotowy")).toBeTruthy();
+    expect(input("Serwer SMTP").value).toBe("smtp.example.net");
+    expect(input("Login").value).toBe("mailer");
+  });
+
+  it("says when Resend replaces SMTP", async () => {
+    await renderLoaded({ ...stored, mailProvider: "resend", resendEnabled: true, mailReady: false });
+
+    expect(screen.getByText("Resend · niegotowy")).toBeTruthy();
+    expect(screen.getByText(/Resend, włączony w Integracjach/)).toBeTruthy();
   });
 });
 
@@ -291,42 +333,47 @@ describe("SettingsPage mail", () => {
     expect(button("Wyślij test").disabled).toBe(true);
   });
 
-  it("sends the test mail to the default recipient and reports the message id", async () => {
+  it("sends the test mail and reports the transport and the message id", async () => {
     await renderLoaded();
-    expect(input("Odbiorca testu").value).toBe("delivered+stellarr@resend.dev");
-    const reply = deferred<{ id: string }>();
+    expect(input("Odbiorca testu").value).toBe("");
+    await replaceText("Odbiorca testu", "ja@example.net");
+    const reply = deferred<{ id: string; provider: "smtp" | "resend" }>();
     testMailMock.mockReturnValue(reply.promise);
 
     await userEvent.click(button("Wyślij test"));
 
-    expect(testMailMock).toHaveBeenCalledExactlyOnceWith("delivered+stellarr@resend.dev");
+    expect(testMailMock).toHaveBeenCalledExactlyOnceWith("ja@example.net");
     expect(button("Wysyłanie").disabled).toBe(true);
     expect(input("Odbiorca testu").disabled).toBe(true);
 
-    reply.resolve({ id: "msg-42" });
+    reply.resolve({ id: "msg-42", provider: "smtp" });
 
-    expect((await screen.findByRole("status")).textContent).toBe("Resend przyjął wiadomość. ID: msg-42");
+    expect((await screen.findByRole("status")).textContent).toBe("SMTP przyjął wiadomość. ID: msg-42");
     expect(button("Wyślij test").disabled).toBe(false);
     expect(updateMock).not.toHaveBeenCalled();
   });
 
   it("trims the recipient and replaces an earlier result", async () => {
     await renderLoaded();
-    testMailMock.mockResolvedValueOnce({ id: "msg-1" }).mockResolvedValueOnce({ id: "msg-2" });
+    testMailMock
+      .mockResolvedValueOnce({ id: "msg-1", provider: "smtp" })
+      .mockResolvedValueOnce({ id: "msg-2", provider: "resend" });
+    await replaceText("Odbiorca testu", "ty@example.net");
     await userEvent.click(button("Wyślij test"));
-    await screen.findByText("Resend przyjął wiadomość. ID: msg-1");
+    await screen.findByText("SMTP przyjął wiadomość. ID: msg-1");
 
     await replaceText("Odbiorca testu", "  ja@example.net ");
     await userEvent.click(button("Wyślij test"));
 
     expect(await screen.findByText("Resend przyjął wiadomość. ID: msg-2")).toBeTruthy();
-    expect(screen.queryByText("Resend przyjął wiadomość. ID: msg-1")).toBeNull();
+    expect(screen.queryByText("SMTP przyjął wiadomość. ID: msg-1")).toBeNull();
     expect(testMailMock).toHaveBeenLastCalledWith("ja@example.net");
   });
 
   it("shows why the test mail was not sent", async () => {
     await renderLoaded();
     testMailMock.mockRejectedValue(new Error("Resend odrzucił klucz."));
+    await replaceText("Odbiorca testu", "ja@example.net");
 
     await userEvent.click(button("Wyślij test"));
 
@@ -337,15 +384,34 @@ describe("SettingsPage mail", () => {
   it("explains a test mail failure that carries no message", async () => {
     await renderLoaded();
     testMailMock.mockRejectedValue("boom");
+    await replaceText("Odbiorca testu", "ja@example.net");
 
     await userEvent.click(button("Wyślij test"));
 
     expect(await screen.findByText("Nie udało się wysłać wiadomości testowej.")).toBeTruthy();
   });
 
-  it("cannot send a test while the mail key is missing", async () => {
-    await renderLoaded({ ...stored, resendApiKeyConfigured: false });
+  it("cannot send a test while the transport is not ready", async () => {
+    await renderLoaded({ ...stored, mailReady: false });
+    await replaceText("Odbiorca testu", "ja@example.net");
     expect(button("Wyślij test").disabled).toBe(true);
+  });
+
+  it("sends the edited SMTP server with the rest of the settings", async () => {
+    await renderLoaded();
+    updateMock.mockResolvedValue(stored);
+
+    await replaceText("Serwer SMTP", "mail.example.org");
+    await replaceText("Port", "465");
+    await userEvent.selectOptions(screen.getByLabelText("Szyfrowanie"), "tls");
+    await userEvent.click(button("Zapisz ustawienia"));
+
+    expect(updateMock).toHaveBeenLastCalledWith({
+      ...stored,
+      smtpHost: "mail.example.org",
+      smtpPort: 465,
+      smtpSecurity: "tls",
+    });
   });
 
   it("cannot send a test to an empty recipient", async () => {
@@ -356,5 +422,41 @@ describe("SettingsPage mail", () => {
 
     await userEvent.type(input("Odbiorca testu"), "   ");
     expect(button("Wyślij test").disabled).toBe(true);
+  });
+});
+
+describe("SettingsPage panel language", () => {
+  it("switches the panel to English at once and remembers it in this browser", async () => {
+    await renderLoaded();
+
+    await userEvent.selectOptions(screen.getByLabelText("Język"), "English");
+
+    expect(getLocale()).toBe("en");
+    expect(localStorage.getItem("stellarr.cockpit.locale")).toBe("en");
+    expect(await screen.findByLabelText("Instance name")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Save settings" })).toBeTruthy();
+    // The page is drawn afresh in the new language, so it reads the settings again.
+    expect(settingsMock).toHaveBeenCalledTimes(2);
+
+    setLocale("pl");
+    localStorage.removeItem("stellarr.cockpit.locale");
+  });
+});
+
+describe("SettingsPage SMTP password", () => {
+  it("saves the password on Enter without saving the rest of the settings", async () => {
+    const user = userEvent.setup();
+    await renderLoaded();
+    await screen.findByText("Ze środowiska");
+    setSecretMock.mockResolvedValue(secret("mail.smtp-password", "panel"));
+    secretsMock.mockResolvedValue(secrets({ "mail.smtp-password": "panel" }));
+
+    await user.type(screen.getByLabelText("Hasło SMTP"), "nowe hasło{Enter}");
+
+    expect(setSecretMock).toHaveBeenCalledWith("mail.smtp-password", "nowe hasło");
+    expect(updateMock).not.toHaveBeenCalled();
+    expect(await screen.findByText("Ustawiony tutaj")).toBeTruthy();
+    // Whether mail is ready depends on the password, so the settings are read again.
+    expect(settingsMock).toHaveBeenCalledTimes(2);
   });
 });

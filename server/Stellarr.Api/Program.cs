@@ -7,14 +7,17 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Stellarr.Api.Auth;
+using Stellarr.Api.Backups;
 using Stellarr.Api.Data;
 using Stellarr.Api.Embeds;
 using Stellarr.Api.Endpoints;
+using Stellarr.Api.Integrations;
 using Stellarr.Api.Localization;
 using Stellarr.Api.Logging;
 using Stellarr.Api.Mail;
 using Stellarr.Api.Maintenance;
 using Stellarr.Api.Realtime;
+using Stellarr.Api.Secrets;
 using Stellarr.Api.Storage;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -102,7 +105,20 @@ builder.Services.AddScoped<InstanceMaintenance>();
 builder.Services.AddHostedService<MaintenanceWorker>();
 
 builder.Services.Configure<MailOptions>(builder.Configuration.GetSection(MailOptions.SectionName));
-builder.Services.AddHttpClient<IEmailDelivery, ResendEmailDelivery>(http =>
+builder.Services.AddScoped<InstanceSecrets>();
+builder.Services.AddSingleton<BackupJobs>();
+builder.Services.AddSingleton<SmtpEmailDelivery>();
+builder.Services.AddScoped<IEmailDelivery, MailDelivery>();
+// GIPHY takes its key in the query string: this client logs nothing, so the
+// key cannot reach the log Cockpit shows.
+builder.Services.AddHttpClient<GiphyClient>(http =>
+{
+    http.BaseAddress = new Uri("https://api.giphy.com/");
+    http.Timeout = TimeSpan.FromSeconds(10);
+    http.DefaultRequestHeaders.UserAgent.ParseAdd("Stellarr/2.0");
+    http.DefaultRequestHeaders.Accept.ParseAdd("application/json");
+}).RemoveAllLoggers();
+builder.Services.AddHttpClient<ResendEmailDelivery>(http =>
 {
     http.BaseAddress = new Uri("https://api.resend.com/");
     http.Timeout = TimeSpan.FromSeconds(15);
@@ -248,6 +264,8 @@ static async Task InitializeApplicationAsync(WebApplication app)
     {
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         await DatabaseSchema.UpgradeAsync(db, stopping);
+        // A backup cut short by the last stop left a partial file; it is no backup.
+        BackupJobs.RemoveLeftovers(BackupJobs.Directory(app.Configuration));
         await EmbedRecovery.EnqueueStaleYouTubeAsync(db, app.Services.GetRequiredService<EmbedInbox>(), stopping);
     }
 

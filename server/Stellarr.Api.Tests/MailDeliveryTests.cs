@@ -24,7 +24,7 @@ public sealed class MailDeliveryTests
         var provider = new StubProvider(HttpStatusCode.OK, """{"id":"email-42"}""");
         var delivery = CreateDelivery(provider);
 
-        var id = await delivery.SendAsync(Message, CancellationToken.None);
+        var id = await delivery.SendAsync(Message, "re_test", CancellationToken.None);
 
         Assert.Equal("email-42", id);
         var request = Assert.Single(provider.Requests);
@@ -46,7 +46,7 @@ public sealed class MailDeliveryTests
         var delivery = CreateDelivery(new StubProvider(HttpStatusCode.UnprocessableEntity, "invalid from address"));
 
         var failure = await Assert.ThrowsAsync<HttpRequestException>(
-            () => delivery.SendAsync(Message, CancellationToken.None));
+            () => delivery.SendAsync(Message, "re_test", CancellationToken.None));
 
         Assert.Equal(HttpStatusCode.UnprocessableEntity, failure.StatusCode);
         Assert.Contains("invalid from address", failure.Message, StringComparison.Ordinal);
@@ -57,16 +57,16 @@ public sealed class MailDeliveryTests
     {
         var delivery = CreateDelivery(new StubProvider(HttpStatusCode.OK, "{}"));
 
-        await Assert.ThrowsAsync<HttpRequestException>(() => delivery.SendAsync(Message, CancellationToken.None));
+        await Assert.ThrowsAsync<HttpRequestException>(() => delivery.SendAsync(Message, "re_test", CancellationToken.None));
     }
 
     [Fact]
     public async Task WithoutAnApiKeyNothingIsSent()
     {
         var provider = new StubProvider(HttpStatusCode.OK, """{"id":"email-42"}""");
-        var delivery = CreateDelivery(provider, apiKey: " ");
+        var delivery = CreateDelivery(provider);
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => delivery.SendAsync(Message, CancellationToken.None));
+        await Assert.ThrowsAsync<InvalidOperationException>(() => delivery.SendAsync(Message, " ", CancellationToken.None));
 
         Assert.Empty(provider.Requests);
     }
@@ -96,10 +96,8 @@ public sealed class MailDeliveryTests
         Assert.Equal($"password-reset/{tokenId:N}", mail.IdempotencyKey);
     }
 
-    private static ResendEmailDelivery CreateDelivery(StubProvider provider, string apiKey = "re_test") =>
-        new(
-            new HttpClient(provider) { BaseAddress = new Uri("https://api.resend.com/") },
-            Options.Create(new MailOptions { ResendApiKey = apiKey }));
+    private static ResendEmailDelivery CreateDelivery(StubProvider provider) =>
+        new(new HttpClient(provider) { BaseAddress = new Uri("https://api.resend.com/") });
 
     private sealed record SentRequest(
         HttpMethod Method,

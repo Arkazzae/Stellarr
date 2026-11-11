@@ -1,18 +1,16 @@
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
-using Microsoft.Extensions.Options;
 
 namespace Stellarr.Api.Mail;
 
 /// <summary>Sends mail through the Resend HTTP API.</summary>
-public sealed class ResendEmailDelivery(HttpClient http, IOptions<MailOptions> options) : IEmailDelivery
+public sealed class ResendEmailDelivery(HttpClient http)
 {
     /// <exception cref="InvalidOperationException">No API key is configured.</exception>
     /// <exception cref="HttpRequestException">The provider refused the message or answered with no id.</exception>
-    public async Task<string> SendAsync(EmailMessage message, CancellationToken cancellationToken)
+    public async Task<string> SendAsync(EmailMessage message, string apiKey, CancellationToken cancellationToken)
     {
-        var apiKey = options.Value.ResendApiKey;
         if (string.IsNullOrWhiteSpace(apiKey))
         {
             throw new InvalidOperationException("The Resend API key is not configured.");

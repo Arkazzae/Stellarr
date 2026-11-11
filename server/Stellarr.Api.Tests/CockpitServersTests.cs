@@ -1,7 +1,7 @@
-using Microsoft.EntityFrameworkCore;
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using Microsoft.EntityFrameworkCore;
 
 namespace Stellarr.Api.Tests;
 

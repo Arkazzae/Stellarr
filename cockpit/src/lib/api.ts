@@ -19,19 +19,33 @@ export interface CockpitOverview {
   realtimeConnectionCount: number;
   storedObjectBytes: number;
   messageCount: number;
+  /** Every server on the instance, the instance's own included. */
+  serverCount: number;
+  publicServerCount: number;
 }
 
-/** One day of activity on the instance server; `date` is the instance's local date (YYYY-MM-DD). */
+/**
+ * One day of activity; `date` is the instance's local date (YYYY-MM-DD).
+ * Messages, active users, new members and reactions are the instance server's;
+ * uploads and sign-ins are the whole instance's.
+ */
 export interface CockpitActivityDay {
   date: string;
   messages: number;
   newMembers: number;
+  /** Different people who wrote that day. */
+  activeUsers: number;
+  reactions: number;
+  uploads: number;
+  signIns: number;
 }
 
 /** The last 30 days, oldest first and today last, counted in `timeZone`. */
 export interface CockpitActivity {
   timeZone: string;
   days: CockpitActivityDay[];
+  /** Different people who wrote in the whole window; the days do not add up to it. */
+  activeUsers: number;
 }
 
 export interface CockpitBootstrap {
@@ -111,10 +125,14 @@ export interface CockpitServerMember extends CockpitServerPerson {
   isOwner: boolean;
 }
 
+export type CockpitServiceId = "api" | "database" | "realtime" | "maintenance" | "storage";
+
 export interface CockpitRuntimeService {
   name: string;
   state: "healthy" | "warning" | "error" | "inactive";
   detail: string;
+  /** Which service it is; its availability is drawn from the samples by this. */
+  id: CockpitServiceId;
 }
 
 /** One sampling interval of the API process; request counts are for that interval alone. */
@@ -128,6 +146,11 @@ export interface CockpitRuntimeSample {
   requests: number;
   clientErrors: number;
   serverErrors: number;
+  /** Whether the database answered the check taken with this sample, and how fast. */
+  databaseUp: boolean;
+  databaseLatencyMs: number;
+  /** Whether the object store answered its check; null when it is not checked. */
+  storageUp: boolean | null;
 }
 
 export interface CockpitRuntime {
@@ -187,26 +210,81 @@ function logQuery(filters: CockpitLogFilters, extra: Record<string, string> = {}
   return text ? `?${text}` : "";
 }
 
+export type CockpitBackupPart = "database" | "objects" | "keys" | "instance";
+
 export interface CockpitBackup {
   id: string;
   sizeBytes: number;
   createdAt: string;
   verifiedAt: string | null;
+  /** What the backup holds; a plain `.db` file holds the database alone. */
+  parts: CockpitBackupPart[];
+  /** Objects the store could not give when the backup was made. */
+  missingObjects: number;
+}
+
+/** A backup being written in the background. */
+export interface CockpitBackupJob {
+  id: string;
+  parts: CockpitBackupPart[];
+  startedAt: string;
+  phase: CockpitBackupPart;
+  objectsDone: number;
+  objectsTotal: number;
 }
 
 export interface CockpitBackups {
   backups: CockpitBackup[];
   retentionDays: number;
+  job: CockpitBackupJob | null;
+  /** Why the last backup did not finish; cleared by the next one that does. */
+  lastFailure: { id: string; message: string; at: string } | null;
 }
+
+export type CockpitBackupChoice = Record<CockpitBackupPart, boolean>;
+
+export type CockpitSecretName = "mail.resend-api-key" | "mail.smtp-password" | "giphy.api-key";
+
+/**
+ * Whether a secret is set and where from. The value never comes back: the
+ * panel can set, replace or remove a secret, not read it. `variable` is the
+ * name an operator would set in `.env` instead.
+ */
+export interface CockpitSecret {
+  name: CockpitSecretName;
+  configured: boolean;
+  source: "panel" | "environment" | "none";
+  variable: string;
+  /** When the panel's value was set; null for any other source. */
+  updatedAt: string | null;
+}
+
+/** An integration switch the operator flipped; one left out stays as stored. */
+export type CockpitIntegrationSwitches = Partial<Pick<CockpitSettings, "resendEnabled" | "giphyEnabled">>;
+
+export type CockpitSmtpSecurity = "starttls" | "tls" | "none";
 
 export interface CockpitSettings {
   instanceName: string;
   publicUrl: string;
   timeZone: string;
   mailingEnabled: boolean;
-  mailProvider: "resend";
+  /** The transport mail goes through: SMTP, or Resend when it is turned on under Integrations. */
+  mailProvider: "smtp" | "resend";
   mailFromAddress: string;
   resendApiKeyConfigured: boolean;
+  resendEnabled: boolean;
+  smtpHost: string;
+  smtpPort: number;
+  smtpSecurity: CockpitSmtpSecurity;
+  smtpUsername: string;
+  /** Whether Mail__SmtpPassword is set; the password itself never leaves the server. */
+  smtpPasswordConfigured: boolean;
+  /** Whether the chosen transport has what it needs to send. */
+  mailReady: boolean;
+  /** Whether the web client offers GIFs: switched on and with a key. */
+  giphyEnabled: boolean;
+  giphyKeyConfigured: boolean;
   inviteMailEnabled: boolean;
   recoveryMailEnabled: boolean;
   alertMailEnabled: boolean;
@@ -341,16 +419,24 @@ export const cockpitApi = {
   logExportUrl: (filters: CockpitLogFilters) => `/api/cockpit/logs/export${logQuery(filters)}`,
 
   backups: (signal?: AbortSignal) => request<CockpitBackups>("/api/cockpit/backups", {}, signal),
-  createBackup: (signal?: AbortSignal) =>
-    request<CockpitBackup>("/api/cockpit/backups", { method: "POST" }, signal),
+  /**
+   * The database alone comes back at once as a plain SQLite file; anything
+   * more starts an archive in the background and comes back as its job.
+   */
+  createBackup: (choice: CockpitBackupChoice, signal?: AbortSignal) =>
+    request<CockpitBackup | CockpitBackupJob>("/api/cockpit/backups", { method: "POST", body: choice }, signal),
   verifyBackup: (backupId: string, signal?: AbortSignal) =>
     request<CockpitBackup>(`/api/cockpit/backups/${segment(backupId)}/verify`, { method: "POST" }, signal),
   backupDownloadUrl: (backupId: string) => `/api/cockpit/backups/${segment(backupId)}/download`,
 
   settings: (signal?: AbortSignal) => request<CockpitSettings>("/api/cockpit/settings", {}, signal),
   // The server owns publicUrl (it comes from the environment), mailProvider,
-  // resendApiKeyConfigured and updatedAt, so they are never sent back.
-  updateSettings: (settings: CockpitSettings, signal?: AbortSignal) =>
+  // resendApiKeyConfigured, smtpPasswordConfigured, mailReady, giphyKeyConfigured and updatedAt,
+  // so they are never sent back.
+  // The integration switches go only when the operator flips one. The settings
+  // carry their effective state, and sending that back would turn "never
+  // chosen" (on as soon as a key exists) into an explicit "off".
+  updateSettings: (settings: CockpitSettings, switches: CockpitIntegrationSwitches = {}, signal?: AbortSignal) =>
     request<CockpitSettings>(
       "/api/cockpit/settings",
       {
@@ -367,12 +453,25 @@ export const cockpitApi = {
           logRetentionDays: settings.logRetentionDays,
           orphanObjectRetentionDays: settings.orphanObjectRetentionDays,
           automaticCleanupEnabled: settings.automaticCleanupEnabled,
+          smtpHost: settings.smtpHost,
+          smtpPort: settings.smtpPort,
+          smtpSecurity: settings.smtpSecurity,
+          smtpUsername: settings.smtpUsername,
+          ...switches,
         },
       },
       signal,
     ),
+  /** Tries the GIPHY key with one request to GIPHY. */
+  testGiphy: (signal?: AbortSignal) =>
+    request<{ connected: boolean }>("/api/cockpit/integrations/giphy/test", { method: "POST" }, signal),
+  secrets: (signal?: AbortSignal) => request<CockpitSecret[]>("/api/cockpit/secrets", {}, signal),
+  setSecret: (name: CockpitSecretName, value: string, signal?: AbortSignal) =>
+    request<CockpitSecret>(`/api/cockpit/secrets/${segment(name)}`, { method: "PUT", body: { value } }, signal),
+  clearSecret: (name: CockpitSecretName, signal?: AbortSignal) =>
+    request<CockpitSecret>(`/api/cockpit/secrets/${segment(name)}`, { method: "DELETE" }, signal),
   sendTestMail: (to: string, signal?: AbortSignal) =>
-    request<{ id: string }>("/api/cockpit/mail/test", { method: "POST", body: { to } }, signal),
+    request<{ id: string; provider: CockpitSettings["mailProvider"] }>("/api/cockpit/mail/test", { method: "POST", body: { to } }, signal),
 
 
   requestPasswordReset: (email: string, signal?: AbortSignal) =>

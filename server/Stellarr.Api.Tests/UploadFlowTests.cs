@@ -453,5 +453,10 @@ public sealed partial class UploadFlowTests(StellarrWebApplicationFactory factor
 
         public Task DeleteAsync(string key, CancellationToken cancellationToken) =>
             inner.DeleteAsync(key, cancellationToken);
+
+        public IAsyncEnumerable<StoredObjectInfo> ListAsync(CancellationToken cancellationToken) =>
+            inner.ListAsync(cancellationToken);
+
+        public Task ProbeAsync(CancellationToken cancellationToken) => inner.ProbeAsync(cancellationToken);
     }
 }

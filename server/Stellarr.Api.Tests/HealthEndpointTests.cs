@@ -138,5 +138,10 @@ public sealed class HealthEndpointTests(StellarrWebApplicationFactory factory)
 
         public Task DeleteAsync(string key, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
+
+        public IAsyncEnumerable<StoredObjectInfo> ListAsync(CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task ProbeAsync(CancellationToken cancellationToken) => throw new NotSupportedException();
     }
 }

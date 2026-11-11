@@ -134,8 +134,11 @@ services:
       Stellarr__InstanceName: ${STELLARR_INSTANCE_NAME:-Stellarr Dev}
       Stellarr__Language: ${STELLARR_LANGUAGE:-en}
       Mail__Enabled: ${STELLARR_MAIL_ENABLED:-true}
+      # The mail secrets. SMTP's server, port and login are set in Cockpit; Resend
+      # replaces SMTP when it is turned on under Integrations.
+      Mail__SmtpPassword: ${STELLARR_SMTP_PASSWORD:-}
       Mail__ResendApiKey: ${STELLARR_RESEND_API_KEY:-}
-      Mail__FromAddress: ${STELLARR_MAIL_FROM:-onboarding@resend.dev}
+      Mail__FromAddress: ${STELLARR_MAIL_FROM:-}
       Mail__FromName: ${STELLARR_MAIL_FROM_NAME:-Stellarr}
     ports:
       # Published so the API can be called with curl; the browser uses :3000.

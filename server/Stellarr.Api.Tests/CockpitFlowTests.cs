@@ -71,6 +71,9 @@ public sealed class CockpitFlowTests : IClassFixture<StellarrWebApplicationFacto
         var bootstrap = await JsonAsync(await owner.GetAsync("/api/cockpit/bootstrap"));
         Assert.Equal("maja", bootstrap.GetProperty("operator").GetProperty("username").GetString());
         Assert.True(bootstrap.GetProperty("overview").GetProperty("messageCount").GetInt32() > 0);
+        var overview = bootstrap.GetProperty("overview");
+        Assert.InRange(overview.GetProperty("publicServerCount").GetInt32(), 0, overview.GetProperty("serverCount").GetInt32());
+        Assert.True(overview.GetProperty("serverCount").GetInt32() >= 1);
 
         var users = await JsonAsync(await owner.GetAsync("/api/cockpit/users"));
         Assert.Equal(

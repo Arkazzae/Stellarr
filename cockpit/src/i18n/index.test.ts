@@ -1,55 +1,49 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { en } from "./en";
-import { detectLocale, getLocale, resolveLocale, setLocale, t } from "./index";
+import { detectLocale, getLocale, resolveLocale, saveLocale, setLocale, t } from "./index";
 import { pl } from "./pl";
 
 afterEach(() => {
   setLocale("en");
   document.cookie = "stellarr_locale=; path=/; max-age=0";
+  localStorage.clear();
   vi.restoreAllMocks();
 });
 
 describe("resolveLocale", () => {
-  it("prefers the cookie over the browser languages", () => {
-    expect(resolveLocale("stellarr_locale=pl", ["en-US"])).toBe("pl");
-    expect(resolveLocale("stellarr_locale=en", ["pl-PL"])).toBe("en");
+  it("takes the language chosen in the panel's settings", () => {
+    expect(resolveLocale("pl")).toBe("pl");
+    expect(resolveLocale("en")).toBe("en");
   });
 
-  it("finds the cookie among others", () => {
-    expect(resolveLocale("theme=dark; stellarr_locale=pl; other=1", ["en"])).toBe("pl");
-  });
-
-  it("ignores a cookie that names an unsupported language", () => {
-    expect(resolveLocale("stellarr_locale=de", ["pl"])).toBe("pl");
-    expect(resolveLocale("stellarr_locale=", ["pl"])).toBe("pl");
-  });
-
-  it("takes the first browser language that is Polish or English, whatever its region", () => {
-    expect(resolveLocale("", ["de-DE", "pl-PL", "en-US"])).toBe("pl");
-    expect(resolveLocale("", ["fr", "en-GB", "pl"])).toBe("en");
-    expect(resolveLocale("", ["PL"])).toBe("pl");
-  });
-
-  it("falls back to English when nothing matches", () => {
-    expect(resolveLocale("", ["de", "fr-CA"])).toBe("en");
-    expect(resolveLocale("", [])).toBe("en");
-    expect(resolveLocale("other=pl", ["plx"])).toBe("en");
+  it("starts in English when nothing was chosen or the choice is unknown", () => {
+    expect(resolveLocale(null)).toBe("en");
+    expect(resolveLocale("de")).toBe("en");
+    expect(resolveLocale("")).toBe("en");
   });
 });
 
 describe("detectLocale", () => {
-  it("reads the cookie of the document", () => {
-    vi.spyOn(navigator, "languages", "get").mockReturnValue(["en-US"]);
-    document.cookie = "stellarr_locale=pl; path=/";
+  it("reads the choice kept in this browser", () => {
+    saveLocale("pl");
 
     expect(detectLocale()).toBe("pl");
   });
 
-  it("reads the languages of the browser when there is no cookie", () => {
-    vi.spyOn(navigator, "languages", "get").mockReturnValue(["de", "pl"]);
+  it("follows neither the browser's languages nor the web client's cookie", () => {
+    vi.spyOn(navigator, "languages", "get").mockReturnValue(["pl-PL"]);
+    document.cookie = "stellarr_locale=pl; path=/";
 
-    expect(detectLocale()).toBe("pl");
+    expect(detectLocale()).toBe("en");
+  });
+
+  it("falls back to English when the browser keeps no storage", () => {
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
+      throw new DOMException("blocked", "SecurityError");
+    });
+
+    expect(detectLocale()).toBe("en");
   });
 });
 

@@ -192,15 +192,27 @@
     @apply border-border outline-ring/50;
   }
 
+  /*
+   * Cockpit is one composition at any zoom. From the window it was laid out
+   * on, 1680x760 CSS px (a 2560x1440 screen at 150% with the browser's bars),
+   * 1rem is a fixed share of the window: the smaller of its width and height,
+   * so a wide or a short window keeps the whole panel in view. Zooming out
+   * then changes the window's CSS px and every size together, and nothing on
+   * screen moves. In smaller windows, and when zooming in past that size, the
+   * reader's default font size stands, so zoom still enlarges the text there.
+   * Every size is in rem for this; a px size would not follow the window.
+   */
   html {
-    min-width: 320px;
+    --cockpit-scale: max(100%, min(calc(100vw / 105), calc(100svh / 47.5)));
+    min-width: 20rem;
     background: var(--background);
     font-family: var(--font-sans);
+    font-size: var(--cockpit-scale);
   }
 
   body {
-    min-width: 320px;
-    min-height: 100vh;
+    min-width: 20rem;
+    min-height: 100svh;
     margin: 0;
     background: var(--background);
     color: var(--foreground);

@@ -127,21 +127,30 @@ public sealed class StellarrWebApplicationFactory : WebApplicationFactory<Progra
 
 internal sealed class FakeEmailDelivery : IEmailDelivery
 {
-    private readonly List<EmailMessage> _messages = [];
+    private readonly List<(EmailMessage Message, MailTransport Transport)> _sent = [];
     internal Exception? Failure { get; set; }
 
     public IReadOnlyList<EmailMessage> Messages
     {
         get
         {
-            lock (_messages) return _messages.ToArray();
+            lock (_sent) return _sent.Select(x => x.Message).ToArray();
         }
     }
 
-    public Task<string> SendAsync(EmailMessage message, CancellationToken cancellationToken)
+    /// <summary>The transport each message was sent through, in the same order.</summary>
+    public IReadOnlyList<MailTransport> Transports
+    {
+        get
+        {
+            lock (_sent) return _sent.Select(x => x.Transport).ToArray();
+        }
+    }
+
+    public Task<string> SendAsync(EmailMessage message, MailTransport transport, CancellationToken cancellationToken)
     {
         if (Failure is { } failure) return Task.FromException<string>(failure);
-        lock (_messages) _messages.Add(message);
+        lock (_sent) _sent.Add((message, transport));
         return Task.FromResult($"email-{Messages.Count}");
     }
 }
@@ -191,6 +200,24 @@ internal sealed class FakeObjectStorage : IObjectStorage
         _objects.Remove(key);
         return Task.CompletedTask;
     }
+
+    public async IAsyncEnumerable<StoredObjectInfo> ListAsync(
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        // A snapshot, so a test may change the store while a listing runs.
+        foreach (var (key, stored) in _objects.OrderBy(x => x.Key, StringComparer.Ordinal).ToArray())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            yield return new StoredObjectInfo(key, stored.Bytes.LongLength);
+            await Task.Yield();
+        }
+    }
+
+    /// <summary>When set, the probe Cockpit's availability bars take fails, as an unreachable store would.</summary>
+    internal bool Unreachable { get; set; }
+
+    public Task ProbeAsync(CancellationToken cancellationToken) =>
+        Unreachable ? throw new IOException("The store does not answer.") : Task.CompletedTask;
 
     internal bool Contains(string key) => _objects.ContainsKey(key);
     internal int Count => _objects.Count;
