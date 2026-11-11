@@ -1,158 +1,138 @@
 # Configuration
 
-Settings are environment variables that `docker-compose.yml` passes to the
-container. Put them in a file named `.env` next to the compose file, starting
-from `.env.example`. After a change, run `docker compose up -d`: Compose
-recreates the container with the new values and keeps the data volume.
+`docker-compose.yml` configures the container through environment variables read from `.env` (copy `.env.example` to `.env` to start). Apply changes by running `docker compose up -d`.
 
-Settings marked **seed** only give the first value of a setting that the owner
-can later change on the settings page of Cockpit, the operator panel, at `/cockpit/`. Once
-the owner has saved that page, the saved value takes precedence over the
-variable.
+Variables marked **seed** initialize settings that the instance owner can later change in Cockpit (`/cockpit/`). Once saved in Cockpit, the database value takes precedence over the environment variable.
 
 ## Address and TLS
 
-| Variable | Type | Default | Effect |
+| Variable | Type | Default | Description |
 | --- | --- | --- | --- |
-| `STELLARR_DOMAIN` | host name or IP address | empty | The name people use to reach the instance, and the one place it is set. Without it, TLS and TURN use `localhost` and the instance has no public address: reset links stay off and desktop clients keep the address they connected to. It is the host of the public address, the host in the TURN addresses that browsers receive, the TURN realm, and the name in the self-signed certificate. When it changes, the container generates a new self-signed certificate on the next start. A certificate signed by an authority is left alone. `PUBLIC_HOST` is its older name and is read when `STELLARR_DOMAIN` is not set. |
-| `STELLARR_PUBLIC_PORT` | port number | `STELLARR_HTTPS_PORT` | The HTTPS port that browsers use. It is the published `STELLARR_HTTPS_PORT` when people reach the container directly, and `443` behind a [reverse proxy](reverse-proxy-and-tls.md#run-behind-a-reverse-proxy). It is left out of the public address when it is `443`. |
-| `PUBLIC_IP` | IPv4 address or `auto` | empty | The public address that the TURN server advertises as its own. Set it when the host is behind NAT. `auto` looks up the A record of `STELLARR_DOMAIN` on every start. An invalid value, or `auto` without an A record, stops the container with an error. |
-| `STELLARR_HTTPS_PORT` | port number | `8443` | Host port mapped to the HTTPS port of the container. It is also the port in the redirect from HTTP to HTTPS, and is left out of the address when it is `443`. A value outside 1-65535 stops the container. |
-| `STELLARR_HTTP_PORT` | port number | `8888` | Host port mapped to the HTTP port of the container, which only redirects to HTTPS. The value goes into the port mapping as written, so `127.0.0.1:8888` publishes the port on the loopback interface only. |
-| `STELLARR_PUBLIC_URL` | URL | empty | Overrides the public address, which the container otherwise builds as `https://` with `STELLARR_DOMAIN` and, unless it is `443`, `STELLARR_PUBLIC_PORT`. Password reset mail builds its link from the public address, and it is the origin that the instance reports to desktop clients in `/.well-known/stellarr/client`. Cockpit shows it on its settings page and cannot change it. A value that is not an absolute `http` or `https` origin without credentials, query or fragment makes that one endpoint answer 500. |
-| `STELLARR_VERSION` | image tag | `latest` | The tag of `ghcr.io/arkazzae/stellarr` that the stack runs. Releases are tagged `1.2.3` and `1.2`; `latest` follows the newest stable release. Pin a release for a real installation. |
+| `STELLARR_DOMAIN` | hostname or IP | empty | Primary hostname or IP used for the public origin, ICE/TURN server URLs, TURN realm, and self-signed TLS certificate SAN. When unset, TLS and TURN fall back to `localhost`, password-reset links stay disabled (unless `STELLARR_PUBLIC_URL` is set), and desktop clients use the origin they connected to. Changing `STELLARR_DOMAIN` triggers regeneration of a self-signed certificate on next start (CA-signed certificates are never overwritten). Falls back to `PUBLIC_HOST` if unset. |
+| `STELLARR_PUBLIC_PORT` | port | `STELLARR_HTTPS_PORT` | External HTTPS port used by browsers (`STELLARR_HTTPS_PORT` when connecting directly, or `443` behind a [reverse proxy](reverse-proxy-and-tls.md#run-behind-a-reverse-proxy)). Omitted from the public URL when `443`. |
+| `PUBLIC_IP` | IPv4 or `auto` | empty | Public IPv4 advertised by `coturn` (`external-ip`) and `stellarr-media`. Required behind NAT. `auto` resolves the `A` record of `STELLARR_DOMAIN` on startup and fails if no valid IPv4 is returned. |
+| `STELLARR_HTTPS_PORT` | port (`1–65535`) | `8443` | Host port mapped to container port `443/tcp` and used in HTTP-to-HTTPS redirects. |
+| `STELLARR_HTTP_PORT` | port or `ip:port` | `8888` | Host port mapped to container port `80/tcp` (HTTP redirect only). Prefix with an IP (e.g. `127.0.0.1:8888`) to bind to a single host interface. |
+| `STELLARR_PUBLIC_URL` | origin URL | empty | Explicit public origin (e.g. `https://chat.example.com`), overriding the URL derived from `STELLARR_DOMAIN` and `STELLARR_PUBLIC_PORT`. Used in password-reset links and `/.well-known/stellarr/client`. Displayed read-only in Cockpit. Must be an absolute `http` or `https` origin without credentials, query, or fragment. |
+| `STELLARR_VERSION` | image tag | `latest` | Image tag for `ghcr.io/arkazzae/stellarr`. Pin a release tag (e.g. `1.2.3`) for production deployments. |
 
-The container generates a self-signed certificate when
-`/data/stellarr/tls/fullchain.pem` and `privkey.pem` are missing. To use your
-own, see [Reverse proxy and TLS](reverse-proxy-and-tls.md).
+If `/data/stellarr/tls/fullchain.pem` or `privkey.pem` is missing, the container generates a self-signed certificate. See [Reverse proxy and TLS](reverse-proxy-and-tls.md).
 
-## Voice
+## Voice and RTC
 
-| Variable | Type | Default | Effect |
+| Variable | Type | Default | Description |
 | --- | --- | --- | --- |
-| `STELLARR_RTC_TOPOLOGY` | `mesh` or `sfu` | `mesh` | How the browsers of a call exchange media. `mesh` connects every browser to every other one. `sfu` sends each browser's media once to Stellarr Media, the media server in the container, which forwards it to the rest of the call; it needs `PUBLIC_IP` and `49000/udp` forwarded. An empty value means `mesh`; any other value stops the container. [Stellarr Media](../STELLARR_MEDIA.md) lists what `sfu` does not do yet. |
-| `STELLARR_TURN_PORT` | port number | `3478` | Host port for STUN and TURN, TCP and UDP. Browsers are told to use this port. |
-| `STELLARR_TURNS_PORT` | port number | `5349` | Host port for TURN over TLS, TCP and UDP. Browsers are told to use this port when `STELLARR_TURNS_ENABLED` is `true`. |
-| `STELLARR_TURN_TCP_ENABLED` | `true` or `false` | `false` | Offers TURN over TCP besides UDP. When `false`, the TURN server does not listen on TCP and browsers are not given a TCP address. Any other value stops the container. |
-| `STELLARR_TURNS_ENABLED` | `true` or `false` | `false` | Offers TURN over TLS. When `false`, the TURN server does not listen for TLS or DTLS. Turn it on only with a certificate that browsers trust. Any other value stops the container. |
-| `STELLARR_MEDIA_PORT` | port number | `49000` | Host port for `49000/udp`, the media server's port. In the `sfu` topology browsers are told to use this port, so forward the same external port to it on the router. A value outside 1-65535 stops the container. |
-| `STELLARR_TURN_RELAY_RANGE` | port range | `49160-49200` | Host ports published for the relay range `49160-49200/udp` of the container. Browsers are told the container's port numbers, so when you publish a different range, forward public ports `49160-49200` to it on the router. |
+| `STELLARR_RTC_TOPOLOGY` | `mesh` \| `sfu` | `mesh` | Media routing topology. `mesh` sends WebRTC streams directly between browsers. `sfu` routes streams through [Stellarr Media](../STELLARR_MEDIA.md) inside the container (requires `PUBLIC_IP` and `STELLARR_MEDIA_PORT` forwarded). Empty defaults to `mesh`; any other value aborts startup. |
+| `STELLARR_TURN_PORT` | port (`1–65535`) | `3478` | Published host port and advertised port for STUN and TURN (`udp` and `tcp`). |
+| `STELLARR_TURNS_PORT` | port (`1–65535`) | `5349` | Published host port and advertised port for TURN over TLS (`STELLARR_TURNS_ENABLED=true`). |
+| `STELLARR_TURN_TCP_ENABLED` | `true` \| `false` | `false` | Enables the TURN/TCP listener in `coturn` and advertises `?transport=tcp` ICE URLs. |
+| `STELLARR_TURNS_ENABLED` | `true` \| `false` | `false` | Enables TURN over TLS/DTLS in `coturn` and advertises `turns:` ICE URLs. Requires a browser-trusted TLS certificate. |
+| `STELLARR_MEDIA_PORT` | port (`1–65535`) | `49000` | Published host UDP port for `stellarr-media` (`49000/udp`). Advertised in `sfu` ICE candidates and `/api/bootstrap`; must match the external router port. |
+| `STELLARR_TURN_RELAY_RANGE` | port range | `49160-49200` | Host UDP ports mapped to container ports `49160-49200/udp` for TURN allocations. |
 
-`STELLARR_DOMAIN` and `PUBLIC_IP` also belong to voice. [RTC and
-ports](../RTC_AND_PORTS.md) explains what each port does.
+See [RTC and ports](../RTC_AND_PORTS.md) for port sizing and NAT rules.
 
 ## Uploads and quotas
 
-Sizes are in bytes. A value of `0` or less turns a quota off, except where
-noted.
+Byte limits accept `0` (or negative values) to disable the quota.
 
-| Variable | Type | Default | Effect |
+| Variable | Type | Default | Description |
 | --- | --- | --- | --- |
-| `STELLARR_UPLOAD_USER_BYTES` | bytes | `2147483648` (2 GiB) | What one account may keep stored. |
-| `STELLARR_UPLOAD_TOTAL_BYTES` | bytes | `21474836480` (20 GiB) | What the whole instance may keep stored. |
-| `STELLARR_MIN_FREE_BYTES` | bytes | `1073741824` (1 GiB) | Free space an upload has to leave on the data volume, which the database and logs share. `0` turns the check off. |
-| `STELLARR_MAX_CONCURRENT_UPLOADS` | integer | `4` | Uploads handled at the same time. Values are kept between 1 and 32. |
+| `STELLARR_UPLOAD_USER_BYTES` | bytes | `2147483648` (2 GiB) | Per-account storage quota. |
+| `STELLARR_UPLOAD_TOTAL_BYTES` | bytes | `21474836480` (20 GiB) | Instance-wide storage quota. |
+| `STELLARR_MIN_FREE_BYTES` | bytes | `1073741824` (1 GiB) | Minimum free disk space required on `/data/stellarr` to accept an upload (`0` disables the check). |
+| `STELLARR_MAX_CONCURRENT_UPLOADS` | integer (`1–32`) | `4` | Maximum concurrent uploads across the instance. |
 
-Each file is also limited by type: images 10 MiB, audio 25 MiB, video 100 MiB
-and other files 25 MiB. Nginx rejects a request body above 128 MiB.
+Per-file limits by media type: images 10 MiB, audio 25 MiB, documents/other 25 MiB, video 100 MiB. Nginx enforces a 128 MiB maximum request body size.
 
 ## Mail
 
-Stellarr sends password reset mail and delivery tests through the Resend HTTPS
-API. Nothing is sent until a key is set. Reset mail builds its link
-from the public address (`STELLARR_DOMAIN`).
+Password-reset and test emails are sent via the Resend HTTPS API. No email is sent until `STELLARR_RESEND_API_KEY` is configured.
 
-| Variable | Type | Default | Effect |
+| Variable | Type | Default | Description |
 | --- | --- | --- | --- |
-| `STELLARR_MAIL_ENABLED` | `true` or `false` | `true` | **Seed** of the mailing switch in the operator settings. |
-| `STELLARR_RESEND_API_KEY` | string | empty | The Resend API key. It stays in the container's environment: the operator panel shows only whether a key is set. |
-| `STELLARR_MAIL_FROM` | e-mail address | `onboarding@resend.dev` | **Seed** of the sender address. Use `onboarding@resend.dev` for tests and an address on a domain verified at Resend for real mail. |
-| `STELLARR_MAIL_FROM_NAME` | string | `Stellarr` | The sender name shown next to the address. |
+| `STELLARR_MAIL_ENABLED` | `true` \| `false` | `true` | **Seed** for the mailing toggle in Cockpit settings. |
+| `STELLARR_RESEND_API_KEY` | string | empty | Resend API key. Never exposed in API responses; Cockpit only reports whether a key is set. |
+| `STELLARR_MAIL_FROM` | email | `onboarding@resend.dev` | **Seed** for the sender address. Use an address on a Resend-verified domain in production. |
+| `STELLARR_MAIL_FROM_NAME` | string | `Stellarr` | Sender display name. |
 
-## Single sign-on
+## Single sign-on (OIDC)
 
-Sign-in through an OpenID Connect provider is optional, and password sign-in
-stays available. The provider must be reachable over HTTPS and the client must
-have a secret. The callback path is fixed at `/api/auth/oidc/callback`.
+OpenID Connect login is optional; local username/password login remains available. The callback URL is `<public-url>/api/auth/oidc/callback`.
 
-| Variable | Type | Default | Effect |
+| Variable | Type | Default | Description |
 | --- | --- | --- | --- |
-| `STELLARR_OIDC_ENABLED` | `true` or `false` | `false` | Turns single sign-on on. It also needs the issuer, the client id and a secret. |
-| `STELLARR_OIDC_ISSUER` | HTTPS URL | empty | The issuer of the provider. |
-| `STELLARR_OIDC_CLIENT_ID` | string | empty | The client id registered at the provider. |
-| `STELLARR_OIDC_CLIENT_SECRET` | string | empty | The client secret. When set, it is used instead of the file below. |
-| `STELLARR_OIDC_CLIENT_SECRET_FILE` | path in the container | empty | A file that holds the client secret, for deployments that mount secrets. |
-| `STELLARR_OIDC_DISPLAY_NAME` | string | `Main account` | The label of the sign-in button. Any text works, for example `Konto główne` on a Polish installation. |
+| `STELLARR_OIDC_ENABLED` | `true` \| `false` | `false` | Enables OIDC login (requires issuer, client ID, and client secret). |
+| `STELLARR_OIDC_ISSUER` | HTTPS URL | empty | OIDC provider issuer URL. |
+| `STELLARR_OIDC_CLIENT_ID` | string | empty | OIDC client ID. |
+| `STELLARR_OIDC_CLIENT_SECRET` | string | empty | OIDC client secret (takes precedence over `STELLARR_OIDC_CLIENT_SECRET_FILE`). |
+| `STELLARR_OIDC_CLIENT_SECRET_FILE` | container path | empty | Path to a mounted file containing the OIDC client secret. |
+| `STELLARR_OIDC_DISPLAY_NAME` | string | `Main account` | Sign-in button label on the login screen. |
 
 ## Language
 
-| Variable | Type | Default | Effect |
+| Variable | Type | Default | Description |
 | --- | --- | --- | --- |
-| `STELLARR_LANGUAGE` | `en` or `pl` | `en` | The language of the interface for everyone who has not chosen one, and of everything the server says: error messages, system messages, the names of the roles and channels of a new server, and mail. The web server reads it on every request. Text that was saved earlier keeps the language it was written in. The API stops at start-up on any other value, and the web client falls back to English. |
+| `STELLARR_LANGUAGE` | `en` \| `pl` | `en` | Default interface locale for users without a saved preference, and the language used by the API for error messages, system messages, default server/role/channel names, audit entries, and emails. Stored records keep the language in which they were created. Unknown values abort API startup. |
 
-[Localization](../LOCALIZATION.md) describes how a person's own choice and the
-instance default combine.
+See [Localization](../LOCALIZATION.md).
 
-## Instance identity
+## Instance identity and desktop handshake
 
-| Variable | Type | Default | Effect |
+| Variable | Type | Default | Description |
 | --- | --- | --- | --- |
-| `STELLARR_INSTANCE_ID` | UUID | generated | The id by which clients recognise this instance. When empty, a UUID is generated on the first start and kept in `/data/stellarr/instance-id`. A value that is not a UUID makes `/.well-known/stellarr/client` answer 500. |
-| `STELLARR_INSTANCE_NAME` | string | `Stellarr` | The instance name reported to clients before the first account exists. After that, the name of the server is reported. |
-| `STELLARR_TIME_ZONE` | time zone id | `UTC` | **Seed** of the server time zone in the operator settings, for example `Europe/Warsaw`. |
-| `STELLARR_DESKTOP_MINIMUM_VERSION` | version | `0.1.0` | The oldest desktop client that may sign in. Older ones are refused. The operator can save another value in the operator panel, which then wins. |
-| `STELLARR_DESKTOP_RECOMMENDED_VERSION` | version | `0.1.3` | The desktop client version that the instance reports as recommended in the handshake. The operator can save another value, which then wins. |
+| `STELLARR_INSTANCE_ID` | UUID | generated | Persistent instance UUID reported at `/.well-known/stellarr/client`. Generated on first start and stored in `/data/stellarr/instance-id` when unset. |
+| `STELLARR_INSTANCE_NAME` | string | `Stellarr` | Instance name reported before the first server is created (afterward, the primary server's name is used; editable in Cockpit). |
+| `STELLARR_TIME_ZONE` | IANA time zone | `UTC` | **Seed** for the instance time zone in Cockpit settings (e.g. `Europe/Warsaw`). |
+| `STELLARR_DESKTOP_MINIMUM_VERSION` | semver | `0.1.0` | Minimum allowed desktop client version; older clients are rejected by the client gate. |
+| `STELLARR_DESKTOP_RECOMMENDED_VERSION` | semver | `0.1.3` | Recommended desktop client version advertised in `/.well-known/stellarr/client`. |
 
-## Other
+## Other settings
 
-| Variable | Type | Default | Effect |
+| Variable | Type | Default | Description |
 | --- | --- | --- | --- |
-| `GIPHY_API_KEY` | string | empty | The GIPHY web-integration key for the GIF search. GIPHY requires the browser to make the requests, so the API hands the key to signed-in clients. Changing it needs a restart of the container, not a rebuild. When you build the image from source, the same value is also passed as a build argument. |
-| `STELLARR_EF_COMMAND_LOG_LEVEL` | .NET log level | `Warning` | The level of the log category that records every SQL command. `Information` logs each command. |
+| `GIPHY_API_KEY` | string | empty | GIPHY web-integration API key provided to authenticated browser clients for GIF search (also passed as a build arg when building from source). |
+| `STELLARR_EF_COMMAND_LOG_LEVEL` | .NET log level | `Warning` | Log level for `Microsoft.EntityFrameworkCore.Database.Command` (`Information` logs SQL queries). |
 
-## Limits of the container
+## Container resource limits
 
-| Variable | Type | Default | Effect |
+| Variable | Type | Default | Description |
 | --- | --- | --- | --- |
-| `STELLARR_CONTAINER_MEMORY_LIMIT` | size | `4g` | Memory the container may use. |
-| `STELLARR_CONTAINER_CPUS` | number | `4` | CPUs the container may use. |
-| `STELLARR_CONTAINER_PIDS_LIMIT` | integer | `512` | Processes the container may run. |
+| `STELLARR_CONTAINER_MEMORY_LIMIT` | size | `4g` | Container memory limit (`mem_limit`). |
+| `STELLARR_CONTAINER_CPUS` | number | `4` | Container CPU quota (`cpus`). |
+| `STELLARR_CONTAINER_PIDS_LIMIT` | integer | `512` | Container process limit (`pids_limit`). |
 
-## Read by the container, not set by the compose file
+## Advanced container environment variables
 
-The entrypoint and the certificate script read the variables below. The compose
-file does not pass them. To set one, add it under `environment:` in a
-`docker-compose.override.yml`.
+The container entrypoint and TLS maintenance scripts read the following variables directly. They are not defined in `docker-compose.yml`; set them via `docker-compose.override.yml` when needed.
 
-| Variable | Default | Effect |
+| Variable | Default | Description |
 | --- | --- | --- |
-| `TLS_RENEW_BEFORE_SECONDS` | `2592000` (30 days) | The container renews a self-signed certificate when it expires within this time, or when it does not match `STELLARR_DOMAIN`. |
-| `TLS_RENEW_CHECK_SECONDS` | `43200` (12 hours) | How often the container checks that certificate. |
-| `STELLARR_MEDIA_ADVERTISE` | empty | A comma-separated list of `ip:port` that the media server advertises to browsers instead of `PUBLIC_IP` and the container's own address. |
-| `STELLARR_MEDIA_LOG` | `info` | The media server's log filter, such as `info` or `stellarr_media=debug`. |
-| `STELLARR_MEDIA_CONTROL_SECRET` | the stored secret | Replaces the secret that the API and the media server share. |
+| `STELLARR_DATA_ROOT` | `/data/stellarr` | Root directory for persistent state inside the container. |
+| `TLS_RENEW_BEFORE_SECONDS` | `2592000` (30 days) | Renew managed self-signed certificates when remaining validity falls below this threshold or when `STELLARR_DOMAIN` changes. |
+| `TLS_RENEW_CHECK_SECONDS` | `43200` (12 hours) | Interval between self-signed certificate renewal checks. |
+| `STELLARR_MEDIA_ADVERTISE` | empty | Comma-separated `ip:port` list overriding the derived `stellarr-media` ICE host candidates. |
+| `STELLARR_MEDIA_LOG` | `info` | `tracing` filter for `stellarr-media` (e.g. `info,stellarr_media=debug`). |
+| `STELLARR_MEDIA_CONTROL_SECRET` | `/data/stellarr/secrets/media-control-secret` | Overrides the shared bearer secret between the API and `stellarr-media`. |
+| `TURN_SHARED_SECRET` | `/data/stellarr/secrets/turn-shared-secret` | Overrides the shared HMAC secret between the API and `coturn`. |
+| `RUSTFS_SECRET_KEY` | `/data/stellarr/secrets/rustfs-secret` | Overrides the shared S3 secret key between the API and RustFS. |
+| `RUSTFS_ACCESS_KEY` | `stellarr` | S3 access key for RustFS. |
+| `RUSTFS_BUCKET` | `stellarr-images` | S3 bucket name in RustFS. |
 
-On the first start the container also creates the secrets that its object
-store, its TURN server and its media server share with the API, and keeps them
-in `/data/stellarr/secrets`. They are part of the data volume and have to be
-restored with it.
+On first start, generated secrets are written to `/data/stellarr/secrets/` and must be backed up with the data volume.
 
-## Development stack
+## Development stack (`docker-compose.dev.yml`)
 
-`docker-compose.dev.yml` reads the variables below besides the ones above. Its
-defaults differ in two places: `STELLARR_TIME_ZONE` is `Europe/Warsaw` and
-`STELLARR_INSTANCE_NAME` is `Stellarr Dev`. It does not pass
-`STELLARR_DOMAIN`, `STELLARR_PUBLIC_PORT`, `STELLARR_PUBLIC_URL` or the TURN, upload, single sign-on and container limit
-settings.
+`docker-compose.dev.yml` runs each service from bind mounts with live reload (`STELLARR_TIME_ZONE` defaults to `Europe/Warsaw`, `STELLARR_INSTANCE_NAME` to `Stellarr Dev`, and `PUBLIC_HOST` sets `Rtc__PublicHost`).
 
-| Variable | Default | Effect |
+| Variable | Default | Description |
 | --- | --- | --- |
-| `STELLARR_DEV_WEB_PORT` | `3000` | Host port of the web client. |
-| `STELLARR_DEV_COCKPIT_PORT` | `3001` | Host port of Cockpit, the operator panel. |
-| `STELLARR_DEV_API_PORT` | `5000` | Host port of the API. |
-| `STELLARR_DEV_S3_PORT` | `9000` | Host port of the object store. |
-| `STELLARR_DEV_MEDIA_PORT` | `49100` | Host port of the media server's `49000/udp`, which it advertises on `127.0.0.1`. It differs from production's port so the two stacks can run on one host. |
-| `STELLARR_DEV_MEDIA_CONTROL_PORT` | `5200` | Host port of the media server's control API, published on the loopback interface only. |
-| `STELLARR_ALLOWED_DEV_ORIGINS` | empty | Extra host names, comma-separated, that may load the development server's chunks. `127.0.0.1` is always allowed. |
-| `STELLARR_API_ORIGIN` | `http://127.0.0.1:5000` | Where the development servers forward API requests: `next dev` sends `/api`, `/assets` and `/hubs` there, and the operator panel's dev server sends `/api` and `/health`. The development stack sets it to `http://api:5000` itself. |
-| `WATCHPACK_POLLING` | `true` | Makes the web dev server poll for file changes, which a bind mount needs on some hosts. |
+| `STELLARR_DEV_WEB_PORT` | `3000` | Host port for Next.js (`next dev`). |
+| `STELLARR_DEV_COCKPIT_PORT` | `3001` | Host port for Cockpit (`vite`). |
+| `STELLARR_DEV_API_PORT` | `5000` | Host port for the ASP.NET Core API (`dotnet watch`). |
+| `STELLARR_DEV_S3_PORT` | `9000` | Host port for RustFS. |
+| `STELLARR_DEV_MEDIA_PORT` | `49100` | Host UDP port for `stellarr-media` (advertised on `127.0.0.1`). |
+| `STELLARR_DEV_MEDIA_CONTROL_PORT` | `5200` | Host loopback TCP port (`127.0.0.1:5200`) for the `stellarr-media` control API. |
+| `STELLARR_ALLOWED_DEV_ORIGINS` | empty | Comma-separated hostnames allowed to load Next.js dev chunks (`127.0.0.1` is always allowed). |
+| `STELLARR_API_ORIGIN` | `http://127.0.0.1:5000` | Upstream API origin proxied by the web (`/api`, `/assets`, `/hubs`) and Cockpit (`/api`, `/health`) dev servers (`http://api:5000` inside `docker-compose.dev.yml`). |
+| `WATCHPACK_POLLING` | `true` | Enables file-system polling in `next dev` for bind mounts. |

@@ -1,28 +1,20 @@
 # Reverse proxy and TLS
 
-The container terminates TLS itself and starts with a self-signed certificate.
-This page replaces that certificate with one that browsers trust, and shows how
-to run the container behind a proxy that already holds your certificates.
+By default, the container terminates TLS itself using an auto-generated self-signed certificate. You can either mount your own CA-signed certificate into the container or terminate TLS on an external reverse proxy.
 
-## Use your own certificate
+## Mount a custom TLS certificate
 
-The container reads the certificate and the key from two files in the data
-volume, and both Nginx and the TURN server use them:
+Both Nginx and `coturn` read the certificate and private key from `/data/stellarr/tls/`:
 
-| Path in the container | Content |
+| Container path | Contents |
 | --- | --- |
-| `/data/stellarr/tls/fullchain.pem` | The certificate, followed by the intermediate certificates, in PEM format |
-| `/data/stellarr/tls/privkey.pem` | The private key, in PEM format |
+| `/data/stellarr/tls/fullchain.pem` | PEM leaf certificate followed by intermediate certificates |
+| `/data/stellarr/tls/privkey.pem` | PEM private key |
 
-The container leaves a certificate that an authority signed alone. It treats any
-self-signed pair as its own, including one you made, and replaces it when it
-expires within 30 days or no longer matches `STELLARR_DOMAIN`.
+CA-signed certificates are never overwritten by the container. Self-signed certificates are treated as container-managed and replaced when expiring within 30 days or when `STELLARR_DOMAIN` changes.
 
-1. Put both files in a folder next to `docker-compose.yml`, for example
-   `certs/`, with the names above.
-
-2. Create `docker-compose.override.yml` in the same folder as the compose file.
-   Compose reads it automatically.
+1. Place `fullchain.pem` and `privkey.pem` in a directory next to `docker-compose.yml` (for example, `./certs/`).
+2. Create `docker-compose.override.yml` in the same directory:
 
    ```yaml
    services:
@@ -31,95 +23,68 @@ expires within 30 days or no longer matches `STELLARR_DOMAIN`.
          - ./certs:/data/stellarr/tls:ro
    ```
 
-3. Set `STELLARR_DOMAIN` in `.env` to the name on the certificate, then recreate the
-   container:
+3. Set `STELLARR_DOMAIN` in `.env` to match the certificate's hostname, then recreate the container:
 
    ```bash
    docker compose up -d
    ```
 
-4. Check what the server presents:
+4. Verify the served certificate chain:
 
    ```bash
    echo | openssl s_client -connect chat.example.com:8443 -servername chat.example.com 2>/dev/null | grep -E 'issuer=|Verify return code'
    ```
 
-   The issuer is your certificate authority, and the last line reads
-   `Verify return code: 0 (ok)`.
+   Confirm that `issuer=` shows your CA and the output ends with `Verify return code: 0 (ok)`.
 
-The container refuses to start with a pair it cannot use. A certificate that
-does not match its key logs `TLS certificate does not match its private key.
-Replace the mounted certificate pair.` and the container exits with status 1.
-A certificate that expires within seven days logs a warning at start-up.
+If the certificate is unreadable or does not match `privkey.pem`, the container logs an error and exits with status `1`. If a mounted CA-signed certificate expires within 7 days, the container logs a warning on startup.
 
 > [!WARNING]
-> Mount the folder, not the two files. A file mount keeps pointing at the file
-> as it was when the container started, so a renewal that replaces the file is
-> not seen. A folder mount also needs real files: a symlink, such as the ones in
-> the `live/` folder of an ACME client, leads outside the folder and does not
-> resolve inside the container. Copy the files with `cp -L` instead.
+> Mount the directory (`./certs:/data/stellarr/tls:ro`), not individual files. Single-file bind mounts retain the original inode across atomic file replacements on the host, preventing renewals from propagating into the container. Also ensure the directory contains regular files rather than symlinks pointing outside the mount (such as Certbot `live/` symlinks—copy them with `cp -L`).
 
-### Renew a certificate you supplied
+### Reloading after certificate renewal
 
-The container renews only the self-signed certificates it generated. After you
-replace the files in `certs/`, make Nginx and the TURN server read them again:
+After updating `fullchain.pem` and `privkey.pem` on the host, reload Nginx and restart `coturn`:
 
 ```bash
 docker compose exec stellarr nginx -s reload
 docker compose exec stellarr supervisorctl -c /etc/supervisor/supervisord.conf restart turn
 ```
 
-Restarting TURN closes the relays that are open at that moment.
-`docker compose restart` does both and also restarts the rest of the container.
+Restarting `turn` drops active TURN relay allocations.
 
-Until the reload, Nginx keeps serving the old certificate.
+### TURN over TLS (`turns:`)
 
-### TURN over TLS
-
-`STELLARR_TURNS_ENABLED=true` offers TURN over TLS on `STELLARR_TURNS_PORT`. The
-TURN server presents the same pair as Nginx, so the pair has to be one that
-browsers trust.
+Setting `STELLARR_TURNS_ENABLED=true` enables TURN over TLS/DTLS on `STELLARR_TURNS_PORT` (`5349` by default) using the same certificate pair. Browsers reject self-signed certificates on `turns:` connections, so enable it only with a CA-signed certificate.
 
 ## Run behind a reverse proxy
 
-Use a proxy when something else already owns port 443 on the host, or when one
-proxy holds the certificates for several sites. The proxy terminates TLS and
-forwards plain HTTP to the container's HTTP port, `8888` by default.
-
-Set these in `.env`:
+When an external reverse proxy terminates TLS on port `443` and forwards HTTP to the container's HTTP port (`8888` by default), set in `.env`:
 
 ```bash
 STELLARR_DOMAIN=chat.example.com
 STELLARR_PUBLIC_PORT=443
+STELLARR_HTTP_PORT=127.0.0.1:8888
 ```
 
-The public address is then `https://chat.example.com`, without the container's
-own HTTPS port.
+Binding `STELLARR_HTTP_PORT` to `127.0.0.1` prevents external clients from bypassing the proxy on port `8888`.
 
-### What the proxy has to forward
+### Proxy requirements
 
-| Requirement | Why |
+| Requirement | Reason |
 | --- | --- |
-| `X-Forwarded-Proto: https` | The container redirects every plain HTTP request without it to `https://<host>:<STELLARR_HTTPS_PORT>/`. With the defaults that is port 8443, the container's own HTTPS port with its self-signed certificate. Visitors land there, or on a closed port. |
-| The `Host` header as the browser sent it | Invite links and the origin that desktop clients read are built from it. |
-| `Upgrade` and `Connection` on `/hubs/` | The realtime connection is a WebSocket at `/hubs/app`. Without the headers the WebSocket closes at once and the client negotiates again, repeatedly. |
-| Request bodies of at least 128 MiB | Uploads go through the proxy. The container accepts bodies up to 128 MiB, and a video may be 100 MiB. |
-| A read timeout above 20 seconds | The server sends a keep-alive every 15 seconds on the hub and every 20 seconds on the WebSocket. |
+| `X-Forwarded-Proto: https` | Without this header, container Nginx redirects HTTP requests to `https://<host>:<STELLARR_HTTPS_PORT>/`. |
+| Preserve `Host` (`$http_host`) | Used to construct invite URLs and the discovery origin when `STELLARR_PUBLIC_URL` is unset. |
+| Forward `Upgrade` and `Connection` headers | Required for SignalR WebSocket connections under `/hubs/app`. |
+| Allow request bodies up to `128 MiB` | Video uploads can be up to 100 MiB; container Nginx allows up to 128 MiB. |
+| Read timeout above 20 seconds | SignalR sends a keep-alive every 15 seconds and WebSockets ping every 20 seconds. |
 
-Serve the proxy on port 443. The container builds invite links from the host
-name without the port, so on any other port the links point at the wrong
-address.
-
-The API takes the client address from the connection to the container, so behind
-a proxy it records the proxy's address for every request, whatever the proxy
-sends in `X-Forwarded-For`. The sessions list of the operator panel shows that
-address, and the limits per address apply to everyone behind the proxy
-together: after 10 sign-in attempts in a minute from any of them, the next
-attempt is answered with 429.
+> [!NOTE]
+> The ASP.NET Core API reads the TCP peer address of the incoming connection inside the container rather than `X-Forwarded-For`. Behind a reverse proxy, active session logs show the proxy's IP address and per-IP rate limits (such as 10 failed sign-in attempts per minute) are shared across all proxied clients.
 
 ### Example: Nginx
 
-The `map` block goes in the `http` context.
+Place the `map` block in the `http` context:
 
 ```nginx
 map $http_upgrade $connection_upgrade {
@@ -147,39 +112,20 @@ server {
 }
 ```
 
-A proxy in the same Compose network can use `http://stellarr:80` instead of the
-published port.
+If the reverse proxy runs in the same Docker network, proxy to `http://stellarr:80` instead of `http://127.0.0.1:8888`.
 
-To check the result, open the site in a browser and look at the network panel
-for the request to `/hubs/app`: it is a WebSocket with status 101 and stays open.
-`curl https://chat.example.com/health` answers `{"status":"ready"}`.
-
-### Keep the HTTP port on the host
-
-A port published on all interfaces is a second way in that skips the proxy and
-whatever it enforces. `STELLARR_HTTP_PORT` is placed in the port mapping as
-written, so a value with an address publishes the port on that interface only:
-
-```bash
-STELLARR_HTTP_PORT=127.0.0.1:8888
-```
-
-The HTTPS port stays published on all interfaces.
+Verify the setup by checking `curl https://chat.example.com/health` (returns `{"status":"ready"}`) and confirming in browser DevTools that `/hubs/app` upgrades with status `101 Switching Protocols`.
 
 ## What does not go through the proxy
 
-An HTTP proxy carries only HTTP. STUN, TURN and the relay ports use UDP and
-their own TCP, so they go straight to the host:
+An HTTP reverse proxy only handles HTTP and WebSocket traffic. WebRTC STUN, TURN, and SFU media use UDP (and dedicated TURN TCP/TLS listeners) and must connect directly to the Docker host:
 
-| Port | Protocol | Used for |
+| Default port | Protocol | Purpose |
 | --- | --- | --- |
 | `3478` | UDP | STUN and TURN |
-| `49160-49200` | UDP | TURN relays |
-| `3478` | TCP | TURN over TCP, with `STELLARR_TURN_TCP_ENABLED=true` |
-| `5349` | TCP and UDP | TURN over TLS, with `STELLARR_TURNS_ENABLED=true` |
+| `49160-49200` | UDP | TURN relay ports |
+| `3478` | TCP | TURN over TCP (`STELLARR_TURN_TCP_ENABLED=true`) |
+| `5349` | TCP, UDP | TURN over TLS/DTLS (`STELLARR_TURNS_ENABLED=true`) |
+| `49000` | UDP | Stellarr Media SFU (`STELLARR_RTC_TOPOLOGY=sfu`) |
 
-Publish them on the host as the compose file does, and forward them on the
-router. `STELLARR_DOMAIN` has to name the machine that runs the container, not a
-service that passes only HTTP, because browsers send TURN traffic to that name.
-[Requirements](requirements.md) lists the ports and what to set behind NAT, and
-[RTC and ports](../RTC_AND_PORTS.md) covers the TURN settings.
+Publish these ports on the host and forward them on the router. `STELLARR_DOMAIN` and `PUBLIC_IP` must resolve to the host reachable on these ports, not an HTTP-only CDN or tunnel. See [Requirements](requirements.md) and [RTC and ports](../RTC_AND_PORTS.md).

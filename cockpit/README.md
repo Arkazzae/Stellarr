@@ -1,44 +1,37 @@
 # Stellarr Cockpit
 
-Cockpit is the instance owner's panel, a separate front end: an overview with the
-last thirty days of activity, users with their sessions and roles, metrics of the
-running process, a searchable log, backups and instance settings.
+Stellarr Cockpit is the instance operator panel (`cockpit/`), built as a standalone React + Vite single-page application. It provides:
 
-## Running it
+- **Overview**: 30-day message/join activity and service status.
+- **Users**: account management, active sessions, and built-in roles.
+- **Servers**: list of servers on the instance with ownership transfer and deletion.
+- **Runtime**: 1-hour process telemetry (memory, GC heap, CPU, threads, SignalR connections, and HTTP response rates).
+- **Logs**: paged, searchable, and filterable 10,000-line in-memory log stream with TSV export.
+- **Backups**: online SQLite snapshots and retention cleanup.
+- **Settings**: instance name, time zone, retention policies, and Resend email configuration.
+
+## Development
 
 ```bash
 npm install
 npm run dev
 ```
 
-The app runs at `http://localhost:3001`. In development, requests to `/api` and
-`/health` are forwarded to `STELLARR_API_ORIGIN` (by default
-`http://127.0.0.1:5000`; see `.env.example`).
+The dev server listens on `http://localhost:3001` and proxies `/api` and `/health` to `STELLARR_API_ORIGIN` (`http://127.0.0.1:5000` by default).
 
-In the production image the static build is served under `/cockpit/` on the same
-origin as the main client; the address it had before, `/ops/`, redirects there. The
-`/api/cockpit/*` endpoints require a login with an account that holds the built-in
-owner role. The panel relies on the persistent session and audit registry, metrics of
-the running process, the log buffer and SQLite backups taken online.
+In the production container image, Nginx serves the static build under `/cockpit/` on the same origin as the web client (`/ops/` redirects with `308`). All `/api/cockpit/*` endpoints require an authenticated session with the instance owner role.
 
-## Language
+## Localization
 
-The panel is in English by default, with Polish as a translation. The language is
-chosen in the browser each time the panel loads, never at build time, in this order:
+Cockpit supports English (`en`, default) and Polish (`pl`). The active locale is resolved in the browser on startup in this order:
 
-1. the `stellarr_locale` cookie, which the main client writes (`pl` or `en`) when you
-   change its language setting;
-2. the first of the browser's preferred languages that is Polish or English;
-3. English.
+1. `stellarr_locale` cookie (set by the main web client).
+2. First matching language (`pl` or `en`) in `navigator.languages`.
+3. `en`.
 
-The `lang` attribute of the page follows the chosen language, and so do dates and
-numbers. There is no language switcher here: change the language in the main client.
+Catalogs live in `src/i18n/en.ts` and `src/i18n/pl.ts` and must define identical keys. Components format messages via `t("some.key", { name: value })`.
 
-The panel's text lives in `src/i18n/en.ts` and `src/i18n/pl.ts`, which must have the
-same keys. Components read it with `t("some.key", { name: value })`,
-where `{name}` marks a placeholder in the message.
-
-## Checks
+## Verification
 
 ```bash
 npm run typecheck
@@ -47,5 +40,4 @@ npm test
 npm run build
 ```
 
-`npm run build` checks the types and writes the build to `dist/`; `npm run preview`
-serves it locally on port 4174.
+`npm run build` runs TypeScript validation and outputs the static bundle to `dist/`. `npm run preview` serves the production build locally on port `4174`.
