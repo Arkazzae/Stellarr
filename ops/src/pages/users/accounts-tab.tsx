@@ -102,12 +102,7 @@ export function AccountsTab({ users, roles, filter, onFilterChange, perform }: A
               <TableRow key={user.id}>
                 <TableCell>
                   <div className="flex items-center gap-3">
-                    <UserAvatar
-                      id={user.id}
-                      displayName={user.displayName}
-                      avatarUrl={user.avatarUrl}
-                      className="size-8"
-                    />
+                    <UserAvatar displayName={user.displayName} className="size-8" />
                     <div>
                       <p className="font-medium">{user.displayName}</p>
                       <p className="text-xs text-muted-foreground">

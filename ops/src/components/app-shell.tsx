@@ -137,12 +137,7 @@ function OperatorMenu({ operator, onLogout }: { operator: OpsOperator; onLogout:
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="gap-2 px-2">
-          <UserAvatar
-            id={operator.id}
-            displayName={operator.displayName}
-            avatarUrl={operator.avatarUrl}
-            className="size-7"
-          />
+          <UserAvatar displayName={operator.displayName} className="size-7" />
           <span className="hidden text-sm sm:inline">{operator.displayName.split(" ")[0]}</span>
           <ChevronDown className="size-3.5 text-muted-foreground" aria-hidden="true" />
         </Button>
