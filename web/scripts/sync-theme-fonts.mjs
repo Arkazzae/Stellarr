@@ -20,40 +20,10 @@ const USER_AGENT =
 
 const SUBSETS = new Set(["latin", "latin-ext"]);
 
-/** [id used in file names and `data-font`, family name, Google Fonts query] */
+/** [id used in file names, family name, Google Fonts query] */
 const FONTS = [
   ["outfit", "Outfit", "Outfit:wght@100..900"],
-  ["inter", "Inter", "Inter:wght@100..900"],
-  ["geist-sans", "Geist", "Geist:wght@100..900"],
-  ["dm-sans", "DM Sans", "DM+Sans:wght@100..1000"],
-  ["plus-jakarta-sans", "Plus Jakarta Sans", "Plus+Jakarta+Sans:wght@200..800"],
-  ["manrope", "Manrope", "Manrope:wght@200..800"],
-  ["figtree", "Figtree", "Figtree:wght@300..900"],
-  ["ibm-plex-sans", "IBM Plex Sans", "IBM+Plex+Sans:wght@100..700"],
-  ["source-sans-3", "Source Sans 3", "Source+Sans+3:wght@200..900"],
-  ["noto-sans", "Noto Sans", "Noto+Sans:wght@100..900"],
-  ["open-sans", "Open Sans", "Open+Sans:wght@300..800"],
-  ["lato", "Lato", "Lato:wght@100;300;400;700;900"],
-  ["poppins", "Poppins", "Poppins:wght@100;200;300;400;500;600;700;800;900"],
-  ["montserrat", "Montserrat", "Montserrat:wght@100..900"],
-  ["raleway", "Raleway", "Raleway:wght@100..900"],
-  ["nunito", "Nunito", "Nunito:wght@200..1000"],
-  ["rubik", "Rubik", "Rubik:wght@300..900"],
-  ["quicksand", "Quicksand", "Quicksand:wght@300..700"],
-  ["baloo-2", "Baloo 2", "Baloo+2:wght@400..800"],
-  ["varela-round", "Varela Round", "Varela+Round"],
-  ["comfortaa", "Comfortaa", "Comfortaa:wght@300..700"],
-  ["fira-code", "Fira Code", "Fira+Code:wght@300..700"],
   ["jetbrains-mono", "JetBrains Mono", "JetBrains+Mono:wght@100..800"],
-  ["source-code-pro", "Source Code Pro", "Source+Code+Pro:wght@200..900"],
-  [
-    "ibm-plex-mono",
-    "IBM Plex Mono",
-    "IBM+Plex+Mono:wght@100;200;300;400;500;600;700",
-  ],
-  ["space-grotesk", "Space Grotesk", "Space+Grotesk:wght@300..700"],
-  ["sora", "Sora", "Sora:wght@100..800"],
-  ["lexend", "Lexend", "Lexend:wght@100..900"],
 ];
 
 async function fetchOk(url) {

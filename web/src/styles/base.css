@@ -5,8 +5,8 @@
  */
 
 @layer base {
-  /* Faces live in `themes/font-faces.css`; `themes/typeset.css` maps the
-     selected `data-font` value onto the application stack. */
+  /* Faces live in `themes/font-faces.css`; `theme.css` fixes the application
+     stack to Outfit, the brand's typeface. */
 
   /* `hidden` is a semantic statement; it must beat any `display` a class sets. */
   [hidden] {

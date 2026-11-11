@@ -1,19 +1,18 @@
 /**
  * The theme registry.
  *
- * A theme is seven independent choices, stored together and applied to `<html>`:
+ * A theme is six independent choices, stored together and applied to `<html>`:
  *
  *   palette   the complete colour vocabulary    -> `data-theme` and CSS variables
  *   accent    an optional personal accent        -> `--palette-accent`
  *   scheme    dark, light, or follow the OS      -> `data-scheme`
  *   contrast  normal or high                     -> `data-contrast`
- *   font      the face the app is set in         -> `data-font`
  *   size      how large message text is          -> `data-size`
  *   density   how much air a message gets        -> `data-density`
  *
  * A preset owns every colour role, not just a hue. Choosing one resets the
- * accent to the colour designed for it, but never changes typography or
- * density.
+ * accent to the colour designed for it, but never changes type size or
+ * density. The app itself is always set in Outfit, the brand's face.
  *
  * The palette data lives here so the runtime, the pre-hydration script, the
  * previews and the tests share one set of values. `recipe.css` maps this
@@ -251,43 +250,6 @@ export const PALETTES = [
 type Palette = (typeof PALETTES)[number];
 export type PaletteId = Palette["id"];
 
-/**
- * Every face is self-hosted in `public/fonts`. Declaring a face costs nothing
- * until it is used, so the browser only fetches the selected family.
- */
-export const FONTS = [
-  { id: "outfit", label: "Outfit" },
-  { id: "inter", label: "Inter" },
-  { id: "geist-sans", label: "Geist Sans" },
-  { id: "dm-sans", label: "DM Sans" },
-  { id: "plus-jakarta-sans", label: "Plus Jakarta Sans" },
-  { id: "manrope", label: "Manrope" },
-  { id: "figtree", label: "Figtree" },
-  { id: "ibm-plex-sans", label: "IBM Plex Sans" },
-  { id: "source-sans-3", label: "Source Sans 3" },
-  { id: "noto-sans", label: "Noto Sans" },
-  { id: "open-sans", label: "Open Sans" },
-  { id: "lato", label: "Lato" },
-  { id: "poppins", label: "Poppins" },
-  { id: "montserrat", label: "Montserrat" },
-  { id: "raleway", label: "Raleway" },
-  { id: "nunito", label: "Nunito" },
-  { id: "rubik", label: "Rubik" },
-  { id: "quicksand", label: "Quicksand" },
-  { id: "baloo-2", label: "Baloo 2" },
-  { id: "varela-round", label: "Varela Round" },
-  { id: "comfortaa", label: "Comfortaa" },
-  { id: "fira-code", label: "Fira Code" },
-  { id: "jetbrains-mono", label: "JetBrains Mono" },
-  { id: "source-code-pro", label: "Source Code Pro" },
-  { id: "ibm-plex-mono", label: "IBM Plex Mono" },
-  { id: "space-grotesk", label: "Space Grotesk" },
-  { id: "sora", label: "Sora" },
-  { id: "lexend", label: "Lexend" },
-] as const;
-
-export type FontId = (typeof FONTS)[number]["id"];
-
 /** Only message text and the composer move; the chrome keeps its own scale. */
 export const SIZES = [{ id: "sm" }, { id: "md" }, { id: "lg" }] as const;
 
@@ -310,7 +272,6 @@ export interface ThemePreference {
   accent: string;
   scheme: SchemePreference;
   contrast: ContrastPreference;
-  font: FontId;
   size: SizePreference;
   density: DensityPreference;
 }
@@ -320,7 +281,6 @@ export const DEFAULT_THEME: ThemePreference = {
   accent: PALETTES[0].colors.accent,
   scheme: "dark",
   contrast: "normal",
-  font: "outfit",
   size: "md",
   density: "cozy",
 };
@@ -343,16 +303,7 @@ export const LEGACY_PALETTES: Readonly<Record<string, PaletteId>> = {
   graphite: "midnight",
 };
 
-export const LEGACY_FONTS: Readonly<Record<string, FontId>> = {
-  system: "outfit",
-  grotesk: "inter",
-  rounded: "nunito",
-  serif: "source-sans-3",
-  mono: "jetbrains-mono",
-};
-
 const PALETTE_IDS: readonly PaletteId[] = PALETTES.map(({ id }) => id);
-const FONT_IDS: readonly FontId[] = FONTS.map(({ id }) => id);
 const SIZE_IDS: readonly SizePreference[] = SIZES.map(({ id }) => id);
 const DENSITY_IDS: readonly DensityPreference[] = DENSITIES.map(({ id }) => id);
 
@@ -437,7 +388,7 @@ function oneOf<T extends string>(
 /**
  * Narrows anything read back from storage to a usable preference. Each axis
  * falls back on its own instead of the whole object being discarded, which is
- * what lets a preference written before the font pack existed keep its palette.
+ * what lets a preference written before a setting existed keep the others.
  */
 export function normaliseTheme(input: unknown): ThemePreference {
   if (typeof input !== "object" || input === null) return DEFAULT_THEME;
@@ -453,11 +404,6 @@ export function normaliseTheme(input: unknown): ThemePreference {
     accent: normaliseHex(raw.accent) ?? getPalette(palette).colors.accent,
     scheme: oneOf(SCHEMES, raw.scheme, DEFAULT_THEME.scheme),
     contrast: oneOf(CONTRASTS, raw.contrast, DEFAULT_THEME.contrast),
-    font: oneOf(
-      FONT_IDS,
-      migrate(LEGACY_FONTS, raw.font),
-      DEFAULT_THEME.font,
-    ),
     size: oneOf(SIZE_IDS, raw.size, DEFAULT_THEME.size),
     density: oneOf(DENSITY_IDS, raw.density, DEFAULT_THEME.density),
   };
@@ -484,7 +430,6 @@ export function applyThemeAttributes(
   dataset.theme = theme.palette;
   dataset.scheme = resolved;
   dataset.contrast = theme.contrast;
-  dataset.font = theme.font;
   dataset.size = theme.size;
   dataset.density = theme.density;
 

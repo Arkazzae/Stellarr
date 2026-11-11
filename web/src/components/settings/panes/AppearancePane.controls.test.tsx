@@ -35,7 +35,7 @@ describe("AppearancePane controls", () => {
 
   it("leaves every control inert when the theme cannot be changed", async () => {
     const user = userEvent.setup();
-    const p = props({ supported: false, theme: { ...DEFAULT_THEME, font: "jetbrains-mono" } });
+    const p = props({ supported: false });
     render(<AppearancePane {...p} />);
 
     expect(screen.getByRole("button", { name: "Przywróć domyślne" })).toBeDisabled();
@@ -54,13 +54,10 @@ describe("AppearancePane controls", () => {
     expect(screen.getByRole("button", { name: "Kolor motywu" })).toBeEnabled();
   });
 
-  it("shows the personal accent in the palette inspector, not the preset's", async () => {
-    const user = userEvent.setup();
+  it("shows the personal accent in the field, not the preset's", () => {
     render(<AppearancePane {...props({ theme: { ...DEFAULT_THEME, accent: "#ff3366" } })} />);
 
-    await user.click(screen.getByText(/Pełna paleta/));
-    const inspector = screen.getByText(/Pełna paleta/).closest("details") as HTMLElement;
-    expect(within(inspector).getByText("#ff3366")).toBeInTheDocument();
-    expect(within(inspector).queryByText(DEFAULT_THEME.accent)).toBeNull();
+    expect(screen.getByLabelText("Kolor akcentu")).toHaveValue("#ff3366");
+    expect(screen.getByText("#ff3366", { selector: "output" })).toBeInTheDocument();
   });
 });

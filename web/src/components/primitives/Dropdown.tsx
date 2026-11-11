@@ -109,7 +109,7 @@ function placeList(
  * A native `<select>` draws its list with the operating system's widget: the
  * app's palette outside the field and the system's grey inside it, no room for
  * a second line, nothing to theme. This is the same control built from the
- * app's own parts, so it carries the theme, the font pack and the density.
+ * app's own parts, so it carries the theme, the type scale and the density.
  *
  * It is a combobox with a listbox popup. Focus never leaves the field: the
  * arrows move a cursor, `aria-activedescendant` says where it is, and Enter

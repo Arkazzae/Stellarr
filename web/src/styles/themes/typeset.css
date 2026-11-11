@@ -1,152 +1,19 @@
 /*
  * ============================================================================
- * TYPESET — which face the app is set in, and how large and how tight
+ * TYPESET — how large message text is and how tight it sits
  * ============================================================================
  *
  * Same idea as `recipe.css`, applied to type instead of colour: an attribute
  * on <html> picks a value, and everything downstream reads a token.
  *
- *   [data-font]     the face                → --font-sans
  *   [data-size]     message text size       → --msg-size
  *   [data-density]  air around a message    → --msg-leading, --msg-pad-y,
  *                                             --msg-line-gap
  *
- * The selectors are deliberately not anchored to <html>. Putting `data-font`
- * on a card in the appearance pane makes that card paint its own sample in the
- * real face — the same trick a palette swatch plays with `data-theme`, and the
- * reason neither preview can drift from what choosing it actually does.
- *
- * Every face is self-hosted. `font-faces.css` is generated from the pinned
- * family list by `npm run fonts:sync`; only the selected face is requested by
- * the browser because a declaration alone does not download its source.
+ * The app's face is fixed to Outfit, declared by `theme.css`, so there is no
+ * font selector and no `data-font` to keep in step.
  * ============================================================================
  */
-
-/* ------------------------------------------------------------- the pack --- */
-/*
- * Unlayered on purpose: `--font-sans` is declared by Tailwind's `@theme`,
- * which lands in the `theme` layer, and an unlayered rule outranks any layer.
- * The same reason `recipe.css` publishes its tokens unlayered.
- */
-
-:root {
-  /* What every stack falls back to, written once. A face is a preference; the
-     tail is what has to be there when the preference cannot be honoured. */
-  --font-tail: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto,
-    "Helvetica Neue", Arial, sans-serif;
-}
-
-[data-font="outfit"] {
-  --font-sans: "Outfit", var(--font-tail);
-}
-
-[data-font="inter"] {
-  --font-sans: "Inter", var(--font-tail);
-}
-
-[data-font="geist-sans"] {
-  --font-sans: "Geist", var(--font-tail);
-}
-
-[data-font="dm-sans"] {
-  --font-sans: "DM Sans", var(--font-tail);
-}
-
-[data-font="plus-jakarta-sans"] {
-  --font-sans: "Plus Jakarta Sans", var(--font-tail);
-}
-
-[data-font="manrope"] {
-  --font-sans: "Manrope", var(--font-tail);
-}
-
-[data-font="figtree"] {
-  --font-sans: "Figtree", var(--font-tail);
-}
-
-[data-font="ibm-plex-sans"] {
-  --font-sans: "IBM Plex Sans", var(--font-tail);
-}
-
-[data-font="source-sans-3"] {
-  --font-sans: "Source Sans 3", var(--font-tail);
-}
-
-[data-font="noto-sans"] {
-  --font-sans: "Noto Sans", var(--font-tail);
-}
-
-[data-font="open-sans"] {
-  --font-sans: "Open Sans", var(--font-tail);
-}
-
-[data-font="lato"] {
-  --font-sans: "Lato", var(--font-tail);
-}
-
-[data-font="poppins"] {
-  --font-sans: "Poppins", var(--font-tail);
-}
-
-[data-font="montserrat"] {
-  --font-sans: "Montserrat", var(--font-tail);
-}
-
-[data-font="raleway"] {
-  --font-sans: "Raleway", var(--font-tail);
-}
-
-[data-font="nunito"] {
-  --font-sans: "Nunito", var(--font-tail);
-}
-
-[data-font="rubik"] {
-  --font-sans: "Rubik", var(--font-tail);
-}
-
-[data-font="quicksand"] {
-  --font-sans: "Quicksand", var(--font-tail);
-}
-
-[data-font="baloo-2"] {
-  --font-sans: "Baloo 2", var(--font-tail);
-}
-
-[data-font="varela-round"] {
-  --font-sans: "Varela Round", var(--font-tail);
-}
-
-[data-font="comfortaa"] {
-  --font-sans: "Comfortaa", var(--font-tail);
-}
-
-[data-font="fira-code"] {
-  --font-sans: "Fira Code", var(--font-mono);
-}
-
-[data-font="jetbrains-mono"] {
-  --font-sans: "JetBrains Mono", var(--font-mono);
-}
-
-[data-font="source-code-pro"] {
-  --font-sans: "Source Code Pro", var(--font-mono);
-}
-
-[data-font="ibm-plex-mono"] {
-  --font-sans: "IBM Plex Mono", var(--font-mono);
-}
-
-[data-font="space-grotesk"] {
-  --font-sans: "Space Grotesk", var(--font-tail);
-}
-
-[data-font="sora"] {
-  --font-sans: "Sora", var(--font-tail);
-}
-
-[data-font="lexend"] {
-  --font-sans: "Lexend", var(--font-tail);
-}
 
 /* ------------------------------------------------ size and density -------- */
 /*

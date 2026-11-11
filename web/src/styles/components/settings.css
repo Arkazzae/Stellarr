@@ -261,10 +261,10 @@
   /* ---------- WYGLĄD ---------- */
   /*
    * The cards in this pane are working instances of what they offer: a preset
-   * carries `data-theme`/`data-scheme`, a font card carries `data-font`, and
-   * every token below is read from the card rather than from the page. That is
-   * why nothing here names a colour or a family — a swatch that is painted by
-   * the same rules as the app cannot show a colour the app will not use.
+   * carries `data-theme`/`data-scheme`, and every token below is read from the
+   * card rather than from the page. That is why nothing here names a colour —
+   * a swatch painted by the same rules as the app cannot show a colour the app
+   * will not use.
    */
   /* One line of text and a 32px button: centred on each other, not top-aligned.
      The note drops its own bottom margin here — the row owns the spacing, and
@@ -272,10 +272,10 @@
   .ap-intro{display:flex;align-items:center;gap:16px;margin:-4px 0 16px}
   .ap-intro .set-note{flex:1;margin:0}
 
-  /* Motywy: a board of miniatures, not a column of banners. The tile is only
-     as wide as the picture it has to show, so six themes read as one compact
-     block that keeps everything below it above the fold. */
-  .ap-themes{display:grid;grid-template-columns:repeat(auto-fill,minmax(116px,1fr));gap:10px}
+  /* Motywy: a board of miniatures, not a column of banners. Six presets sit
+     three per row, so the whole set reads as two compact rows and everything
+     below it stays above the fold. */
+  .ap-themes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
   .ap-tile{
     position:relative;display:flex;flex-direction:column;gap:8px;text-align:left;
     padding:8px;border-radius:var(--radius-md);
@@ -320,52 +320,6 @@
     font-size:12px;font-variant-numeric:tabular-nums;text-transform:uppercase;
   }
 
-  .ap-palette{border-top:1px solid var(--line-subtle)}
-  .ap-palette summary{
-    display:flex;align-items:center;gap:8px;min-height:48px;
-    color:var(--text-muted);font-size:13px;font-weight:550;cursor:pointer;
-  }
-  .ap-palette summary::before{
-    content:"";width:7px;height:7px;flex:none;
-    border-right:1.5px solid currentColor;border-bottom:1.5px solid currentColor;
-    transform:rotate(-45deg);transition:transform var(--dur-base) var(--ease-standard);
-  }
-  .ap-palette[open] summary::before{transform:rotate(45deg) translate(-1px,-1px)}
-  .ap-palette summary::marker,.ap-palette summary::-webkit-details-marker{display:none}
-  .ap-palette summary span{color:var(--text-faint);font-weight:400}
-  /* The inspector is a swatch board: the colour is the object, its name and
-     value are the caption under it. Twenty-two ruled rows in two columns said
-     the same thing with twenty-two rules and no colour worth looking at. */
-  .ap-token-groups{display:flex;flex-direction:column;gap:16px;padding:6px 0 14px}
-  /* Mark, word, rule — the same heading the palette of commands uses, so the
-     two places in the app that group small things group them the same way. */
-  .ap-token-group h3{
-    display:flex;align-items:center;gap:7px;margin-bottom:9px;
-    color:var(--text-faint);font-size:11.5px;font-weight:600;
-  }
-  .ap-token-group h3 .ap-token-ico{display:flex;flex:none;opacity:0.9}
-  .ap-token-group h3::after{
-    content:"";flex:1;height:1px;margin-left:2px;
-    background:linear-gradient(to right,var(--line-subtle),transparent);
-  }
-  .ap-token-group ul{
-    list-style:none;display:grid;
-    grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:9px;
-  }
-  .ap-token-group li{display:flex;flex-direction:column;gap:4px;min-width:0}
-  .ap-token-group li i{
-    height:26px;border-radius:var(--radius-sm);box-shadow:inset 0 0 0 1px var(--line-subtle);
-  }
-  .ap-token-group li span{
-    color:var(--text-muted);font-size:11px;
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-  }
-  .ap-token-group li code{
-    color:var(--text-faint);font-family:var(--font-mono);font-size:10px;
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:lowercase;
-  }
-  .ap-palette > p{margin:0 0 14px;color:var(--text-faint);font-size:11.5px;line-height:1.5}
-
   /* The app in miniature: sidebar, room, three lines of a message — the same
      elevation order the window has, so a tile is recognisable as the thing it
      will turn into rather than as a row of paint samples. */
@@ -389,30 +343,9 @@
   .ap-mini-room i:last-child{width:72%}
 
   /*
-   * Pismo: a specimen sheet. One line per face, set in that face — the name is
-   * the specimen, so nothing has to be said twice. `font-family` has to be
-   * restated here: a child inherits the *resolved* family, so redefining
-   * `--font-sans` on the row only reaches text that reads the variable again.
+   * Podgląd: the transcript's own classes, so size and density are shown by
+   * the rules that will actually lay out the room — not by a copy of them.
    */
-  .ap-faces{display:grid;grid-template-columns:repeat(auto-fill,minmax(148px,1fr));gap:8px}
-  .ap-face{
-    display:flex;align-items:center;justify-content:space-between;gap:8px;
-    min-height:40px;padding:0 11px;text-align:left;
-    border-radius:var(--radius-md);border:1px solid var(--line-subtle);
-    background:var(--surface-raised);font-family:var(--font-sans);color:var(--text-muted);
-    transition:border-color var(--dur-fast) var(--ease-standard), box-shadow var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
-  }
-  .ap-face:hover{border-color:var(--line-strong);color:var(--text)}
-  .ap-face.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent);color:var(--text)}
-  .ap-face:disabled{opacity:0.5;cursor:default}
-  .ap-face-name{
-    min-width:0;font-size:14px;font-weight:550;
-    overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
-  }
-  .ap-face .ap-tick{flex:none;display:inline-flex;color:var(--accent-text)}
-
-  /* Podgląd: the transcript's own classes, so size and density are shown by
-     the rules that will actually lay out the room — not by a copy of them. */
   .ap-preview .msg-group{padding-left:0;padding-right:0}
   .ap-preview .msg-group:hover{background:none}
 
@@ -1032,7 +965,7 @@
      phone breakpoint. Keep compact mouse controls visually restrained on
      desktop, but give their tablet and hybrid-laptop variants a 44px target. */
   @media (pointer:coarse){
-    .set-item-act,.ap-face{min-height:44px}
+    .set-item-act{min-height:44px}
     .set-item-act{
       min-width:44px;display:inline-flex;align-items:center;justify-content:center;
     }
@@ -1147,9 +1080,8 @@
     .int-row.has-move > .btn-ghost{
       grid-column:3;grid-row:1 / span 2;min-height:44px;align-self:center;
     }
-    /* Both boards already reflow on their own; the phone only needs the face
-       rows to reach a comfortable tap target. */
-    .ap-face{min-height:44px}
+    /* Both boards already reflow on their own; the phone only needs the
+       controls to reach a comfortable tap target. */
     .ap-intro{flex-direction:column;gap:0}
     .ap-reset{align-self:flex-start;margin:0 0 14px;min-height:44px}
     .ap-accent-row{align-items:stretch}

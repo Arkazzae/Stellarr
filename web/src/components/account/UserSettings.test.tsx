@@ -183,7 +183,6 @@ function setup(overrides: Partial<UserSettingsProps> = {}) {
         accent: "#756cf7",
         scheme: "system",
         contrast: "normal",
-        font: "outfit",
         size: "md",
         density: "cozy",
       },

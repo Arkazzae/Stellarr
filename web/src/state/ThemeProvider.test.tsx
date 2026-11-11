@@ -85,7 +85,7 @@ describe("ThemeProvider", () => {
     expect(shownTheme()).toEqual(DEFAULT_THEME);
     expect(root.dataset.theme).toBe("midnight");
     expect(root.dataset.scheme).toBe("dark");
-    expect(root.dataset.font).toBe("outfit");
+    expect(root.dataset.font).toBeUndefined();
     expect(localStorage.getItem(THEME_STORAGE_KEY)).toBeNull();
   });
 
@@ -100,11 +100,11 @@ describe("ThemeProvider", () => {
     expect(shownTheme()).toMatchObject({
       palette: "ink",
       scheme: "light",
-      font: "jetbrains-mono",
     });
+    expect(shownTheme()).not.toHaveProperty("font");
     expect(root.dataset.theme).toBe("ink");
     expect(root.dataset.scheme).toBe("light");
-    expect(root.dataset.font).toBe("jetbrains-mono");
+    expect(root.dataset.font).toBeUndefined();
     expect(root.style.getPropertyValue("--palette-accent")).toBe("#58a6ff");
   });
 

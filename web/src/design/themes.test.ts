@@ -1,11 +1,10 @@
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 
 import { describe, expect, it } from "vitest";
 
 import {
   DEFAULT_THEME,
-  FONTS,
   PALETTES,
   normaliseTheme,
   paletteCssVariables,
@@ -18,14 +17,6 @@ const palettesCss = parseBlocks(
     join(process.cwd(), "src/styles/themes/palettes.css"),
     "utf8",
   ),
-);
-const typesetCss = readFileSync(
-  join(process.cwd(), "src/styles/themes/typeset.css"),
-  "utf8",
-);
-const fontFacesCss = readFileSync(
-  join(process.cwd(), "src/styles/themes/font-faces.css"),
-  "utf8",
 );
 const recipeCss = readFileSync(
   join(process.cwd(), "src/styles/themes/recipe.css"),
@@ -82,55 +73,6 @@ describe("theme registry", () => {
     for (const selector of palettesCss.keys()) {
       const id = /^\[data-theme="([a-z-]+)"\]$/.exec(selector)?.[1];
       if (id !== undefined) expect(registered.has(id)).toBe(true);
-    }
-  });
-
-  it("contains all 28 requested self-hosted faces", () => {
-    expect(FONTS).toHaveLength(28);
-    expect(FONTS.map(({ label }) => label)).toEqual([
-      "Outfit",
-      "Inter",
-      "Geist Sans",
-      "DM Sans",
-      "Plus Jakarta Sans",
-      "Manrope",
-      "Figtree",
-      "IBM Plex Sans",
-      "Source Sans 3",
-      "Noto Sans",
-      "Open Sans",
-      "Lato",
-      "Poppins",
-      "Montserrat",
-      "Raleway",
-      "Nunito",
-      "Rubik",
-      "Quicksand",
-      "Baloo 2",
-      "Varela Round",
-      "Comfortaa",
-      "Fira Code",
-      "JetBrains Mono",
-      "Source Code Pro",
-      "IBM Plex Mono",
-      "Space Grotesk",
-      "Sora",
-      "Lexend",
-    ]);
-  });
-
-  it("maps every font id and ships every referenced local asset", () => {
-    for (const { id } of FONTS) {
-      expect(typesetCss).toContain(`[data-font="${id}"]`);
-    }
-    const files = [...fontFacesCss.matchAll(/url\(\/(fonts\/[^)]+)\)/g)].map(
-      (match) => match[1],
-    ).filter(
-      (file): file is string => file !== undefined,
-    );
-    expect(files.length).toBeGreaterThanOrEqual(FONTS.length * 2);
-    for (const file of files) {
-      expect(existsSync(join(process.cwd(), "public", file))).toBe(true);
     }
   });
 
@@ -220,20 +162,20 @@ describe("Evergreen palette", () => {
 });
 
 describe("stored preference migration", () => {
-  it("migrates old palette and font ids without discarding other axes", () => {
-    expect(
-      normaliseTheme({
-        palette: "github",
-        font: "mono",
-        density: "compact",
-      }),
-    ).toEqual({
+  it("migrates old palette ids and drops the retired font axis", () => {
+    const migrated = normaliseTheme({
+      palette: "github",
+      font: "mono",
+      density: "compact",
+    });
+
+    expect(migrated).toEqual({
       ...DEFAULT_THEME,
       palette: "ink",
       accent: "#58a6ff",
-      font: "jetbrains-mono",
       density: "compact",
     });
+    expect(migrated).not.toHaveProperty("font");
   });
 
   it("rejects malformed custom accent values", () => {

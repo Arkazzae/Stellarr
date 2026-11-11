@@ -107,7 +107,7 @@ describe("ThemeScript", () => {
     runScript();
 
     expect(root.dataset.theme).toBe("ink");
-    expect(root.dataset.font).toBe("source-sans-3");
+    expect(root.dataset.font).toBeUndefined();
     expect(snapshot()).toEqual(expectedFor(stored));
   });
 
@@ -130,7 +130,6 @@ describe("ThemeScript", () => {
       palette: "nope",
       scheme: "sepia",
       contrast: 3,
-      font: "comic",
       size: "xl",
       density: "tight",
       hasOwnProperty: "constructor",
@@ -140,7 +139,7 @@ describe("ThemeScript", () => {
     runScript();
 
     expect(snapshot()).toEqual(expectedFor(stored));
-    expect(root.dataset.font).toBe(DEFAULT_THEME.font);
+    expect(root.dataset.size).toBe(DEFAULT_THEME.size);
   });
 
   it.each(["{not json", "null", "42", '"text"'])(

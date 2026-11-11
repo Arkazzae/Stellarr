@@ -55,7 +55,6 @@ describe("stored presets under their old ids", () => {
       accent: "#123abc",
       scheme: "light",
       contrast: "high",
-      font: "lato",
       size: "lg",
       density: "compact",
     };
@@ -105,13 +104,13 @@ describe("the first paint", () => {
   it("keeps the other stored axes when the id is an old one", () => {
     localStorage.setItem(
       THEME_STORAGE_KEY,
-      JSON.stringify({ palette: "twitch", accent: "#123abc", font: "lato" }),
+      JSON.stringify({ palette: "twitch", accent: "#123abc", size: "lg" }),
     );
 
     paintFirstFrame();
 
     expect(root.dataset.theme).toBe("amethyst");
-    expect(root.dataset.font).toBe("lato");
+    expect(root.dataset.size).toBe("lg");
     expect(root.style.getPropertyValue("--palette-accent")).toBe("#123abc");
     expect(root.dataset.density).toBe(DEFAULT_THEME.density);
   });

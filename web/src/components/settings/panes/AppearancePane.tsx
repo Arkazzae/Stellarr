@@ -8,85 +8,18 @@ import { Segmented, type SegmentedOption } from "@/components/primitives/Segment
 import {
   DEFAULT_THEME,
   DENSITIES,
-  FONTS,
   PALETTES,
   SIZES,
   getPalette,
   paletteCssVariables,
   type ContrastPreference,
   type DensityPreference,
-  type PaletteColors,
   type ResolvedScheme,
   type SchemePreference,
   type SizePreference,
   type ThemePreference,
 } from "@/design/themes";
-import type { MessageKey } from "@/i18n";
 import { useLanguage } from "@/state/hooks";
-
-interface TokenGroup {
-  title: MessageKey;
-  icon: IconName;
-  /** Message key of each role's name, and the colour it currently has. */
-  tokens: readonly (readonly [MessageKey, string])[];
-}
-
-/**
- * Colour roles in the order a theme is built up: the chosen hue, the surfaces
- * it sits on, the text on those, the lines between them, and the four colours
- * that carry meaning.
- */
-function tokenGroups(c: PaletteColors): readonly TokenGroup[] {
-  return [
-    {
-      title: "theme.paletteAccent",
-      icon: "sparkle",
-      tokens: [["theme.paletteAccent", c.accent]],
-    },
-    {
-      title: "theme.paletteBackgrounds",
-      icon: "board",
-      tokens: [
-        ["theme.color.darkest", c.backgrounds.darkest],
-        ["theme.color.dark", c.backgrounds.dark],
-        ["theme.color.primary", c.backgrounds.primary],
-        ["theme.color.secondary", c.backgrounds.secondary],
-        ["theme.color.tertiary", c.backgrounds.tertiary],
-        ["theme.color.hover", c.backgrounds.hover],
-        ["theme.color.active", c.backgrounds.active],
-        ["theme.color.floating", c.backgrounds.floating],
-      ],
-    },
-    {
-      title: "theme.paletteText",
-      icon: "language",
-      tokens: [
-        ["theme.color.normal", c.text.normal],
-        ["theme.color.muted", c.text.muted],
-        ["theme.color.faint", c.text.faint],
-      ],
-    },
-    {
-      title: "theme.paletteBorders",
-      icon: "sidebar",
-      tokens: [
-        ["theme.color.subtle", c.borders.subtle],
-        ["theme.color.default", c.borders.default],
-        ["theme.color.strong", c.borders.strong],
-      ],
-    },
-    {
-      title: "theme.paletteSemantic",
-      icon: "warning",
-      tokens: [
-        ["theme.color.success", c.semantic.success],
-        ["theme.color.warning", c.semantic.warning],
-        ["theme.color.danger", c.semantic.danger],
-        ["theme.color.info", c.semantic.info],
-      ],
-    },
-  ];
-}
 
 function Card({
   icon,
@@ -146,47 +79,6 @@ function Tick() {
   );
 }
 
-function PaletteInspector({
-  colors,
-  paletteLabel,
-}: {
-  colors: PaletteColors;
-  paletteLabel: string;
-}) {
-  const { t } = useLanguage();
-  return (
-    <details className="ap-palette">
-      <summary>
-        {t("theme.fullPalette")} <span>{paletteLabel}</span>
-      </summary>
-      <div className="ap-token-groups">
-        {tokenGroups(colors).map((group) => (
-          <section key={group.title} className="ap-token-group">
-            <h3>
-              <span className="ap-token-ico" aria-hidden="true">
-                <Icon name={group.icon} size={13} />
-              </span>
-              {t(group.title)}
-            </h3>
-            <ul>
-              {group.tokens.map(([key, value]) => (
-                // The full value stays on the tooltip so a long one never
-                // decides the width of the board.
-                <li key={key} title={`${t(key)}: ${value}`}>
-                  <i style={{ background: value }} aria-hidden="true" />
-                  <span>{t(key)}</span>
-                  <code>{value}</code>
-                </li>
-              ))}
-            </ul>
-          </section>
-        ))}
-      </div>
-      <p>{t("theme.paletteNote")}</p>
-    </details>
-  );
-}
-
 /** Two invented people; read aloud they would sound like unread messages. */
 function MessagePreview() {
   const { t } = useLanguage();
@@ -229,12 +121,11 @@ export interface AppearancePaneProps {
 }
 
 /**
- * Two questions, in the order someone asks them: what colour is it, and how is
- * the text set.
+ * What colour the app is, and how its conversation is set. The face itself is
+ * the brand's and is not a choice.
  *
- * Nothing here names a colour or a face. A preset tile carries its own CSS
- * variables and `data-scheme`, and a face row carries `data-font`, so an entry
- * added to either registry paints its own preview.
+ * Nothing here names a colour. A preset tile carries its own CSS variables and
+ * `data-scheme`, so an entry added to the registry paints its own preview.
  */
 export function AppearancePane({
   supported,
@@ -372,40 +263,11 @@ export function AppearancePane({
             disabled={!supported}
           />
         </ChoiceRow>
-
-        <PaletteInspector
-          colors={{ ...preset.colors, accent: theme.accent }}
-          paletteLabel={preset.label}
-        />
       </Card>
 
       <MessagePreview />
 
-      <Card icon="brush" title={t("theme.font")}>
-        {/* A specimen sheet rather than a grid of cards: one row per face, set
-            in that face. Its one-word character stays on the tooltip. */}
-        <div className="ap-faces" role="radiogroup" aria-label={t("theme.fontFamily")}>
-          {FONTS.map((font) => {
-            const selected = font.id === theme.font;
-            return (
-              <button
-                key={font.id}
-                type="button"
-                role="radio"
-                aria-checked={selected}
-                title={`${font.label}: ${t(`theme.font.${font.id}`)}`}
-                disabled={!supported}
-                className={selected ? "ap-face on" : "ap-face"}
-                data-font={font.id}
-                onClick={() => onChange({ font: font.id })}
-              >
-                <span className="ap-face-name">{font.label}</span>
-                {selected ? <Tick /> : null}
-              </button>
-            );
-          })}
-        </div>
-
+      <Card icon="brush" title={t("theme.typography")}>
         <ChoiceRow title={t("theme.textSize")} detail={t("theme.textSizeDetail")}>
           <Segmented
             options={sizeOptions}

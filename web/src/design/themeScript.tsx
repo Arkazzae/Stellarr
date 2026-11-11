@@ -2,8 +2,6 @@ import {
   CONTRASTS,
   DEFAULT_THEME,
   DENSITIES,
-  FONTS,
-  LEGACY_FONTS,
   LEGACY_PALETTES,
   PALETTES,
   PALETTE_CSS_VARIABLES,
@@ -16,8 +14,7 @@ const ids = (list: readonly { id: string }[]) => list.map(({ id }) => id);
 
 /**
  * Runs before paint, so the first frame is already in the user's theme. Without
- * it a light-scheme user sees one dark frame on every navigation, and anyone
- * with a stored font sees one frame in the wrong face.
+ * it a light-scheme user sees one dark frame on every navigation.
  *
  * It repeats the narrowing in `themes.ts` instead of importing it, because an
  * import would pull the whole module into a blocking inline script. Everything
@@ -27,8 +24,8 @@ const ids = (list: readonly { id: string }[]) => list.map(({ id }) => id);
  */
 const script = `(function(){
 var DEFAULT=${JSON.stringify(DEFAULT_THEME)},VARIABLES=${JSON.stringify(PALETTE_CSS_VARIABLES)};
-var LEGACY_PALETTES=${JSON.stringify(LEGACY_PALETTES)},LEGACY_FONTS=${JSON.stringify(LEGACY_FONTS)};
-var PALETTES=${JSON.stringify(ids(PALETTES))},FONTS=${JSON.stringify(ids(FONTS))},SIZES=${JSON.stringify(ids(SIZES))},DENSITIES=${JSON.stringify(ids(DENSITIES))};
+var LEGACY_PALETTES=${JSON.stringify(LEGACY_PALETTES)};
+var PALETTES=${JSON.stringify(ids(PALETTES))},SIZES=${JSON.stringify(ids(SIZES))},DENSITIES=${JSON.stringify(ids(DENSITIES))};
 var SCHEMES=${JSON.stringify(SCHEMES)},CONTRASTS=${JSON.stringify(CONTRASTS)};
 var saved=null;
 try{var raw=localStorage.getItem(${JSON.stringify(THEME_STORAGE_KEY)});if(raw)saved=JSON.parse(raw)}catch(e){}
@@ -51,7 +48,6 @@ if(scheme==="system")scheme=matchMedia("(prefers-color-scheme: dark)").matches?"
 root.dataset.theme=palette;
 root.dataset.scheme=scheme;
 root.dataset.contrast=pick("contrast",CONTRASTS);
-root.dataset.font=pick("font",FONTS,LEGACY_FONTS);
 root.dataset.size=pick("size",SIZES);
 root.dataset.density=pick("density",DENSITIES);
 })()`;
