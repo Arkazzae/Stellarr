@@ -61,7 +61,7 @@ remembered from before the deployment.
 
 Compose does not publish these ports. Nginx passes `/api/`, `/assets/`,
 `/health`, `/hubs/` and `/.well-known/stellarr/client` to ASP.NET, serves the
-operator panel from `/ops/`, proxies `/bergamot-models-gcs/` to the store of
+operator panel, Cockpit, from `/cockpit/`, proxies `/bergamot-models-gcs/` to the store of
 translation models, and sends every other path to Next.js. RustFS is reachable
 only through the backend.
 

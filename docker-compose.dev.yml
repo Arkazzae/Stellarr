@@ -4,7 +4,7 @@
 # baked in.
 #
 #   web     :3000  next dev, the chat client
-#   ops     :3001  vite, the operator panel
+#   cockpit :3001  vite, the operator panel
 #   api     :5000  dotnet watch, reached by the browser through the web proxy
 #   media   :49100/udp  cargo run under watchexec, Stellarr Media; its control
 #                       API is published on 127.0.0.1:5200
@@ -69,7 +69,7 @@ services:
     depends_on:
       - api
 
-  ops:
+  cockpit:
     image: node:24-bookworm-slim
     working_dir: /app
     command: >
@@ -77,10 +77,10 @@ services:
     environment:
       STELLARR_API_ORIGIN: http://api:5000
     ports:
-      - "${STELLARR_DEV_OPS_PORT:-3001}:3001"
+      - "${STELLARR_DEV_COCKPIT_PORT:-3001}:3001"
     volumes:
-      - ./ops:/app
-      - ops_node_modules:/app/node_modules
+      - ./cockpit:/app
+      - cockpit_node_modules:/app/node_modules
     depends_on:
       - api
 
@@ -210,7 +210,7 @@ services:
 
 volumes:
   web_node_modules:
-  ops_node_modules:
+  cockpit_node_modules:
   web_next:
   api_obj:
   api_bin:

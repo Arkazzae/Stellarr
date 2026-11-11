@@ -93,14 +93,14 @@ public sealed class DesktopReleaseFlowTests
         using var owner = Client(factory);
         await LoginAsync(owner, "maja", "Aurora!2026");
 
-        var invalid = await owner.PutAsJsonAsync("/api/ops/desktop-release", new
+        var invalid = await owner.PutAsJsonAsync("/api/cockpit/desktop-release", new
         {
             minimumVersion = "1.2",
             recommendedVersion = "1.1.0",
         });
         Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
 
-        var update = await owner.PutAsJsonAsync("/api/ops/desktop-release", new
+        var update = await owner.PutAsJsonAsync("/api/cockpit/desktop-release", new
         {
             minimumVersion = "0.1.0",
             recommendedVersion = "0.1.1",
@@ -119,7 +119,7 @@ public sealed class DesktopReleaseFlowTests
         await LoginAsync(member, "jo", "Corona!2026");
         Assert.Equal(
             HttpStatusCode.Forbidden,
-            (await member.GetAsync("/api/ops/desktop-release")).StatusCode);
+            (await member.GetAsync("/api/cockpit/desktop-release")).StatusCode);
     }
 
     private static void PublishDesktop(string dataRoot, string version, byte[] bytes)

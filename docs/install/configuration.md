@@ -6,7 +6,7 @@ from `.env.example`. After a change, run `docker compose up -d`: Compose
 recreates the container with the new values and keeps the data volume.
 
 Settings marked **seed** only give the first value of a setting that the owner
-can later change on the settings page of the operator panel, at `/ops/`. Once
+can later change on the settings page of Cockpit, the operator panel, at `/cockpit/`. Once
 the owner has saved that page, the saved value takes precedence over the
 variable.
 
@@ -147,7 +147,7 @@ settings.
 | Variable | Default | Effect |
 | --- | --- | --- |
 | `STELLARR_DEV_WEB_PORT` | `3000` | Host port of the web client. |
-| `STELLARR_DEV_OPS_PORT` | `3001` | Host port of the operator panel. |
+| `STELLARR_DEV_COCKPIT_PORT` | `3001` | Host port of Cockpit, the operator panel. |
 | `STELLARR_DEV_API_PORT` | `5000` | Host port of the API. |
 | `STELLARR_DEV_S3_PORT` | `9000` | Host port of the object store. |
 | `STELLARR_DEV_MEDIA_PORT` | `49100` | Host port of the media server's `49000/udp`, which it advertises on `127.0.0.1`. It differs from production's port so the two stacks can run on one host. |

@@ -48,8 +48,8 @@ builder.Services.AddOptions<LanguageOptions>()
 builder.Services.AddSingleton(services => new Messages(services.GetRequiredService<IOptions<LanguageOptions>>().Value));
 // The operator panel reads the host's recent log lines from this provider.
 builder.Services.AddHttpContextAccessor();
-builder.Services.AddSingleton<OpsLogBuffer>();
-builder.Services.AddSingleton<ILoggerProvider>(services => services.GetRequiredService<OpsLogBuffer>());
+builder.Services.AddSingleton<CockpitLogBuffer>();
+builder.Services.AddSingleton<ILoggerProvider>(services => services.GetRequiredService<CockpitLogBuffer>());
 // The keys that protect the session cookie live on the data volume, so a
 // restart or a new container does not sign everybody out.
 builder.Services.AddDataProtection()
@@ -218,7 +218,7 @@ app.MapSocialEndpoints();
 app.MapDirectMessageEndpoints();
 app.MapEmojiEndpoints();
 app.MapSoundboardEndpoints();
-app.MapOpsEndpoints();
+app.MapCockpitEndpoints();
 app.MapHub<AppHub>("/hubs/app");
 
 await InitializeApplicationAsync(app);

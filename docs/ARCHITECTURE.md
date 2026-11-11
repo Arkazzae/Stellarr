@@ -12,7 +12,7 @@ Browser
       Nginx :443
        |         \
        |          \__ Next.js :3000
-       |           \__ operator panel, static files under /ops/
+       |           \__ Cockpit, the operator panel, static files under /cockpit/
        |
        \__ ASP.NET Core :5000
               |       \
@@ -40,7 +40,7 @@ sfu              Browser <---- WebRTC, :49000/udp ----> Stellarr Media
 ## Responsibilities
 
 - Next.js owns the interface and the browser implementation of the versioned `VoiceClient`; the UI knows only its public contract.
-- The operator panel (`ops/`) is a separate single-page build that Nginx serves under `/ops/`. It talks to the `/api/ops/` endpoints of the same API and needs the owner role.
+- Cockpit, the operator panel (`cockpit/`), is a separate single-page build that Nginx serves under `/cockpit/`. It talks to the `/api/cockpit/` endpoints of the same API and needs the owner role. The old address `/ops/` redirects to it.
 - ASP.NET Core is the control plane: sessions, users, channels, public and direct messages, uploads, presence and signaling. In the `sfu` topology it is also the only authority over media sessions: it opens and closes them in the media server through its control API on every change of a seat, and relays the negotiation between the browser and the media server.
 - Direct messages are persisted in SQLite and pushed as targeted SignalR events;
   the identifier of a two-person conversation can also serve as a private RTC room.

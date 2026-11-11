@@ -21,7 +21,7 @@ public sealed class ClientGateOptions
     /// under <c>Clients:Allowed</c> are admitted next to these and never
     /// instead of them.
     /// </summary>
-    public string[] Allowed { get; set; } = ["web", "ops", "desktop-linux", "mobile-android"];
+    public string[] Allowed { get; set; } = ["web", "cockpit", "desktop-linux", "mobile-android"];
 
     /// <summary>Where the current clients can be got; the refusal names it.</summary>
     public string? DownloadPath { get; set; } = "/";

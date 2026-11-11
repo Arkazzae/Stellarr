@@ -149,7 +149,7 @@ docker compose down      # removes the container and the network, keeps the data
 - [Reverse proxy and TLS](reverse-proxy-and-tls.md): a certificate that browsers
   trust, and running behind a proxy.
 - [Configuration](configuration.md): every setting.
-- The operator panel is at `https://localhost:8443/ops/`. The owner opens it.
+- Cockpit, the operator panel, is at `https://localhost:8443/cockpit/`. The owner opens it.
 
 ## Build from source
 

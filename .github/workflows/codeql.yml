@@ -6,11 +6,11 @@ name: CodeQL
 on:
   push:
     branches: [main]
-    paths: ["server/**", "web/**", "ops/**", ".github/workflows/codeql.yml"]
+    paths: ["server/**", "web/**", "cockpit/**", ".github/workflows/codeql.yml"]
   pull_request:
     branches: [main]
     types: [opened, synchronize, reopened, ready_for_review]
-    paths: ["server/**", "web/**", "ops/**", ".github/workflows/codeql.yml"]
+    paths: ["server/**", "web/**", "cockpit/**", ".github/workflows/codeql.yml"]
   schedule:
     - cron: "23 4 * * 1"
   workflow_dispatch:

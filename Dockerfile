@@ -21,11 +21,11 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV NEXT_PUBLIC_GIPHY_API_KEY=${NEXT_PUBLIC_GIPHY_API_KEY}
 RUN npm run build
 
-FROM --platform=$BUILDPLATFORM node:26-bookworm-slim AS ops-build
-WORKDIR /src/ops
-COPY ops/package.json ops/package-lock.json ./
+FROM --platform=$BUILDPLATFORM node:26-bookworm-slim AS cockpit-build
+WORKDIR /src/cockpit
+COPY cockpit/package.json cockpit/package-lock.json ./
 RUN npm ci
-COPY ops/ ./
+COPY cockpit/ ./
 RUN npm run build
 
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0-noble AS api-build
@@ -131,7 +131,7 @@ COPY infra/supervisord.conf /etc/supervisor/supervisord.conf
 COPY --chmod=0755 infra/entrypoint.sh /usr/local/bin/stellarr-entrypoint
 COPY --chmod=0755 infra/tls-maintenance.sh /usr/local/bin/stellarr-tls-maintenance
 
-COPY --from=ops-build /src/ops/dist /srv/ops
+COPY --from=cockpit-build /src/cockpit/dist /srv/cockpit
 COPY --from=api-build /out/api /opt/stellarr/api
 COPY --from=web-build /src/web/.next/standalone /opt/stellarr/web
 COPY --from=web-build /src/web/.next/static /opt/stellarr/web/.next/static

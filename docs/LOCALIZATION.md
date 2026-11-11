@@ -13,7 +13,7 @@ operator can change the instance default to Polish with `STELLARR_LANGUAGE=pl`;
 the web server reads it on every request, so one image serves every instance.
 The language of a request is resolved in this order: the `stellarr_locale`
 cookie, `STELLARR_LANGUAGE`, English. The operator panel has its own catalogs
-in `ops/src/i18n/` and follows the same cookie (see [`ops/README.md`](../ops/README.md)).
+in `cockpit/src/i18n/` and follows the same cookie (see [`cockpit/README.md`](../cockpit/README.md)).
 
 ## The interface catalog
 
