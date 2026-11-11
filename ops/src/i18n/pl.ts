@@ -50,14 +50,11 @@ export const pl = {
   "nav.settings": "Ustawienia",
 
   "shell.navigationLabel": "Nawigacja OPs",
-  "shell.role": "Właściciel instancji",
-  "shell.localInstance": "Instancja lokalna",
   "shell.openApp": "Przejdź do aplikacji",
   "shell.logout": "Wyloguj się",
   "shell.openNavigation": "Otwórz nawigację",
   "shell.navigationTitle": "Nawigacja",
   "shell.navigationDescription": "Przejdź do wybranego obszaru panelu OPs.",
-  "shell.ownerBadge": "Właściciel",
 
   "notFound.title": "Nie ma takiego widoku",
   "notFound.description": "Adres nie prowadzi do żadnego obszaru panelu OPs.",

@@ -103,8 +103,8 @@ describe("the navigation shell", () => {
       "Releases",
       "Settings",
     ]);
-    expect(screen.getByText("Owner")).toBeTruthy();
-    expect(screen.getByText("Local instance")).toBeTruthy();
+    expect(within(screen.getByRole("banner")).getByText("Logs and audit")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Open navigation" })).toBeTruthy();
   });
 });
 

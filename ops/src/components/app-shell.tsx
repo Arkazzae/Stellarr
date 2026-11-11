@@ -1,22 +1,9 @@
-import {
-  ChevronDown,
-  Cpu,
-  DatabaseBackup,
-  LayoutDashboard,
-  LogOut,
-  Menu,
-  PackageOpen,
-  ScrollText,
-  Server,
-  Settings,
-  ShieldCheck,
-  UsersRound,
-  type LucideIcon,
-} from "lucide-react";
+import { ChevronDown, Menu } from "lucide-react";
 import { useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 
-import { Badge } from "@/components/ui/badge";
+import logoForDark from "@/assets/logo/small.svg";
+import logoForLight from "@/assets/logo/mono.svg";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -26,7 +13,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Separator } from "@/components/ui/separator";
 import {
   Sheet,
   SheetContent,
@@ -44,17 +30,16 @@ import { useOps } from "@/state/ops-context";
 interface NavigationItem {
   labelKey: MessageKey;
   href: string;
-  icon: LucideIcon;
 }
 
 const navigation: readonly NavigationItem[] = [
-  { labelKey: "nav.overview", href: "/", icon: LayoutDashboard },
-  { labelKey: "nav.users", href: "/users", icon: UsersRound },
-  { labelKey: "nav.runtime", href: "/runtime", icon: Cpu },
-  { labelKey: "nav.logs", href: "/logs", icon: ScrollText },
-  { labelKey: "nav.backups", href: "/backups", icon: DatabaseBackup },
-  { labelKey: "nav.releases", href: "/desktop-release", icon: PackageOpen },
-  { labelKey: "nav.settings", href: "/settings", icon: Settings },
+  { labelKey: "nav.overview", href: "/" },
+  { labelKey: "nav.users", href: "/users" },
+  { labelKey: "nav.runtime", href: "/runtime" },
+  { labelKey: "nav.logs", href: "/logs" },
+  { labelKey: "nav.backups", href: "/backups" },
+  { labelKey: "nav.releases", href: "/desktop-release" },
+  { labelKey: "nav.settings", href: "/settings" },
 ];
 
 /** The root only matches itself; every other item also owns the pages beneath it. */
@@ -64,22 +49,22 @@ function activeItem(pathname: string): NavigationItem | undefined {
   );
 }
 
+/** A list of text links, as in the documentation's sidebar: the current page takes the link colour. */
 function NavigationLinks({ onNavigate }: { onNavigate?: () => void }) {
   return (
-    <nav aria-label={t("shell.navigationLabel")} className="flex flex-1 flex-col gap-1 p-3">
-      {navigation.map(({ labelKey, href, icon: Icon }) => (
+    <nav aria-label={t("shell.navigationLabel")} className="flex flex-col px-6 py-4">
+      {navigation.map(({ labelKey, href }) => (
         <NavLink
           key={href}
           to={href}
           onClick={onNavigate}
           className={({ isActive }) =>
             cn(
-              "flex h-9 items-center gap-3 rounded-md px-3 text-sm font-medium text-muted-foreground outline-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring",
-              isActive && "bg-sidebar-accent text-sidebar-accent-foreground",
+              "flex h-9 items-center rounded-sm text-sm font-medium text-muted-foreground outline-none transition-colors hover:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring",
+              isActive && "text-sidebar-primary hover:text-sidebar-primary",
             )
           }
         >
-          <Icon className="size-4" aria-hidden="true" />
           {t(labelKey)}
         </NavLink>
       ))}
@@ -87,47 +72,27 @@ function NavigationLinks({ onNavigate }: { onNavigate?: () => void }) {
   );
 }
 
+/**
+ * The mark and the wordmark, as the documentation shows them: the one-colour
+ * mark on light, the small mark on dark. The gap is the height of the mark's
+ * shortest bar, as the brand guidelines ask.
+ */
 function Brand() {
   return (
-    <div className="flex h-16 items-center gap-3 px-5">
-      <div className="grid size-8 place-items-center rounded-md bg-primary text-primary-foreground">
-        <ShieldCheck className="size-4" aria-hidden="true" />
-      </div>
-      <div className="min-w-0">
-        <p className="truncate text-sm font-semibold">{t("app.name")}</p>
-        <p className="truncate text-xs text-muted-foreground">{t("shell.role")}</p>
-      </div>
+    <div className="flex h-16 items-center gap-1.5 px-6">
+      <img src={logoForLight} alt="" className="size-6 dark:hidden" />
+      <img src={logoForDark} alt="" className="hidden size-6 dark:block" />
+      <p className="truncate text-base font-semibold">{t("app.name")}</p>
     </div>
   );
 }
 
-function InstanceFooter({ instanceName }: { instanceName: string }) {
-  return (
-    <div className="p-3">
-      <Separator className="mb-3" />
-      <div className="flex items-center gap-3 rounded-md px-3 py-2">
-        <div className="grid size-8 shrink-0 place-items-center rounded-md border bg-background">
-          <Server className="size-4" aria-hidden="true" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-sm font-medium">{instanceName}</p>
-          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <span className="size-1.5 rounded-full bg-emerald-600" aria-hidden="true" />
-            {t("shell.localInstance")}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function Sidebar({ instanceName, onNavigate }: { instanceName: string; onNavigate?: () => void }) {
+function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
       <Brand />
-      <Separator />
+      <div className="mx-6 border-t border-sidebar-border" />
       <NavigationLinks onNavigate={onNavigate} />
-      <InstanceFooter instanceName={instanceName} />
     </div>
   );
 }
@@ -150,15 +115,9 @@ function OperatorMenu({ operator, onLogout }: { operator: OpsOperator; onLogout:
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
           {/* A plain anchor: the app lives at the site root, outside this panel's /ops/ router base. */}
-          <a href="/">
-            <Settings aria-hidden="true" />
-            {t("shell.openApp")}
-          </a>
+          <a href="/">{t("shell.openApp")}</a>
         </DropdownMenuItem>
-        <DropdownMenuItem variant="destructive" onSelect={onLogout}>
-          <LogOut aria-hidden="true" />
-          {t("shell.logout")}
-        </DropdownMenuItem>
+        <DropdownMenuItem onSelect={onLogout}>{t("shell.logout")}</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -174,44 +133,41 @@ export function AppShell() {
 
   return (
     <div className="min-h-svh bg-background">
-      <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 border-r lg:block">
-        <Sidebar instanceName={instance.name} />
+      <aside className="fixed inset-y-0 left-0 z-30 hidden w-68 lg:block">
+        <Sidebar />
       </aside>
 
-      <div className="lg:pl-64">
-        <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b bg-background/95 px-4 supports-[backdrop-filter]:bg-background/85 supports-[backdrop-filter]:backdrop-blur-sm sm:px-6">
+      <div className="lg:pl-68">
+        <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b bg-background px-4 sm:px-8">
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="icon"
-                className="lg:hidden"
+                className="-ml-2 lg:hidden"
                 aria-label={t("shell.openNavigation")}
               >
                 <Menu aria-hidden="true" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-72 gap-0 p-0">
+            <SheetContent side="left" className="w-68 gap-0 border-r-0 p-0">
               <SheetHeader className="sr-only">
                 <SheetTitle>{t("shell.navigationTitle")}</SheetTitle>
                 <SheetDescription>{t("shell.navigationDescription")}</SheetDescription>
               </SheetHeader>
-              <Sidebar instanceName={instance.name} onNavigate={() => setMobileOpen(false)} />
+              <Sidebar onNavigate={() => setMobileOpen(false)} />
             </SheetContent>
           </Sheet>
 
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium">{item ? t(item.labelKey) : t("app.name")}</p>
-            <p className="hidden text-xs text-muted-foreground sm:block">{instance.name}</p>
+            <p className="truncate text-sm font-semibold">{item ? t(item.labelKey) : t("app.name")}</p>
+            <p className="hidden truncate text-xs text-muted-foreground sm:block">{instance.name}</p>
           </div>
 
-          <Badge variant="outline" className="hidden sm:inline-flex">
-            {t("shell.ownerBadge")}
-          </Badge>
           <OperatorMenu operator={operator} onLogout={() => void logout()} />
         </header>
 
-        <main className="mx-auto w-full max-w-[1600px] p-4 sm:p-6 lg:p-8">
+        <main className="mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-8 sm:py-8 lg:px-12">
           <Outlet />
         </main>
       </div>

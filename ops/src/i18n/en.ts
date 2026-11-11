@@ -55,14 +55,11 @@ export const en = {
   "nav.settings": "Settings",
 
   "shell.navigationLabel": "OPs navigation",
-  "shell.role": "Instance owner",
-  "shell.localInstance": "Local instance",
   "shell.openApp": "Open the app",
   "shell.logout": "Log out",
   "shell.openNavigation": "Open navigation",
   "shell.navigationTitle": "Navigation",
   "shell.navigationDescription": "Go to a section of the OPs panel.",
-  "shell.ownerBadge": "Owner",
 
   "notFound.title": "Page not found",
   "notFound.description": "This address does not lead to any section of the OPs panel.",
