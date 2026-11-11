@@ -1,4 +1,4 @@
-import { Check, KeyRound, LoaderCircle, Mail, Save, Send, Server, ShieldCheck } from "lucide-react";
+import { LoaderCircle } from "lucide-react";
 import { useState, type ComponentProps, type FormEvent, type ReactNode } from "react";
 
 import { PageHeader } from "@/components/page-header";
@@ -18,23 +18,17 @@ type FieldErrors = Record<string, string[]>;
 type Update = <K extends keyof OpsSettings>(key: K, value: OpsSettings[K]) => void;
 
 interface SectionProps {
-  icon: typeof Server;
   title: string;
   description: string;
   children: ReactNode;
 }
 
-function Section({ icon: Icon, title, description, children }: SectionProps) {
+function Section({ title, description, children }: SectionProps) {
   return (
-    <Card className="shadow-none">
+    <Card>
       <CardHeader>
-        <div className="flex items-start gap-3">
-          <Icon className="mt-0.5 size-5 text-muted-foreground" aria-hidden="true" />
-          <div>
-            <CardTitle>{title}</CardTitle>
-            <CardDescription className="mt-1.5">{description}</CardDescription>
-          </div>
-        </div>
+        <CardTitle>{title}</CardTitle>
+        <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-5">{children}</CardContent>
     </Card>
@@ -99,7 +93,6 @@ interface CardProps {
 function InstanceCard({ settings, update, errors }: CardProps) {
   return (
     <Section
-      icon={Server}
       title={t("settings.instance.title")}
       description={t("settings.instance.description")}
     >
@@ -160,7 +153,6 @@ function RetentionCard(props: CardProps) {
   const { settings, update } = props;
   return (
     <Section
-      icon={ShieldCheck}
       title={t("settings.retention.title")}
       description={t("settings.retention.description")}
     >
@@ -174,7 +166,7 @@ function RetentionCard(props: CardProps) {
           field="orphanObjectRetentionDays"
         />
       </div>
-      <div className="rounded-lg border px-4">
+      <div className="border-t">
         <SettingToggle
           id="auto-cleanup"
           title={t("settings.cleanup.title")}
@@ -190,11 +182,10 @@ function RetentionCard(props: CardProps) {
 function MailCard({ settings, update, errors }: CardProps) {
   return (
     <Section
-      icon={Mail}
       title="Resend"
       description={t("settings.mail.description")}
     >
-      <div className="rounded-lg border px-4">
+      <div className="border-t">
         <SettingToggle
           id="mail-enabled"
           title={t("settings.mail.enable.title")}
@@ -203,7 +194,7 @@ function MailCard({ settings, update, errors }: CardProps) {
           onCheckedChange={(checked) => update("mailingEnabled", checked)}
         />
       </div>
-      <div className="flex items-center justify-between gap-4 rounded-lg border p-4">
+      <div className="flex items-center justify-between gap-4 border-t pt-5">
         <div>
           <p className="text-sm font-medium">{t("settings.mail.transport")}</p>
           <p className="mt-1 text-sm text-muted-foreground">
@@ -248,7 +239,7 @@ function TestMail({ settings }: { settings: OpsSettings }) {
   }
 
   return (
-    <div className="space-y-3 rounded-lg border p-4">
+    <div className="space-y-3 border-t pt-5">
       <div>
         <Label htmlFor="test-recipient">{t("settings.test.recipient")}</Label>
         <p className="mt-1 text-sm text-muted-foreground">
@@ -271,11 +262,7 @@ function TestMail({ settings }: { settings: OpsSettings }) {
             sending || !settings.mailingEnabled || !settings.resendApiKeyConfigured || !recipient.trim()
           }
         >
-          {sending ? (
-            <LoaderCircle className="animate-spin" aria-hidden="true" />
-          ) : (
-            <Send aria-hidden="true" />
-          )}
+          {sending ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : null}
           {sending ? t("settings.test.sending") : t("settings.test.send")}
         </Button>
       </div>
@@ -297,11 +284,10 @@ function DeliveryCard({ settings, update }: Omit<CardProps, "errors">) {
   const mailOff = !settings.mailingEnabled;
   return (
     <Section
-      icon={KeyRound}
       title={t("settings.delivery.title")}
       description={t("settings.delivery.description")}
     >
-      <div className="flex items-start justify-between gap-4 rounded-lg border p-4">
+      <div className="flex items-start justify-between gap-4 border-t pt-5">
         <div>
           <p className="text-sm font-medium">{t("settings.delivery.key")}</p>
           <p className="mt-1 text-sm leading-6 text-muted-foreground">
@@ -317,7 +303,7 @@ function DeliveryCard({ settings, update }: Omit<CardProps, "errors">) {
         </Badge>
       </div>
       <TestMail settings={settings} />
-      <div className="rounded-lg border px-4">
+      <div className="border-t">
         <SettingToggle
           id="invite-mail"
           title={t("settings.delivery.invite.title")}
@@ -395,11 +381,7 @@ export function SettingsPage() {
         description={t("settings.description")}
         actions={
           <Button type="submit" form="ops-settings-form" disabled={!settings || saving}>
-            {saving ? (
-              <LoaderCircle className="animate-spin" aria-hidden="true" />
-            ) : (
-              <Save aria-hidden="true" />
-            )}
+            {saving ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : null}
             {saving ? t("common.saving") : t("settings.save")}
           </Button>
         }
@@ -419,7 +401,6 @@ export function SettingsPage() {
       ) : null}
       {saved ? (
         <Alert>
-          <Check aria-hidden="true" />
           <AlertTitle>{t("settings.saved.title")}</AlertTitle>
           <AlertDescription>{t("settings.saved.description")}</AlertDescription>
         </Alert>

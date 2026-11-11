@@ -1,4 +1,4 @@
-import { Download, LoaderCircle, RefreshCw, Search } from "lucide-react";
+import { LoaderCircle, RefreshCw, Search } from "lucide-react";
 import { useState } from "react";
 
 import { PageHeader } from "@/components/page-header";
@@ -134,7 +134,6 @@ export function LogsPage() {
             </Button>
             <Button variant="outline" asChild>
               <a href={opsApi.logExportUrl} download>
-                <Download aria-hidden="true" />
                 {t("logs.export")}
               </a>
             </Button>
@@ -149,7 +148,7 @@ export function LogsPage() {
         </Alert>
       ) : null}
 
-      <Card className="shadow-none">
+      <Card>
         <CardHeader className="gap-4 sm:flex sm:flex-row sm:items-end sm:justify-between">
           <div>
             <CardTitle>{t("logs.events.title")}</CardTitle>

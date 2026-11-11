@@ -51,7 +51,7 @@ export function AccountsTab({ users, roles, filter, onFilterChange, perform }: A
   const visible = users.filter((user) => matchesFilter(user, filter));
 
   return (
-    <Card className="shadow-none">
+    <Card>
       <CardHeader className="gap-4 sm:flex sm:flex-row sm:items-center sm:justify-between">
         <div>
           <CardTitle>{t("accounts.title")}</CardTitle>

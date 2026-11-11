@@ -235,7 +235,7 @@ describe("the users page", () => {
 
     expect(await screen.findByText("Accounts in the instance: 1.")).toBeTruthy();
     expect(screen.getByRole("tab", { name: "Sessions (0)" })).toBeTruthy();
-    expect(screen.getByText("◐ Away")).toBeTruthy();
+    expect(screen.getByText("Away")).toBeTruthy();
     expect(screen.getByRole("button", { name: "Actions for Ben Kowalski" })).toBeTruthy();
   });
 });

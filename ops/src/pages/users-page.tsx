@@ -1,4 +1,4 @@
-import { LoaderCircle, Plus } from "lucide-react";
+import { LoaderCircle } from "lucide-react";
 import { useCallback, useState } from "react";
 
 import { PageHeader } from "@/components/page-header";
@@ -50,7 +50,6 @@ export function UsersPage() {
         description={t("users.description")}
         actions={
           <Button onClick={() => setUserSheetOpen(true)}>
-            <Plus aria-hidden="true" />
             {t("users.add")}
           </Button>
         }

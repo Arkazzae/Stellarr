@@ -1,6 +1,8 @@
-import { LoaderCircle, LockKeyhole, ServerCrash, ShieldX } from "lucide-react";
+import { LoaderCircle } from "lucide-react";
 import { useState, type FormEvent, type ReactNode } from "react";
 
+import logoForDark from "@/assets/logo/small.svg";
+import logoForLight from "@/assets/logo/mono.svg";
 import { AppShell } from "@/components/app-shell";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -44,11 +46,10 @@ function LoginScreen() {
 
   return (
     <CenteredState>
-      <Card className="w-full max-w-sm shadow-none">
+      <Card className="w-full max-w-sm">
         <CardHeader>
-          <div className="mb-2 grid size-9 place-items-center rounded-md bg-primary text-primary-foreground">
-            <LockKeyhole className="size-4" aria-hidden="true" />
-          </div>
+          <img src={logoForLight} alt="" className="mb-3 size-8 dark:hidden" />
+          <img src={logoForDark} alt="" className="mb-3 hidden size-8 dark:block" />
           <CardTitle>{t("gate.login.title")}</CardTitle>
           <CardDescription>{t("gate.login.description")}</CardDescription>
         </CardHeader>
@@ -112,9 +113,8 @@ export function AppGate() {
     case "forbidden":
       return (
         <CenteredState>
-          <Card className="w-full max-w-md shadow-none">
+          <Card className="w-full max-w-md">
             <CardHeader>
-              <ShieldX className="mb-2 size-7 text-destructive" aria-hidden="true" />
               <CardTitle>{t("gate.forbidden.title")}</CardTitle>
               <CardDescription>{t("gate.forbidden.description")}</CardDescription>
             </CardHeader>
@@ -129,9 +129,8 @@ export function AppGate() {
     case "error":
       return (
         <CenteredState>
-          <Card className="w-full max-w-md shadow-none">
+          <Card className="w-full max-w-md">
             <CardHeader>
-              <ServerCrash className="mb-2 size-7 text-destructive" aria-hidden="true" />
               <CardTitle>{t("gate.error.title")}</CardTitle>
               <CardDescription>{error ?? t("gate.error.fallback")}</CardDescription>
             </CardHeader>

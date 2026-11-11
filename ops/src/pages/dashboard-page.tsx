@@ -1,17 +1,8 @@
-import {
-  Activity,
-  Database,
-  HardDrive,
-  Info,
-  MessageSquareText,
-  RefreshCw,
-  Server,
-  UsersRound,
-  type LucideIcon,
-} from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
 import { PageHeader } from "@/components/page-header";
+import { Stat, StatGrid } from "@/components/stats";
 import { StatusBadge } from "@/components/status-badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -62,49 +53,19 @@ function HealthBadge({ state }: { state: HealthCheckState }) {
   );
 }
 
-interface CounterProps {
-  title: string;
-  value: string;
-  detail: string;
-  icon: LucideIcon;
-}
-
-function Counter({ title, value, detail, icon: Icon }: CounterProps) {
-  return (
-    <Card role="group" aria-label={title} className="gap-4 py-5 shadow-none">
-      <CardHeader className="flex flex-row items-center justify-between gap-4 px-5">
-        <CardDescription>{title}</CardDescription>
-        <Icon className="size-4 text-muted-foreground" aria-hidden="true" />
-      </CardHeader>
-      <CardContent className="px-5">
-        <p className="text-2xl font-semibold tracking-tight tabular-nums">{value}</p>
-        <p className="mt-1 text-xs text-muted-foreground">{detail}</p>
-      </CardContent>
-    </Card>
-  );
-}
-
 interface ServiceRowProps {
-  icon: LucideIcon;
   name: string;
   endpoint: string;
   status: ReactNode;
   origin: string;
 }
 
-function ServiceRow({ icon: Icon, name, endpoint, status, origin }: ServiceRowProps) {
+function ServiceRow({ name, endpoint, status, origin }: ServiceRowProps) {
   return (
     <TableRow>
       <TableCell>
-        <div className="flex items-center gap-3">
-          <div className="grid size-8 place-items-center rounded-md border bg-muted/40">
-            <Icon className="size-4" aria-hidden="true" />
-          </div>
-          <div>
-            <p className="font-medium">{name}</p>
-            <p className="text-xs text-muted-foreground">{endpoint}</p>
-          </div>
-        </div>
+        <p className="font-medium">{name}</p>
+        <p className="font-mono text-xs text-muted-foreground">{endpoint}</p>
       </TableCell>
       <TableCell>{status}</TableCell>
       <TableCell className="text-right text-xs text-muted-foreground">{origin}</TableCell>
@@ -153,35 +114,31 @@ export function DashboardPage() {
         }
       />
 
-      <section aria-label={t("dashboard.summary")} className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <Counter
-          title={t("common.users")}
+      <StatGrid label={t("dashboard.summary")} className="sm:grid-cols-2 xl:grid-cols-4">
+        <Stat
+          label={t("common.users")}
           value={formatNumber(overview.userCount)}
           detail={t("dashboard.users.detail", { count: overview.onlineUserCount })}
-          icon={UsersRound}
         />
-        <Counter
-          title={t("dashboard.realtime.title")}
+        <Stat
+          label={t("dashboard.realtime.title")}
           value={formatNumber(overview.realtimeConnectionCount)}
           detail={t("dashboard.realtime.detail")}
-          icon={Activity}
         />
-        <Counter
-          title={t("dashboard.objects.title")}
+        <Stat
+          label={t("dashboard.objects.title")}
           value={formatBytes(overview.storedObjectBytes)}
           detail={t("dashboard.objects.detail")}
-          icon={HardDrive}
         />
-        <Counter
-          title={t("dashboard.messages.title")}
+        <Stat
+          label={t("dashboard.messages.title")}
           value={formatNumber(overview.messageCount)}
           detail={t("dashboard.messages.detail")}
-          icon={MessageSquareText}
         />
-      </section>
+      </StatGrid>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.8fr)]">
-        <Card className="shadow-none">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.8fr)]">
+        <Card>
           <CardHeader>
             <CardTitle>{t("dashboard.services.title")}</CardTitle>
             <CardDescription>{t("dashboard.services.description")}</CardDescription>
@@ -197,21 +154,18 @@ export function DashboardPage() {
               </TableHeader>
               <TableBody>
                 <ServiceRow
-                  icon={Server}
                   name="API"
                   endpoint="/health/live"
                   status={<HealthBadge state={health.api} />}
                   origin={t("dashboard.services.originBackend")}
                 />
                 <ServiceRow
-                  icon={Database}
                   name="SQLite"
                   endpoint="/health/ready"
                   status={<HealthBadge state={health.database} />}
                   origin={t("dashboard.services.originBackend")}
                 />
                 <ServiceRow
-                  icon={Activity}
                   name={t("common.realtime")}
                   endpoint="PresenceTracker"
                   status={
@@ -226,7 +180,7 @@ export function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card className="shadow-none">
+        <Card>
           <CardHeader>
             <CardTitle>{t("dashboard.contract.title")}</CardTitle>
             <CardDescription>{t("dashboard.contract.description")}</CardDescription>
@@ -249,7 +203,6 @@ export function DashboardPage() {
       </div>
 
       <Alert>
-        <Info aria-hidden="true" />
         <AlertTitle>{t("dashboard.notice.title")}</AlertTitle>
         <AlertDescription>{t("dashboard.notice.description")}</AlertDescription>
       </Alert>

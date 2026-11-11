@@ -1,5 +1,3 @@
-import { KeyRound } from "lucide-react";
-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -41,7 +39,7 @@ interface SessionsTabProps {
 
 export function SessionsTab({ sessions, perform }: SessionsTabProps) {
   return (
-    <Card className="shadow-none">
+    <Card>
       <CardHeader>
         <CardTitle>{t("sessions.title")}</CardTitle>
         <CardDescription>{t("sessions.description")}</CardDescription>
@@ -96,7 +94,6 @@ export function SessionsTab({ sessions, perform }: SessionsTabProps) {
                       )
                     }
                   >
-                    <KeyRound aria-hidden="true" />
                     {t("sessions.revoke")}
                   </Button>
                 </TableCell>

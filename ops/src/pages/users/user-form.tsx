@@ -1,4 +1,4 @@
-import { LoaderCircle, Plus } from "lucide-react";
+import { LoaderCircle } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -109,11 +109,7 @@ export function UserForm({ open, roles, onOpenChange, perform }: UserFormProps) 
             </select>
           </div>
           <Button type="submit" className="w-full" disabled={pending}>
-            {pending ? (
-              <LoaderCircle className="animate-spin" aria-hidden="true" />
-            ) : (
-              <Plus aria-hidden="true" />
-            )}
+            {pending ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : null}
             {pending ? t("common.creating") : t("userForm.submit")}
           </Button>
         </form>

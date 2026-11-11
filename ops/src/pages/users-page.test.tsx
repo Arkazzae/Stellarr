@@ -229,14 +229,14 @@ describe("UsersPage accounts", () => {
     const row = rowOf("Ola Owner");
     expect(row.textContent).toContain("@ola · ola@example.net");
     expect(within(row).getByText("Właściciel")).toBeTruthy();
-    expect(within(row).getByText("● W sieci")).toBeTruthy();
+    expect(within(row).getByText("W sieci")).toBeTruthy();
     expect(within(row).getByText("2")).toBeTruthy();
     expect(within(row).getByText(formatDateTime(ola.joinedAt))).toBeTruthy();
     expect(rowOf("Ben Kowalski").textContent).toContain("@ben_k");
     expect(rowOf("Ben Kowalski").textContent).not.toContain("·");
-    expect(within(rowOf("Ben Kowalski")).getByText("◐ Zaraz wracam")).toBeTruthy();
-    expect(within(rowOf("Cleo Nowak")).getByText("■ Nie przeszkadzać")).toBeTruthy();
-    expect(within(rowOf("Dawid")).getByText("○ Poza siecią")).toBeTruthy();
+    expect(within(rowOf("Ben Kowalski")).getByText("Zaraz wracam")).toBeTruthy();
+    expect(within(rowOf("Cleo Nowak")).getByText("Nie przeszkadzać")).toBeTruthy();
+    expect(within(rowOf("Dawid")).getByText("Poza siecią")).toBeTruthy();
     expect(screen.getByText("5 kont w instancji.")).toBeTruthy();
   });
 
@@ -245,7 +245,7 @@ describe("UsersPage accounts", () => {
 
     const row = rowOf("Ola Owner");
     expect(within(row).getByText("Wyłączone")).toBeTruthy();
-    expect(within(row).queryByText("● W sieci")).toBeNull();
+    expect(within(row).queryByText("W sieci")).toBeNull();
   });
 
   it("filters by display name or username, ignoring case, also of Polish letters", async () => {

@@ -1,4 +1,4 @@
-import { Mail, MoreHorizontal, ShieldCheck, UserCheck, UserX } from "lucide-react";
+import { MoreHorizontal } from "lucide-react";
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -58,7 +58,6 @@ export function UserActions({ user, roles, perform }: UserActionsProps) {
             }
           }}
         >
-          <Mail aria-hidden="true" />
           {t("accountActions.resetPassword")}
         </DropdownMenuItem>
         {isOwner ? null : (
@@ -75,7 +74,6 @@ export function UserActions({ user, roles, perform }: UserActionsProps) {
                   )
                 }
               >
-                <ShieldCheck aria-hidden="true" />
                 {role.name}
               </DropdownMenuItem>
             ))}
@@ -94,7 +92,6 @@ export function UserActions({ user, roles, perform }: UserActionsProps) {
             )
           }
         >
-          {user.isDisabled ? <UserCheck aria-hidden="true" /> : <UserX aria-hidden="true" />}
           {user.isDisabled ? t("accountActions.enable") : t("accountActions.disable")}
         </DropdownMenuItem>
       </DropdownMenuContent>

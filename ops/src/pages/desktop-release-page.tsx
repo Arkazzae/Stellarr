@@ -1,12 +1,4 @@
-import {
-  Download,
-  LoaderCircle,
-  PackageOpen,
-  Save,
-  ShieldCheck,
-  Smartphone,
-  type LucideIcon,
-} from "lucide-react";
+import { LoaderCircle } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
 import { PageHeader } from "@/components/page-header";
@@ -36,17 +28,15 @@ const platforms = {
     title: "Android",
     architecture: "ARM64",
     downloadKey: "release.downloadApk",
-    icon: Smartphone,
   },
   arch: {
     title: "Arch Linux",
     architecture: "x86_64",
     downloadKey: "release.downloadPackage",
-    icon: PackageOpen,
   },
 } satisfies Record<
   string,
-  { title: string; architecture: string; downloadKey: MessageKey; icon: LucideIcon }
+  { title: string; architecture: string; downloadKey: MessageKey }
 >;
 
 interface PublishedReleaseProps {
@@ -55,33 +45,27 @@ interface PublishedReleaseProps {
 }
 
 function PublishedRelease({ platform, release }: PublishedReleaseProps) {
-  const { title, architecture, downloadKey, icon: Icon } = platforms[platform];
+  const { title, architecture, downloadKey } = platforms[platform];
 
   return (
     <div className="border-t py-5 first:border-t-0 first:pt-0 last:pb-0">
       {release ? (
         <div className="flex flex-col gap-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex min-w-0 items-center gap-3">
-              <span className="grid size-10 shrink-0 place-items-center rounded-md bg-muted text-muted-foreground">
-                <Icon className="size-5" aria-hidden="true" />
-              </span>
-              <div className="min-w-0">
-                <p className="text-sm font-medium">
-                  {title} <span className="text-muted-foreground">v{release.version}</span>
-                </p>
-                <p className="truncate text-xs text-muted-foreground" title={release.fileName}>
-                  {release.fileName}
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  {architecture} · {formatSize(release.sizeBytes)} ·{" "}
-                  {formatDate(release.publishedAt)}
-                </p>
-              </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium">
+                {title} <span className="text-muted-foreground">v{release.version}</span>
+              </p>
+              <p className="truncate font-mono text-xs text-muted-foreground" title={release.fileName}>
+                {release.fileName}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                {architecture} · {formatSize(release.sizeBytes)}
+              </p>
+              <p className="text-xs text-muted-foreground">{formatDate(release.publishedAt)}</p>
             </div>
             <Button asChild>
               <a href={release.downloadUrl} download={release.fileName}>
-                <Download aria-hidden="true" />
                 {t(downloadKey)}
               </a>
             </Button>
@@ -90,7 +74,7 @@ function PublishedRelease({ platform, release }: PublishedReleaseProps) {
           <div className="grid gap-1">
             <p className="text-sm leading-none font-medium">SHA-256</p>
             <code
-              className="overflow-hidden rounded-md bg-muted px-3 py-2 text-xs text-ellipsis text-muted-foreground"
+              className="overflow-hidden rounded-md bg-muted px-3 py-2 font-mono text-xs text-ellipsis text-muted-foreground"
               title={release.sha256}
             >
               {release.sha256}
@@ -98,8 +82,7 @@ function PublishedRelease({ platform, release }: PublishedReleaseProps) {
           </div>
         </div>
       ) : (
-        <div className="flex min-h-24 items-center gap-3 text-sm text-muted-foreground">
-          <Icon className="size-5" aria-hidden="true" />
+        <div className="text-sm text-muted-foreground">
           {t("release.missing", { platform: title })}
         </div>
       )}
@@ -176,7 +159,7 @@ function DesktopReleaseView({ initial }: { initial: OpsDesktopRelease }) {
         description={t("release.description")}
       />
 
-      <Card className="shadow-none">
+      <Card>
         <CardHeader>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
@@ -194,7 +177,7 @@ function DesktopReleaseView({ initial }: { initial: OpsDesktopRelease }) {
         </CardContent>
       </Card>
 
-      <Card className="shadow-none">
+      <Card>
         <CardHeader>
           <CardTitle>{t("release.compatibility.title")}</CardTitle>
           <CardDescription>{t("release.compatibility.description")}</CardDescription>
@@ -225,7 +208,6 @@ function DesktopReleaseView({ initial }: { initial: OpsDesktopRelease }) {
             ) : null}
             {saved ? (
               <Alert>
-                <ShieldCheck aria-hidden="true" />
                 <AlertTitle>{t("release.saved.title")}</AlertTitle>
                 <AlertDescription>{t("release.saved.description")}</AlertDescription>
               </Alert>
@@ -234,11 +216,7 @@ function DesktopReleaseView({ initial }: { initial: OpsDesktopRelease }) {
               type="submit"
               disabled={saving || !minimumVersion.trim() || !recommendedVersion.trim()}
             >
-              {saving ? (
-                <LoaderCircle className="animate-spin" aria-hidden="true" />
-              ) : (
-                <Save aria-hidden="true" />
-              )}
+              {saving ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : null}
               {saving ? t("release.saving") : t("release.save")}
             </Button>
           </form>

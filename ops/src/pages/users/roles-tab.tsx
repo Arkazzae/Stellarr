@@ -1,5 +1,3 @@
-import { Plus } from "lucide-react";
-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -22,14 +20,13 @@ interface RolesTabProps {
 
 export function RolesTab({ roles, onCreate, onEdit }: RolesTabProps) {
   return (
-    <Card className="shadow-none">
+    <Card>
       <CardHeader className="sm:flex sm:flex-row sm:items-center sm:justify-between">
         <div>
           <CardTitle>{t("roles.title")}</CardTitle>
           <CardDescription className="mt-1.5">{t("roles.description")}</CardDescription>
         </div>
         <Button variant="outline" size="sm" onClick={onCreate}>
-          <Plus aria-hidden="true" />
           {t("roles.add")}
         </Button>
       </CardHeader>

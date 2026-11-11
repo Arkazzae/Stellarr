@@ -135,7 +135,8 @@ describe("DesktopReleasePage packages", () => {
     const apk = packageOf(/^Android/);
     expect(apk.getByText("v0.4.2")).toBeTruthy();
     expect(apk.getByText("stellarr-0.4.2.apk")).toBeTruthy();
-    expect(apk.getByText(`ARM64 · 24.5 MB · ${formatDate(android.publishedAt)}`)).toBeTruthy();
+    expect(apk.getByText("ARM64 · 24.5 MB")).toBeTruthy();
+    expect(apk.getByText(formatDate(android.publishedAt))).toBeTruthy();
     expect(apk.getByText("Poprawki powiadomień.")).toBeTruthy();
     expect(apk.getByText("a".repeat(64))).toBeTruthy();
     const apkLink = apk.getByRole("link", { name: "Pobierz APK" });
@@ -144,7 +145,8 @@ describe("DesktopReleasePage packages", () => {
 
     const pkg = packageOf(/^Arch Linux/);
     expect(pkg.getByText("v0.4.1")).toBeTruthy();
-    expect(pkg.getByText(`x86_64 · 700 KB · ${formatDate(arch.publishedAt)}`)).toBeTruthy();
+    expect(pkg.getByText("x86_64 · 700 KB")).toBeTruthy();
+    expect(pkg.getByText(formatDate(arch.publishedAt))).toBeTruthy();
     expect(pkg.getByText("b".repeat(64))).toBeTruthy();
     const pkgLink = pkg.getByRole("link", { name: "Pobierz paczkę" });
     expect(pkgLink.getAttribute("href")).toBe("/api/desktop/release/arch");
@@ -179,7 +181,7 @@ describe("DesktopReleasePage packages", () => {
   ])("shows %d bytes as %s", async (sizeBytes, text) => {
     await renderLoaded(release({ published: { ...arch, sizeBytes } }));
 
-    expect(packageOf(/^Arch Linux/).getByText(new RegExp(`x86_64 · ${text} ·`))).toBeTruthy();
+    expect(packageOf(/^Arch Linux/).getByText(`x86_64 · ${text}`)).toBeTruthy();
   });
 });
 

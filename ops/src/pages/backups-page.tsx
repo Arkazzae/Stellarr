@@ -1,7 +1,8 @@
-import { DatabaseBackup, Download, LoaderCircle, Plus, ShieldCheck, type LucideIcon } from "lucide-react";
+import { Download, LoaderCircle } from "lucide-react";
 import { useState } from "react";
 
 import { PageHeader } from "@/components/page-header";
+import { Stat, StatGrid } from "@/components/stats";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,24 +21,6 @@ import { opsApi, type OpsBackup } from "@/lib/api";
 import { useOpsResource } from "@/lib/use-ops-resource";
 
 const formatSize = (bytes: number) => formatMegabytes(bytes, 2);
-
-interface SummaryProps {
-  value: string;
-  label: string;
-  icon?: LucideIcon;
-}
-
-function Summary({ value, label, icon: Icon }: SummaryProps) {
-  return (
-    <Card role="group" aria-label={label} className="py-5 shadow-none">
-      <CardContent>
-        {Icon ? <Icon className="mb-2 size-5 text-muted-foreground" aria-hidden="true" /> : null}
-        <p className={Icon ? "font-semibold" : "text-xl font-semibold"}>{value}</p>
-        <p className="text-sm text-muted-foreground">{label}</p>
-      </CardContent>
-    </Card>
-  );
-}
 
 interface BackupRowProps {
   backup: OpsBackup;
@@ -61,11 +44,7 @@ function BackupRow({ backup, verifying, onVerify }: BackupRowProps) {
       <TableCell className="text-right">
         <div className="inline-flex gap-1">
           <Button variant="ghost" size="sm" disabled={verifying} onClick={onVerify}>
-            {verifying ? (
-              <LoaderCircle className="animate-spin" aria-hidden="true" />
-            ) : (
-              <ShieldCheck aria-hidden="true" />
-            )}
+            {verifying ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : null}
             {t("backups.verify")}
           </Button>
           <Button variant="ghost" size="icon-sm" asChild>
@@ -130,11 +109,7 @@ export function BackupsPage() {
         description={t("backups.description")}
         actions={
           <Button onClick={() => void create()} disabled={creating}>
-            {creating ? (
-              <LoaderCircle className="animate-spin" aria-hidden="true" />
-            ) : (
-              <Plus aria-hidden="true" />
-            )}
+            {creating ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : null}
             {creating ? t("common.creating") : t("backups.create")}
           </Button>
         }
@@ -153,26 +128,24 @@ export function BackupsPage() {
         </Alert>
       ) : null}
 
-      <section className="grid gap-4 sm:grid-cols-3">
-        <Summary
-          icon={DatabaseBackup}
-          value={latest ? formatDateTime(latest.createdAt) : t("common.none")}
+      <StatGrid className="sm:grid-cols-3">
+        <Stat
           label={t("backups.summary.latest")}
+          value={latest ? formatDateTime(latest.createdAt) : t("common.none")}
         />
-        <Summary
-          icon={ShieldCheck}
+        <Stat
+          label={t("backups.summary.latestVerification")}
           value={
             latestVerified?.verifiedAt ? formatDateTime(latestVerified.verifiedAt) : t("common.none")
           }
-          label={t("backups.summary.latestVerification")}
         />
-        <Summary
-          value={String(backups.length)}
+        <Stat
           label={t("backups.summary.count", { days: data?.retentionDays ?? "—" })}
+          value={String(backups.length)}
         />
-      </section>
+      </StatGrid>
 
-      <Card className="shadow-none">
+      <Card>
         <CardHeader>
           <CardTitle>{t("backups.table.title")}</CardTitle>
           <CardDescription>{t("backups.table.description")}</CardDescription>
