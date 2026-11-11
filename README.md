@@ -1,6 +1,5 @@
 # Stellarr
 
-Stellarr to komunikator tekstowy i głosowy do samodzielnego hostowania dla
-małej grupy znajomych. Dane instancji zostają na Twoim serwerze.
+[Experimental] [DEVELOPMENT] The self-hosted Discord alternative for your friends. Fast, solid, and fully yours.
 
-Licencja: [MIT](LICENSE).
+[MIT](LICENSE).
