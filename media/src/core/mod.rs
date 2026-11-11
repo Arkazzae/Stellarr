@@ -1353,7 +1353,8 @@ impl Core {
                 s.published
                     .iter()
                     .filter_map(|t| {
-                        Some((t.mid, t.keyframe.pending?)).filter(|_| t.keyframe.can_send(now))
+                        let kind = t.keyframe.pending?;
+                        t.keyframe.can_send(now).then_some((t.mid, kind))
                     })
                     .collect()
             });

@@ -100,17 +100,20 @@ fn unavailable() -> Response {
     )
 }
 
+/// The task that owns the core is gone, so no request can be served.
+struct Unavailable;
+
 /// Runs `f` on the task that owns the core and returns what it returned.
 async fn call<T: Send + 'static>(
     state: &AppState,
     f: impl FnOnce(&mut Core, Instant) -> T + Send + 'static,
-) -> Result<T, Response> {
+) -> Result<T, Unavailable> {
     let (reply, rx) = oneshot::channel();
     let job: Job = Box::new(move |core, now| {
         let _ = reply.send(f(core, now));
     });
-    state.jobs.send(job).await.map_err(|_| unavailable())?;
-    rx.await.map_err(|_| unavailable())
+    state.jobs.send(job).await.map_err(|_| Unavailable)?;
+    rx.await.map_err(|_| Unavailable)
 }
 
 /// Compares the presented secret with the configured one in time that
@@ -203,14 +206,14 @@ async fn method_not_allowed() -> Response {
 async fn health(State(state): State<AppState>) -> Response {
     match call(&state, |core, _| core.health()).await {
         Ok(health) => ok(StatusCode::OK, health),
-        Err(r) => r,
+        Err(Unavailable) => unavailable(),
     }
 }
 
 async fn reset(State(state): State<AppState>) -> Response {
     match call(&state, |core, now| core.reset(now)).await {
         Ok(reply) => ok(StatusCode::OK, reply),
-        Err(r) => r,
+        Err(Unavailable) => unavailable(),
     }
 }
 
@@ -243,14 +246,14 @@ async fn create_session(
     {
         Ok(Ok(created)) => ok(StatusCode::CREATED, created),
         Ok(Err(e)) => api_error(e),
-        Err(r) => r,
+        Err(Unavailable) => unavailable(),
     }
 }
 
 async fn delete_session(State(state): State<AppState>, Path(id): Path<String>) -> Response {
     match call(&state, move |core, now| core.delete_session(now, &id)).await {
         Ok(()) => StatusCode::NO_CONTENT.into_response(),
-        Err(r) => r,
+        Err(Unavailable) => unavailable(),
     }
 }
 
@@ -273,7 +276,7 @@ async fn session_call(
     match result {
         Ok(Ok(())) => StatusCode::NO_CONTENT.into_response(),
         Ok(Err(e)) => api_error(e),
-        Err(r) => r,
+        Err(Unavailable) => unavailable(),
     }
 }
 
@@ -373,7 +376,7 @@ async fn events(
         let epoch = epoch.clone();
         let poll = match call(&state, move |core, _| core.events(epoch.as_deref(), after)).await {
             Ok(poll) => poll,
-            Err(r) => return r,
+            Err(Unavailable) => return unavailable(),
         };
         if poll.reset || !poll.events.is_empty() {
             return ok(StatusCode::OK, poll);
@@ -393,7 +396,7 @@ async fn events(
 async fn stats(State(state): State<AppState>) -> Response {
     match call(&state, |core, now| core.stats(now)).await {
         Ok(stats) => ok(StatusCode::OK, stats),
-        Err(r) => r,
+        Err(Unavailable) => unavailable(),
     }
 }
 
