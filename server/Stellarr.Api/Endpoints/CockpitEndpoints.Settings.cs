@@ -25,7 +25,7 @@ public static partial class CockpitEndpoints
     {
         var server = http.RequireInstanceServer();
         var settings = await LoadSettingsAsync(db, server, configuration, cancellationToken);
-        return Results.Ok(settings.ToCockpitDto(server.Name, PublicUrlOf(configuration), HasResendApiKey(mail.Value)));
+        return Results.Ok(settings.ToCockpitDto(server.Name, PublicUrlOf(configuration), mail.Value));
     }
 
     private static async Task<IResult> UpdateSettingsAsync(
@@ -56,6 +56,12 @@ public static partial class CockpitEndpoints
         settings.LogRetentionDays = request.LogRetentionDays;
         settings.OrphanObjectRetentionDays = request.OrphanObjectRetentionDays;
         settings.AutomaticCleanupEnabled = request.AutomaticCleanupEnabled;
+        // The mail transport fields are left as they are when a request leaves them out.
+        settings.MailSmtpHost = request.SmtpHost?.Trim() ?? settings.MailSmtpHost;
+        settings.MailSmtpPort = request.SmtpPort ?? settings.MailSmtpPort;
+        settings.MailSmtpSecurity = request.SmtpSecurity?.Trim().ToLowerInvariant() ?? settings.MailSmtpSecurity;
+        settings.MailSmtpUsername = request.SmtpUsername?.Trim() ?? settings.MailSmtpUsername;
+        settings.MailResendEnabled = request.ResendEnabled ?? settings.MailResendEnabled;
         settings.UpdatedAt = DateTime.UtcNow;
         await StageAuditAsync(
             db,
@@ -68,7 +74,7 @@ public static partial class CockpitEndpoints
             return Results.Conflict();
         }
 
-        return Results.Ok(settings.ToCockpitDto(server.Name, PublicUrlOf(configuration), HasResendApiKey(mail.Value)));
+        return Results.Ok(settings.ToCockpitDto(server.Name, PublicUrlOf(configuration), mail.Value));
     }
 
     private static async Task<IResult> GetDesktopReleaseAsync(
@@ -166,24 +172,38 @@ public static partial class CockpitEndpoints
 
         var settings = await LoadSettingsAsync(db, server, configuration, cancellationToken);
         var options = mail.Value;
+        var transport = MailTransports.Resolve(settings, options);
         var fromAddress = string.IsNullOrWhiteSpace(settings.MailFromAddress)
             ? options.FromAddress.Trim()
             : settings.MailFromAddress.Trim();
-        if (!settings.MailingEnabled || fromAddress.Length == 0 || !HasResendApiKey(options))
+        if (!settings.MailingEnabled || fromAddress.Length == 0 || !transport.Ready)
         {
             return Results.Problem(
                 statusCode: StatusCodes.Status409Conflict,
                 title: messages.Get(MessageKey.CockpitMailNotReadyTitle),
-                detail: messages.Get(MessageKey.CockpitMailNotReadyDetail));
+                detail: messages.Get(transport.Provider == MailProvider.Resend
+                    ? MessageKey.CockpitMailNotReadyDetail
+                    : MessageKey.CockpitMailNotReadySmtpDetail));
         }
 
         var from = string.IsNullOrWhiteSpace(options.FromName)
             ? fromAddress
             : $"{options.FromName.Trim()} <{fromAddress}>";
-        var messageId = await delivery.SendAsync(
-            AccountEmail.DeliveryTest(from, recipient, server.Name, messages),
-            cancellationToken);
-        return Results.Ok(new { id = messageId });
+        try
+        {
+            var messageId = await delivery.SendAsync(
+                AccountEmail.DeliveryTest(from, recipient, server.Name, messages),
+                transport,
+                cancellationToken);
+            return Results.Ok(new { id = messageId, provider = MailTransports.NameOf(transport.Provider) });
+        }
+        catch (Exception exception) when (exception is MailDeliveryException or HttpRequestException)
+        {
+            return Results.Problem(
+                statusCode: StatusCodes.Status502BadGateway,
+                title: messages.Get(MessageKey.CockpitTestMailFailed),
+                detail: exception.Message);
+        }
     }
 
     /// <summary>
@@ -259,9 +279,6 @@ public static partial class CockpitEndpoints
     internal static string PublicUrlOf(IConfiguration configuration) =>
         (configuration["Operations:PublicUrl"] ?? "").Trim().TrimEnd('/');
 
-    /// <summary>The key itself is never read back; whether one is set is all the panel learns.</summary>
-    private static bool HasResendApiKey(MailOptions options) => !string.IsNullOrWhiteSpace(options.ResendApiKey);
-
     private static Dictionary<string, string[]> ValidateSettings(UpdateCockpitSettingsRequest request, Messages messages)
     {
         var problems = new Dictionary<string, string[]>(StringComparer.Ordinal);
@@ -282,6 +299,27 @@ public static partial class CockpitEndpoints
         catch (InvalidTimeZoneException)
         {
             problems["timeZone"] = [messages.Get(MessageKey.CockpitTimeZoneBroken)];
+        }
+
+        if ((request.SmtpHost?.Trim().Length ?? 0) > 255)
+        {
+            problems["smtpHost"] = [messages.Get(MessageKey.CockpitSmtpHostLength)];
+        }
+
+        if (request.SmtpPort is < 1 or > 65535)
+        {
+            problems["smtpPort"] = [messages.Get(MessageKey.CockpitSmtpPortRange)];
+        }
+
+        if (request.SmtpSecurity is { } security &&
+            !MailTransports.SecurityNames.Contains(security.Trim().ToLowerInvariant()))
+        {
+            problems["smtpSecurity"] = [messages.Get(MessageKey.CockpitSmtpSecurityUnknown)];
+        }
+
+        if ((request.SmtpUsername?.Trim().Length ?? 0) > MaxMailAddressLength)
+        {
+            problems["smtpUsername"] = [messages.Get(MessageKey.CockpitSmtpUsernameLength)];
         }
 
         var fromAddress = request.MailFromAddress?.Trim() ?? "";

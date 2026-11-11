@@ -12,6 +12,17 @@ public sealed class OperationsSettings
     public string TimeZone { get; set; } = "UTC";
     public bool MailingEnabled { get; set; }
     public string MailFromAddress { get; set; } = "";
+
+    public const int DefaultSmtpPort = 587;
+    public string MailSmtpHost { get; set; } = "";
+    public int MailSmtpPort { get; set; } = DefaultSmtpPort;
+    public string MailSmtpUsername { get; set; } = "";
+
+    /// <summary>starttls, tls or none.</summary>
+    public string MailSmtpSecurity { get; set; } = "starttls";
+
+    /// <summary>Whether Resend replaces SMTP; null when the operator never chose.</summary>
+    public bool? MailResendEnabled { get; set; }
     public bool InviteMailEnabled { get; set; } = true;
     public bool RecoveryMailEnabled { get; set; } = true;
     public bool AlertMailEnabled { get; set; }

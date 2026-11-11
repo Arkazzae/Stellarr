@@ -102,7 +102,9 @@ builder.Services.AddScoped<InstanceMaintenance>();
 builder.Services.AddHostedService<MaintenanceWorker>();
 
 builder.Services.Configure<MailOptions>(builder.Configuration.GetSection(MailOptions.SectionName));
-builder.Services.AddHttpClient<IEmailDelivery, ResendEmailDelivery>(http =>
+builder.Services.AddSingleton<SmtpEmailDelivery>();
+builder.Services.AddScoped<IEmailDelivery, MailDelivery>();
+builder.Services.AddHttpClient<ResendEmailDelivery>(http =>
 {
     http.BaseAddress = new Uri("https://api.resend.com/");
     http.Timeout = TimeSpan.FromSeconds(15);

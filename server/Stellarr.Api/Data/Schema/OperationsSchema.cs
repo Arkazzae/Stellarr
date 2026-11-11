@@ -4,20 +4,31 @@ namespace Stellarr.Api.Data.Schema;
 
 /// <summary>
 /// Brings the owner-managed instance settings of an older installation up to
-/// date. The mail provider's API key is not part of them; it stays in the
-/// environment.
+/// date. The mail secrets, the Resend key and the SMTP password, are not part
+/// of them; they stay in the environment.
 /// </summary>
 internal static class OperationsSchema
 {
-    // SMTP was replaced by the Resend HTTPS API. These columns held no secret
-    // and nothing reads them. They are dropped so that EF can insert a settings
-    // row into an upgraded database without supplying obsolete NOT NULL values.
+    // The SMTP settings of an earlier product. They held no secret and nothing
+    // reads them. They are dropped so that EF can insert a settings row into an
+    // upgraded database without supplying obsolete NOT NULL values.
     private static readonly (string Column, string Statement)[] ObsoleteColumns =
     [
         ("SmtpHost", """ALTER TABLE "OperationsSettings" DROP COLUMN "SmtpHost";"""),
         ("SmtpPort", """ALTER TABLE "OperationsSettings" DROP COLUMN "SmtpPort";"""),
         ("SmtpUsername", """ALTER TABLE "OperationsSettings" DROP COLUMN "SmtpUsername";"""),
         ("SmtpSecurity", """ALTER TABLE "OperationsSettings" DROP COLUMN "SmtpSecurity";"""),
+    ];
+
+    // The SMTP columns are named apart from the obsolete ones above, which are
+    // dropped on every start; they have defaults, so older rows stay valid.
+    private static readonly (string Column, string Statement)[] MailColumns =
+    [
+        ("MailSmtpHost", """ALTER TABLE "OperationsSettings" ADD COLUMN "MailSmtpHost" TEXT NOT NULL DEFAULT '';"""),
+        ("MailSmtpPort", """ALTER TABLE "OperationsSettings" ADD COLUMN "MailSmtpPort" INTEGER NOT NULL DEFAULT 587;"""),
+        ("MailSmtpUsername", """ALTER TABLE "OperationsSettings" ADD COLUMN "MailSmtpUsername" TEXT NOT NULL DEFAULT '';"""),
+        ("MailSmtpSecurity", """ALTER TABLE "OperationsSettings" ADD COLUMN "MailSmtpSecurity" TEXT NOT NULL DEFAULT 'starttls';"""),
+        ("MailResendEnabled", """ALTER TABLE "OperationsSettings" ADD COLUMN "MailResendEnabled" INTEGER NULL;"""),
     ];
 
     private static readonly (string Column, string Statement)[] DesktopColumns =
@@ -36,6 +47,11 @@ internal static class OperationsSchema
                 "TimeZone" TEXT NOT NULL,
                 "MailingEnabled" INTEGER NOT NULL,
                 "MailFromAddress" TEXT NOT NULL,
+                "MailSmtpHost" TEXT NOT NULL DEFAULT '',
+                "MailSmtpPort" INTEGER NOT NULL DEFAULT 587,
+                "MailSmtpUsername" TEXT NOT NULL DEFAULT '',
+                "MailSmtpSecurity" TEXT NOT NULL DEFAULT 'starttls',
+                "MailResendEnabled" INTEGER NULL,
                 "InviteMailEnabled" INTEGER NOT NULL,
                 "RecoveryMailEnabled" INTEGER NOT NULL,
                 "AlertMailEnabled" INTEGER NOT NULL,
@@ -60,7 +76,7 @@ internal static class OperationsSchema
             }
         }
 
-        foreach (var (column, statement) in DesktopColumns)
+        foreach (var (column, statement) in MailColumns.Concat(DesktopColumns))
         {
             if (!await SqliteSchema.HasColumnAsync(db, "OperationsSettings", column, cancellationToken))
             {

@@ -21,7 +21,7 @@ public static partial class PasswordRecoveryEndpoints
     private static readonly TimeSpan LinkLifetime = TimeSpan.FromHours(1);
 
     /// <summary>Where the mail goes out from and what its link points at.</summary>
-    private sealed record Mailing(string Sender, string PublicUrl);
+    private sealed record Mailing(string Sender, string PublicUrl, MailTransport Transport);
 
     [LoggerMessage(
         Level = LogLevel.Error,
@@ -85,6 +85,7 @@ public static partial class PasswordRecoveryEndpoints
         {
             await delivery.SendAsync(
                 AccountEmail.PasswordReset(mailing.Sender, user.Email!, user.DisplayName, server.Name, link, token.Id, messages),
+                mailing.Transport,
                 cancellationToken);
         }
         catch (Exception exception) when (IsDeliveryFailure(exception, cancellationToken))
@@ -166,14 +167,15 @@ public static partial class PasswordRecoveryEndpoints
         var recoveryEnabled = settings?.RecoveryMailEnabled ?? true;
         var fromAddress = FirstNotBlank(settings?.MailFromAddress, options.FromAddress);
         var publicUrl = CockpitEndpoints.PublicUrlOf(configuration);
+        var transport = MailTransports.Resolve(settings, options);
         if (!mailingEnabled || !recoveryEnabled ||
-            fromAddress.Length == 0 || publicUrl.Length == 0 || string.IsNullOrWhiteSpace(options.ResendApiKey))
+            fromAddress.Length == 0 || publicUrl.Length == 0 || !transport.Ready)
         {
             return null;
         }
 
         var sender = string.IsNullOrWhiteSpace(options.FromName) ? fromAddress : $"{options.FromName.Trim()} <{fromAddress}>";
-        return new Mailing(sender, publicUrl);
+        return new Mailing(sender, publicUrl, transport);
     }
 
     /// <summary>
@@ -183,7 +185,7 @@ public static partial class PasswordRecoveryEndpoints
     /// an answer that differs from an unknown one.
     /// </summary>
     private static bool IsDeliveryFailure(Exception exception, CancellationToken requestAborted) =>
-        exception is HttpRequestException or InvalidOperationException ||
+        exception is MailDeliveryException or HttpRequestException or InvalidOperationException ||
         (exception is OperationCanceledException && !requestAborted.IsCancellationRequested);
 
     private static string FirstNotBlank(params string?[] values) =>

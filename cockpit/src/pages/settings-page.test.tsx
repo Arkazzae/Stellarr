@@ -37,9 +37,16 @@ const stored: CockpitSettings = {
   publicUrl: "https://domek.example.net",
   timeZone: "Europe/Warsaw",
   mailingEnabled: true,
-  mailProvider: "resend",
+  mailProvider: "smtp",
   mailFromAddress: "stellarr@example.net",
   resendApiKeyConfigured: true,
+  resendEnabled: false,
+  smtpHost: "smtp.example.net",
+  smtpPort: 587,
+  smtpSecurity: "starttls",
+  smtpUsername: "mailer",
+  smtpPasswordConfigured: true,
+  mailReady: true,
   inviteMailEnabled: true,
   recoveryMailEnabled: true,
   alertMailEnabled: false,
@@ -130,11 +137,21 @@ describe("SettingsPage loading", () => {
     expect(button("Zapisz ustawienia").disabled).toBe(false);
   });
 
-  it("tells whether the mail key is configured", async () => {
-    await renderLoaded({ ...stored, resendApiKeyConfigured: false });
+  it("tells whether the SMTP password is set and which transport is active", async () => {
+    await renderLoaded({ ...stored, smtpPasswordConfigured: false });
 
-    expect(screen.getByText("Brak sekretu")).toBeTruthy();
+    expect(screen.getByText("Brak hasła")).toBeTruthy();
     expect(screen.queryByText("Skonfigurowany")).toBeNull();
+    expect(screen.getByText("SMTP · gotowy")).toBeTruthy();
+    expect(input("Serwer SMTP").value).toBe("smtp.example.net");
+    expect(input("Login").value).toBe("mailer");
+  });
+
+  it("says when Resend replaces SMTP", async () => {
+    await renderLoaded({ ...stored, mailProvider: "resend", resendEnabled: true, mailReady: false });
+
+    expect(screen.getByText("Resend · niegotowy")).toBeTruthy();
+    expect(screen.getByText(/Resend, włączony w Integracjach/)).toBeTruthy();
   });
 });
 
@@ -291,42 +308,47 @@ describe("SettingsPage mail", () => {
     expect(button("Wyślij test").disabled).toBe(true);
   });
 
-  it("sends the test mail to the default recipient and reports the message id", async () => {
+  it("sends the test mail and reports the transport and the message id", async () => {
     await renderLoaded();
-    expect(input("Odbiorca testu").value).toBe("delivered+stellarr@resend.dev");
-    const reply = deferred<{ id: string }>();
+    expect(input("Odbiorca testu").value).toBe("");
+    await replaceText("Odbiorca testu", "ja@example.net");
+    const reply = deferred<{ id: string; provider: "smtp" | "resend" }>();
     testMailMock.mockReturnValue(reply.promise);
 
     await userEvent.click(button("Wyślij test"));
 
-    expect(testMailMock).toHaveBeenCalledExactlyOnceWith("delivered+stellarr@resend.dev");
+    expect(testMailMock).toHaveBeenCalledExactlyOnceWith("ja@example.net");
     expect(button("Wysyłanie").disabled).toBe(true);
     expect(input("Odbiorca testu").disabled).toBe(true);
 
-    reply.resolve({ id: "msg-42" });
+    reply.resolve({ id: "msg-42", provider: "smtp" });
 
-    expect((await screen.findByRole("status")).textContent).toBe("Resend przyjął wiadomość. ID: msg-42");
+    expect((await screen.findByRole("status")).textContent).toBe("SMTP przyjął wiadomość. ID: msg-42");
     expect(button("Wyślij test").disabled).toBe(false);
     expect(updateMock).not.toHaveBeenCalled();
   });
 
   it("trims the recipient and replaces an earlier result", async () => {
     await renderLoaded();
-    testMailMock.mockResolvedValueOnce({ id: "msg-1" }).mockResolvedValueOnce({ id: "msg-2" });
+    testMailMock
+      .mockResolvedValueOnce({ id: "msg-1", provider: "smtp" })
+      .mockResolvedValueOnce({ id: "msg-2", provider: "resend" });
+    await replaceText("Odbiorca testu", "ty@example.net");
     await userEvent.click(button("Wyślij test"));
-    await screen.findByText("Resend przyjął wiadomość. ID: msg-1");
+    await screen.findByText("SMTP przyjął wiadomość. ID: msg-1");
 
     await replaceText("Odbiorca testu", "  ja@example.net ");
     await userEvent.click(button("Wyślij test"));
 
     expect(await screen.findByText("Resend przyjął wiadomość. ID: msg-2")).toBeTruthy();
-    expect(screen.queryByText("Resend przyjął wiadomość. ID: msg-1")).toBeNull();
+    expect(screen.queryByText("SMTP przyjął wiadomość. ID: msg-1")).toBeNull();
     expect(testMailMock).toHaveBeenLastCalledWith("ja@example.net");
   });
 
   it("shows why the test mail was not sent", async () => {
     await renderLoaded();
     testMailMock.mockRejectedValue(new Error("Resend odrzucił klucz."));
+    await replaceText("Odbiorca testu", "ja@example.net");
 
     await userEvent.click(button("Wyślij test"));
 
@@ -337,15 +359,34 @@ describe("SettingsPage mail", () => {
   it("explains a test mail failure that carries no message", async () => {
     await renderLoaded();
     testMailMock.mockRejectedValue("boom");
+    await replaceText("Odbiorca testu", "ja@example.net");
 
     await userEvent.click(button("Wyślij test"));
 
     expect(await screen.findByText("Nie udało się wysłać wiadomości testowej.")).toBeTruthy();
   });
 
-  it("cannot send a test while the mail key is missing", async () => {
-    await renderLoaded({ ...stored, resendApiKeyConfigured: false });
+  it("cannot send a test while the transport is not ready", async () => {
+    await renderLoaded({ ...stored, mailReady: false });
+    await replaceText("Odbiorca testu", "ja@example.net");
     expect(button("Wyślij test").disabled).toBe(true);
+  });
+
+  it("sends the edited SMTP server with the rest of the settings", async () => {
+    await renderLoaded();
+    updateMock.mockResolvedValue(stored);
+
+    await replaceText("Serwer SMTP", "mail.example.org");
+    await replaceText("Port", "465");
+    await userEvent.selectOptions(screen.getByLabelText("Szyfrowanie"), "tls");
+    await userEvent.click(button("Zapisz ustawienia"));
+
+    expect(updateMock).toHaveBeenLastCalledWith({
+      ...stored,
+      smtpHost: "mail.example.org",
+      smtpPort: 465,
+      smtpSecurity: "tls",
+    });
   });
 
   it("cannot send a test to an empty recipient", async () => {

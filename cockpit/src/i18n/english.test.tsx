@@ -101,6 +101,7 @@ describe("the navigation shell", () => {
       "Runtime",
       "Logs",
       "Backups",
+      "Integrations",
       "Settings",
     ]);
     expect(within(screen.getByRole("banner")).getByText("Logs")).toBeTruthy();

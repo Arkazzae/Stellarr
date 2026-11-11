@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { detectLocale, setLocale } from "@/i18n";
 import { BackupsPage } from "@/pages/backups-page";
 import { DashboardPage } from "@/pages/dashboard-page";
+import { IntegrationsPage } from "@/pages/integrations-page";
 import { LogsPage } from "@/pages/logs-page";
 import { NotFoundPage } from "@/pages/not-found-page";
 import { RuntimePage } from "@/pages/runtime-page";
@@ -29,6 +30,7 @@ const router = createBrowserRouter(
         { path: "runtime", element: <RuntimePage /> },
         { path: "logs", element: <LogsPage /> },
         { path: "backups", element: <BackupsPage /> },
+        { path: "integrations", element: <IntegrationsPage /> },
         { path: "settings", element: <SettingsPage /> },
         { path: "*", element: <NotFoundPage /> },
       ],

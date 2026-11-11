@@ -199,14 +199,26 @@ export interface CockpitBackups {
   retentionDays: number;
 }
 
+export type CockpitSmtpSecurity = "starttls" | "tls" | "none";
+
 export interface CockpitSettings {
   instanceName: string;
   publicUrl: string;
   timeZone: string;
   mailingEnabled: boolean;
-  mailProvider: "resend";
+  /** The transport mail goes through: SMTP, or Resend when it is turned on under Integrations. */
+  mailProvider: "smtp" | "resend";
   mailFromAddress: string;
   resendApiKeyConfigured: boolean;
+  resendEnabled: boolean;
+  smtpHost: string;
+  smtpPort: number;
+  smtpSecurity: CockpitSmtpSecurity;
+  smtpUsername: string;
+  /** Whether Mail__SmtpPassword is set; the password itself never leaves the server. */
+  smtpPasswordConfigured: boolean;
+  /** Whether the chosen transport has what it needs to send. */
+  mailReady: boolean;
   inviteMailEnabled: boolean;
   recoveryMailEnabled: boolean;
   alertMailEnabled: boolean;
@@ -349,7 +361,8 @@ export const cockpitApi = {
 
   settings: (signal?: AbortSignal) => request<CockpitSettings>("/api/cockpit/settings", {}, signal),
   // The server owns publicUrl (it comes from the environment), mailProvider,
-  // resendApiKeyConfigured and updatedAt, so they are never sent back.
+  // resendApiKeyConfigured, smtpPasswordConfigured, mailReady and updatedAt,
+  // so they are never sent back.
   updateSettings: (settings: CockpitSettings, signal?: AbortSignal) =>
     request<CockpitSettings>(
       "/api/cockpit/settings",
@@ -367,12 +380,17 @@ export const cockpitApi = {
           logRetentionDays: settings.logRetentionDays,
           orphanObjectRetentionDays: settings.orphanObjectRetentionDays,
           automaticCleanupEnabled: settings.automaticCleanupEnabled,
+          smtpHost: settings.smtpHost,
+          smtpPort: settings.smtpPort,
+          smtpSecurity: settings.smtpSecurity,
+          smtpUsername: settings.smtpUsername,
+          resendEnabled: settings.resendEnabled,
         },
       },
       signal,
     ),
   sendTestMail: (to: string, signal?: AbortSignal) =>
-    request<{ id: string }>("/api/cockpit/mail/test", { method: "POST", body: { to } }, signal),
+    request<{ id: string; provider: CockpitSettings["mailProvider"] }>("/api/cockpit/mail/test", { method: "POST", body: { to } }, signal),
 
 
   requestPasswordReset: (email: string, signal?: AbortSignal) =>

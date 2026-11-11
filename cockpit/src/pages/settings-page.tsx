@@ -2,6 +2,7 @@ import { useState, type ComponentProps, type FormEvent, type ReactNode } from "r
 
 import { Spinner } from "@/components/spinner";
 import { PageHeader } from "@/components/page-header";
+import { SecretRow } from "@/components/secret-row";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,8 +10,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { t } from "@/i18n";
-import { CockpitApiError, cockpitApi, type CockpitSettings } from "@/lib/api";
+import { t, type MessageKey } from "@/i18n";
+import { CockpitApiError, cockpitApi, type CockpitSettings, type CockpitSmtpSecurity } from "@/lib/api";
 import { useCockpitResource } from "@/lib/use-cockpit-resource";
 import { useCockpit } from "@/state/cockpit-context";
 
@@ -177,12 +178,17 @@ function RetentionCard(props: CardProps) {
   );
 }
 
+const SMTP_SECURITY: readonly { value: CockpitSmtpSecurity; labelKey: MessageKey }[] = [
+  { value: "starttls", labelKey: "settings.smtp.security.starttls" },
+  { value: "tls", labelKey: "settings.smtp.security.tls" },
+  { value: "none", labelKey: "settings.smtp.security.none" },
+];
+
 function MailCard({ settings, update, errors }: CardProps) {
+  const throughResend = settings.mailProvider === "resend";
+  const securityError = errors.smtpSecurity?.[0];
   return (
-    <Section
-      title="Resend"
-      description={t("settings.mail.description")}
-    >
+    <Section title={t("settings.mail.title")} description={t("settings.mail.description")}>
       <div className="border-t">
         <SettingToggle
           id="mail-enabled"
@@ -192,14 +198,18 @@ function MailCard({ settings, update, errors }: CardProps) {
           onCheckedChange={(checked) => update("mailingEnabled", checked)}
         />
       </div>
-      <div className="flex items-center justify-between gap-4 border-t pt-5">
+      <div className="flex items-start justify-between gap-4 border-t pt-5">
         <div>
           <p className="text-sm font-medium">{t("settings.mail.transport")}</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            {t("settings.mail.transportDetail")}
+            {throughResend ? t("settings.mail.transportResend") : t("settings.mail.transportSmtp")}
           </p>
         </div>
-        <Badge variant="secondary">Resend API</Badge>
+        <Badge variant={settings.mailReady ? "success" : "warning"}>
+          {throughResend ? "Resend" : "SMTP"}
+          {" · "}
+          {settings.mailReady ? t("settings.mail.ready") : t("settings.mail.notReady")}
+        </Badge>
       </div>
       <Field
         id="mail-from"
@@ -209,15 +219,67 @@ function MailCard({ settings, update, errors }: CardProps) {
         onChange={(event) => update("mailFromAddress", event.target.value)}
         disabled={!settings.mailingEnabled}
         placeholder="stellarr@example.net"
-        hint={t("settings.mail.fromHint")}
         errors={errors.mailFromAddress}
+      />
+      <div className="grid gap-4 border-t pt-5 sm:grid-cols-[minmax(0,1fr)_7rem]">
+        <Field
+          id="smtp-host"
+          label={t("settings.smtp.host")}
+          value={settings.smtpHost}
+          onChange={(event) => update("smtpHost", event.target.value)}
+          placeholder="smtp.example.net"
+          autoComplete="off"
+          errors={errors.smtpHost}
+        />
+        <Field
+          id="smtp-port"
+          label={t("settings.smtp.port")}
+          type="number"
+          min={1}
+          max={65535}
+          value={String(settings.smtpPort)}
+          onChange={(event) => update("smtpPort", Number(event.target.value))}
+          errors={errors.smtpPort}
+        />
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="smtp-security">{t("settings.smtp.security")}</Label>
+        <select
+          id="smtp-security"
+          value={settings.smtpSecurity}
+          onChange={(event) => update("smtpSecurity", event.target.value as CockpitSmtpSecurity)}
+          aria-invalid={Boolean(securityError)}
+          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+        >
+          {SMTP_SECURITY.map((option) => (
+            <option key={option.value} value={option.value}>
+              {t(option.labelKey)}
+            </option>
+          ))}
+        </select>
+        {securityError ? <p className="text-xs text-danger">{securityError}</p> : null}
+      </div>
+      <Field
+        id="smtp-username"
+        label={t("settings.smtp.username")}
+        value={settings.smtpUsername}
+        onChange={(event) => update("smtpUsername", event.target.value)}
+        autoComplete="off"
+        hint={t("settings.smtp.usernameHint")}
+        errors={errors.smtpUsername}
+      />
+      <SecretRow
+        title={t("settings.smtp.password")}
+        variable="Mail__SmtpPassword"
+        configured={settings.smtpPasswordConfigured}
+        missingKey="settings.smtp.passwordMissing"
       />
     </Section>
   );
 }
 
 function TestMail({ settings }: { settings: CockpitSettings }) {
-  const [recipient, setRecipient] = useState("delivered+stellarr@resend.dev");
+  const [recipient, setRecipient] = useState("");
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
@@ -227,8 +289,8 @@ function TestMail({ settings }: { settings: CockpitSettings }) {
     setResult(null);
     setFailure(null);
     try {
-      const { id } = await cockpitApi.sendTestMail(recipient.trim());
-      setResult(t("settings.test.accepted", { id }));
+      const { id, provider } = await cockpitApi.sendTestMail(recipient.trim());
+      setResult(t("settings.test.accepted", { id, provider: provider === "resend" ? "Resend" : "SMTP" }));
     } catch (cause) {
       setFailure(cause instanceof Error ? cause.message : t("settings.test.failed"));
     } finally {
@@ -241,7 +303,7 @@ function TestMail({ settings }: { settings: CockpitSettings }) {
       <div>
         <Label htmlFor="test-recipient">{t("settings.test.recipient")}</Label>
         <p className="mt-1 text-sm text-muted-foreground">
-          {t("settings.test.hint")}
+          {t("settings.test.hint", { provider: settings.mailProvider === "resend" ? "Resend" : "SMTP" })}
         </p>
       </div>
       <div className="flex flex-col gap-2 sm:flex-row">
@@ -257,7 +319,7 @@ function TestMail({ settings }: { settings: CockpitSettings }) {
           variant="outline"
           onClick={() => void send()}
           disabled={
-            sending || !settings.mailingEnabled || !settings.resendApiKeyConfigured || !recipient.trim()
+            sending || !settings.mailingEnabled || !settings.mailReady || !recipient.trim()
           }
         >
           {sending ? <Spinner /> : null}
@@ -285,21 +347,6 @@ function DeliveryCard({ settings, update }: Omit<CardProps, "errors">) {
       title={t("settings.delivery.title")}
       description={t("settings.delivery.description")}
     >
-      <div className="flex items-start justify-between gap-4 border-t pt-5">
-        <div>
-          <p className="text-sm font-medium">{t("settings.delivery.key")}</p>
-          <p className="mt-1 text-sm leading-6 text-muted-foreground">
-            {t("settings.delivery.keyBefore")}{" "}
-            <code className="rounded bg-muted px-1 py-0.5 text-xs">Mail__ResendApiKey</code>{" "}
-            {t("settings.delivery.keyAfter")}
-          </p>
-        </div>
-        <Badge variant={settings.resendApiKeyConfigured ? "success" : "warning"}>
-          {settings.resendApiKeyConfigured
-            ? t("settings.delivery.keyConfigured")
-            : t("settings.delivery.keyMissing")}
-        </Badge>
-      </div>
       <TestMail settings={settings} />
       <div className="border-t">
         <SettingToggle

@@ -169,6 +169,13 @@ describe("routes", () => {
     mailProvider: "resend",
     mailFromAddress: "cockpit@example.com",
     resendApiKeyConfigured: true,
+    resendEnabled: true,
+    smtpHost: "smtp.example.com",
+    smtpPort: 465,
+    smtpSecurity: "tls",
+    smtpUsername: "cockpit",
+    smtpPasswordConfigured: false,
+    mailReady: true,
     inviteMailEnabled: true,
     recoveryMailEnabled: false,
     alertMailEnabled: true,
@@ -284,6 +291,11 @@ describe("routes", () => {
       logRetentionDays: 30,
       orphanObjectRetentionDays: 7,
       automaticCleanupEnabled: false,
+      smtpHost: "smtp.example.com",
+      smtpPort: 465,
+      smtpSecurity: "tls",
+      smtpUsername: "cockpit",
+      resendEnabled: true,
     });
   });
 

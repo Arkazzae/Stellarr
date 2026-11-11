@@ -59,7 +59,10 @@ const navigation: readonly NavigationGroup[] = [
   },
   {
     labelKey: "nav.group.configuration",
-    items: [{ labelKey: "nav.settings", href: "/settings", icon: "gear" }],
+    items: [
+      { labelKey: "nav.integrations", href: "/integrations", icon: "link" },
+      { labelKey: "nav.settings", href: "/settings", icon: "gear" },
+    ],
   },
 ];
 

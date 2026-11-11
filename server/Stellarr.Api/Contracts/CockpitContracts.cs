@@ -1,5 +1,6 @@
 using Stellarr.Api.Auth;
 using Stellarr.Api.Domain;
+using Stellarr.Api.Mail;
 
 namespace Stellarr.Api.Contracts;
 
@@ -173,7 +174,14 @@ public sealed record CockpitSettingsDto(
     int LogRetentionDays,
     int OrphanObjectRetentionDays,
     bool AutomaticCleanupEnabled,
-    DateTime UpdatedAt);
+    DateTime UpdatedAt,
+    bool ResendEnabled,
+    string SmtpHost,
+    int SmtpPort,
+    string SmtpSecurity,
+    string SmtpUsername,
+    bool SmtpPasswordConfigured,
+    bool MailReady);
 
 public sealed record CockpitDesktopReleaseDto(
     string MinimumVersion,
@@ -203,7 +211,12 @@ public sealed record UpdateCockpitSettingsRequest(
     int BackupRetentionDays,
     int LogRetentionDays,
     int OrphanObjectRetentionDays,
-    bool AutomaticCleanupEnabled);
+    bool AutomaticCleanupEnabled,
+    string? SmtpHost = null,
+    int? SmtpPort = null,
+    string? SmtpSecurity = null,
+    string? SmtpUsername = null,
+    bool? ResendEnabled = null);
 
 public sealed record UpdateCockpitDesktopReleaseRequest(string? MinimumVersion, string? RecommendedVersion);
 
@@ -215,14 +228,17 @@ public static class CockpitContractMappings
         this OperationsSettings settings,
         string instanceName,
         string publicUrl,
-        bool resendApiKeyConfigured) => new(
+        MailOptions mail)
+    {
+        var transport = MailTransports.Resolve(settings, mail);
+        return new(
         instanceName,
         publicUrl,
         settings.TimeZone,
         settings.MailingEnabled,
-        "resend",
+        MailTransports.NameOf(transport.Provider),
         settings.MailFromAddress,
-        resendApiKeyConfigured,
+        MailTransports.HasResendKey(mail),
         settings.InviteMailEnabled,
         settings.RecoveryMailEnabled,
         settings.AlertMailEnabled,
@@ -230,7 +246,20 @@ public static class CockpitContractMappings
         settings.LogRetentionDays,
         settings.OrphanObjectRetentionDays,
         settings.AutomaticCleanupEnabled,
-        settings.UpdatedAt);
+        settings.UpdatedAt,
+        transport.Provider == MailProvider.Resend,
+        settings.MailSmtpHost,
+        settings.MailSmtpPort,
+        MailTransports.ParseSecurity(settings.MailSmtpSecurity) switch
+        {
+            SmtpSecurity.Tls => MailTransports.TlsName,
+            SmtpSecurity.None => MailTransports.NoneName,
+            _ => MailTransports.StartTlsName,
+        },
+        settings.MailSmtpUsername,
+        MailTransports.HasSmtpPassword(mail),
+        transport.Ready);
+    }
 
     public static CockpitRoleDto ToCockpitDto(this ServerRole role, int memberCount) => new(
         role.Id.ToString(),
