@@ -1,5 +1,8 @@
 # Stellarr
 
+<p align="center">
+  <img src="branding/film/stellarr.webp" width="800" alt="A one-minute tour of Stellarr: the astronaut mascot turns into the logo, friends plan a game night in a text channel, a Polish message is translated in the browser, four people talk in a voice channel while one of them shares a screen, the interface switches through its six palettes, the owner checks the instance in Cockpit, and one docker compose command starts the single container.">
+
 [Experimental] [DEVELOPMENT] The self-hosted Discord alternative for your friends. Fast, solid, and fully yours.
 
 ## Documentation
@@ -27,7 +30,7 @@ Full documentation lives in [`docs/`](docs/README.md):
 | `media/` | [Stellarr Media](media/README.md), the Rust WebRTC SFU (`stellarr-media`) |
 | `infra/` | Container entrypoint, Nginx, coturn, supervisord, and TLS scripts |
 | `docs/` | VitePress documentation site |
-| `branding/` | [Logo, mascot, and brand guidelines](branding/README.md) |
+| `branding/` | [Logo, mascot, and brand guidelines](branding/README.md), and the [README film](branding/film/README.md) |
 
 ## License
 
