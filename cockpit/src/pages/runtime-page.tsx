@@ -1,30 +1,29 @@
 import { useEffect } from "react";
 
 import { CardTitleRow } from "@/components/card-title-row";
-import { Icon, type IconName } from "@/components/icons/icon";
-import { LineChart } from "@/components/line-chart";
 import { RequestChart } from "@/components/request-chart";
+import { ServiceUptime, UptimeAxis } from "@/components/service-uptime";
+import { Sparkbars } from "@/components/sparkbars";
 import { Spinner } from "@/components/spinner";
+import { StatTile } from "@/components/stat-tile";
 import { StatusBadge } from "@/components/status-badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { getLocale, t } from "@/i18n";
 import { formatDateTime, formatMegabytes, formatNumber } from "@/i18n/format";
-import { cockpitApi, type CockpitRuntime } from "@/lib/api";
-import { formatUptime } from "@/lib/uptime";
+import { cockpitApi, type CockpitRuntime, type CockpitRuntimeSample } from "@/lib/api";
+import { bucketize } from "@/lib/sparkline";
+import { formatUptime, minuteSlots, serviceSlotStates } from "@/lib/uptime";
 import { useCockpitResource } from "@/lib/use-cockpit-resource";
+import { useMeasuredHeight } from "@/lib/use-measured-height";
+import { cn } from "@/lib/utils";
 
-const MEGABYTE = 1024 * 1024;
 const HOUR_MS = 60 * 60 * 1000;
+
+/** Room the request chart takes outside its plot: the legend and the time axis. */
+const REQUEST_CHART_CHROME = 56;
+const MIN_PLOT = 64;
 
 const formatMemory = (bytes: number) => formatMegabytes(bytes, 1);
 
@@ -35,105 +34,108 @@ function formatClock(at: string): string {
   });
 }
 
-interface TileProps {
-  icon: IconName;
-  label: string;
-  value: string;
-  unit?: string;
-  caption: string;
+interface TrendProps {
+  history: readonly CockpitRuntimeSample[];
+  pick: (sample: CockpitRuntimeSample) => number;
+  combine: "sum" | "last";
+  format: (value: number) => string;
+  tone?: "accent" | "danger";
 }
 
-/** One figure: its name, the value with a small unit, and a line about it. */
-function Tile({ icon, label, value, unit, caption }: TileProps) {
-  return (
-    <Card role="group" aria-label={label} className="justify-center gap-0 px-5 py-3.5">
-      <p className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Icon name={icon} />
-        {label}
-      </p>
-      <p className="mt-2.5 text-3xl leading-none font-semibold tracking-[-0.01em] tabular-nums">
-        {value}
-        {unit ? <span className="ml-1 text-base font-medium text-muted-foreground">{unit}</span> : null}
-      </p>
-      <p className="mt-2 text-xs text-muted-foreground">{caption}</p>
-    </Card>
-  );
+/** A tile's last hour, in two-minute bars. */
+function Trend({ history, pick, combine, format, tone }: TrendProps) {
+  return <Sparkbars points={bucketize(history, pick, combine)} format={format} tone={tone} />;
 }
 
-function Tiles({ data }: { data: CockpitRuntime }) {
-  const requests = data.history.reduce((sum, sample) => sum + sample.requests, 0);
-  const serverErrors = data.history.reduce((sum, sample) => sum + sample.serverErrors, 0);
-  const clientErrors = data.history.reduce((sum, sample) => sum + sample.clientErrors, 0);
+/** The six figures, each with its last hour, as tiles of one size; their grid places them. */
+function MetricTiles({ data }: { data: CockpitRuntime }) {
+  const history = data.history;
+  const requests = history.reduce((sum, sample) => sum + sample.requests, 0);
+  const serverErrors = history.reduce((sum, sample) => sum + sample.serverErrors, 0);
+  const clientErrors = history.reduce((sum, sample) => sum + sample.clientErrors, 0);
   const [value, unit] = formatMemory(data.workingSetBytes).split(/\s(?=\S+$)/);
+  const count = (amount: number) => formatNumber(amount);
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-rows-3">
-      <Tile icon="signal" label={t("runtime.metric.requests")} value={formatNumber(requests)} caption={t("runtime.lastHour")} />
-      <Tile
+    <>
+      <StatTile
+        icon="signal"
+        title={t("runtime.metric.requests")}
+        value={formatNumber(requests)}
+        caption={t("runtime.lastHour")}
+        trend={<Trend history={history} pick={(sample) => sample.requests} combine="sum" format={count} />}
+      />
+      <StatTile
         icon="warning"
-        label={t("runtime.metric.serverErrors")}
+        title={t("runtime.metric.serverErrors")}
         value={formatNumber(serverErrors)}
         caption={t("runtime.metric.clientErrors", { count: formatNumber(clientErrors) })}
+        trend={
+          <Trend history={history} pick={(sample) => sample.serverErrors} combine="sum" format={count} tone="danger" />
+        }
       />
-      <Tile
+      <StatTile
         icon="cpu"
-        label={t("runtime.metric.cpu")}
+        title={t("runtime.metric.cpu")}
         value={formatNumber(data.cpuPercent, { maximumFractionDigits: 1 })}
         unit="%"
         caption={t("runtime.metric.cpuDetail", { seconds: data.sampleSeconds })}
+        trend={
+          <Trend
+            history={history}
+            pick={(sample) => sample.cpuPercent}
+            combine="last"
+            format={(percent) => `${formatNumber(percent, { maximumFractionDigits: 1 })}%`}
+          />
+        }
       />
-      <Tile
+      <StatTile
         icon="sliders"
-        label={t("runtime.metric.memory")}
+        title={t("runtime.metric.memory")}
         value={value ?? ""}
         unit={unit}
         caption={t("runtime.metric.memoryDetail", {
           heap: formatMemory(data.gcHeapBytes),
           threads: data.threadCount,
         })}
+        trend={<Trend history={history} pick={(sample) => sample.workingSetBytes} combine="last" format={formatMemory} />}
       />
-      <Tile
+      <StatTile
         icon="wifi"
-        label={t("runtime.metric.realtime")}
+        title={t("runtime.metric.realtime")}
         value={formatNumber(data.realtimeConnections)}
         caption={t("runtime.metric.voiceRooms", { count: data.voiceRooms })}
+        trend={<Trend history={history} pick={(sample) => sample.realtimeConnections} combine="last" format={count} />}
       />
-      <Tile
+      <StatTile
         icon="clipboard"
-        label={t("runtime.metric.latency")}
+        title={t("runtime.metric.latency")}
         value={formatNumber(data.databaseLatencyMs, { maximumFractionDigits: 2 })}
         unit="ms"
         caption={t("runtime.metric.latencyDetail")}
+        trend={
+          <Trend
+            history={history}
+            pick={(sample) => sample.databaseLatencyMs}
+            combine="last"
+            format={(ms) => `${formatNumber(ms, { maximumFractionDigits: 2 })} ms`}
+          />
+        }
       />
-    </div>
+    </>
   );
 }
 
-function Charts({ data }: { data: CockpitRuntime }) {
+/** Requests per sample over the hour, filling the height it is given. */
+function RequestsChart({ data, className }: { data: CockpitRuntime; className?: string }) {
+  const [plot, height] = useMeasuredHeight<HTMLDivElement>(64 + REQUEST_CHART_CHROME);
   return (
-    <div className="grid grid-cols-1 gap-3 xl:grid-rows-2">
-      <Card className="gap-0 py-0">
-        <CardTitleRow icon="sliders" title={t("runtime.chart.memory")}>
-          <span className="text-sm text-muted-foreground tabular-nums">{formatMemory(data.workingSetBytes)}</span>
-        </CardTitleRow>
-        <div className="flex flex-1 flex-col justify-end px-5 pt-8 pb-3">
-          <LineChart
-            points={data.history.map((sample) => ({ at: sample.at, value: sample.workingSetBytes / MEGABYTE }))}
-            label={t("runtime.chart.memory")}
-            formatValue={(megabytes) => `${formatNumber(Math.round(megabytes))} MB`}
-            formatTime={formatClock}
-            tableCaption={t("runtime.chart.memoryTable")}
-            timeHeading={t("runtime.chart.time")}
-            windowMs={HOUR_MS}
-            height={72}
-          />
-        </div>
-      </Card>
-      <Card className="gap-0 py-0">
-        <CardTitleRow icon="signal" title={t("runtime.chart.requests")}>
-          <span className="text-sm text-muted-foreground">{t("runtime.chart.perInterval", { seconds: data.sampleSeconds })}</span>
-        </CardTitleRow>
-        <div className="flex flex-1 flex-col justify-end px-5 pt-3 pb-3">
+    <Card className={cn("gap-0 py-0", className)}>
+      <CardTitleRow icon="signal" title={t("runtime.chart.requests")}>
+        <span className="text-sm text-muted-foreground">{t("runtime.chart.perInterval", { seconds: data.sampleSeconds })}</span>
+      </CardTitleRow>
+      <div className="flex min-h-0 flex-1 flex-col px-5 pt-3 pb-3">
+        <div ref={plot} className="min-h-0 flex-1">
           <RequestChart
             points={data.history.map((sample) => ({
               at: sample.at,
@@ -147,11 +149,34 @@ function Charts({ data }: { data: CockpitRuntime }) {
             formatTime={formatClock}
             tableCaption={t("runtime.chart.requestsTable")}
             timeHeading={t("runtime.chart.time")}
-            height={64}
+            height={Math.max(MIN_PLOT, height - REQUEST_CHART_CHROME)}
           />
         </div>
-      </Card>
-    </div>
+      </div>
+    </Card>
+  );
+}
+
+/** Every service the API reports on, with its last hour as a bar per minute and its state now. */
+function ServicesCard({ data, className }: { data: CockpitRuntime; className?: string }) {
+  const { end, slots } = minuteSlots(data.history);
+  return (
+    <Card className={cn("gap-0 py-0", className)}>
+      <CardTitleRow icon="server" title={t("runtime.services.title")} />
+      <div className="flex min-h-0 flex-1 flex-col gap-4 px-5 py-4">
+        {data.services.map((service) => (
+          <ServiceUptime
+            key={service.id}
+            name={service.name}
+            detail={service.detail}
+            states={serviceSlotStates(slots, service)}
+            end={end}
+            badge={<StatusBadge state={service.state} />}
+          />
+        ))}
+        <UptimeAxis />
+      </div>
+    </Card>
   );
 }
 
@@ -207,38 +232,15 @@ export function RuntimePage() {
       ) : null}
 
       {data ? (
-        <>
-          <div className="grid flex-1 grid-cols-1 gap-3 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
-            <Tiles data={data} />
-            <Charts data={data} />
+        // A bento: the six figures in two rows of three with the request chart
+        // under them, and beside them a column with every service's last hour.
+        <div className="grid flex-1 gap-3 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+          <div className="grid min-h-0 grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-3 xl:grid-rows-[auto_auto_minmax(0,1fr)]">
+            <MetricTiles data={data} />
+            <RequestsChart data={data} className="col-span-full" />
           </div>
-
-          <Card className="min-h-0 gap-0 py-0">
-            <CardTitleRow icon="server" title={t("runtime.services.title")} />
-            <div className="relative min-h-0 flex-1 overflow-auto px-3 pb-2 sm:px-5">
-              <Table containerClassName="overflow-visible">
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>{t("common.service")}</TableHead>
-                    <TableHead>{t("common.status")}</TableHead>
-                    <TableHead>{t("runtime.services.details")}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {data.services.map((service) => (
-                    <TableRow key={service.name}>
-                      <TableCell className="font-medium">{service.name}</TableCell>
-                      <TableCell>
-                        <StatusBadge state={service.state} />
-                      </TableCell>
-                      <TableCell className="text-muted-foreground">{service.detail}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          </Card>
-        </>
+          <ServicesCard data={data} />
+        </div>
       ) : null}
     </div>
   );

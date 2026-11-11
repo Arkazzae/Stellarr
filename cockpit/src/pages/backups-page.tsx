@@ -25,6 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { t, type MessageKey } from "@/i18n";
 import { formatDateTime, formatMegabytes, formatNumber } from "@/i18n/format";
 import {
@@ -285,9 +286,21 @@ export function BackupsPage() {
         title={t("backups.title")}
         description={t("backups.description")}
         actions={
-          <Button onClick={() => setDialogOpen(true)} disabled={job !== null}>
-            {t("backups.create")}
-          </Button>
+          <>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label={t("backups.scope.title")}>
+                  <Icon name="info" size={18} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" align="end" className="max-w-sm leading-5">
+                {t("backups.scope.description")}
+              </TooltipContent>
+            </Tooltip>
+            <Button onClick={() => setDialogOpen(true)} disabled={job !== null}>
+              {t("backups.create")}
+            </Button>
+          </>
         }
       />
 
@@ -373,10 +386,6 @@ export function BackupsPage() {
         </CardContent>
       </Card>
 
-      <Alert>
-        <AlertTitle>{t("backups.scope.title")}</AlertTitle>
-        <AlertDescription>{t("backups.scope.description")}</AlertDescription>
-      </Alert>
     </div>
   );
 }

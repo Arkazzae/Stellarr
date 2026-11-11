@@ -213,6 +213,12 @@ internal sealed class FakeObjectStorage : IObjectStorage
         }
     }
 
+    /// <summary>When set, the probe Cockpit's availability bars take fails, as an unreachable store would.</summary>
+    internal bool Unreachable { get; set; }
+
+    public Task ProbeAsync(CancellationToken cancellationToken) =>
+        Unreachable ? throw new IOException("The store does not answer.") : Task.CompletedTask;
+
     internal bool Contains(string key) => _objects.ContainsKey(key);
     internal int Count => _objects.Count;
 }

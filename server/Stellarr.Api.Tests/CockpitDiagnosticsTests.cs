@@ -64,10 +64,43 @@ public sealed partial class CockpitDiagnosticsTests : IClassFixture<StellarrWebA
         // The test host switches both off in its configuration.
         Assert.Equal("inactive", services["Maintenance worker"]);
         Assert.Equal("inactive", services["Object storage"]);
+        // The panel draws each service's availability by these ids.
+        Assert.Equal(
+            ["api", "database", "realtime", "maintenance", "storage"],
+            runtime.GetProperty("services").EnumerateArray().Select(service => service.GetProperty("id").GetString()));
         Assert.True(runtime.GetProperty("uptimeSeconds").GetInt64() >= 0);
         Assert.True(runtime.GetProperty("workingSetBytes").GetInt64() > 0);
         Assert.True(runtime.GetProperty("threadCount").GetInt32() > 0);
         Assert.True(runtime.GetProperty("databaseLatencyMs").GetDouble() >= 0);
+    }
+
+    [Fact]
+    public async Task TheObjectStoreIsReportedAsItsLastCheckFoundIt()
+    {
+        using var factory = new StellarrWebApplicationFactory(
+            loadTestData: true,
+            new Dictionary<string, string?> { ["Storage:SkipInitialization"] = "false" });
+        using var owner = Client(factory);
+        await LoginAsync(owner, "maja", "Aurora!2026");
+        var metrics = factory.Services.GetRequiredService<RuntimeMetrics>();
+
+        metrics.Sample(DateTime.UtcNow, realtimeConnections: 0, storageUp: true);
+        var answering = await StorageAsync(owner);
+        metrics.Sample(DateTime.UtcNow, realtimeConnections: 0, storageUp: false);
+        var down = await StorageAsync(owner);
+
+        Assert.Equal("healthy", answering.State);
+        Assert.Equal("error", down.State);
+        Assert.Equal("Bucket nie odpowiedział na ostatnie sprawdzenie.", down.Detail);
+        var history = (await JsonAsync(await owner.GetAsync("/api/cockpit/runtime"))).GetProperty("history").EnumerateArray().ToArray();
+        Assert.False(history[^1].GetProperty("storageUp").GetBoolean());
+    }
+
+    private static async Task<(string? State, string? Detail)> StorageAsync(HttpClient owner)
+    {
+        var runtime = await JsonAsync(await owner.GetAsync("/api/cockpit/runtime"));
+        var storage = runtime.GetProperty("services").EnumerateArray().Single(x => x.GetProperty("id").GetString() == "storage");
+        return (storage.GetProperty("state").GetString(), storage.GetProperty("detail").GetString());
     }
 
     [Fact]

@@ -90,6 +90,8 @@ public sealed partial class Messages
         MessageKey.CockpitBackupRunning => "Kopia już się tworzy. Poczekaj, aż się skończy.",
         MessageKey.CockpitBackupNoSpace => "Na dysku brakuje miejsca na kopię: potrzeba około {needed}, wolne jest {free}.",
         MessageKey.CockpitBackupStorageUnreadable => "Nie udało się odczytać magazynu obiektów: {reason}",
+        MessageKey.CockpitStorageAnswering => "Bucket odpowiada na sprawdzenie co 30 s.",
+        MessageKey.CockpitStorageDown => "Bucket nie odpowiedział na ostatnie sprawdzenie.",
         MessageKey.CockpitServerIsInstance => "Serwera instancji nie można usunąć ani przekazać z Cockpitu.",
         MessageKey.CockpitAuditServerDeleted => "usunął(a) serwer {name}",
         MessageKey.CockpitAuditServerTransferred => "przekazał(a) serwer {server} użytkownikowi {name}",

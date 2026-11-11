@@ -3,12 +3,23 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { cockpitApi, type CockpitBackup, type CockpitBackupJob, type CockpitBackups } from "@/lib/api";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { BackupsPage } from "@/pages/backups-page";
 import { CockpitContext } from "@/state/cockpit-context";
 import { cockpitValue } from "@/test/cockpit-fixtures";
 import { selectPolish } from "@/test/locale";
 
 selectPolish();
+
+// The tooltip positions itself with a ResizeObserver, which jsdom lacks.
+vi.stubGlobal(
+  "ResizeObserver",
+  class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  },
+);
 
 vi.mock("@/lib/api", async (importOriginal) => {
   const original = await importOriginal<typeof import("@/lib/api")>();
@@ -64,7 +75,9 @@ function list(backups: CockpitBackup[], retentionDays = 14, extra: Partial<Cockp
 function renderPage() {
   return render(
     <CockpitContext.Provider value={cockpitValue()}>
-      <BackupsPage />
+      <TooltipProvider>
+        <BackupsPage />
+      </TooltipProvider>
     </CockpitContext.Provider>,
   );
 }
@@ -366,5 +379,19 @@ describe("BackupsPage contents and archives", () => {
 
     expect(screen.getByText("Kopia backup-3.zip się nie udała")).toBeTruthy();
     expect(screen.getByText("Na dysku brakuje miejsca na kopię.")).toBeTruthy();
+  });
+});
+
+describe("BackupsPage scope note", () => {
+  it("keeps what a backup holds behind an info button instead of on the page", async () => {
+    const user = userEvent.setup();
+    await renderLoaded();
+
+    expect(screen.queryByText(/Pełna kopia zawiera/)).toBeNull();
+    // A tooltip opens on keyboard focus as well as on hover.
+    await user.tab();
+
+    expect(document.activeElement).toBe(screen.getByRole("button", { name: "Co zawiera kopia" }));
+    expect((await screen.findByRole("tooltip")).textContent).toMatch(/Pełna kopia zawiera bazę danych/);
   });
 });

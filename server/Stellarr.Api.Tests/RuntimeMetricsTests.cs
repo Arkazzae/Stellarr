@@ -48,6 +48,9 @@ public sealed class RuntimeMetricsTests
         var down = metrics.Sample(Start, realtimeConnections: 0, databaseUp: false, databaseLatencyMs: 5000.123);
 
         Assert.Equal((false, 5000.12), (down.DatabaseUp, down.DatabaseLatencyMs));
+        // A sample that did not check the object store says so rather than claiming it up.
+        Assert.Null(down.StorageUp);
+        Assert.False(metrics.Sample(Start.AddSeconds(30), realtimeConnections: 0, storageUp: false).StorageUp);
     }
 
     [Fact]

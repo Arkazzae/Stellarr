@@ -92,6 +92,8 @@ public sealed partial class Messages
         MessageKey.CockpitBackupRunning => "A backup is already being made. Wait for it to finish.",
         MessageKey.CockpitBackupNoSpace => "There is not enough free disk space for the backup: it needs about {needed}, and {free} is free.",
         MessageKey.CockpitBackupStorageUnreadable => "The object store could not be read: {reason}",
+        MessageKey.CockpitStorageAnswering => "The bucket answers the check every 30 s.",
+        MessageKey.CockpitStorageDown => "The bucket did not answer the last check.",
         MessageKey.CockpitServerIsInstance => "The instance server cannot be deleted or handed over from Cockpit.",
         MessageKey.CockpitAuditServerDeleted => "deleted the server {name}",
         MessageKey.CockpitAuditServerTransferred => "handed the server {server} over to {name}",

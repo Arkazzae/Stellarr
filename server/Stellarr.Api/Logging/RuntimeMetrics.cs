@@ -17,7 +17,8 @@ public sealed record RuntimeSample(
     int ClientErrors,
     int ServerErrors,
     bool DatabaseUp,
-    double DatabaseLatencyMs);
+    double DatabaseLatencyMs,
+    bool? StorageUp = null);
 
 /// <summary>
 /// Counts the responses the API sends and keeps one sample of the process per
@@ -60,7 +61,13 @@ public sealed class RuntimeMetrics
     /// Takes a sample of this process at <paramref name="now"/> and keeps it,
     /// dropping the oldest once an hour is kept.
     /// </summary>
-    public RuntimeSample Sample(DateTime now, int realtimeConnections, bool databaseUp = true, double databaseLatencyMs = 0)
+    /// <param name="storageUp">Whether the object store answered; null when it is not checked.</param>
+    public RuntimeSample Sample(
+        DateTime now,
+        int realtimeConnections,
+        bool databaseUp = true,
+        double databaseLatencyMs = 0,
+        bool? storageUp = null)
     {
         using var process = Process.GetCurrentProcess();
         var cpu = process.TotalProcessorTime;
@@ -87,7 +94,8 @@ public sealed class RuntimeMetrics
                 (int)(clientErrors - _sampledClientErrors),
                 (int)(serverErrors - _sampledServerErrors),
                 databaseUp,
-                Math.Round(databaseLatencyMs, 2));
+                Math.Round(databaseLatencyMs, 2),
+                storageUp);
 
             _sampledAt = now;
             _sampledCpu = cpu;

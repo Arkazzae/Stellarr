@@ -125,10 +125,14 @@ export interface CockpitServerMember extends CockpitServerPerson {
   isOwner: boolean;
 }
 
+export type CockpitServiceId = "api" | "database" | "realtime" | "maintenance" | "storage";
+
 export interface CockpitRuntimeService {
   name: string;
   state: "healthy" | "warning" | "error" | "inactive";
   detail: string;
+  /** Which service it is; its availability is drawn from the samples by this. */
+  id: CockpitServiceId;
 }
 
 /** One sampling interval of the API process; request counts are for that interval alone. */
@@ -145,6 +149,8 @@ export interface CockpitRuntimeSample {
   /** Whether the database answered the check taken with this sample, and how fast. */
   databaseUp: boolean;
   databaseLatencyMs: number;
+  /** Whether the object store answered its check; null when it is not checked. */
+  storageUp: boolean | null;
 }
 
 export interface CockpitRuntime {

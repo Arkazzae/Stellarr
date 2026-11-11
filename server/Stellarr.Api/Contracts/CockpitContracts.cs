@@ -114,7 +114,12 @@ public sealed record CockpitSessionDto(
     DateTime ExpiresAt,
     bool Current);
 
-public sealed record CockpitRuntimeServiceDto(string Name, string State, string Detail);
+/// <summary>
+/// A service the API reports on. <c>Id</c> names it for the panel (api,
+/// database, realtime, maintenance, storage), which draws its availability
+/// from the samples: realtime and maintenance run inside the API process.
+/// </summary>
+public sealed record CockpitRuntimeServiceDto(string Name, string State, string Detail, string Id);
 
 /// <summary>One sampling interval of the process; request counts are for that interval alone.</summary>
 public sealed record CockpitRuntimeSampleDto(
@@ -128,7 +133,8 @@ public sealed record CockpitRuntimeSampleDto(
     int ClientErrors,
     int ServerErrors,
     bool DatabaseUp,
-    double DatabaseLatencyMs);
+    double DatabaseLatencyMs,
+    bool? StorageUp);
 
 public sealed record CockpitRuntimeDto(
     DateTime StartedAt,

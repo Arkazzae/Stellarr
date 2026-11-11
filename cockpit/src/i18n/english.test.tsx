@@ -170,7 +170,7 @@ describe("the overview", () => {
     renderWithSession(<DashboardPage />, cockpitValue());
 
     expect(screen.getByText("Availability")).toBeTruthy();
-    expect(screen.getByRole("group", { name: "Database" }).textContent).toContain("SQLite, checked every 30 s");
+    expect(screen.getByRole("group", { name: "SQLite" }).textContent).toContain("the database, checked every 30 s");
     expect(await screen.findByText("All systems up")).toBeTruthy();
   });
 });
@@ -185,7 +185,7 @@ describe("the runtime page", () => {
     realtimeConnections: 4,
     voiceRooms: 2,
     databaseLatencyMs: 1234.5,
-    services: [{ name: "SQLite", state: "warning", detail: "Slow" }],
+    services: [{ name: "SQLite", state: "warning", detail: "Slow", id: "database" }],
     cpuPercent: 7.25,
     sampleSeconds: 30,
     history: [],
@@ -198,7 +198,7 @@ describe("the runtime page", () => {
     const metric = async (label: string) =>
       (await screen.findByRole("group", { name: label })).textContent ?? "";
     expect(await metric("Process memory")).toContain("512MB");
-    expect(await metric("Process memory")).toContain("GC heap 12.5 MB, threads: 31");
+    expect(await metric("Process memory")).toContain("heap 12.5 MB, threads: 31");
     expect(await metric("SQLite latency")).toContain("1,234.5ms");
     expect(await metric("CPU")).toContain("7.3%");
     expect(
@@ -219,7 +219,7 @@ describe("the backups page", () => {
     expect(await screen.findByRole("group", { name: "Backups · retention (days): 1" })).toBeTruthy();
     expect(screen.getByRole("group", { name: "Latest backup" }).textContent).toContain("None");
     expect(screen.getByText("No backups have been created yet.")).toBeTruthy();
-    expect(screen.getByText("What a backup holds")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "What a backup holds" })).toBeTruthy();
   });
 });
 

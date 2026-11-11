@@ -3,16 +3,18 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ActivityChart } from "@/components/activity-chart";
 import { CardTitleRow } from "@/components/card-title-row";
-import { Icon, type IconName } from "@/components/icons/icon";
+import { Icon } from "@/components/icons/icon";
 import { Spinner } from "@/components/spinner";
-import { UptimeCard } from "@/components/uptime-card";
+import { AvailabilityCard } from "@/components/availability-card";
+import { StatTile } from "@/components/stat-tile";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { t, type MessageKey } from "@/i18n";
-import { formatClock, formatNumber } from "@/i18n/format";
+import { formatClock, formatDateTime, formatNumber } from "@/i18n/format";
 import { cockpitApi, type CockpitActivity, type CockpitActivityDay } from "@/lib/api";
 import { readHealth, type HealthSnapshot } from "@/lib/health";
+import { formatUptime } from "@/lib/uptime";
 import { useCockpitResource } from "@/lib/use-cockpit-resource";
 import { cn } from "@/lib/utils";
 import { useCockpit } from "@/state/cockpit-context";
@@ -42,27 +44,6 @@ function formatBytes(value: number): string {
   return `${formatNumber(size, { maximumFractionDigits: 1 })} ${BYTE_UNITS[unit]}`;
 }
 
-interface StatTileProps {
-  icon: IconName;
-  title: string;
-  value: string;
-  caption: string;
-}
-
-/** One headline number. The four tiles share a row, so they share a width and a height. */
-function StatTile({ icon, title, value, caption }: StatTileProps) {
-  return (
-    <Card role="group" aria-label={title} className="gap-0 px-5 py-4">
-      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-        <Icon name={icon} size={16} />
-        <h2 className="font-medium">{title}</h2>
-      </div>
-      <p className="mt-3 text-3xl leading-none font-semibold tracking-[-0.01em] tabular-nums">{value}</p>
-      <p className="mt-2 truncate text-xs text-muted-foreground">{caption}</p>
-    </Card>
-  );
-}
-
 type Series = Exclude<keyof CockpitActivityDay, "date">;
 
 interface SeriesInfo {
@@ -87,11 +68,17 @@ function windowTotal(activity: CockpitActivity, series: Series): number {
   return activity.days.reduce((sum, day) => sum + day[series], 0);
 }
 
-function ActivityCard({ activity, error }: { activity: CockpitActivity | null; error: string | null }) {
+interface ActivityCardProps {
+  activity: CockpitActivity | null;
+  error: string | null;
+  className?: string;
+}
+
+function ActivityCard({ activity, error, className }: ActivityCardProps) {
   const [series, setSeries] = useState<Series>("messages");
 
   return (
-    <Card className="flex-1 gap-0 py-0">
+    <Card className={cn("gap-0 py-0", className)}>
       <CardTitleRow icon="signal" title={t("dashboard.activity.title")}>
         {activity ? (
           <span className="text-xs text-muted-foreground">
@@ -114,7 +101,7 @@ function ActivityCard({ activity, error }: { activity: CockpitActivity | null; e
                 key={key}
                 value={key}
                 className={cn(
-                  "flex min-w-36 flex-1 flex-col items-start gap-1.5 border-b-2 border-transparent px-5 py-2.5 text-left transition-colors outline-none",
+                  "flex min-w-28 flex-1 flex-col items-start gap-1.5 border-b-2 border-transparent px-5 py-2.5 text-left transition-colors outline-none",
                   "text-muted-foreground hover:bg-accent/50 hover:text-foreground focus-visible:bg-accent/50",
                   "data-[state=active]:border-chart-1 data-[state=active]:text-foreground",
                 )}
@@ -212,8 +199,6 @@ export function DashboardPage() {
   if (!bootstrap) return null;
   const { overview } = bootstrap;
 
-  // The overview fills the area under the bar: tiles, then activity taking
-  // what is left, then availability.
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
       <div className="flex items-center justify-between gap-4">
@@ -241,7 +226,12 @@ export function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid shrink-0 grid-cols-2 gap-4 xl:grid-cols-4">
+      {/*
+        A bento of tiles. On a wide screen: the four figures across the top, then
+        activity over three columns with, beside it, how long the API has run
+        above how available it has been.
+      */}
+      <div className="grid flex-1 grid-cols-2 gap-4 xl:grid-cols-4 xl:grid-rows-[auto_auto_minmax(0,1fr)]">
         <StatTile
           icon="users"
           title={t("common.users")}
@@ -266,16 +256,27 @@ export function DashboardPage() {
           value={formatBytes(overview.storedObjectBytes)}
           caption={t("dashboard.storage.detail")}
         />
+
+        <ActivityCard
+          activity={activity.data}
+          error={activity.error}
+          className="col-span-2 xl:col-span-3 xl:row-span-2"
+        />
+
+        <StatTile
+          icon="cpu"
+          title={t("dashboard.uptime.since")}
+          value={runtime.data ? formatUptime(runtime.data.uptimeSeconds) : "…"}
+          caption={runtime.data ? t("dashboard.uptime.started", { date: formatDateTime(runtime.data.startedAt) }) : ""}
+          className="col-span-2 md:col-span-1"
+        />
+        <AvailabilityCard
+          runtime={runtime.data}
+          error={runtime.error}
+          health={health}
+          className="col-span-2 md:col-span-1"
+        />
       </div>
-
-      <ActivityCard activity={activity.data} error={activity.error} />
-
-      <UptimeCard
-        runtime={runtime.data}
-        error={runtime.error}
-        health={health}
-        realtimeConnections={overview.realtimeConnectionCount}
-      />
     </div>
   );
 }

@@ -283,6 +283,8 @@ public sealed class CockpitBackupArchiveTests
         public Task DeleteAsync(string key, CancellationToken cancellationToken) => inner.DeleteAsync(key, cancellationToken);
 
         public IAsyncEnumerable<StoredObjectInfo> ListAsync(CancellationToken cancellationToken) => inner.ListAsync(cancellationToken);
+
+        public Task ProbeAsync(CancellationToken cancellationToken) => inner.ProbeAsync(cancellationToken);
     }
 
     /// <summary>A store whose reads wait until the test lets them through.</summary>
@@ -307,6 +309,8 @@ public sealed class CockpitBackupArchiveTests
         public Task DeleteAsync(string key, CancellationToken cancellationToken) => inner.DeleteAsync(key, cancellationToken);
 
         public IAsyncEnumerable<StoredObjectInfo> ListAsync(CancellationToken cancellationToken) => inner.ListAsync(cancellationToken);
+
+        public Task ProbeAsync(CancellationToken cancellationToken) => inner.ProbeAsync(cancellationToken);
     }
 
     /// <summary>A store that is down when the backup lists it.</summary>
@@ -320,6 +324,8 @@ public sealed class CockpitBackupArchiveTests
             throw new IOException("The store is down.");
 
         public Task DeleteAsync(string key, CancellationToken cancellationToken) => Task.CompletedTask;
+
+        public Task ProbeAsync(CancellationToken cancellationToken) => throw new IOException("The store is down.");
 
         public async IAsyncEnumerable<StoredObjectInfo> ListAsync(
             [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)

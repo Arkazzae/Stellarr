@@ -46,6 +46,12 @@ public interface IObjectStorage
 
     /// <summary>Every object in the bucket, page by page, so a backup misses none a table forgot.</summary>
     IAsyncEnumerable<StoredObjectInfo> ListAsync(CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Asks the store whether the bucket answers, without changing anything;
+    /// throws when it does not. Cockpit's availability bars take one every 30 s.
+    /// </summary>
+    Task ProbeAsync(CancellationToken cancellationToken);
 }
 
 public sealed class S3ObjectStorage(IAmazonS3 client, IOptions<StorageOptions> options) : IObjectStorage
@@ -111,6 +117,9 @@ public sealed class S3ObjectStorage(IAmazonS3 client, IOptions<StorageOptions> o
 
     public Task DeleteAsync(string key, CancellationToken cancellationToken) =>
         client.DeleteObjectAsync(_bucket, key, cancellationToken);
+
+    public Task ProbeAsync(CancellationToken cancellationToken) =>
+        client.ListObjectsV2Async(new ListObjectsV2Request { BucketName = _bucket, MaxKeys = 1 }, cancellationToken);
 
     public async IAsyncEnumerable<StoredObjectInfo> ListAsync(
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)

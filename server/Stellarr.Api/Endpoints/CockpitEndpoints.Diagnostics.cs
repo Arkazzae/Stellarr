@@ -50,20 +50,27 @@ public static partial class CockpitEndpoints
         var storageInactive = configuration.GetValue<bool>("Storage:SkipInitialization");
         CockpitRuntimeServiceDto[] services =
         [
-            new("API", "healthy", $".NET {Environment.Version}"),
+            new("API", "healthy", $".NET {Environment.Version}", "api"),
             new(
                 "SQLite",
                 databaseReady ? "healthy" : "error",
-                messages.Get(databaseReady ? MessageKey.CockpitDatabaseHealthy : MessageKey.CockpitDatabaseDown)),
-            new("SignalR", "healthy", messages.Get(MessageKey.CockpitRealtimeConnections, ("count", realtimeConnections))),
+                messages.Get(databaseReady ? MessageKey.CockpitDatabaseHealthy : MessageKey.CockpitDatabaseDown),
+                "database"),
+            new(
+                "SignalR",
+                "healthy",
+                messages.Get(MessageKey.CockpitRealtimeConnections, ("count", realtimeConnections)),
+                "realtime"),
             new(
                 "Maintenance worker",
                 maintenance ? "healthy" : "inactive",
-                messages.Get(maintenance ? MessageKey.CockpitMaintenanceRunning : MessageKey.CockpitMaintenanceOff)),
+                messages.Get(maintenance ? MessageKey.CockpitMaintenanceRunning : MessageKey.CockpitMaintenanceOff),
+                "maintenance"),
             new(
                 "Object storage",
-                storageInactive ? "inactive" : "healthy",
-                messages.Get(storageInactive ? MessageKey.CockpitStorageInitializationOff : MessageKey.CockpitStorageChecked)),
+                storageInactive ? "inactive" : StorageState(history),
+                messages.Get(storageInactive ? MessageKey.CockpitStorageInitializationOff : StorageDetail(history)),
+                "storage"),
         ];
 
         return Results.Ok(new CockpitRuntimeDto(
@@ -89,8 +96,23 @@ public static partial class CockpitEndpoints
                 sample.ClientErrors,
                 sample.ServerErrors,
                 sample.DatabaseUp,
-                sample.DatabaseLatencyMs)).ToArray()));
+                sample.DatabaseLatencyMs,
+                sample.StorageUp)).ToArray()));
     }
+
+    /// <summary>The object store's state as the latest sample found it; healthy until a sample has checked it.</summary>
+    private static string StorageState(IReadOnlyList<RuntimeSample> history) =>
+        LastStorageCheck(history) == false ? "error" : "healthy";
+
+    private static MessageKey StorageDetail(IReadOnlyList<RuntimeSample> history) => LastStorageCheck(history) switch
+    {
+        true => MessageKey.CockpitStorageAnswering,
+        false => MessageKey.CockpitStorageDown,
+        null => MessageKey.CockpitStorageChecked,
+    };
+
+    private static bool? LastStorageCheck(IReadOnlyList<RuntimeSample> history) =>
+        history.LastOrDefault(sample => sample.StorageUp is not null)?.StorageUp;
 
     /// <summary>
     /// A page of the log buffer, newest first, filtered by level (a comma-separated

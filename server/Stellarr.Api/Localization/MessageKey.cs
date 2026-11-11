@@ -91,6 +91,8 @@ public enum MessageKey
     CockpitBackupRunning,
     CockpitBackupNoSpace,
     CockpitBackupStorageUnreadable,
+    CockpitStorageAnswering,
+    CockpitStorageDown,
     CockpitServerIsInstance,
     CockpitAuditServerDeleted,
     CockpitAuditServerTransferred,

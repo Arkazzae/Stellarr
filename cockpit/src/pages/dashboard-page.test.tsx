@@ -37,6 +37,7 @@ function runtime(): CockpitRuntime {
     serverErrors: 0,
     databaseUp,
     databaseLatencyMs: 0.5,
+    storageUp: null,
   });
   return {
     startedAt: "2026-11-10T10:00:00Z",
@@ -118,10 +119,9 @@ function renderDashboard(value: CockpitContextValue = cockpitValue()) {
 
 const counter = (title: string) => screen.getByRole("group", { name: title });
 const service = (name: string) => screen.getByRole("group", { name });
-const uptimeCard = () => screen.getByText("Dostępność").closest("[data-slot=card]") as HTMLElement;
 
 describe("DashboardPage counters", () => {
-  it("shows the overview's counters in the tiles and the connections under availability", () => {
+  it("shows the overview's counters in the tiles", () => {
     answerProbes(200, 200);
     renderDashboard(
       sessionWith({
@@ -140,7 +140,6 @@ describe("DashboardPage counters", () => {
     expect(counter("Wiadomości").textContent).toContain((987654).toLocaleString("pl-PL"));
     expect(counter("Serwery").textContent).toBe("Serwery4publiczne: 3");
     expect(counter("Magazyn").textContent).toContain("1,5 KB");
-    expect(uptimeCard().textContent).toContain("Połączenia realtime9");
   });
 
   it.each([
@@ -172,7 +171,7 @@ describe("DashboardPage health", () => {
     renderDashboard();
 
     expect(await within(service("API")).findByText("Działa")).toBeTruthy();
-    expect(await within(service("Baza danych")).findByText("Niedostępne")).toBeTruthy();
+    expect(await within(service("SQLite")).findByText("Niedostępne")).toBeTruthy();
   });
 
   it("reports both services unavailable when the first probe cannot connect", async () => {
@@ -180,7 +179,7 @@ describe("DashboardPage health", () => {
     renderDashboard();
 
     expect(await within(service("API")).findByText("Niedostępne")).toBeTruthy();
-    expect(within(service("Baza danych")).getByText("Niedostępne")).toBeTruthy();
+    expect(within(service("SQLite")).getByText("Niedostępne")).toBeTruthy();
   });
 
   it("shows checking until the probes answer", async () => {
@@ -372,8 +371,8 @@ describe("DashboardPage availability", () => {
     renderDashboard();
 
     expect(await screen.findByText("1 d 1 h 1 min")).toBeTruthy();
-    expect(within(service("API")).getByText("100% w ostatniej godzinie")).toBeTruthy();
-    expect(within(service("Baza danych")).getByText(`${(66.7).toLocaleString("pl-PL")}% w ostatniej godzinie`)).toBeTruthy();
+    expect(within(service("API")).getByText("100%")).toBeTruthy();
+    expect(within(service("SQLite")).getByText(`${(66.7).toLocaleString("pl-PL")}%`)).toBeTruthy();
     expect(await screen.findByText("Wszystko działa")).toBeTruthy();
   });
 
