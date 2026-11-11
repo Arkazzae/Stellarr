@@ -71,23 +71,24 @@ export interface DirectCallDeclinedEvent {
 }
 
 /**
- * Transport-agnostic signaling envelope. `payload` is a JSON string so the hub
- * never has to know the shape of SDP or ICE messages.
+ * What one browser in a call tells the others about itself: its `state` (mute,
+ * and which streams are its screen and camera). `payload` is a JSON string the
+ * hub does not interpret. Descriptions and candidates never travel here; they
+ * go to the media server as `MediaSignal`.
  */
 export interface VoiceSignal {
   protocolVersion: RtcProtocolVersion;
   channelId: ChannelId;
   /** Set by the server on delivery; omitted when sending. */
   fromUserId?: UserId;
-  /** The target peer; omit to broadcast to everyone in the channel. */
+  /** The one person to tell; omit to broadcast to everyone in the channel. */
   toUserId?: UserId;
   kind: RtcSignalKind;
   payload: string;
 }
 
 /**
- * One signal between this browser and the media server of the `sfu` topology,
- * relayed by the hub. Like `VoiceSignal`, `payload` is a JSON string the hub
+ * One signal between this browser and the media server, relayed by the hub. Like `VoiceSignal`, `payload` is a JSON string the hub
  * does not interpret; `@/lib/rtc/protocol` has a codec for each kind and
  * direction. `K` narrows the kinds: what a browser may send is not what the
  * media server sends.
@@ -207,8 +208,7 @@ export interface RealtimeClient {
   sendVoiceSignal(signal: VoiceSignal): Promise<void>;
   /**
    * Creates the media session of this connection's seat in `channelId`, which
-   * must already be held, and resolves to its id. Only the `sfu` topology has
-   * one; the hub refuses in the mesh topology.
+   * must already be held, and resolves to its id.
    */
   openMediaSession(channelId: ChannelId): Promise<string>;
   sendMediaSignal(signal: MediaSignal<BrowserMediaSignalKind>): Promise<void>;

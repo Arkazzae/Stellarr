@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -115,7 +115,7 @@ describe("VoiceProblemNotice", () => {
     expect(mocks.voice.leave).not.toHaveBeenCalled();
   });
 
-  it("leaves a half-working connection before it dials again", async () => {
+  it("repairs a half-working call in place, so nobody sees this person leave", async () => {
     const user = userEvent.setup();
     voiceWith({
       problem: problem("transport"),
@@ -125,8 +125,9 @@ describe("VoiceProblemNotice", () => {
 
     await user.click(button("room.reconnect"));
 
-    await waitFor(() => expect(mocks.voice.join).toHaveBeenCalledExactlyOnceWith("ch-salon"));
-    expect(mocks.voice.leave).toHaveBeenCalledOnce();
+    expect(mocks.voice.reconnect).toHaveBeenCalledOnce();
+    expect(mocks.voice.leave).not.toHaveBeenCalled();
+    expect(mocks.voice.join).not.toHaveBeenCalled();
   });
 
   it("has no way to reconnect when there is no call to reconnect to", () => {

@@ -356,19 +356,31 @@ describe("RemoteAudio shared-screen sound", () => {
     expect(changed).toHaveBeenCalled();
   });
 
-  it("takes a stream off the voice sink once video shows it is a share", () => {
+  it("takes a stream off the voice sink once it is announced as a share", () => {
     const peer = addPeer();
     const share = fakeStream();
     audio.receive(peer, share, fakeTrack());
     expect(peer.voice.audio.srcObject).toBe(share);
 
-    peer.media.addVideo(share);
+    announceScreen(peer, share.id);
     audio.route(peer);
 
     expect(peer.voice).toMatchObject({ streamId: null, processed: false });
     expect(peer.voice.audio.srcObject).toBeNull();
     expect(screenSinks().filter((sink) => sink.srcObject === share)).toHaveLength(1);
     expect(speech.remove).toHaveBeenCalledWith("u-z");
+  });
+
+  it("keeps a voice on its sink when a camera joins its stream", () => {
+    const peer = addPeer();
+    const voice = fakeStream();
+    audio.receive(peer, voice, fakeTrack());
+
+    peer.media.addVideo(voice);
+    audio.route(peer);
+
+    expect(peer.voice.audio.srcObject).toBe(voice);
+    expect(peer.screenAudio).toBeNull();
   });
 
   it("sends a share's sound through a strip that is never gated or denoised", () => {

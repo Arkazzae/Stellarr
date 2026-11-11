@@ -24,9 +24,8 @@ export interface RemoteVoice {
  *
  * Everything here belongs to the person: how they are named and heard on this
  * machine, what they say they send, and which of their streams is which. The
- * connection is deliberately not here. In the mesh every person has one of
- * their own; behind a media server everybody arrives on the same one, and a
- * directory says whose track is whose.
+ * connection is deliberately not here: everybody arrives on the same one to
+ * the media server, and its directory says whose track is whose.
  */
 export interface Participant {
   readonly userId: UserId;
@@ -82,17 +81,16 @@ export interface ParticipantMediaEnv {
 
 /**
  * A remote track of `person` arrived: file it, then let everything be placed
- * again. Saying whose track it is belongs to the topology, which knows the
- * connection or the directory it came through. `id` is what the person calls
- * the stream, which their state frame compares against: the stream's own id
- * in the mesh, the directory's `streamId` behind a media server.
+ * again. Saying whose track it is belongs to the media server's directory.
+ * `id` is what the person calls the stream, which their state frame compares
+ * against: the directory's `streamId`, not the browser's stream id.
  */
 export function receiveRemoteTrack(
   env: ParticipantMediaEnv,
   person: Participant,
   track: MediaStreamTrack,
   stream: MediaStream,
-  id: string = stream.id,
+  id: string,
 ): void {
   if (track.kind === "audio") {
     env.remoteAudio.receive(person, stream, track, id);

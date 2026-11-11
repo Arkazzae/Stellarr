@@ -19,7 +19,6 @@ public sealed partial class AppHub(
     PresenceTracker presence,
     SoundboardPlaybackGate soundboardGate,
     HubThrottleGate throttle,
-    MediaTopology mediaTopology,
     MediaPlane mediaPlane,
     MediaControlClient mediaControl,
     ILogger<AppHub> logger) : Hub

@@ -30,10 +30,8 @@ import {
 import { CallHealth } from "./webrtcHealth";
 import { LocalCamera, LocalScreen, type LocalVideoEnv } from "./webrtcLocalVideo";
 import { LocalMicrophone } from "./webrtcMicrophone";
-import { Mesh } from "./webrtcMesh";
 import {
   receiveRemoteState,
-  receiveRemoteTrack,
   type Participant,
   type ParticipantMediaEnv,
 } from "./webrtcParticipant";
@@ -49,8 +47,8 @@ export interface WebRtcVoiceClientOptions {
   selfUserId: UserId;
   selfDisplayName: string;
   /**
-   * Called once per voice session and read once per peer connection, so a
-   * channel with three people costs one `/api/bootstrap` call rather than three.
+   * Called once per voice session and read once per connection to the media
+   * server, so replacing a connection costs no `/api/bootstrap` call.
    */
   ice: VoiceIceProvider;
   /**
@@ -70,18 +68,20 @@ export interface WebRtcVoiceClientOptions {
   participantPreferences?: ParticipantPreferencesStore;
   /** Stats cadence. Observational only: media never depends on it. */
   statsIntervalMs?: number;
-  /**
-   * Grace before a `disconnected` peer is nudged with an ICE restart, or,
-   * behind a media server, before its connection is replaced.
-   */
+  /** Grace before a `disconnected` connection to the media server is replaced. */
   recoveryGraceMs?: number;
   /**
-   * Behind a media server: the pause before a lost connection is replaced.
-   * Each further replacement in a row waits twice as long.
+   * The pause before a lost connection to the media server is replaced. Each
+   * further replacement in a row waits twice as long.
    */
   mediaReplacementPauseMs?: number;
+  /**
+   * How long somebody's microphone may take to arrive, after the connection
+   * comes up or after they join, before the call counts as degraded.
+   */
+  mediaArrivalGraceMs?: number;
   /** Bootstrap contract used to refuse an incompatible media implementation. */
-  rtc: Pick<RtcConfig, "protocolVersion" | "topology"> & {
+  rtc: Pick<RtcConfig, "protocolVersion"> & {
     capabilities?: Pick<RtcConfig["capabilities"], "camera">;
   };
 }
@@ -92,16 +92,13 @@ export interface WebRtcVoiceClientOptions {
  * This class is the facade the UI sees through `VoiceClient`. It keeps apart
  * the two things a call is made of. The people (`webrtcParticipant`,
  * `webrtcRemoteAudio`, `webrtcRemoteMedia`) are what the others sound like and
- * which of their streams is which. The connections belong to a `CallTopology`
- * (`webrtcTopology`), the one the bootstrap names: a full mesh (`webrtcMesh`,
- * `webrtcMeshHealth`), where every person in the channel gets a direct
- * connection to every other, which suits a handful of friends on one instance;
- * or one connection to Stellarr Media (`webrtcSfu`, `webrtcSfuDirectory`,
- * `webrtcSfuHealth`), which forwards everybody's tracks. Around both sit
- * `webrtcPeer` (a connection and its negotiation), `webrtcMicrophone` and
- * `webrtcLocalVideo` (what the others hear and see), `webrtcSettings` (live
- * changes) and `webrtcHealth` (the stats and credential clocks, and the proof
- * that audio flows).
+ * which of their streams is which. The connection is one connection to
+ * Stellarr Media (`webrtcSfu`, `webrtcSfuDirectory`, `webrtcSfuHealth`), which
+ * forwards everybody's tracks, behind the `CallTopology` interface
+ * (`webrtcTopology`). Around it sit `webrtcPeer` (the connection and its
+ * negotiation), `webrtcMicrophone` and `webrtcLocalVideo` (what the others
+ * hear and see), `webrtcSettings` (live changes) and `webrtcHealth` (the stats
+ * and credential clocks, and the proof that audio flows).
  */
 export class WebRtcVoiceClient implements VoiceClient {
   private readonly store = new VoiceStateStore();
@@ -128,6 +125,12 @@ export class WebRtcVoiceClient implements VoiceClient {
   private selfSpeaking = false;
   private disposed = false;
   private deviceSnapshot: VoiceDeviceSnapshot | null = null;
+  /**
+   * The stream this side's microphone and camera are both sent in, one per
+   * call. Sharing it is what lets the browsers of the others play the face
+   * and the voice in sync; the stream itself carries no tracks.
+   */
+  private voiceStream: MediaStream | null = null;
 
   /**
    * Bumped on every join and leave. Every async continuation checks it before
@@ -184,6 +187,7 @@ export class WebRtcVoiceClient implements VoiceClient {
       selfUserId: options.selfUserId,
       store: this.store,
       speech: this.speech,
+      voiceStream: () => this.currentVoiceStream(),
       links: () => this.topology.links(),
       applyEncoding: () => this.topology.applyMicEncoding(),
       rebuildLink: (link) => this.topology.rebuild(link),
@@ -217,6 +221,7 @@ export class WebRtcVoiceClient implements VoiceClient {
     };
     this.camera = new LocalCamera({
       ...video,
+      voiceStream: () => this.currentVoiceStream(),
       useSystemCamera: () => this.useSystemCamera(),
       recaptureCamera: (settings) =>
         this.settingsQueue.push({
@@ -227,45 +232,12 @@ export class WebRtcVoiceClient implements VoiceClient {
         }),
     });
     this.screen = new LocalScreen(video);
-    // `rtcIncompatibility` lets a call start with these two topologies only,
-    // so whatever else the bootstrap says never gets a connection.
-    this.topology =
-      options.rtc.topology === "sfu" ? this.createSfu() : this.createMesh();
+    this.topology = this.createSfu();
     this.settingsQueue = new SettingsQueue(
       (change) => this.applySettingsNow(change),
       () => this.disposed,
     );
     this.store.set({ cameraSupported: this.cameraIsSupported() });
-  }
-
-  private createMesh(): Mesh {
-    const { options } = this;
-    return new Mesh(this.people, {
-      selfUserId: options.selfUserId,
-      translate: this.t,
-      store: this.store,
-      ice: options.ice,
-      preferences: this.preferences,
-      remoteAudio: this.remoteAudio,
-      microphone: this.microphone,
-      camera: this.camera,
-      screen: this.screen,
-      recoveryGraceMs: options.recoveryGraceMs,
-      settings: () => this.settings,
-      bitrate: () => this.bitrate.getBitrate(),
-      screenAudioStereo: () => this.screen.stereo,
-      send: (signal) => this.send(signal),
-      announceTo: (userId) => {
-        void this.send({ kind: "state", toUserId: userId, payload: this.statePayload() });
-      },
-      receiveTrack: (person, track, stream) =>
-        receiveRemoteTrack(this.personMedia, person, track, stream),
-      session: () => this.session,
-      activeSession: () => this.activeSession(),
-      isStale: (session) => this.isStale(session),
-      changed: () => this.publishPeers(),
-      transportChanged: () => this.health.syncTransport(),
-    });
   }
 
   private createSfu(): Sfu {
@@ -284,6 +256,7 @@ export class WebRtcVoiceClient implements VoiceClient {
       screen: this.screen,
       recoveryGraceMs: options.recoveryGraceMs,
       replacementPauseMs: options.mediaReplacementPauseMs,
+      arrivalGraceMs: options.mediaArrivalGraceMs,
       settings: () => this.settings,
       bitrate: () => this.bitrate.getBitrate(),
       screenAudioStereo: () => this.screen.stereo,
@@ -294,6 +267,8 @@ export class WebRtcVoiceClient implements VoiceClient {
       activeSession: () => this.activeSession(),
       changed: () => this.publishPeers(),
       transportChanged: () => this.health.syncTransport(),
+      probe: () => this.health.probe(),
+      voiceStreamId: () => this.voiceStream?.id ?? null,
     });
   }
 
@@ -355,9 +330,7 @@ export class WebRtcVoiceClient implements VoiceClient {
     }
     this.store.set({
       connection: "connecting",
-      // Nobody is connected yet. That reads `ready` in the mesh, where a
-      // correct join with nobody else needs no connection, and `connecting`
-      // behind a media server, which this side has to reach first.
+      // Nothing is connected yet: the media server has to be reached first.
       transport: { signaling: "connecting", ...this.topology.transport() },
     });
 
@@ -405,6 +378,7 @@ export class WebRtcVoiceClient implements VoiceClient {
     this.releaseMicrophone();
     this.remoteAudio.removeHost();
     this.options.ice.endSession();
+    this.voiceStream = null;
 
     if (wasJoined) {
       try {
@@ -414,6 +388,38 @@ export class WebRtcVoiceClient implements VoiceClient {
       }
     }
     this.store.reset();
+  }
+
+  /**
+   * Repair the call without giving up the seat, so nobody sees this person
+   * leave: refresh the ICE servers, confirm the seat with the hub (which keeps
+   * a seat it already holds) and open a fresh media session with a fresh
+   * budget of replacements. A call that never got its seat, or lost it,
+   * joins again instead.
+   */
+  async reconnect(): Promise<void> {
+    const channelId = this.channelId;
+    if (this.disposed || channelId === null) return;
+    if (this.store.getSnapshot().connection === "failed") {
+      await this.join(channelId);
+      return;
+    }
+
+    const session = this.session;
+    await this.health.refreshIce(session);
+    if (this.isStale(session)) return;
+    try {
+      await this.options.realtime.joinVoice(channelId);
+    } catch {
+      if (session === this.session) this.store.set({ error: rejoinFailedError(this.t) });
+      return;
+    }
+    if (this.isStale(session)) return;
+
+    this.setSignaling("connected");
+    this.store.set({ connection: "connected", error: null });
+    void this.broadcastState();
+    await this.topology.seated();
   }
 
   dispose(): void {
@@ -662,9 +668,7 @@ export class WebRtcVoiceClient implements VoiceClient {
         if (event.channelId === this.channelId) void this.leave();
       }),
       realtime.on("VoiceSignal", (signal) => {
-        if (signal.channelId !== this.channelId) return;
-        if (signal.kind === "state") this.receiveState(signal);
-        else void this.topology.handleSignal(signal);
+        if (signal.channelId === this.channelId) this.receiveState(signal);
       }),
       realtime.on("MediaSignal", (signal) => {
         if (signal.channelId === this.channelId) void this.topology.handleMediaSignal(signal);
@@ -678,7 +682,7 @@ export class WebRtcVoiceClient implements VoiceClient {
 
   /**
    * Another person's account of themselves. It travels from browser to
-   * browser in every topology, so it is about the person and never about how
+   * browser through the hub, so it is about the person and never about how
    * their media reaches this side.
    */
   private receiveState(signal: VoiceSignal): void {
@@ -706,9 +710,9 @@ export class WebRtcVoiceClient implements VoiceClient {
    *
    * The HTTP endpoint has already moved this SignalR connection's authoritative
    * seat. Re-invoking JoinVoice confirms that state and asks the hub for the
-   * target snapshot; only the connections and the people are dropped, because
-   * they belong to the old room. Behind a media server the new seat then
-   * opens a media session of its own.
+   * target snapshot; only the connection and the people are dropped, because
+   * they belong to the old room. The new seat then opens a media session of
+   * its own.
    */
   private async followMove(targetChannelId: ChannelId): Promise<void> {
     if (this.channelId === null || this.channelId === targetChannelId) return;
@@ -741,14 +745,12 @@ export class WebRtcVoiceClient implements VoiceClient {
   }
 
   /**
-   * Follow the hub without tearing down healthy media.
+   * Follow the hub through a reconnect.
    *
-   * In the mesh a SignalR reconnect says nothing about the peer connections:
-   * they are direct, and they usually keep working perfectly while the hub is
-   * away. So the state shows "reconnecting" for honesty, and on recovery we
-   * rejoin the voice group and re-announce, rather than rebuilding anything
-   * that is fine. Behind a media server the reconnect ended the seat and its
-   * media session with it, so the rejoin opens a new one.
+   * The state shows "reconnecting" for honesty while the hub is away. The
+   * reconnect ended the seat and its media session with it, so on recovery
+   * the client rejoins the voice group, re-announces its state and opens a new
+   * media session.
    */
   private onRealtimeStatus(): void {
     if (!this.channelId) return;
@@ -782,8 +784,7 @@ export class WebRtcVoiceClient implements VoiceClient {
     this.store.set({ connection: "connected", error: null });
     // Whoever joined while we were away has no idea what our state is.
     void this.broadcastState();
-    // The reconnect ended the seat, and with it a media session if there was
-    // one; the mesh's direct connections outlive it.
+    // The reconnect ended the seat, and the media session with it.
     await this.topology.seated();
     await this.topology.repairUnhealthy();
   }
@@ -800,8 +801,8 @@ export class WebRtcVoiceClient implements VoiceClient {
         channelId,
       });
     } catch {
-      // A frame addressed to one peer can finish after that peer left or after
-      // this client moved rooms; peer recovery owns targeted failures. A
+      // A frame addressed to one person can finish after they left or after
+      // this client moved rooms, and the next broadcast catches them up. A
       // dropped broadcast during a hub reconnect is expected too, since the
       // rejoin re-announces. Only report when the hub is supposed to be up.
       if (
@@ -831,8 +832,8 @@ export class WebRtcVoiceClient implements VoiceClient {
   /**
    * Runs when the tab comes back, the page is restored, or the network returns.
    *
-   * Only unhealthy peers are touched. Rebuilding a connection that is working
-   * would introduce the very glitch this is meant to avoid.
+   * Only a connection that is down is replaced. Rebuilding a connection that
+   * is working would introduce the very glitch this is meant to avoid.
    */
   private async recoverAfterResume(): Promise<void> {
     if (this.disposed || !this.channelId) return;
@@ -862,6 +863,10 @@ export class WebRtcVoiceClient implements VoiceClient {
   /** The session of the call in progress, or null when there is none to act in. */
   private activeSession(): number | null {
     return this.disposed || this.channelId === null ? null : this.session;
+  }
+
+  private currentVoiceStream(): MediaStream {
+    return (this.voiceStream ??= new MediaStream());
   }
 
   private cameraIsSupported(): boolean {

@@ -15,11 +15,13 @@ export interface LocalMicrophoneEnv {
   readonly store: VoiceStateStore;
   /** Lights the speaking ring from the audio before the input gate. */
   readonly speech: SpeechDetector;
+  /** The stream the microphone is sent in, shared with the camera so the two play in sync. */
+  voiceStream(): MediaStream;
   /** The links the microphone is sent on. */
   links(): Iterable<Link>;
   /** Cap every microphone sender at the adaptive controller's ceiling. */
   applyEncoding(): Promise<void>;
-  /** Replace a link whose sender refused even to take the swap back. */
+  /** Replace a link whose sender refused to restore the surviving microphone. */
   rebuildLink(link: Link): Promise<void>;
   /** The device ended underneath the call, e.g. a headset was unplugged. */
   onDeviceLost(): void;
@@ -81,7 +83,7 @@ export class LocalMicrophone {
     const capture = this.active;
     if (!capture || link.micSender) return;
     try {
-      link.micSender = addSender(link, capture.track, capture.stream);
+      link.micSender = addSender(link, capture.track, this.env.voiceStream());
     } catch {
       // A connection that cannot take the track is about to be rebuilt.
     }
@@ -123,10 +125,10 @@ export class LocalMicrophone {
   }
 
   /**
-   * Reopen the microphone for `next` and move every link onto it.
+   * Reopen the microphone for `next` and move the sender onto it.
    *
    * Without `force`, only a capture-affecting change does anything. If the new
-   * device cannot be opened, or one link cannot take it, the old capture is
+   * device cannot be opened, or the sender cannot take it, the old capture is
    * still running, so the call goes on and the error is reported as
    * recoverable rather than fatal. A newer request discards the capture, undoing
    * sender changes while the previous capture still owns the call. A capture

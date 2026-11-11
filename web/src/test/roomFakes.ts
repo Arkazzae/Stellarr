@@ -130,6 +130,7 @@ export function fakeVoice(overrides: Partial<VoiceValue> = {}): VoiceValue {
     soundboardEnabled: false,
     join: vi.fn(),
     leave: vi.fn(async () => {}),
+    reconnect: vi.fn(),
     toggleMute: vi.fn(),
     toggleCamera: vi.fn(),
     toggleShare: vi.fn(),

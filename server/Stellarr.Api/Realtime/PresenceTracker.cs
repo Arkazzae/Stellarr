@@ -44,7 +44,7 @@ public interface IMediaSessionCloser
 /// connection. A newer tab takes the seat of an older one, because the
 /// signalling protocol names peers by user id and cannot hold two of them.
 /// <para>
-/// In the sfu topology a seat also holds the session the media server keeps
+/// A seat also holds the session the media server keeps
 /// for it, and the session lives exactly as long as the seat stays in its
 /// room. That rule is kept here rather than by the hub methods and endpoints
 /// that move people around: every change of a seat goes through

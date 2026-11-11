@@ -435,3 +435,72 @@ describe("after a reconnect", () => {
     );
   });
 });
+
+describe("while the directory changes around the text channels", () => {
+  /** Joins, pin reads and journal reads so far, the traffic a resync costs. */
+  const traffic = () => ({
+    joins: h.chat.focusChannel.mock.calls.length,
+    pins: h.chat.listPinned.mock.calls.length,
+    journal: h.chat.syncMessages.mock.calls.length,
+  });
+
+  /** Mounts on two text channels and waits for the first catch-up of both. */
+  async function mountSynced() {
+    twoChannels();
+    const mounted = await mountLoaded();
+    act(() => h.setConnection("connected"));
+    await waitFor(() => expect(h.chat.syncMessages).toHaveBeenCalledTimes(2));
+    return mounted;
+  }
+
+  it("does not rejoin or replay anything when people join, leave or mute on a call", async () => {
+    const { rerender } = await mountSynced();
+    const before = traffic();
+
+    // The same text channels in new objects: what the directory handed over on
+    // every occupancy change, and still does for a rename or a voice channel.
+    for (let change = 0; change < 3; change += 1) {
+      h.directory.textChannels = h.directory.textChannels.map((channel) => ({ ...channel }));
+      rerender();
+      await act(async () => {});
+    }
+
+    expect(traffic()).toEqual(before);
+  });
+
+  it("still rejoins and replays every text channel after a reconnect", async () => {
+    const { rerender } = await mountSynced();
+    h.directory.textChannels = h.directory.textChannels.map((channel) => ({ ...channel }));
+    rerender();
+    await act(async () => {});
+    const before = traffic();
+
+    act(() => h.setConnection("reconnecting"));
+    act(() => h.setConnection("connected"));
+
+    await waitFor(() =>
+      expect(traffic()).toEqual({
+        joins: before.joins + 2,
+        pins: before.pins + 2,
+        journal: before.journal + 2,
+      }),
+    );
+  });
+
+  it("joins and replays a text channel that appears", async () => {
+    const { rerender } = await mountSynced();
+    expect(h.chat.focusChannel).not.toHaveBeenCalledWith("ch-news");
+
+    h.directory.textChannels = [
+      ...h.directory.textChannels,
+      { id: "ch-news", name: "news" },
+    ];
+    rerender();
+
+    await waitFor(() =>
+      expect(h.chat.syncMessages).toHaveBeenCalledWith("ch-news", "cursor-1"),
+    );
+    expect(h.chat.focusChannel).toHaveBeenCalledWith("ch-news");
+    expect(h.chat.listPinned).toHaveBeenCalledWith("ch-news");
+  });
+});

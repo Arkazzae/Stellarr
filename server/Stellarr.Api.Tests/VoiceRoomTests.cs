@@ -130,21 +130,23 @@ public sealed partial class VoiceRoomTests
             await peer.JoinAsync(Salon);
         }
 
-        await maja.SignalAsync(Salon, "offer", """{"type":"offer","sdp":"x"}""", toUserId: ada.Id.ToString());
+        // A newcomer is told the state of those already there, one by one.
+        const string screen = """{"screenStreamId":"screen-1"}""";
+        await maja.SignalAsync(Salon, "state", screen, toUserId: ada.Id.ToString());
         var targeted = await ada["VoiceSignal"].NextAsync();
         Assert.Equal(1, targeted.GetProperty("protocolVersion").GetInt32());
         Assert.Equal(Salon, targeted.GetProperty("channelId").GetString());
         Assert.Equal(maja.Id.ToString(), targeted.GetProperty("fromUserId").GetString());
         Assert.Equal(ada.Id.ToString(), targeted.GetProperty("toUserId").GetString());
-        Assert.Equal("offer", targeted.GetProperty("kind").GetString());
-        Assert.Equal("""{"type":"offer","sdp":"x"}""", targeted.GetProperty("payload").GetString());
+        Assert.Equal("state", targeted.GetProperty("kind").GetString());
+        Assert.Equal(screen, targeted.GetProperty("payload").GetString());
         await AssertNoSignalAsync(maja, ilya, outside);
 
-        await maja.SignalAsync(Salon, "candidate", """{"candidate":"c"}""");
+        await maja.SignalAsync(Salon, "state", """{"screenStreamId":null}""");
         foreach (var peer in new[] { ada, ilya })
         {
             var broadcast = await peer["VoiceSignal"].NextAsync();
-            Assert.Equal("candidate", broadcast.GetProperty("kind").GetString());
+            Assert.Equal("state", broadcast.GetProperty("kind").GetString());
             Assert.Equal(JsonValueKind.Null, broadcast.GetProperty("toUserId").ValueKind);
         }
         await AssertNoSignalAsync(maja, outside);
@@ -162,25 +164,25 @@ public sealed partial class VoiceRoomTests
 
         const string refused = "Invalid voice signal.";
         await RefusedAsync(refused, maja.SignalAsync(Salon, "hello", "{}"));
-        await RefusedAsync(refused, maja.SignalAsync(Salon, "offer", "{}", version: 2));
-        await RefusedAsync(refused, maja.SignalAsync(Salon, "offer", new string('x', RtcProtocol.MaxSignalBytes + 1)));
-        await RefusedAsync(refused, maja.SignalAsync(NightShift, "offer", "{}"));
-        await RefusedAsync(refused, outside.SignalAsync(Salon, "offer", "{}"));
-        await RefusedAsync("Invalid ChannelId.", maja.SignalAsync("not-a-guid", "offer", "{}"));
+        await RefusedAsync(refused, maja.SignalAsync(Salon, "state", "{}", version: 2));
+        await RefusedAsync(refused, maja.SignalAsync(Salon, "state", StateOfLength(RtcProtocol.MaxSignalBytes + 1)));
+        await RefusedAsync(refused, maja.SignalAsync(NightShift, "state", "{}"));
+        await RefusedAsync(refused, outside.SignalAsync(Salon, "state", "{}"));
+        await RefusedAsync("Invalid ChannelId.", maja.SignalAsync("not-a-guid", "state", "{}"));
         await RefusedAsync(
             "Voice signal target is not in this channel.",
-            maja.SignalAsync(Salon, "offer", "{}", toUserId: outside.Id.ToString()));
+            maja.SignalAsync(Salon, "state", "{}", toUserId: outside.Id.ToString()));
         await RefusedAsync(
             "Voice signal target is not in this channel.",
-            maja.SignalAsync(Salon, "offer", "{}", toUserId: "nobody"));
+            maja.SignalAsync(Salon, "state", "{}", toUserId: "nobody"));
         await RefusedAsync("Invalid voice state.", maja.SignalAsync(Salon, "state", "{not json"));
         await RefusedAsync("Invalid voice state.", maja.SignalAsync(Salon, "state", "[true]"));
 
         await AssertNoSignalAsync(ada, outside);
 
         // A refusal leaves the connection and its seat as they were.
-        await maja.SignalAsync(Salon, "offer", "{}");
-        Assert.Equal("offer", (await ada["VoiceSignal"].NextAsync()).GetProperty("kind").GetString());
+        await maja.SignalAsync(Salon, "state", "{}");
+        Assert.Equal("state", (await ada["VoiceSignal"].NextAsync()).GetProperty("kind").GetString());
     }
 
     [Fact]
@@ -192,10 +194,18 @@ public sealed partial class VoiceRoomTests
         await maja.JoinAsync(Salon);
         await ada.JoinAsync(Salon);
 
-        await maja.SignalAsync(Salon, "offer", new string('x', RtcProtocol.MaxSignalBytes));
+        await maja.SignalAsync(Salon, "state", StateOfLength(RtcProtocol.MaxSignalBytes));
 
         var relayed = await ada["VoiceSignal"].NextAsync();
         Assert.Equal(RtcProtocol.MaxSignalBytes, relayed.GetProperty("payload").GetString()!.Length);
+    }
+
+    /// <summary>A state that says nothing about muting, padded to exactly <paramref name="bytes"/> bytes.</summary>
+    private static string StateOfLength(int bytes)
+    {
+        const string head = "{\"pad\":\"";
+        const string tail = "\"}";
+        return head + new string('x', bytes - head.Length - tail.Length) + tail;
     }
 
     [Fact]
@@ -297,18 +307,13 @@ public sealed partial class VoiceRoomTests
 
     /// <summary>An application of its own, and the hub connections opened against it.</summary>
     /// <param name="mediaServer">
-    /// Stands in for Stellarr Media. Given alone it puts the application in the
-    /// sfu topology; <paramref name="topology"/> can still say otherwise.
+    /// Stands in for Stellarr Media, for a test that looks at what the API asks
+    /// of it. Without one the application gets the factory's own.
     /// </param>
-    private sealed class VoiceApp(FakeMediaServer? mediaServer = null, string? topology = null) : IAsyncDisposable
+    private sealed class VoiceApp(FakeMediaServer? mediaServer = null) : IAsyncDisposable
     {
         private readonly StellarrWebApplicationFactory _factory = new(
             loadTestData: true,
-            configuration: new Dictionary<string, string?>
-            {
-                ["Rtc:Topology"] = topology ?? (mediaServer is null ? null : MediaTopology.Sfu),
-                ["Rtc:MediaControlSecret"] = FakeMediaServer.Secret,
-            },
             configureServices: services => mediaServer?.Install(services));
         private readonly List<Peer> _peers = [];
 

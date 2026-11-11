@@ -66,6 +66,8 @@ The first account registered on an empty instance becomes the instance owner and
 2. In both browser windows, join the `voice` channel and grant microphone access.
 3. Verify two-way audio and check the connection indicator (`Connected`) in the bottom-left status bar.
 
+This test needs no further setup because both browsers run on the Docker host. Voice for a browser on any other device, including one in your local network, requires `PUBLIC_IP` and UDP port `49000` (`STELLARR_MEDIA_PORT`) forwarded to the host on the same external port. See [Requirements](requirements.md#behind-nat).
+
 If voice remains stuck on connecting or fails across networks, follow the checklist in [RTC and ports](../RTC_AND_PORTS.md#diagnostics).
 
 ## Stop or remove
@@ -81,7 +83,7 @@ docker compose down      # remove container and network, preserve data volume
 ## Next steps
 
 - **Operator panel**: Sign in with the owner account and open `https://localhost:8443/cockpit/`.
-- [Requirements](requirements.md): router port forwarding and `PUBLIC_IP` for external users.
+- [Requirements](requirements.md): `PUBLIC_IP` and router port forwarding, required for voice from any other device.
 - [Reverse proxy and TLS](reverse-proxy-and-tls.md): trusted certificates and reverse proxy setup.
 - [Configuration](configuration.md): environment variable reference.
 

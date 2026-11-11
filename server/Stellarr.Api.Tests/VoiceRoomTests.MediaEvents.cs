@@ -4,7 +4,7 @@ using Stellarr.Api.Realtime;
 namespace Stellarr.Api.Tests;
 
 /// <summary>
-/// The event pump of the sfu topology: what the media server says reaches the
+/// The media event pump: what the media server says reaches the
 /// browser whose seat holds the session, in order, and a media server that
 /// restarts, loses its events or goes away is handled as the contract says.
 /// </summary>

@@ -118,14 +118,14 @@ Verify the setup by checking `curl https://chat.example.com/health` (returns `{"
 
 ## What does not go through the proxy
 
-An HTTP reverse proxy only handles HTTP and WebSocket traffic. WebRTC STUN, TURN, and SFU media use UDP (and dedicated TURN TCP/TLS listeners) and must connect directly to the Docker host:
+An HTTP reverse proxy only handles HTTP and WebSocket traffic. WebRTC STUN, TURN, and media server traffic use UDP (and dedicated TURN TCP/TLS listeners) and must connect directly to the Docker host:
 
 | Default port | Protocol | Purpose |
 | --- | --- | --- |
+| `49000` | UDP | Stellarr Media, which carries every call (`STELLARR_MEDIA_PORT`) |
 | `3478` | UDP | STUN and TURN |
 | `49160-49200` | UDP | TURN relay ports |
 | `3478` | TCP | TURN over TCP (`STELLARR_TURN_TCP_ENABLED=true`) |
 | `5349` | TCP, UDP | TURN over TLS/DTLS (`STELLARR_TURNS_ENABLED=true`) |
-| `49000` | UDP | Stellarr Media SFU (`STELLARR_RTC_TOPOLOGY=sfu`) |
 
 Publish these ports on the host and forward them on the router. `STELLARR_DOMAIN` and `PUBLIC_IP` must resolve to the host reachable on these ports, not an HTTP-only CDN or tunnel. See [Requirements](requirements.md) and [RTC and ports](../RTC_AND_PORTS.md).

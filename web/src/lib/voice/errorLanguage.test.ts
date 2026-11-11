@@ -15,7 +15,6 @@ import {
   iceConfigError,
   joinFailedError,
   micError,
-  peerLostError,
   rtcIncompatibility,
 } from "./webrtcErrors";
 
@@ -30,7 +29,7 @@ function incompatibleClient(translate?: Translator): WebRtcVoiceClient {
     selfUserId: "u-a",
     selfDisplayName: "Ada",
     ice: {} as VoiceIceProvider,
-    rtc: { protocolVersion: 0, topology: "unknown" },
+    rtc: { protocolVersion: 0 },
     ...(translate === undefined ? {} : { translate }),
   };
   return new WebRtcVoiceClient(options);
@@ -57,8 +56,7 @@ describe("what the voice client tells a person", () => {
   });
 
   it("fills the names and versions in for the reader's language", () => {
-    expect(peerLostError(english, "Ada").message).toBe("Lost the audio connection with Ada.");
-    expect(rtcIncompatibility(english, { protocolVersion: 7, topology: "mesh" })).toBe(
+    expect(rtcIncompatibility(english, { protocolVersion: 7 })).toBe(
       "The server uses an unsupported RTC version (7); this client supports v1.",
     );
     expect(iceConfigError(english, new IceConfigError("expired", "x")).message).toContain(

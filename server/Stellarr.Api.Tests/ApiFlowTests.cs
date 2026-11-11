@@ -40,7 +40,6 @@ public sealed class ApiFlowTests : IClassFixture<StellarrWebApplicationFactory>
         Assert.Equal(5, document.RootElement.GetProperty("members").GetArrayLength());
         var rtc = document.RootElement.GetProperty("rtc");
         Assert.Equal(1, rtc.GetProperty("protocolVersion").GetInt32());
-        Assert.Equal("mesh", rtc.GetProperty("topology").GetString());
         Assert.Contains("opus", rtc.GetProperty("capabilities").GetProperty("audioCodecs").EnumerateArray().Select(x => x.GetString()));
         Assert.True(rtc.GetProperty("capabilities").GetProperty("camera").GetBoolean());
         var iceServers = rtc.GetProperty("iceServers");

@@ -1,20 +1,21 @@
 /**
  * The RTC control-plane contract: wire-level facts only.
  *
- * Nothing here may depend on SignalR, React or a particular media topology,
- * so the same contract can sit under a browser mesh or a media server.
+ * Nothing here may depend on SignalR or React, so the contract stays the
+ * same whatever carries it.
  */
 export const RTC_PROTOCOL_VERSION = 1 as const;
 
 export type RtcProtocolVersion = typeof RTC_PROTOCOL_VERSION;
-export type RtcTopology = "mesh" | "sfu";
-
-export const RTC_SIGNAL_KINDS = ["offer", "answer", "candidate", "state"] as const;
+/**
+ * What browsers may tell each other over `VoiceSignal`: only their own state.
+ * Descriptions and candidates go to the media server over `MediaSignal`.
+ */
+export const RTC_SIGNAL_KINDS = ["state"] as const;
 export type RtcSignalKind = (typeof RTC_SIGNAL_KINDS)[number];
 
 /**
- * The kinds of the `sfu` topology's `MediaSignal` envelope
- * (docs/STELLARR_MEDIA.md, "Hub leg"). A browser sends `offer`, `answer` and
+ * The kinds of the `MediaSignal` envelope (docs/STELLARR_MEDIA.md, "Hub leg"). A browser sends `offer`, `answer` and
  * `candidate`; the media server sends `offer`, `answer` and `tracks`, and never
  * trickles a candidate.
  */

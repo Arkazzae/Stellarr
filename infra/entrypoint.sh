@@ -102,11 +102,6 @@ turn_tls_enabled="${Rtc__TurnsEnabled:-true}"
 require_boolean Rtc__TurnTcpEnabled "$turn_tcp_enabled"
 require_boolean Rtc__TurnsEnabled "$turn_tls_enabled"
 
-rtc_topology="${Rtc__Topology:-mesh}"
-case "$rtc_topology" in
-  mesh|sfu) ;;
-  *) fail "Rtc__Topology must be 'mesh' or 'sfu'." ;;
-esac
 # The host port of 49000/udp. A browser can only reach the port it is told, so
 # the media server advertises this one and the API names it in the bootstrap.
 media_port="${Rtc__MediaPort:-49000}"
@@ -155,24 +150,23 @@ fi
 export TURN_SHARED_SECRET="$turn_secret"
 export Rtc__TurnSharedSecret="$turn_secret"
 
-# Stellarr Media runs in both topologies; in the mesh topology the API never
-# calls it. Its candidates are the public address, when one is known, and the
-# container's own address, which is where coturn relays a browser that needs
-# TURN. STELLARR_MEDIA_ADVERTISE, when set, replaces both and is passed through.
+# Stellarr Media carries every call. Its candidates are the public address,
+# when one is known, and the container's own address, which is where coturn
+# relays a browser that needs TURN. STELLARR_MEDIA_ADVERTISE, when set,
+# replaces both and is passed through.
 export STELLARR_MEDIA_BIND="0.0.0.0:49000"
 export STELLARR_MEDIA_PUBLIC_IP="$public_ip"
 export STELLARR_MEDIA_PUBLIC_PORT="$media_port"
 export STELLARR_MEDIA_CONTROL_BIND="127.0.0.1:5200"
 export STELLARR_MEDIA_CONTROL_SECRET="$media_control_secret"
 export STELLARR_MEDIA_LOG="${STELLARR_MEDIA_LOG:-info}"
-export Rtc__Topology="$rtc_topology"
 export Rtc__MediaControlUrl="http://127.0.0.1:5200"
 export Rtc__MediaControlSecret="$media_control_secret"
 export Rtc__MediaPort="$media_port"
 
-if [[ "$rtc_topology" == "sfu" && -z "$public_ip" && -z "${STELLARR_MEDIA_ADVERTISE:-}" ]]; then
-  echo "Rtc__Topology is sfu but PUBLIC_IP is empty, so the media server advertises only this container's own address." \
-    "A browser outside this host can reach it only through TURN, and gets no connection when TURN is blocked too." \
+if [[ -z "$public_ip" && -z "${STELLARR_MEDIA_ADVERTISE:-}" ]]; then
+  echo "PUBLIC_IP is empty, so the media server advertises only this container's own address." \
+    "Voice from a browser outside this host reaches it only through TURN, and gets no connection when TURN is blocked too." \
     "Set PUBLIC_IP to the IPv4 address browsers reach this host at, or to 'auto'." >&2
 fi
 

@@ -13,17 +13,14 @@ public static class RtcProtocol
     /// <summary>The largest signal payload, in bytes, that the hub relays.</summary>
     public const int MaxSignalBytes = 128 * 1024;
 
-    public static readonly FrozenSet<string> SignalKinds =
-        new[] { "offer", "answer", "candidate", "state" }.ToFrozenSet(StringComparer.Ordinal);
-
     /// <summary>
-    /// The kinds of <see cref="SignalKinds"/> that set up a direct connection
-    /// between browsers. The sfu topology refuses them on <c>SendVoiceSignal</c>,
-    /// so browsers cannot connect behind the media server and learn each
-    /// other's addresses.
+    /// What a browser may send the others in its room with
+    /// <c>SendVoiceSignal</c>: only its <c>state</c>. Media and its negotiation
+    /// go through the media server (<see cref="MediaSignalKinds"/>), so browsers
+    /// never connect to each other and never learn each other's addresses.
     /// </summary>
-    public static readonly FrozenSet<string> PeerConnectionKinds =
-        new[] { "offer", "answer", "candidate" }.ToFrozenSet(StringComparer.Ordinal);
+    public static readonly FrozenSet<string> SignalKinds =
+        new[] { "state" }.ToFrozenSet(StringComparer.Ordinal);
 
     /// <summary>What a browser may send the media server with <c>SendMediaSignal</c>.</summary>
     public static readonly FrozenSet<string> MediaSignalKinds =

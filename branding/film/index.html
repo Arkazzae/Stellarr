@@ -1,0 +1,1115 @@
+<!doctype html>
+<!--
+  Stellarr: the README film (about 60 s, 1920 x 1080, 60 fps). Every frame is a pure function of time: window.__render(t).
+  The app screens are frozen snapshots of the real web client and Cockpit (ui/*.js, captured from a local demo
+  instance with fictional people), mounted in shadow roots and moved by a camera; nothing in them runs on its own clock.
+
+  Opened in a browser, it plays live: space = pause, left/right = 1 s, click on the bar = seek. ?t=12.5 shows a still.
+  Render and every other step: ./film.sh (see README.md).
+-->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Stellarr film</title>
+    <style>
+      /* The brand's font (branding/README.md: UI and wordmark in Outfit, code in JetBrains Mono), the same files the web client ships. */
+      @font-face {
+        font-family: "Outfit";
+        src: url(ui/static/fonts/outfit-100-900-latin.woff2) format("woff2");
+        font-weight: 100 900;
+        unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+      }
+      @font-face {
+        font-family: "Outfit";
+        src: url(ui/static/fonts/outfit-100-900-latin-ext.woff2) format("woff2");
+        font-weight: 100 900;
+        unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+      }
+      @font-face {
+        font-family: "JetBrains Mono";
+        src: url(ui/static/fonts/jetbrains-mono-100-800-latin.woff2) format("woff2");
+        font-weight: 100 800;
+      }
+
+      /* The Midnight palette of the web client (web/src/design/themes.ts, branding/README.md). */
+      :root {
+        --bg: #09090b; /* background darkest */
+        --surface: #101113; /* floating */
+        --ink: #f3f4f6; /* text normal, and the bubble of the mark */
+        --ink-2: #b9bec9; /* text muted */
+        --faint: #9aa0ad; /* faint, small text */
+        --line: #292e39; /* border default */
+        --accent: #6f65d1; /* the one accent: the voice meter, speaking, primary actions */
+        --ok: #3dd68c; /* success */
+      }
+
+      * { box-sizing: border-box; }
+      html, body { margin: 0; height: 100%; background: #050506; overflow: hidden; }
+      body { display: grid; place-items: center; }
+      #stage { position: relative; flex: none; overflow: hidden; background: var(--bg); color: var(--ink); -webkit-font-smoothing: antialiased; transform-origin: 50% 50%; }
+      .capture body { display: block; }
+      .capture #stage { transform: none !important; }
+      .scene { position: absolute; inset: 0; display: none; overflow: hidden; }
+      .abs { position: absolute; left: 0; top: 0; }
+      .fill { position: absolute; inset: 0; }
+      .mask { position: absolute; overflow: hidden; }
+      .word { position: absolute; left: 0; top: 0; white-space: pre; }
+      svg { overflow: visible; }
+      #hud { position: fixed; left: 0; right: 0; bottom: 0; height: 26px; cursor: pointer; background: rgb(255 255 255 / 0.06); }
+      #hud i { position: absolute; left: 0; top: 0; bottom: 0; background: var(--accent); }
+      #hud span { position: absolute; right: 10px; top: 4px; color: #bbb; font: 12px/1 ui-monospace, monospace; }
+      .capture #hud { display: none; }
+    </style>
+    <!-- the real screens: stylesheets and fonts shared by the snapshots, then one file per screen -->
+    <script src="ui/shared.js"></script>
+    <script src="ui/chat.js"></script>
+    <script src="ui/translate-before.js"></script>
+    <script src="ui/translated.js"></script>
+    <script src="ui/voice.js"></script>
+    <script src="ui/voice-share.js"></script>
+    <script src="ui/appearance.js"></script>
+    <script src="ui/cockpit-runtime.js"></script>
+    <script src="ui/palettes.js"></script>
+    <script src="mount.js"></script>
+  </head>
+  <body>
+    <div id="stage"></div>
+    <div id="hud"><i></i><span></span></div>
+
+    <script>
+      // ------------------------------------------------------------------
+      // Parameters
+      // ------------------------------------------------------------------
+      const Q = new URLSearchParams(location.search);
+      const CAPTURE = Q.has("capture");
+      const FAMILY = "Outfit"; // the brand's font; matches @font-face above
+      const NAME = Q.get("name") || "Stellarr"; // the name, written as the brand writes it (uppercase S)
+      const W = Number(Q.get("w")) || 1920;
+      const H = Number(Q.get("h")) || 1080;
+      const CX = W / 2, CY = H / 2;
+      const TIMELINE = 60;
+      // 8 subframes: the bubble transitions cross the frame at up to about 70 px per frame, which steps at 5
+      const SUB = 8;
+      const SPEED = Number(Q.get("speed") || 1);
+      const DURATION = TIMELINE / SPEED;
+      if (CAPTURE) document.documentElement.classList.add("capture");
+      const stage = document.getElementById("stage");
+      stage.style.width = `${W}px`;
+      stage.style.height = `${H}px`;
+      stage.style.fontFamily = `"${FAMILY}", sans-serif`;
+
+      // ------------------------------------------------------------------
+      // Engine: interpolation, easings, spring (from the motion-design template)
+      // ------------------------------------------------------------------
+      const clamp = (x, a = 0, b = 1) => (x < a ? a : x > b ? b : x);
+      const lerp = (a, b, p) => a + (b - a) * p;
+      const prog = (t, a, b) => clamp((t - a) / (b - a));
+      const E = {
+        lin: (x) => x,
+        in2: (x) => x * x,
+        out2: (x) => 1 - (1 - x) ** 2,
+        io2: (x) => (x < 0.5 ? 2 * x * x : 1 - (-2 * x + 2) ** 2 / 2),
+        in3: (x) => x ** 3,
+        out3: (x) => 1 - (1 - x) ** 3,
+        io3: (x) => (x < 0.5 ? 4 * x ** 3 : 1 - (-2 * x + 2) ** 3 / 2),
+        in4: (x) => x ** 4,
+        out4: (x) => 1 - (1 - x) ** 4,
+        io4: (x) => (x < 0.5 ? 8 * x ** 4 : 1 - (-2 * x + 2) ** 4 / 2),
+        inExpo: (x) => (x <= 0 ? 0 : 2 ** (10 * x - 10)),
+        outExpo: (x) => (x >= 1 ? 1 : 1 - 2 ** (-10 * x)),
+        ioExpo: (x) => (x <= 0 ? 0 : x >= 1 ? 1 : x < 0.5 ? 2 ** (20 * x - 10) / 2 : (2 - 2 ** (-20 * x + 10)) / 2),
+        outBack: (x) => 1 + 2.70158 * (x - 1) ** 3 + 1.70158 * (x - 1) ** 2,
+      };
+      const spring = (s, f = 2, z = 0.42) => {
+        if (s <= 0) return 0;
+        const w = 2 * Math.PI * f;
+        if (z >= 1) return 1 - Math.exp(-w * s) * (1 + w * s);
+        const wd = w * Math.sqrt(1 - z * z);
+        return 1 - Math.exp(-z * w * s) * (Math.cos(wd * s) + ((z * w) / wd) * Math.sin(wd * s));
+      };
+      const pop = (t, at, f = 2.6, z = 0.4) => (t < at ? 0 : spring(t - at, f, z));
+
+      // ------------------------------------------------------------------
+      // DOM
+      // ------------------------------------------------------------------
+      const el = (tag, cls, parent, html) => {
+        const e = document.createElement(tag);
+        if (cls) e.className = cls;
+        if (html != null) e.innerHTML = html;
+        if (parent) parent.appendChild(e);
+        return e;
+      };
+      const svgEl = (tag, attrs, parent) => {
+        const e = document.createElementNS("http://www.w3.org/2000/svg", tag);
+        for (const k in attrs) e.setAttribute(k, attrs[k]);
+        if (parent) parent.appendChild(e);
+        return e;
+      };
+      const T = (e, o) => {
+        let tr = `translate(${o.x || 0}px,${o.y || 0}px)`;
+        if (o.r) tr += ` rotate(${o.r}deg)`;
+        const sx = (o.sx ?? 1) * (o.s ?? 1), sy = (o.sy ?? 1) * (o.s ?? 1);
+        if (sx !== 1 || sy !== 1) tr += ` scale(${sx},${sy})`;
+        e.style.transform = tr;
+        if (o.o !== undefined) e.style.opacity = clamp(o.o);
+      };
+      // Weights by role: Outfit is a variable face (100-900), so every weight here is a real one.
+      const WT = { text: 400, mid: 500, display: 600, bold: 700 };
+      const requested = new Set();
+      const FONT = (weight, px, style = "") => (requested.add(`${weight} ${style || "normal"}`), `${style ? style + " " : ""}${weight} ${px}px "${FAMILY}"`);
+
+      // ------------------------------------------------------------------
+      // Typography (from the template): kerned letters and rows of words in masks
+      // ------------------------------------------------------------------
+      function measure(text, font, ls = "0px") {
+        const s = el("span", null, document.body);
+        s.style.cssText = `position:absolute;left:0;top:0;white-space:pre;font:${font};letter-spacing:${ls};visibility:hidden`;
+        s.textContent = text;
+        const base = s.getBoundingClientRect();
+        const r = document.createRange();
+        const xs = [];
+        for (let i = 0; i < text.length; i++) {
+          r.setStart(s.firstChild, i);
+          r.setEnd(s.firstChild, i + 1);
+          const b = r.getBoundingClientRect();
+          xs.push({ x: b.left - base.left, w: b.width });
+        }
+        s.remove();
+        return { xs, w: base.width, h: base.height };
+      }
+      // distance from the top of a line box (line-height lh) to the baseline
+      function baseline(font, lh = 1.24) {
+        const probe = el("span", null, document.body);
+        probe.style.cssText = `position:absolute;left:0;top:0;font:${font};line-height:${lh};visibility:hidden;white-space:pre`;
+        probe.textContent = "x";
+        const dot = el("span", null, probe);
+        dot.style.cssText = "display:inline-block;width:0;height:0";
+        const b = dot.getBoundingClientRect().top - probe.getBoundingClientRect().top;
+        probe.remove();
+        return b;
+      }
+      function letters(parent, text, font, ls = "0px", color = "") {
+        const m = measure(text, font, ls);
+        return [...text].map((ch, i) => {
+          const s = el("span", "word", parent);
+          s.textContent = ch;
+          s.style.font = font;
+          s.style.lineHeight = "1.24";
+          s.style.letterSpacing = ls;
+          if (color) s.style.color = color;
+          return { e: s, ch, x: m.xs[i].x, w: m.xs[i].w };
+        });
+      }
+      function wordRow(parent, words, { x, y, size, weight = 400, style = "", ls = "-0.02em", align = "left", color = "", maskEm = 1.24, padEm = 0.12 }) {
+        const items = words.map((w) => {
+          const f = FONT(w.w || weight, size, w.style ?? style);
+          return { ...w, f, mw: measure(w.text, f, ls).w, sp: measure("a a", f, ls).w - measure("aa", f, ls).w };
+        });
+        const total = items.reduce((a, it, i) => a + it.mw + (i < items.length - 1 ? it.sp : 0), 0);
+        let cx = align === "center" ? x - total / 2 : x;
+        const pad = size * padEm;
+        const base = y + baseline(items[0].f);
+        return {
+          size, total, base,
+          items: items.map((it) => {
+            const mask = el("div", "mask", parent);
+            mask.style.cssText += `left:${cx - pad}px;top:${y - pad}px;width:${it.mw + pad * 2}px;height:${size * maskEm + pad}px`;
+            const s = el("span", "word", mask);
+            s.textContent = it.text;
+            s.style.cssText += `font:${it.f};letter-spacing:${ls};line-height:1.24;left:${pad}px;top:${pad}px;color:${it.color || color}`;
+            const o = { mask, s, x: cx, w: it.mw, text: it.text };
+            cx += it.mw + it.sp;
+            return o;
+          }),
+        };
+      }
+      function animRow(row, t, tin, tout, { st = 0.05, dur = 0.8, od = 0.36, rot = 5, dir = 1 } = {}) {
+        row.items.forEach((w, i) => {
+          const p = E.outExpo(prog(t, tin + i * st, tin + i * st + dur));
+          const q = tout == null ? 0 : E.in3(prog(t, tout + i * st * 0.5, tout + i * st * 0.5 + od));
+          T(w.s, { y: dir * ((1 - p) * 1.1 - q * 1.5) * row.size * 1.24, r: dir * ((1 - p) * rot - q * rot * 0.6) });
+        });
+      }
+      const esc = (v) => String(v).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+
+      // ------------------------------------------------------------------
+      // Camera over a snapshot: world point (fx, fy) lands on (cx, cy) at scale s
+      // ------------------------------------------------------------------
+      const camera = (e, { cx = CX, cy = CY, fx = CX, fy = CY, s = 1 }) =>
+        (e.style.transform = `translate(${cx}px,${cy}px) scale(${s}) translate(${-fx}px,${-fy}px)`);
+      // keys: [{ t, x, y, s, e }]; between two keys the camera eases (e of the later key, io3 by default),
+      // the zoom on a log scale so the eye sees an even pace
+      const camPath = (keys) => (t) => {
+        if (t <= keys[0].t) return { fx: keys[0].x, fy: keys[0].y, s: keys[0].s };
+        for (let i = 1; i < keys.length; i++) {
+          const a = keys[i - 1], b = keys[i];
+          if (t <= b.t) {
+            const p = (b.e || E.io3)(prog(t, a.t, b.t));
+            return { fx: lerp(a.x, b.x, p), fy: lerp(a.y, b.y, p), s: Math.exp(lerp(Math.log(a.s), Math.log(b.s), p)) };
+          }
+        }
+        const k = keys[keys.length - 1];
+        return { fx: k.x, fy: k.y, s: k.s };
+      };
+      const toScreen = (c, x, y) => ({ x: (x - c.fx) * c.s + CX, y: (y - c.fy) * c.s + CY });
+
+      // A tap on the interface: a dot that lands and a ring that spreads, in screen space.
+      function tapper(parent) {
+        const ring = el("div", "abs", parent);
+        ring.style.cssText += "width:72px;height:72px;margin:-36px 0 0 -36px;border-radius:50%;border:3px solid var(--accent);display:none";
+        const dot = el("div", "abs", parent);
+        dot.style.cssText += "width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;background:var(--ink);box-shadow:0 0 0 5px var(--accent);display:none";
+        // taps: [{ at, x, y }] in world coordinates; cam(t) gives the camera
+        return (t, taps, cam) => {
+          const k = taps.find((tp) => t > tp.at - 0.3 && t < tp.at + 0.55);
+          if (!k) return void (ring.style.display = dot.style.display = "none");
+          const p = toScreen(cam(t), k.x, k.y);
+          const u = t - k.at;
+          dot.style.display = "block";
+          const din = E.outExpo(prog(u, -0.3, -0.05)), dout = E.in2(prog(u, 0.12, 0.4));
+          T(dot, { x: p.x, y: p.y, s: (0.4 + 0.6 * din) * (u > 0 && u < 0.12 ? 0.82 : 1), o: din * (1 - dout) });
+          ring.style.display = u > 0 ? "block" : "none";
+          const rp = E.out3(prog(u, 0, 0.5));
+          T(ring, { x: p.x, y: p.y, s: 0.5 + 1.1 * rp, o: (1 - rp) * 0.9 });
+        };
+      }
+
+      // ------------------------------------------------------------------
+      // The pet and the mark (branding/mascot, branding/logo/mark.svg; 64 x 64 units). The astronaut and the logo
+      // share one speech bubble, so one turns into the other: the visor fades, the eyes and the mouth become the
+      // three bars of the mark, the ears and the antenna slip behind the bubble. Played backwards, the mark
+      // becomes the pet again.
+      // ------------------------------------------------------------------
+      const MARK = {
+        bubble: "M26 8H38C53 8 58 13 58 28C58 43 53 48 38 48H33C31.4 48 29.9 48.5 28.6 49.4L18.64 56.27C17.46 57.08 16.5 56.58 16.5 55.15V49.6C16.5 47.8 15.5 46.8 13.71 45.95C8.11 43.28 6 37.75 6 28C6 13 11 8 26 8Z",
+        bars: [[18.5, 13], [29, 22], [39.5, 16]], // x and height of each 6-unit bar; all are centred on y = 28
+        cy: 28,
+      };
+      // The expressions, exactly as branding/mascot/expressions draws them: the eyes (which blink) and the mouth.
+      const LINE = (d, w, c) => `<path d="${d}" fill="none" stroke="${c}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`;
+      const EYE = (x) => `<circle cx="${x}" cy="26" r="3.6" fill="#f3f4f6"/><circle cx="${x - 1.22}" cy="24.7" r="1.15" fill="#09090b"/>`;
+      const PET = {
+        ears: [[2, 19], [57, 19]],
+        visor: "M25 15H39A12 12 0 0 1 51 27V28A12 12 0 0 1 39 40H25A12 12 0 0 1 13 28V27A12 12 0 0 1 25 15Z",
+        glint: "M18.5 22C19.8 19.6 22.2 18.4 25 18.3",
+        faces: {
+          idle: { eyes: EYE(24.5) + EYE(39.5), mouth: `<rect x="28" y="32.6" width="8" height="2.8" rx="1.4" fill="#6f65d1"/>` },
+          happy: {
+            eyes: LINE("M20.5 27C20.5 22.6 28.5 22.6 28.5 27", 3, "#f3f4f6") + LINE("M35.5 27C35.5 22.6 43.5 22.6 43.5 27", 3, "#f3f4f6"),
+            mouth: LINE("M27.5 32C29 36 35 36 36.5 32", 2.8, "#6f65d1"),
+          },
+          listening: { eyes: EYE(27.5) + EYE(42.5), mouth: `<circle cx="35" cy="34" r="1.8" fill="#6f65d1"/>` },
+          speaking: { eyes: EYE(24.5) + EYE(39.5), mouth: `<path d="M28 31.6H36C36 35.4 34.4 37.2 32 37.2C29.6 37.2 28 35.4 28 31.6Z" fill="#6f65d1" stroke="#6f65d1" stroke-width="1.4" stroke-linejoin="round"/>` },
+          connecting: {
+            eyes: `<circle cx="24.5" cy="26" r="3" fill="#f3f4f6"/><circle cx="39.5" cy="26" r="3" fill="#f3f4f6"/>`,
+            mouth: [26.5, 32, 37.5].map((x) => `<circle cx="${x}" cy="34" r="1.7" fill="#6f65d1"/>`).join(""),
+          },
+        },
+        // where each bar of the mark grows from: the left eye, the mouth, the right eye
+        seeds: [[24.5, 26], [32, 34], [39.5, 26]],
+      };
+      // a blink: the eyes close and open in 0.18 s around each of `times`
+      const blinkAt = (t, times) => times.reduce((v, b) => Math.max(v, t > b && t < b + 0.18 ? Math.sin((Math.PI * (t - b)) / 0.18) : 0), 0);
+      // a gentle float, periodic over 2 s, so the film's last frame meets its first
+      const float = (t) => Math.sin((2 * Math.PI * t) / 2);
+
+      // The pet (and the mark it becomes) inside an SVG group. draw(x0, y0, s, pose) puts unit (0, 0) at (x0, y0).
+      // pose: m (0 pet .. 1 mark), face, face2 + mix (a change of expression), blink (0..1), bob (units, up).
+      function buildPet(parent) {
+        const g = svgEl("g", {}, parent);
+        const ears = PET.ears.map(([x, y]) => svgEl("rect", { x, y, width: 5, height: 18, rx: 2.5, fill: "var(--accent)" }, g));
+        const antenna = svgEl("g", {}, g);
+        antenna.innerHTML = LINE("M44 10L48.5 3.5", 2.6, "#f3f4f6") + `<circle cx="49.5" cy="3.6" r="2.6" fill="#6f65d1"/>`;
+        svgEl("path", { d: MARK.bubble, fill: "var(--ink)" }, g);
+        // the visor, its glint and the face shrink together towards the middle of the visor
+        const visorG = svgEl("g", {}, g);
+        const visor = svgEl("path", { d: PET.visor, fill: "#09090b" }, visorG);
+        const glint = svgEl("g", {}, visorG);
+        glint.innerHTML = LINE(PET.glint, 1.8, "#f3f4f6");
+        const faces = Object.fromEntries(
+          Object.entries(PET.faces).map(([name, f]) => {
+            const fg = svgEl("g", {}, visorG);
+            const eyes = svgEl("g", {}, fg);
+            eyes.innerHTML = f.eyes;
+            const mouth = svgEl("g", {}, fg);
+            mouth.innerHTML = f.mouth;
+            return [name, { fg, eyes }];
+          }),
+        );
+        const bars = MARK.bars.map(() => svgEl("rect", { rx: 3, fill: "var(--accent)" }, g));
+        return {
+          g,
+          draw(x0, y0, s, { m = 0, face = "idle", face2 = null, mix = 0, blink = 0, bob = 0 } = {}) {
+            g.setAttribute("transform", `translate(${x0} ${y0 - bob * s}) scale(${s})`);
+            // the ears slide in behind the bubble, the antenna sinks into it
+            const e = E.io3(prog(m, 0, 0.7)), eo = 1 - prog(m, 0.45, 0.75);
+            ears[0].setAttribute("transform", `translate(${7 * e} 0)`);
+            ears[1].setAttribute("transform", `translate(${-7 * e} 0)`);
+            ears.forEach((r) => (r.style.opacity = eo));
+            antenna.setAttribute("transform", `translate(${-6.3 * e} ${9.1 * e})`);
+            antenna.style.opacity = eo;
+            // the visor closes towards its middle (no fade through grey), and the bars are left on the white bubble
+            const v = E.io3(prog(m, 0.12, 0.62));
+            visorG.setAttribute("transform", `translate(32 27.5) scale(${Math.max(0.001, 1 - v)}) translate(-32 -27.5)`);
+            visorG.style.display = v < 0.999 ? "" : "none";
+            glint.style.opacity = 1 - prog(m, 0, 0.15);
+            const fo = 1 - prog(m, 0.08, 0.32);
+            for (const [name, f] of Object.entries(faces)) {
+              const o = name === face ? 1 - (face2 ? mix : 0) : name === face2 ? mix : 0;
+              f.fg.style.display = o * fo > 0.001 ? "" : "none";
+              f.fg.style.opacity = o * fo;
+              f.eyes.setAttribute("transform", `translate(0 26) scale(1 ${1 - 0.9 * blink}) translate(0 -26)`);
+            }
+            // each bar grows out of an eye or the mouth, with a little overshoot, and settles in its place
+            MARK.bars.forEach(([x, h], i) => {
+              const q = Math.max(0, E.outBack(prog(m, 0.12 + i * 0.05, 0.7 + i * 0.05)));
+              const p = E.io3(prog(m, 0.15, 0.72));
+              const cx = lerp(PET.seeds[i][0], x + 3, p), cy = lerp(PET.seeds[i][1], MARK.cy, p);
+              const bw = lerp(2.4, 6, Math.min(q, 1)) * (q > 1 ? 1 + (q - 1) * 0.3 : 1), bh = Math.max(bw, h * q);
+              bars[i].style.display = q > 0.01 ? "" : "none";
+              bars[i].setAttribute("x", cx - bw / 2);
+              bars[i].setAttribute("y", cy - bh / 2);
+              bars[i].setAttribute("width", bw);
+              bars[i].setAttribute("height", bh);
+              bars[i].setAttribute("rx", Math.min(bw, bh) / 2);
+            });
+          },
+        };
+      }
+
+      // The lockup: the mark, the wordmark spaced x from it (x = the shortest bar), and room for lines below.
+      const LOCK = { S: 3.4, rowY: CY - 70, size: 156 };
+      function buildLockup(root, { tagline = true, url = false } = {}) {
+        const svg = svgEl("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, class: "abs" }, root);
+        const pet = buildPet(svg);
+        const S = LOCK.S, size = LOCK.size;
+        const wmFont = FONT(WT.display, size);
+        const m = measure(NAME, wmFont, "-0.01em");
+        const markW = 52 * S, gap = 13 * S;
+        const left = CX - (markW + gap + m.w) / 2;
+        const ox = left - 6 * S, oy = LOCK.rowY - MARK.cy * S; // where mark unit (0, 0) sits
+        const wmX = left + markW + gap;
+        const base = LOCK.rowY + 0.35 * size; // Outfit's cap height (0.7 em) centred on the bars
+        const top = base - baseline(wmFont);
+        const wmBox = el("div", "abs", root);
+        wmBox.style.cssText += `left:${wmX - 20}px;top:${top - 10}px;width:${m.w + 60}px;height:${size * 1.24 + 30}px;overflow:hidden`;
+        const ls = letters(wmBox, NAME, wmFont, "-0.01em", "var(--ink)");
+        const tag = tagline ? wordRow(root, "Talk on your own server.".split(" ").map((text) => ({ text })), { x: wmX + 4, y: base + 38, size: 58, weight: WT.text, color: "var(--ink-2)", ls: "-0.01em" }) : null;
+        const link = url ? wordRow(root, [{ text: "github.com/Arkazzae/Stellarr" }], { x: wmX + 4, y: base + 38 + 58 * 1.24 + 22, size: 32, weight: WT.mid, color: "var(--faint)", ls: "0em" }) : null;
+        // the screen position of the bubble's centre (unit 32, 28) in the lockup
+        return { svg, pet, ls, wmBox, tag, link, ox, oy, S, cx: ox + 32 * S, cy: oy + MARK.cy * S };
+      }
+
+      // The bubble as a shape for transitions. clip-path: path() takes no transform, so the path is rewritten
+      // with every point at unit * k + (ox, oy).
+      const BUBBLE_CMDS = [...MARK.bubble.matchAll(/([MHVCLZ])([^MHVCLZ]*)/g)].map(([, c, a]) => [c, a.trim() ? a.trim().split(/[\s,]+/).map(Number) : []]);
+      const bubbleD = (k, ox, oy) =>
+        BUBBLE_CMDS.map(([c, a]) => c + (c === "H" ? a.map((x) => (x * k + ox).toFixed(2)) : c === "V" ? a.map((y) => (y * k + oy).toFixed(2)) : a.map((v, i) => (i % 2 ? v * k + oy : v * k + ox).toFixed(2))).join(" ")).join("");
+      // the smallest scale at which the bubble, its centre (unit 32, 28) on screen point (ax, ay), covers the frame
+      const bubblePath2D = new Path2D(MARK.bubble);
+      const probeCtx = document.createElement("canvas").getContext("2d");
+      const EDGE = [];
+      for (let i = 0; i <= 8; i++) EDGE.push([(W * i) / 8, -6], [(W * i) / 8, H + 6], [-6, (H * i) / 8], [W + 6, (H * i) / 8]);
+      function coverScale(ax, ay) {
+        let lo = 0.5, hi = 600;
+        for (let k = 0; k < 32; k++) {
+          const s = (lo + hi) / 2;
+          if (EDGE.every(([x, y]) => probeCtx.isPointInPath(bubblePath2D, 32 + (x - ax) / s, MARK.cy + (y - ay) / s))) hi = s;
+          else lo = s;
+        }
+        return hi * 1.03;
+      }
+      // a bubble that grows from (from.x, from.y) at scale from.s until it covers the frame, its centre drifting to `to`
+      const bubbleAt = (t, at, dur, from, to = { x: CX, y: CY }, end = coverScale(to.x, to.y)) => {
+        const u = E.io3(prog(t, at, at + dur));
+        const s = Math.exp(lerp(Math.log(from.s), Math.log(end), u));
+        const x = lerp(from.x, to.x, u), y = lerp(from.y, to.y, u);
+        return { s, ox: x - 32 * s, oy: y - MARK.cy * s, u };
+      };
+      // a filled bubble wipe in `color`
+      function bubbleWipe(parent, color, { at, dur, from, to }) {
+        const svg = svgEl("svg", { width: W, height: H, viewBox: `0 0 ${W} ${H}`, class: "abs" }, parent);
+        const p = svgEl("path", { d: MARK.bubble, fill: color }, svg);
+        const end = coverScale((to || { x: CX }).x, (to || { y: CY }).y);
+        return (t) => {
+          p.style.display = t < at ? "none" : "";
+          const b = bubbleAt(t, at, dur, from, to, end);
+          p.setAttribute("transform", `translate(${b.ox} ${b.oy}) scale(${b.s})`);
+        };
+      }
+
+      // ------------------------------------------------------------------
+      // Scenes
+      // ------------------------------------------------------------------
+      const scenes = [];
+      const defs = [];
+      let shift = 0;
+      const scene = (name, t0, t1, build) => defs.push({ name, t0: t0 - shift, t1: t1 - shift, shift, build });
+      const mounted = []; // every snapshot, so __ready can wait for their images
+      const MEASURED = {}; // positions one scene measures in its snapshot for a later scene
+      // mounts a snapshot only long enough to measure it (inside a root that is laid out while building)
+      const peek = (root, name, fn) => {
+        const u = mountUI(root, name);
+        const r = fn(u);
+        u.host.remove();
+        return r;
+      };
+      const ui = (root, name) => {
+        const u = mountUI(root, name);
+        mounted.push(u);
+        return u;
+      };
+
+      // ==================================================================
+      // 1. The pet floats in the middle, blinks and smiles; then it becomes the mark, the name arrives beside it,
+      //    and the tagline below. Frame 0 already shows the pet (the film loops back to it).
+      // ==================================================================
+      const HOOK = { S0: 8, blinks: [0.55], happy: 1.0, morph: [1.5, 2.5], move: [2.55, 3.35], letters: 2.9, tag: 3.65, window: [5.6, 6.5] };
+      let hookLock = null; // the chat scene opens its window from this mark's bubble
+      scene("hook", 0, 6.55, (root) => {
+        root.style.background = "var(--bg)";
+        const L = (hookLock = buildLockup(root, { tagline: true }));
+        return (t) => {
+          const mv = E.io4(prog(t, ...HOOK.move));
+          const S = Math.exp(lerp(Math.log(HOOK.S0), Math.log(L.S), mv));
+          // the bubble's centre travels from the middle of the frame to its place in the lockup
+          const px = lerp(CX, L.cx, mv), py = lerp(CY, L.cy, mv);
+          const hop = Math.sin(Math.PI * prog(t, HOOK.happy, HOOK.happy + 0.38)) * 1.6; // a small hop when it smiles
+          const bob = float(t) * 0.7 * (1 - prog(t, 1.25, 1.6)) + hop;
+          L.pet.draw(px - 32 * S, py - MARK.cy * S, S, {
+            m: E.io3(prog(t, ...HOOK.morph)),
+            face: "idle",
+            face2: "happy",
+            mix: E.io2(prog(t, HOOK.happy, HOOK.happy + 0.14)),
+            blink: blinkAt(t, HOOK.blinks),
+            bob,
+          });
+          L.ls.forEach((Lt, i) => {
+            const p = E.outExpo(prog(t, HOOK.letters + i * 0.045, HOOK.letters + 0.75 + i * 0.045));
+            T(Lt.e, { x: 20 + Lt.x, y: 10 + (1 - p) * LOCK.size * 1.2 });
+          });
+          animRow(L.tag, t, HOOK.tag, null, { st: 0.17, rot: 4 });
+        };
+      });
+      // ==================================================================
+      // 2. The real web client: #general on a server called Friday Crew. Messages arrive at the bottom,
+      //    the transcript stays anchored there as in the app, reactions pop, Maya types and sends.
+      // ==================================================================
+      const CHAT_CAM = camPath([
+        { t: 6.4, x: 960, y: 540, s: 1 },
+        { t: 9.7, x: 960, y: 548, s: 1.04, e: E.lin },
+        { t: 11.0, x: 700, y: 835, s: 2.3 },
+        { t: 19.05, x: 700, y: 835, s: 2.3 },
+        { t: 19.85, x: 640, y: 905, s: 2.6 },
+      ]);
+      const ARRIVE = [
+        { text: "Same. I patched", at: 11.25 },
+        { text: "const crew", at: 12.55 },
+        { text: "Opening Lounge", at: 15.08 },
+        { text: "Running late", at: 16.8 },
+        { text: "Wchodzę", at: 17.65 },
+      ];
+      const CHIPS = [
+        { emo: "🔥", counts: [[11.85, 1], [12.05, 2]] },
+        { emo: "🍿", counts: [[15.65, 1], [15.8, 2], [15.95, 3]] },
+        { emo: "🙌", counts: [[16.2, 1]] },
+      ];
+      // Maya types once the caption has left the composer's corner
+      const TYPE = { text: "Opening Lounge at 8. Bring snacks", a: 13.95, b: 14.9, send: 15.05 };
+      scene("chat", HOOK.window[0], 19.55, (root) => {
+        root.style.background = "var(--bg)";
+        const winEnd = coverScale(CX, CY);
+        const u = ui(root, "chat");
+        u.keepScroll();
+        const items = u.$$("[data-index]");
+        const list = items[0].parentElement;
+        const arrive = ARRIVE.map((a) => {
+          const item = items.find((it) => it.textContent.includes(a.text));
+          const row = item.querySelector(".reactions");
+          const rowH = row ? row.getBoundingClientRect().height + parseFloat(getComputedStyle(row).marginTop || 0) : 0;
+          return { ...a, item, h: item.offsetHeight, rowH };
+        });
+        const chips = CHIPS.map((c) => {
+          const chip = u.$$(".react-chip").find((e) => e.dataset.emo === c.emo);
+          return { ...c, chip, first: c.counts[0][0] };
+        });
+        // a reaction row takes room only from the first reaction on
+        for (const a of arrive) a.rowAt = Math.min(...chips.filter((c) => a.item.contains(c.chip)).map((c) => c.first), Infinity);
+        const ta = u.$('textarea[placeholder="Message #general"]');
+        MEASURED.olaChat = u.box(arrive.find((a) => a.text === "Wchodzę").item.querySelector(".msg-group")).y;
+        const tap = tapper(root);
+        return (t) => {
+          // the app opens inside the mark's own bubble: the whole window, small, grows with the bubble until it fills the frame
+          u.keepScroll();
+          if (t < HOOK.window[1]) {
+            const bb = bubbleAt(t, HOOK.window[0], HOOK.window[1] - HOOK.window[0], { x: hookLock.cx, y: hookLock.cy, s: hookLock.S }, { x: CX, y: CY }, winEnd);
+            root.style.clipPath = `path('${bubbleD(bb.s, bb.ox, bb.oy)}')`;
+            // the app's middle sits in the bubble's middle; it reaches its full size as the bubble covers the frame
+            const k = Math.min(1, (bb.s / winEnd) * 1.25);
+            camera(u.host, { fx: CX, fy: CY, s: k, cx: bb.ox + 32 * bb.s, cy: bb.oy + MARK.cy * bb.s });
+          } else {
+            root.style.clipPath = "none";
+            camera(u.host, CHAT_CAM(t));
+          }
+          root.style.opacity = prog(t, HOOK.window[0], HOOK.window[0] + 0.12);
+          // what is not there yet takes no room at the bottom: the list is pushed down by it, as a chat anchored to its end
+          let hidden = 0;
+          for (const a of arrive) {
+            const p = E.outExpo(prog(t, a.at, a.at + 0.45));
+            const r = a.rowH ? E.outExpo(prog(t, a.rowAt, a.rowAt + 0.3)) : 1;
+            hidden += (a.h - a.rowH) * (1 - p) + a.rowH * (1 - r);
+            a.item.style.opacity = prog(t, a.at, a.at + 0.16);
+            a.item.style.transform = `translateY(${(1 - p) * 14}px)`;
+          }
+          for (const c of chips) {
+            const k = clamp(pop(t, c.first, 3, 0.45), 0, 1.3);
+            c.chip.style.transform = `scale(${k})`;
+            c.chip.style.opacity = t < c.first ? 0 : 1;
+            let n = 0;
+            for (const [at, v] of c.counts) if (t >= at) n = v;
+            if (c.chip.lastChild.nodeType === 3) c.chip.lastChild.textContent = String(Math.max(1, n));
+          }
+          list.style.transform = `translateY(${hidden}px)`;
+          // Maya writes in the composer and sends
+          const n = Math.round(TYPE.text.length * prog(t, TYPE.a, TYPE.b));
+          ta.value = t < TYPE.send ? TYPE.text.slice(0, n) : ""; // Enter sends
+        };
+      });
+
+      // ==================================================================
+      // 3. Ola wrote in Polish. Translate runs the model in the browser: the same message, now in English.
+      // ==================================================================
+      const TR_TAP = 20.45, TR_SWAP = [20.62, 20.9];
+      const LOUNGE_TAP = 24.78;
+      let TR_CAM = null;
+      scene("translate", 19.55, 24.97, (root) => {
+        root.style.background = "var(--bg)";
+        const a = ui(root, "translate-before");
+        const b = ui(root, "translated");
+        const tap = tapper(root);
+        // the two snapshots differ only in Ola's message: the Polish one leaves before the English one arrives
+        const polish = a.$$(".msg-entry").find((e) => e.textContent.includes("Wchodzę"));
+        a.keepScroll(); // positions are measured with the transcript scrolled as in the app
+        // with translation on, every message has a Translate line, so Ola's message sits higher than in #general;
+        // the camera follows it by that much, and the cut from the chat scene does not jump
+        const dy = a.box(polish.closest(".msg-group")).y - MEASURED.olaChat;
+        TR_CAM = camPath([
+          { t: 19.05, x: 700, y: 835 + dy, s: 2.3 },
+          { t: 19.85, x: 640, y: 905 + dy, s: 2.6 },
+          { t: 23.85, x: 640, y: 905 + dy, s: 2.6 },
+          { t: 24.7, x: 700, y: 430, s: 1.3 },
+        ]);
+        // where the taps land, measured in the snapshot: Ola's Translate action and the lounge voice channel
+        const toggles = a.$$(".msg-translation-toggle");
+        const tr = a.box(toggles[toggles.length - 1]);
+        const lounge = a.box(a.$$(".channel-main").find((e) => e.textContent.includes("lounge")));
+        const TAPS = [{ at: TR_TAP, x: tr.cx, y: tr.cy }, { at: LOUNGE_TAP, x: lounge.x + 74, y: lounge.cy }];
+        return (t) => {
+          for (const u of [a, b]) {
+            u.keepScroll();
+            camera(u.host, TR_CAM(t));
+          }
+          polish.style.opacity = 1 - E.in2(prog(t, TR_SWAP[0] - 0.14, TR_SWAP[0]));
+          b.host.style.opacity = E.out2(prog(t, ...TR_SWAP));
+          tap(t, TAPS, TR_CAM);
+        };
+      });
+
+      // ==================================================================
+      // 4. Into the voice channel: four people, the speaking ring moves with whoever talks.
+      // ==================================================================
+      const VOICE_CAM = camPath([
+        { t: 24.97, x: 700, y: 430, s: 1.3 },
+        { t: 25.25, x: 700, y: 430, s: 1.3 },
+        { t: 26.2, x: 860, y: 480, s: 1.2 },
+        { t: 30.1, x: 866, y: 476, s: 1.22, e: E.lin },
+        { t: 30.85, x: 986, y: 487, s: 1.25 },
+      ]);
+      const SPEAK = {
+        Priya: [[25.6, 26.5], [27.9, 28.5]],
+        Jonas: [[26.5, 27.5], [29.3, 30.2]],
+        Theo: [[27.5, 28.0], [28.5, 29.2]],
+        Maya: [[28.0, 28.4]],
+      };
+      const SPEAK_SHARE = { Jonas: [[31.0, 32.2], [32.6, 33.7]], Priya: [[32.2, 32.6]], Theo: [], Maya: [] };
+      // every place the app shows that someone is speaking: the stage tile, the rail and the people list
+      function speakers(u) {
+        const people = {};
+        for (const name of ["Priya", "Jonas", "Maya", "Theo"]) {
+          const els = [
+            ...u.$$(".tile").filter((e) => e.querySelector(".t-name")?.textContent.includes(name)),
+            ...u.$$(".voice-occupant").filter((e) => e.textContent.includes(name)),
+            ...u.$$(".person").filter((e) => e.textContent.includes(name)),
+          ];
+          people[name] = els.flatMap((e) => [e, ...e.querySelectorAll(".av")]);
+        }
+        return (t, plan) => {
+          for (const [name, els] of Object.entries(people)) {
+            const on = (plan[name] || []).some(([a, b]) => t >= a && t < b);
+            for (const e of els) e.classList.toggle("speaking", on);
+          }
+        };
+      }
+      const SHARE_GROW = [30.2, 30.85];
+      scene("voice", 24.97, 31.02, (root) => {
+        root.style.background = "var(--bg)";
+        const u = ui(root, "voice");
+        const speak = speakers(u);
+        const tile = u.$$(".tile").find((e) => e.textContent.includes("Jonas"));
+        const from = u.box(tile);
+        // where the next snapshot shows the stream: the tile grows into exactly that box
+        const to = peek(root, "voice-share", (s) => s.box(s.$("video")));
+        // Jonas's tile opens into the shared screen (the screen is drawn by sharedScreen())
+        const grow = el("div", "abs", root);
+        grow.style.cssText += "overflow:hidden;border-radius:12px;display:none;background:#15171c";
+        const screen = sharedScreen(grow);
+        return (t) => {
+          u.keepScroll();
+          const c = VOICE_CAM(t);
+          camera(u.host, c);
+          speak(t, SPEAK);
+          const p = E.io4(prog(t, ...SHARE_GROW));
+          grow.style.display = t >= SHARE_GROW[0] ? "block" : "none";
+          if (t >= SHARE_GROW[0]) {
+            const r = { x: lerp(from.x, to.x, p), y: lerp(from.y, to.y, p), w: lerp(from.w, to.w, p), h: lerp(from.h, to.h, p) };
+            const a = toScreen(c, r.x, r.y);
+            grow.style.left = `${a.x}px`;
+            grow.style.top = `${a.y}px`;
+            grow.style.width = `${r.w * c.s}px`;
+            grow.style.height = `${r.h * c.s}px`;
+            screen.fit(r.w * c.s, r.h * c.s);
+            screen.at(t);
+            grow.style.opacity = prog(t, SHARE_GROW[0], SHARE_GROW[0] + 0.15);
+          }
+        };
+      });
+
+      // Jonas's screen: an editor with the patch from the chat. An example made for the film, not a real project.
+      const CODE = [
+        ["--", " keeps every player's world in step"],
+        ["local", " Sync = {}"],
+        [""],
+        ["function", " Sync.tick(world, dt)"],
+        ["-", "  world.clock = world.clock + ", "1"],
+        ["+", "  world.clock = world.clock + dt"],
+        ["+", "  if world.drift > ", "0.05", " then"],
+        ["+", "    world:resync()"],
+        ["+", "  end"],
+        ["", "  for _, p in ipairs(world.players) do"],
+        ["", "    p:send(world:snapshot())"],
+        ["", "  end"],
+        ["end"],
+        [""],
+        ["return", " Sync"],
+      ];
+      const TYPE_LINES = { start: 31.45, each: 0.42 }; // the four added lines arrive one by one
+      function sharedScreen(parent) {
+        // inline positions only: inside a snapshot's shadow root the film's classes do not exist
+        const abs = (p) => {
+          const d = el("div", null, p);
+          d.style.cssText = "position:absolute;left:0;top:0;";
+          return d;
+        };
+        const box = abs(parent);
+        box.style.cssText += "width:1920px;height:1080px;transform-origin:0 0;background:#15171c;font-family:'JetBrains Mono',monospace;color:#d7dae0";
+        const side = abs(box);
+        side.style.cssText += "width:360px;height:1080px;background:#111318;border-right:2px solid #23262e;padding:44px 0";
+        side.innerHTML = `<div style="font:600 26px Outfit;color:#8b919c;padding:0 40px 26px">server-mod</div>` +
+          ["config.toml", "players.lua", "sync.lua", "world.lua"].map((f) => `<div style="font:500 30px 'JetBrains Mono';padding:14px 40px;${f === "sync.lua" ? "background:#20232b;color:#f3f4f6" : "color:#9aa0ad"}">${f}</div>`).join("");
+        const tabs = abs(box);
+        tabs.style.cssText += "left:360px;width:1560px;height:84px;background:#111318;border-bottom:2px solid #23262e;display:flex";
+        tabs.innerHTML = `<div style="padding:24px 40px;font:500 28px 'JetBrains Mono';color:#f3f4f6;background:#15171c;border-right:2px solid #23262e">sync.lua</div><div style="padding:24px 40px;font:500 28px 'JetBrains Mono';color:#7f8591">world.lua</div>`;
+        const code = abs(box);
+        code.style.cssText += "left:360px;top:110px;width:1560px";
+        const KW = /\b(local|function|if|then|end|for|in|do|return)\b/g;
+        const paint = (s) => esc(s).replace(KW, '<span style="color:#b4a7ff">$1</span>').replace(/\b(\d+\.?\d*)\b/g, '<span style="color:#f0b232">$1</span>');
+        const rows = CODE.map((parts, i) => {
+          const r = el("div", null, code);
+          const mark = parts[0] === "+" || parts[0] === "-" ? parts[0] : "";
+          const text = mark ? parts.slice(1).join("") : parts.join("");
+          const bg = mark === "+" ? "rgba(61,214,140,0.13)" : mark === "-" ? "rgba(242,85,90,0.14)" : "transparent";
+          const isComment = parts[0] === "--";
+          r.style.cssText = `display:flex;height:56px;align-items:center;background:${bg};font:500 36px 'JetBrains Mono';white-space:pre`;
+          r.innerHTML = `<span style="width:96px;text-align:right;padding-right:28px;color:#596070">${i + 1}</span><span style="width:40px;color:${mark === "+" ? "#3dd68c" : "#f2555a"}">${mark}</span><span class="src" style="${isComment ? "color:#747b89" : ""}">${isComment ? esc(text) : paint(text)}</span>`;
+          return { r, mark, text, src: r.querySelector(".src"), isComment };
+        });
+        const added = rows.filter((r) => r.mark === "+");
+        return {
+          fit(w, h) {
+            box.style.transform = `scale(${Math.min(w / 1920, h / 1080)})`;
+          },
+          at(t) {
+            added.forEach((row, k) => {
+              const a = TYPE_LINES.start + k * TYPE_LINES.each;
+              const n = Math.round(row.text.length * prog(t, a, a + TYPE_LINES.each * 0.85));
+              row.r.style.display = t >= a ? "flex" : "none"; // a new line pushes the ones below it down, as in an editor
+              row.src.innerHTML = paint(row.text.slice(0, n));
+            });
+          },
+        };
+      }
+
+      // ==================================================================
+      // 5. Jonas shares a screen with the room; the rest listen.
+      // ==================================================================
+      const SHARE_CAM = camPath([
+        { t: 30.85, x: 986, y: 487, s: 1.25 },
+        { t: 34.95, x: 986, y: 480, s: 1.29, e: E.lin },
+      ]);
+      // puts Jonas's screen where the app has the <video> of the stream
+      function screenInto(u) {
+        const v = u.$("video");
+        const holder = document.createElement("div");
+        holder.style.cssText = `position:absolute;left:${v.offsetLeft}px;top:${v.offsetTop}px;width:${v.offsetWidth}px;height:${v.offsetHeight}px;overflow:hidden;background:#15171c`;
+        v.after(holder);
+        const s = sharedScreen(holder);
+        s.fit(v.offsetWidth, v.offsetHeight);
+        return s;
+      }
+      scene("share", 30.85, 35.0, (root) => {
+        root.style.background = "var(--bg)";
+        const u = ui(root, "voice-share");
+        const speak = speakers(u);
+        const screen = screenInto(u);
+        return (t) => {
+          u.keepScroll();
+          camera(u.host, SHARE_CAM(t));
+          speak(t, SPEAK_SHARE);
+          screen.at(t);
+          root.style.opacity = E.io2(prog(t, 30.85, 31.0)); // the share layout settles in over the opened tile
+        };
+      });
+
+      // ==================================================================
+      // 6. The climax: Settings > Appearance. Each palette the app ships rises through the whole window as the meter.
+      // ==================================================================
+      const PAL_ORDER = ["Slate", "Evergreen", "Harbor", "Amethyst", "Ink", "Midnight"];
+      const PAL_AT = [36.0, 36.85, 37.7, 38.55, 39.4, 40.25];
+      const PAL_TILE = {}; // the centre of each palette's tile, measured in the snapshot
+      const PAL_CAM = camPath([
+        { t: 34.95, x: 986, y: 480, s: 1.29 },
+        { t: 35.0, x: 986, y: 480, s: 1.29 },
+        { t: 35.75, x: 960, y: 500, s: 1.55 },
+        { t: 37.4, x: 960, y: 500, s: 1.55 },
+        { t: 40.4, x: 960, y: 540, s: 1.0 },
+      ]);
+      const MODAL_IN = [34.97, 35.32];
+      scene("palettes", 34.95, 41.7, (root) => {
+        root.style.background = "var(--bg)";
+        const a = ui(root, "appearance");
+        const b = ui(root, "appearance");
+        const tap = tapper(root);
+        const parts = [a, b].map((u) => ({
+          u,
+          tiles: Object.fromEntries(u.$$(".ap-tile").map((e) => [e.textContent.trim(), e])),
+          // the accent swatch's hex, wherever the pane prints it
+          hex: [...u.$$("input")].filter((i) => /^#?[0-9a-f]{6}$/i.test(i.getAttribute("value") || "")),
+          hexText: [...u.$$(".sv *")].filter((e) => e.children.length === 0 && /^#[0-9a-f]{6}$/i.test(e.textContent.trim())),
+          screen: screenInto(u),
+          tick: u.$(".ap-tile.on .ap-tick"), // the app renders the tick only inside the chosen tile
+          wrap: u.$(".sv-wrap"),
+          panel: u.$(".sv"),
+        }));
+        a.keepScroll();
+        for (const [n, e] of Object.entries(parts[0].tiles)) {
+          const bx = a.box(e);
+          PAL_TILE[n] = [bx.cx, bx.cy];
+        }
+        const choose = (P, name) => {
+          const pal = UI_PALETTES[name];
+          P.u.palette(pal);
+          for (const [n, e] of Object.entries(P.tiles)) {
+            e.classList.toggle("on", n === name);
+            e.setAttribute("aria-checked", String(n === name));
+          }
+          if (P.tick && P.tiles[name]) P.tiles[name].appendChild(P.tick);
+          const acc = /--palette-accent:\s*(#[0-9a-f]{6})/i.exec(pal.style)?.[1] || "#6f65d1";
+          P.hex.forEach((i) => i.setAttribute("value", acc.toUpperCase()));
+          P.hexText.forEach((e) => (e.textContent = acc.toUpperCase()));
+        };
+        let stateA = null, stateB = null;
+        const SWAP = 0.62; // how long a palette takes to spread over the window
+        return (t) => {
+          const c = PAL_CAM(t);
+          // which palette is underneath, and which one is spreading
+          let k = -1;
+          for (let i = 0; i < PAL_AT.length; i++) if (t >= PAL_AT[i]) k = i;
+          const under = k <= 0 ? "Midnight" : PAL_ORDER[k - 1];
+          const rising = k >= 0 ? PAL_ORDER[k] : null;
+          const done = k >= 0 && t >= PAL_AT[k] + SWAP;
+          const base = done ? rising : under;
+          if (stateA !== base) choose(parts[0], (stateA = base));
+          if (rising && stateB !== rising) choose(parts[1], (stateB = rising));
+          for (const P of parts) {
+            P.u.keepScroll();
+            camera(P.u.host, c);
+            P.screen.at(34.4); // Jonas's patch is complete by now
+            // the settings window opens over the call
+            const m = E.outExpo(prog(t, ...MODAL_IN));
+            P.wrap.style.opacity = prog(t, MODAL_IN[0], MODAL_IN[0] + 0.18);
+            P.panel.style.transform = `scale(${lerp(0.965, 1, m)})`;
+          }
+          // the chosen palette spreads from the tapped tile in the shape of the bubble
+          if (rising && !done) {
+            const tile = toScreen(c, ...PAL_TILE[rising]);
+            const bb = bubbleAt(t, PAL_AT[k], SWAP, { x: tile.x, y: tile.y, s: 0.5 }, tile);
+            // screen space to the snapshot's own coordinates, where its clip-path lives
+            const k2 = bb.s / c.s, ox = (bb.ox - CX) / c.s + c.fx, oy = (bb.oy - CY) / c.s + c.fy;
+            b.host.style.display = "block";
+            b.host.style.clipPath = `path('${bubbleD(k2, ox, oy)}')`;
+          } else b.host.style.display = "none";
+          tap(t, PAL_ORDER.map((n, i) => ({ at: PAL_AT[i] - 0.12, x: PAL_TILE[n][0], y: PAL_TILE[n][1] })), PAL_CAM);
+        };
+      });
+
+      // ==================================================================
+      // 7. A chapter in another light: Cockpit, the owner's panel, on the same instance.
+      // ==================================================================
+      const COCKPIT_CAM = camPath([
+        { t: 41.55, x: 660, y: 384, s: 1.42 },
+        { t: 46.1, x: 700, y: 388, s: 1.44, e: E.lin },
+        { t: 47.7, x: 1180, y: 400, s: 1.44 },
+      ]);
+      const COCKPIT_IN = 41.68;
+      scene("cockpit", 41.55, 48.35, (root) => {
+        root.style.background = "#ffffff";
+        const u = ui(root, "cockpit-runtime");
+        const cards = u.$$("[data-slot=card]").map((e) => ({ e, b: u.box(e) })).sort((p, q) => p.b.y - q.b.y || p.b.x - q.b.x);
+        const nav = u.$$("a[href]").filter((a) => u.box(a).x < 300);
+        const head = u.$$("h1, h1 + p, h1 ~ *").slice(0, 3);
+        // the request count of the last hour, whatever it was when the snapshot was taken, counts up as the card arrives
+        const leaf = u.$$('[aria-label="Requests"] p').find((e) => e.children.length === 0 && /^[\d,]+$/.test(e.textContent.trim()));
+        const requests = leaf ? Number(leaf.textContent.replace(/,/g, "")) : 0;
+        return (t) => {
+          u.keepScroll();
+          camera(u.host, COCKPIT_CAM(t));
+          nav.forEach((a, i) => {
+            const p = E.outExpo(prog(t, COCKPIT_IN + 0.04 * i, COCKPIT_IN + 0.5 + 0.04 * i));
+            T(a, { x: (1 - p) * -18, o: p });
+          });
+          head.forEach((h) => (h.style.opacity = prog(t, COCKPIT_IN, COCKPIT_IN + 0.3)));
+          cards.forEach((c, i) => {
+            const p = E.outExpo(prog(t, COCKPIT_IN + 0.08 + 0.05 * i, COCKPIT_IN + 0.68 + 0.05 * i));
+            T(c.e, { y: (1 - p) * 26, o: prog(t, COCKPIT_IN + 0.08 + 0.05 * i, COCKPIT_IN + 0.3 + 0.05 * i) });
+          });
+          if (leaf) leaf.textContent = Math.round(requests * E.outExpo(prog(t, COCKPIT_IN + 0.2, COCKPIT_IN + 1.6))).toLocaleString("en-US");
+        };
+      });
+
+      // ==================================================================
+      // 8. Under all of it: one container, started with one command (docs/install/quick-start.md).
+      // ==================================================================
+      const TERM = { in: 48.45, type: [49.1, 50.05], out1: 50.45, out: 53.55 };
+      scene("terminal", 48.3, 54.3, (root) => {
+        root.style.background = "var(--bg)";
+        const win = el("div", "abs", root);
+        const ww = 1180, wh = 300;
+        win.style.cssText += `left:${CX - ww / 2}px;top:${CY - wh / 2 - 60}px;width:${ww}px;height:${wh}px;border-radius:20px;background:var(--surface);border:1.5px solid var(--line);box-shadow:0 60px 120px -60px rgba(0,0,0,0.8);overflow:hidden`;
+        const bar = el("div", "abs", win);
+        bar.style.cssText += `width:${ww}px;height:64px;border-bottom:1.5px solid var(--line);font:500 26px 'JetBrains Mono',monospace;color:var(--faint);padding:17px 32px`;
+        bar.textContent = "~/stellarr";
+        const body = el("div", "abs", win);
+        body.style.cssText += "top:64px;padding:40px 44px;font:500 40px/1.6 'JetBrains Mono',monospace;color:var(--ink);white-space:pre";
+        const cmd = el("div", null, body);
+        const l1 = el("div", null, body);
+        l1.innerHTML = `<svg width="30" height="30" viewBox="0 0 24 24" style="vertical-align:-3px;margin-right:22px"><path d="M4 12.5l5 5L20 6.5" fill="none" stroke="#3dd68c" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>Container stellarr-v2  <span style="color:var(--ok)">Started</span>`;
+        const COMMAND = "docker compose up -d";
+        return (t) => {
+          const p = E.outExpo(prog(t, TERM.in, TERM.in + 0.7));
+          const out = E.in3(prog(t, TERM.out, TERM.out + 0.45));
+          T(win, { y: (1 - p) * 40 + out * 30, s: lerp(0.96, 1, p) - out * 0.03, o: Math.min(prog(t, TERM.in, TERM.in + 0.25), 1 - out) });
+          const n = Math.round(COMMAND.length * prog(t, ...TERM.type));
+          const blink = t < TERM.type[1] + 0.2 || Math.floor(t * 2.4) % 2 === 0;
+          const caret = t < TERM.out1 ? `<i style="display:inline-block;width:0.55em;height:1.1em;vertical-align:-0.2em;background:${blink ? "var(--ink)" : "transparent"}"></i>` : "";
+          cmd.innerHTML = `<span style="color:var(--accent)">$</span> ${esc(COMMAND.slice(0, n))}${caret}`;
+          const q = E.outExpo(prog(t, TERM.out1, TERM.out1 + 0.5));
+          T(l1, { y: (1 - q) * 18, o: q });
+        };
+      });
+
+      // ==================================================================
+      // Captions: the narrator. The pet sits on a floating plate, with the expression the line calls for
+      // (branding/mascot/expressions; the line is its label), and the plate grows with the words.
+      // ==================================================================
+      const CAP = { left: 64, bottom: 64, h: 116, padL: 18, petS: 1.45, gapText: 18, padR: 42, size: 50 };
+      const CAPS = [
+        { text: "Self-hosted text, voice and video chat.", a: 7.5, b: 10.7, face: "happy" },
+        { text: "Replies, reactions and code blocks.", a: 10.95, b: 13.75, face: "idle" },
+        { text: "Translated locally, in your browser.", a: 21.0, b: 24.0, face: "listening" },
+        { text: "Drop into a voice channel.", a: 26.3, b: 29.4, face: "speaking" },
+        { text: "Share your screen with the room.", a: 31.3, b: 34.5, face: "listening" },
+        { text: "Six palettes. Pick your own accent.", a: 36.3, b: 39.7, face: "happy" },
+        { text: "Users, logs and backups in Cockpit.", a: 43.0, b: 46.4, face: "idle" },
+        // it waits while the container starts and smiles when it is up; then it leaves for the end card
+        { text: "One command, one container.", a: 49.3, b: 53.6, face: "connecting", then: ["happy", 50.5], handOff: true },
+      ];
+      // where the plate's pet has its bubble centre (unit 32, 28) on screen, at rest
+      const CAP_PET = { x: CAP.left + CAP.padL + 32 * CAP.petS, y: H - CAP.bottom - CAP.h / 2 + (MARK.cy - 32) * CAP.petS };
+      scene("captions", 0, TIMELINE + 1, (root) => {
+        const caps = CAPS.map((c) => {
+          const plate = el("div", "abs", root);
+          const words = c.text.split(" ");
+          const textX = CAP.padL + 64 * CAP.petS + CAP.gapText;
+          const row = wordRow(plate, words.map((text) => ({ text })), { x: textX, y: (CAP.h - CAP.size * 1.24) / 2, size: CAP.size, weight: WT.display, color: "var(--ink)", ls: "-0.015em" });
+          plate.style.cssText += `left:${CAP.left}px;top:${H - CAP.bottom - CAP.h}px;height:${CAP.h}px;border-radius:22px;background:var(--bg);border:1.5px solid rgba(255,255,255,0.09);box-shadow:0 34px 70px -34px rgba(0,0,0,0.85);display:none`;
+          const svg = svgEl("svg", { width: 64 * CAP.petS + 20, height: CAP.h, class: "abs" }, plate);
+          svg.style.left = `${CAP.padL - 10}px`;
+          const pet = buildPet(svg);
+          const times = words.map((_, i) => c.a + 0.3 + i * 0.16);
+          return { ...c, plate, row, svg, pet, times, textX };
+        });
+        return (t) => {
+          for (const c of caps) {
+            const on = t >= c.a - 0.05 && t < c.b + 0.4;
+            c.plate.style.display = on ? "block" : "none";
+            if (!on) continue;
+            const pin = E.outExpo(prog(t, c.a, c.a + 0.45));
+            const pout = E.in3(prog(t, c.b, c.b + 0.32));
+            T(c.plate, { y: (1 - pin) * 18 + pout * 14, o: Math.min(prog(t, c.a, c.a + 0.2), 1 - pout) });
+            // the pet pops in first, then the words; the plate grows with them
+            const k = clamp(spring(t - c.a, 2.4, 0.5), 0, 1.15);
+            const s = CAP.petS * (0.55 + 0.45 * k);
+            const lx = 10 + 32 * CAP.petS, ly = CAP.h / 2 + (MARK.cy - 32) * CAP.petS; // bubble centre inside the svg
+            const [f2, at2] = c.then || [null, 1e9];
+            c.pet.draw(lx - 32 * s, ly - MARK.cy * s, s, {
+              face: c.face,
+              face2: f2,
+              mix: E.io2(prog(t, at2, at2 + 0.14)),
+              blink: c.face === "happy" ? 0 : blinkAt(t, [c.a + 1.35]),
+              bob: Math.sin(Math.PI * prog(t, at2, at2 + 0.36)) * 2, // a hop when its face changes
+            });
+            // the last caption's pet leaves the plate and becomes the mark (scene "end")
+            c.svg.style.visibility = c.handOff && t >= END.fly[0] ? "hidden" : "visible";
+            let edge = c.textX - CAP.gapText;
+            c.row.items.forEach((w, i) => {
+              const p = E.outExpo(prog(t, c.times[i], c.times[i] + 0.7));
+              T(w.s, { y: (1 - p) * CAP.size * 1.3, r: (1 - p) * 4 });
+              const g = E.outExpo(prog(t, c.times[i], c.times[i] + 0.45));
+              if (g > 0) edge = lerp(i ? c.row.items[i - 1].x + c.row.items[i - 1].w : edge, w.x + w.w, g);
+            });
+            c.plate.style.width = `${edge + CAP.padR}px`;
+          }
+        };
+      });
+
+      // ==================================================================
+      // 9. The end card: the pet leaves the last caption, becomes the mark, and the name and the tagline return.
+      //    Then the mark turns back into the pet in the middle of the frame: the film is at its first frame again.
+      // ==================================================================
+      const END = { fly: [53.6, 54.35], morph: [54.3, 55.1], letters: 54.95, tag: 55.5, link: 56.15, out: 58.6, back: [58.85, 59.6], home: [58.9, 59.85] };
+      scene("end", 53.6, TIMELINE + 1, (root) => {
+        root.style.zIndex = "2"; // above the captions: the pet leaves the last plate in front of it
+        const L = buildLockup(root, { tagline: true, url: true });
+        return (t) => {
+          const f = E.io4(prog(t, ...END.fly));
+          const h = E.io4(prog(t, ...END.home));
+          const S1 = Math.exp(lerp(Math.log(CAP.petS), Math.log(L.S), f));
+          const S = Math.exp(lerp(Math.log(S1), Math.log(HOOK.S0), h));
+          const px = lerp(lerp(CAP_PET.x, L.cx, f), CX, h), py = lerp(lerp(CAP_PET.y, L.cy, f), CY, h);
+          const m = E.io3(prog(t, ...END.morph)) * (1 - E.io3(prog(t, ...END.back)));
+          L.pet.draw(px - 32 * S, py - MARK.cy * S, S, {
+            m,
+            face: t < END.out ? "happy" : "idle",
+            bob: float(t) * 0.7 * prog(t, 59.3, 59.8),
+          });
+          const gone = E.in3(prog(t, END.out, END.out + 0.4));
+          L.ls.forEach((Lt, i) => {
+            const p = E.outExpo(prog(t, END.letters + i * 0.045, END.letters + 0.75 + i * 0.045));
+            T(Lt.e, { x: 20 + Lt.x, y: 10 + (1 - p) * LOCK.size * 1.2 + gone * 40, o: 1 - gone });
+          });
+          animRow(L.tag, t, END.tag, null, { st: 0.17, rot: 4 });
+          L.tag.items.forEach((w) => (w.mask.style.opacity = 1 - gone));
+          animRow(L.link, t, END.link, null, { st: 0.05, rot: 0 });
+          L.link.items.forEach((w) => (w.mask.style.opacity = 1 - gone));
+        };
+      });
+
+      // ==================================================================
+      // Chapter changes on top of everything: the bubble grows until it is the next world's background
+      // ==================================================================
+      // into Cockpit: a white bubble from the middle of the frame, which is Cockpit's page
+      scene("wipe-light", 41.0, 41.7, (root) => {
+        const wipe = bubbleWipe(root, "#ffffff", { at: 41.0, dur: 0.62, from: { x: CX, y: CY + 80, s: 0.6 } });
+        return (t) => wipe(t);
+      });
+      // into the terminal: a dark bubble from Cockpit's list of services, all of which run in the one container
+      scene("wipe-dark", 47.75, 48.45, (root) => {
+        const wipe = bubbleWipe(root, "var(--bg)", { at: 47.75, dur: 0.62, from: { x: 1560, y: 420, s: 0.6 } });
+        return (t) => wipe(t);
+      });
+      // ------------------------------------------------------------------
+      // Render and readiness
+      // ------------------------------------------------------------------
+      function render(time) {
+        const t = time * SPEED;
+        for (const s of scenes) {
+          const on = t >= s.t0 && t < s.t1;
+          s.root.style.display = on ? "block" : "none";
+          if (on) s.update(t);
+        }
+      }
+
+      window.__DURATION = DURATION;
+      window.__SUB = SUB;
+      window.__SIZE = { w: W, h: H };
+      window.__render = render;
+      window.__ready = (async () => {
+        const declared = [...document.fonts];
+        await Promise.all(declared.map((f) => f.load().catch(() => {})));
+        await document.fonts.ready;
+        for (const f of declared.filter((f) => f.status !== "loaded"))
+          console.error(`Font "${f.family}" ${f.weight} ${f.style} did not load: text in it will render in a fallback font.`);
+        for (const d of defs) {
+          const root = el("div", "scene", stage);
+          root.id = d.name;
+          root.style.display = "block"; // laid out but invisible while building: with display: none every measurement is 0
+          root.style.visibility = "hidden";
+          const update = d.build(root);
+          root.style.display = "none";
+          root.style.visibility = "";
+          scenes.push({ ...d, root, update: (t) => update(t + d.shift) });
+        }
+        const num = (v) => (v === "normal" ? 400 : v === "bold" ? 700 : Number(v));
+        const covers = (range, w) => { const [a, b = a] = String(range).split(" ").map(num); return w >= a && w <= b; };
+        for (const key of requested) {
+          const [w, st] = key.split(" ");
+          if (!declared.some((f) => f.family.replace(/["']/g, "") === FAMILY && f.style === st && covers(f.weight, Number(w))))
+            console.error(`"${FAMILY}" ${w} has no @font-face.`);
+        }
+        // images in the document and inside every snapshot's shadow root (avatars); decode() is capped at 8 s each
+        const imgs = [...document.images, ...mounted.flatMap((u) => u.images())];
+        await Promise.all(imgs.map((i) => Promise.race([i.decode().catch(() => {}), new Promise((r) => setTimeout(r, 8000))])));
+        if (!CAPTURE) live();
+      })();
+
+      // Live preview in the browser
+      function live() {
+        const hud = document.getElementById("hud");
+        const bar = hud.querySelector("i");
+        const label = hud.querySelector("span");
+        const fit = () => (stage.style.transform = `scale(${Math.min(innerWidth / W, (innerHeight - 26) / H)})`);
+        fit();
+        addEventListener("resize", fit);
+        let t = Q.has("t") ? Number(Q.get("t")) : 0;
+        let playing = !Q.has("t");
+        let last = performance.now();
+        addEventListener("keydown", (e) => {
+          if (e.code === "Space") playing = !playing;
+          if (e.code === "ArrowRight") t = Math.min(DURATION, t + 1);
+          if (e.code === "ArrowLeft") t = Math.max(0, t - 1);
+        });
+        hud.addEventListener("click", (e) => (t = (e.clientX / innerWidth) * DURATION));
+        const loop = (now) => {
+          if (playing) t = (t + (now - last) / 1000) % DURATION;
+          last = now;
+          render(t);
+          bar.style.width = `${(t / DURATION) * 100}%`;
+          label.textContent = `${t.toFixed(2)} s`;
+          requestAnimationFrame(loop);
+        };
+        requestAnimationFrame(loop);
+      }
+    </script>
+  </body>
+</html>

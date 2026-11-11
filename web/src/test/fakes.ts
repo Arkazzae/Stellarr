@@ -307,6 +307,8 @@ export class FakeVoiceClient implements VoiceClient {
     this.emit();
   });
 
+  reconnect = vi.fn(async () => {});
+
   setMuted = vi.fn((muted: boolean) => {
     this.set({
       muted,

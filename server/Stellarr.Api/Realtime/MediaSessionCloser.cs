@@ -15,7 +15,6 @@ namespace Stellarr.Api.Realtime;
 /// answers 204 for an unknown session too.
 /// </remarks>
 public sealed class MediaSessionCloser(
-    MediaTopology topology,
     IServiceProvider services,
     MediaControlTiming timing,
     ILogger<MediaSessionCloser> logger) : BackgroundService, IMediaSessionCloser
@@ -60,13 +59,6 @@ public sealed class MediaSessionCloser(
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        // Nothing is ever queued in the mesh topology, where no seat holds a
-        // media session; returning keeps the media server out of it entirely.
-        if (!topology.IsSfu)
-        {
-            return;
-        }
-
         var control = services.GetRequiredService<MediaControlClient>();
         var failing = false;
         try

@@ -1,12 +1,14 @@
 namespace Stellarr.Api.Contracts;
 
 /// <summary>
-/// A message between the peers of a voice room, relayed untouched by the hub.
+/// The state of one browser in a voice room, such as whether it is muted,
+/// relayed untouched by the hub to the others there. Media never travels this
+/// way; it goes through the media server.
 /// </summary>
 /// <param name="ChannelId">The room: a voice channel or a direct conversation.</param>
 /// <param name="ToUserId">The one peer it is meant for; null addresses everybody else in the room.</param>
-/// <param name="Kind">One of <c>RtcProtocol.SignalKinds</c>.</param>
-/// <param name="Payload">The kind's own JSON or SDP text, at most <c>RtcProtocol.MaxSignalBytes</c> long.</param>
+/// <param name="Kind">One of <c>RtcProtocol.SignalKinds</c>, which is only <c>state</c>.</param>
+/// <param name="Payload">A JSON object, at most <c>RtcProtocol.MaxSignalBytes</c> long.</param>
 public sealed record VoiceSignalDto(
     int ProtocolVersion,
     string ChannelId,
@@ -15,9 +17,8 @@ public sealed record VoiceSignalDto(
     string Payload);
 
 /// <summary>
-/// A signal from a browser to the media server, in the sfu topology. The hub
-/// checks it and hands it to the media server; it never reaches another
-/// browser.
+/// A signal from a browser to the media server. The hub checks it and hands it
+/// to the media server; it never reaches another browser.
 /// </summary>
 /// <param name="ChannelId">The room the caller's seat is in: a voice channel or a direct conversation.</param>
 /// <param name="SessionId">The caller's current media session, as <c>OpenMediaSession</c> returned it.</param>

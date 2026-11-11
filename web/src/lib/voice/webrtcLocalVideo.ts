@@ -47,6 +47,11 @@ export interface LocalVideoEnv {
 }
 
 export interface LocalCameraEnv extends LocalVideoEnv {
+  /**
+   * The stream the camera is sent in. The microphone is sent in it too, which
+   * is what makes the others' browsers play the face and the voice in sync.
+   */
+  voiceStream(): MediaStream;
   /** The chosen camera is gone: remember the system camera instead. */
   useSystemCamera(): VoiceSettings;
   /** Apply `settings` through the call's queue and reopen the camera whatever changed. */
@@ -66,9 +71,12 @@ export class LocalCamera {
 
   constructor(private readonly env: LocalCameraEnv) {}
 
-  /** The stream id announced to the others, or null while the camera is off. */
+  /**
+   * The stream id announced to the others, or null while the camera is off:
+   * the voice stream's, which the camera shares with the microphone.
+   */
   get streamId(): string | null {
-    return this.capture?.stream.id ?? null;
+    return this.capture ? this.env.voiceStream().id : null;
   }
 
   get local(): VoiceCamera | null {
@@ -130,7 +138,7 @@ export class LocalCamera {
     const capture = this.capture;
     if (!capture || link.cameraSender) return;
     try {
-      link.cameraSender = addSender(link, capture.video, capture.stream);
+      link.cameraSender = addSender(link, capture.video, this.env.voiceStream());
       void tuneCameraSender(link.cameraSender, this.env.settings().cameraQuality);
     } catch {
       // A closing connection cannot take it; the rebuilt one will.
@@ -518,10 +526,9 @@ async function tuneCameraSender(sender: RTCRtpSender, quality: CameraQualityId):
   }
 }
 
-/** Point a sender at another capture's picture and stream. */
+/** Point a sender at another capture's picture; it stays in the voice stream. */
 async function carry(sender: RTCRtpSender, capture: CameraCapture): Promise<void> {
   await sender.replaceTrack(capture.video);
-  sender.setStreams?.(capture.stream);
 }
 
 function removeSender(link: Link, sender: RTCRtpSender | null): null {

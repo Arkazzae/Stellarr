@@ -1,5 +1,5 @@
 import type { VoiceOccupant } from "@/lib/api/types";
-import type { MediaSessionClosedEvent, MediaSignal, VoiceSignal } from "@/lib/realtime/types";
+import type { MediaSessionClosedEvent, MediaSignal } from "@/lib/realtime/types";
 import type { MediaServerSignalKind } from "@/lib/rtc/protocol";
 import type { NetworkSample } from "./bitrate";
 import type { MediaCounters, StatsLike } from "./stats";
@@ -40,15 +40,16 @@ export interface StatsRound {
 }
 
 /**
- * How the people in a call are connected to each other: the one part of the
- * call that differs between a browser mesh and a media server.
+ * How the people in a call are connected to each other: the connection to
+ * Stellarr Media (`webrtcSfu`).
  *
- * `WebRtcVoiceClient` keeps everything that does not: capture, playback, the
- * people and their streams (`webrtcParticipant`), settings, the stats and
- * credential timers (`CallHealth`). It drives a topology only through this
- * interface. A topology owns its connections (`Link`) and the people in the
- * shared map it is given: it adds a person when the occupancy snapshot names
- * them and removes them when it no longer does.
+ * `WebRtcVoiceClient` keeps everything else: capture, playback, the people and
+ * their streams (`webrtcParticipant`), settings, the stats and credential
+ * timers (`CallHealth`). It drives the connection only through this interface,
+ * which keeps that boundary visible and lets the call be tested on its own.
+ * The topology owns its connection (`Link`) and the people in the shared map
+ * it is given: it adds a person when the occupancy snapshot names them and
+ * removes them when it no longer does.
  */
 export interface CallTopology {
   /**
@@ -59,14 +60,9 @@ export interface CallTopology {
   seated(): Promise<void>;
   /** Bring the people and the connections in line with the hub's occupancy snapshot. */
   reconcile(participants: readonly VoiceOccupant[]): Promise<void>;
-  /**
-   * An `offer`, `answer` or `candidate` frame relayed over `VoiceSignal`.
-   * `state` frames describe a person and never reach the topology.
-   */
-  handleSignal(signal: VoiceSignal): Promise<void>;
-  /** One signal from the media server. A topology without one has nothing to do with it. */
+  /** One signal from the media server. */
   handleMediaSignal(signal: MediaSignal<MediaServerSignalKind>): Promise<void>;
-  /** The media plane ended a media session. A topology without one has nothing to do with it. */
+  /** The media plane ended a media session. */
   mediaSessionClosed(event: MediaSessionClosedEvent): void;
   /** Offer again on every link that is free to take an offer. */
   renegotiate(): Promise<void>;
@@ -76,7 +72,7 @@ export interface CallTopology {
   dropAll(): void;
   /** Repair the links that are down, leaving working ones alone. */
   repairUnhealthy(): Promise<void>;
-  /** Replace a link that can no longer be trusted, e.g. a sender refused even a rollback. */
+  /** Replace the current link if a microphone swap cannot restore its sender. */
   rebuild(link: Link): Promise<void>;
   /**
    * The links this side publishes on: where the microphone, camera and

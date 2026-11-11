@@ -71,13 +71,13 @@ describe("receiveRemoteTrack", () => {
     const sound = track("audio");
     const media = stream("mic", sound);
 
-    receiveRemoteTrack(env, person, sound, media);
+    receiveRemoteTrack(env, person, sound, media, "mic");
 
     expect(receive).toHaveBeenCalledWith(person, media, sound, "mic");
     expect(changed).not.toHaveBeenCalled();
   });
 
-  it("files a track under the id it is given rather than its stream's own", () => {
+  it("files a track under the directory's id rather than its stream's own", () => {
     const picture = track("video");
     const media = stream("msid-hint", picture);
     person.media.announce({ screenStreamId: null, cameraStreamId: "face-2" });
@@ -94,7 +94,7 @@ describe("receiveRemoteTrack", () => {
     const media = stream("share", picture);
     person.media.announce({ screenStreamId: "share", cameraStreamId: null });
 
-    receiveRemoteTrack(env, person, picture, media);
+    receiveRemoteTrack(env, person, picture, media, "share");
 
     expect(person.media.screen?.stream).toBe(media);
     expect(route).toHaveBeenCalledWith(person);
@@ -105,8 +105,8 @@ describe("receiveRemoteTrack", () => {
     const announced = track("video");
     const unannounced = track("video");
     person.media.announce({ screenStreamId: "share", cameraStreamId: null });
-    receiveRemoteTrack(env, person, announced, stream("share", announced));
-    receiveRemoteTrack(env, person, unannounced, stream("other", unannounced));
+    receiveRemoteTrack(env, person, announced, stream("share", announced), "share");
+    receiveRemoteTrack(env, person, unannounced, stream("other", unannounced), "other");
     route.mockClear();
     changed.mockClear();
 

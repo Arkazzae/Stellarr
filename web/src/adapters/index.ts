@@ -123,8 +123,8 @@ export function createRuntime(options: RuntimeOptions = {}): Runtime {
       // tab, in this browser only.
       participantPreferences: new ParticipantPreferencesStore(undefined, userId),
       // An instance without RTC is incompatible too, so a missing contract
-      // becomes an explicit sentinel instead of an assumed v1 mesh.
-      rtc: rtcConfig ?? { protocolVersion: 0, topology: "unknown" },
+      // becomes an explicit sentinel instead of an assumed v1.
+      rtc: rtcConfig ?? { protocolVersion: 0 },
       getSettings: voiceSettingsStore.getSnapshot,
       updateSettings: (patch) => voiceSettingsStore.update(patch),
     });

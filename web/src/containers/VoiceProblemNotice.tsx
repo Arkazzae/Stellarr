@@ -41,7 +41,9 @@ export function VoiceProblemNotice() {
       voice.join(channelId);
       return;
     }
-    void voice.leave().then(() => voice.join(channelId));
+    // Still seated: repair the call in place, so the others never see this
+    // person leave and come back.
+    voice.reconnect();
   };
 
   const actions: ErrorNoticeAction[] = [];

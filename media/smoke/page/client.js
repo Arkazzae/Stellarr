@@ -1,4 +1,4 @@
-// The smallest client of the sfu topology that keeps the "Client rules" of
+// The smallest client of Stellarr Media that keeps the "Negotiation rules" of
 // docs/STELLARR_MEDIA.md: one RTCPeerConnection with max-bundle, the browser
 // offers what it publishes and answers what the media server offers, it is
 // the impolite side of a collision, and every arriving track is filed under
@@ -10,7 +10,7 @@
 
 "use strict";
 
-/** The Opus parameters the mesh client writes into its local descriptions. */
+/** The Opus parameters the web client writes into its local descriptions. */
 const OPUS_TUNING = {
   useinbandfec: "1",
   usedtx: "0",
@@ -79,7 +79,7 @@ function setDirectory(source, tracks) {
 }
 
 /**
- * What `tuneLocalDescription` of the mesh client does to an audio section:
+ * What `tuneLocalDescription` of the web client does to an audio section:
  * Opus first in the payload list, the Opus fmtp parameters merged in and a
  * 20 ms packet time.
  */
@@ -308,7 +308,7 @@ async function publish(name, kind, { via = "transceiver", codec, scalabilityMode
   }
   if (codec) {
     // The codec is moved to the front and nothing is removed, as the screen
-    // share of the mesh client does.
+    // share of the web client does.
     const all = RTCRtpReceiver.getCapabilities(kind).codecs;
     const wanted = (c) => c.mimeType.toLowerCase() === `${kind}/${codec}`.toLowerCase();
     transceiver.setCodecPreferences([...all.filter(wanted), ...all.filter((c) => !wanted(c))]);

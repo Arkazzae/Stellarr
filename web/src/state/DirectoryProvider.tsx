@@ -15,6 +15,7 @@ import type { NewServer, Server, VoiceOccupant } from "@/ports";
 
 import {
   deriveDirectoryView,
+  deriveTextChannels,
   sameOccupancy,
   spliceGroupOrder,
   type DirectorySnapshot,
@@ -94,9 +95,18 @@ export function DirectoryProvider({ children }: { children: ReactNode }) {
   // the server render sees, so one getter serves both.
   const snapshot = useSyncExternalStore(directory.onChanged, getSnapshot, getSnapshot);
 
+  // Occupancy and presence move far more often than channels, and the store
+  // keeps the channel list while they do. Text channels derived from that list
+  // alone keep their identity through a call, so nothing keyed on them, such as
+  // the rail's rows, is rebuilt for someone joining or muting.
+  const textChannels = useMemo(
+    () => deriveTextChannels(snapshot.channels),
+    [snapshot.channels],
+  );
+
   const value = useMemo<DirectoryValue>(
     () => ({
-      ...deriveDirectoryView(snapshot),
+      ...deriveDirectoryView(snapshot, textChannels),
       reorderChannelGroup: (newGroupOrder) =>
         directory.reorderChannels(spliceGroupOrder(snapshot.channels, newGroupOrder)),
       createServer: directory.createServer,
@@ -105,7 +115,7 @@ export function DirectoryProvider({ children }: { children: ReactNode }) {
       joinInvite: directory.joinInvite,
       selectServer: directory.selectServer,
     }),
-    [snapshot, directory],
+    [snapshot, textChannels, directory],
   );
 
   return <DirectoryContext.Provider value={value}>{children}</DirectoryContext.Provider>;
