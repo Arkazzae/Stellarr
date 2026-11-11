@@ -108,10 +108,8 @@ function InstanceCard({ settings, update, errors }: CardProps) {
         label={t("settings.instance.publicUrl")}
         type="url"
         value={settings.publicUrl}
-        onChange={(event) => update("publicUrl", event.target.value)}
-        placeholder="https://stellarr.example.net"
+        readOnly
         hint={t("settings.instance.publicUrlHint")}
-        errors={errors.publicUrl}
       />
       <Field
         id="timezone"

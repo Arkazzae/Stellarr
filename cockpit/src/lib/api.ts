@@ -322,7 +322,8 @@ export const cockpitApi = {
   backupDownloadUrl: (backupId: string) => `/api/cockpit/backups/${segment(backupId)}/download`,
 
   settings: (signal?: AbortSignal) => request<CockpitSettings>("/api/cockpit/settings", {}, signal),
-  // The server owns mailProvider, resendApiKeyConfigured and updatedAt, so they are never sent back.
+  // The server owns publicUrl (it comes from the environment), mailProvider,
+  // resendApiKeyConfigured and updatedAt, so they are never sent back.
   updateSettings: (settings: CockpitSettings, signal?: AbortSignal) =>
     request<CockpitSettings>(
       "/api/cockpit/settings",
@@ -330,7 +331,6 @@ export const cockpitApi = {
         method: "PUT",
         body: {
           instanceName: settings.instanceName,
-          publicUrl: settings.publicUrl,
           timeZone: settings.timeZone,
           mailingEnabled: settings.mailingEnabled,
           mailFromAddress: settings.mailFromAddress,

@@ -25,7 +25,7 @@ public static partial class CockpitEndpoints
     {
         var server = http.RequireInstanceServer();
         var settings = await LoadSettingsAsync(db, server, configuration, cancellationToken);
-        return Results.Ok(settings.ToCockpitDto(server.Name, HasResendApiKey(mail.Value)));
+        return Results.Ok(settings.ToCockpitDto(server.Name, PublicUrlOf(configuration), HasResendApiKey(mail.Value)));
     }
 
     private static async Task<IResult> UpdateSettingsAsync(
@@ -46,7 +46,6 @@ public static partial class CockpitEndpoints
 
         var settings = await LoadSettingsAsync(db, server, configuration, cancellationToken);
         server.Name = request.InstanceName?.Trim() ?? "";
-        settings.PublicUrl = request.PublicUrl?.Trim() ?? "";
         settings.TimeZone = request.TimeZone?.Trim() ?? "";
         settings.MailingEnabled = request.MailingEnabled;
         settings.MailFromAddress = request.MailFromAddress?.Trim() ?? "";
@@ -69,7 +68,7 @@ public static partial class CockpitEndpoints
             return Results.Conflict();
         }
 
-        return Results.Ok(settings.ToCockpitDto(server.Name, HasResendApiKey(mail.Value)));
+        return Results.Ok(settings.ToCockpitDto(server.Name, PublicUrlOf(configuration), HasResendApiKey(mail.Value)));
     }
 
     private static async Task<IResult> GetDesktopReleaseAsync(
@@ -252,6 +251,14 @@ public static partial class CockpitEndpoints
         }
     }
 
+    /// <summary>
+    /// The address people reach the instance at. It comes from the environment
+    /// (STELLARR_DOMAIN, through the container's entrypoint) and nothing in
+    /// Cockpit overrides it.
+    /// </summary>
+    internal static string PublicUrlOf(IConfiguration configuration) =>
+        (configuration["Operations:PublicUrl"] ?? "").Trim().TrimEnd('/');
+
     /// <summary>The key itself is never read back; whether one is set is all the panel learns.</summary>
     private static bool HasResendApiKey(MailOptions options) => !string.IsNullOrWhiteSpace(options.ResendApiKey);
 
@@ -263,13 +270,6 @@ public static partial class CockpitEndpoints
             problems["instanceName"] = [messages.Get(MessageKey.CockpitInstanceNameLength)];
         }
 
-        var publicUrl = request.PublicUrl?.Trim() ?? "";
-        if (!Uri.TryCreate(publicUrl, UriKind.Absolute, out var uri) ||
-            (uri.Scheme != Uri.UriSchemeHttps && !(uri.Scheme == Uri.UriSchemeHttp && uri.IsLoopback)) ||
-            uri.UserInfo.Length > 0)
-        {
-            problems["publicUrl"] = [messages.Get(MessageKey.CockpitPublicUrlInvalid)];
-        }
 
         try
         {

@@ -82,7 +82,6 @@ public sealed partial class Messages
         MessageKey.CockpitAuditServerDeleted => "deleted the server {name}",
         MessageKey.CockpitAuditServerTransferred => "handed the server {server} over to {name}",
         MessageKey.CockpitInstanceNameLength => "The instance name must be 1 to 80 characters long.",
-        MessageKey.CockpitPublicUrlInvalid => "Enter an absolute HTTPS address. HTTP is allowed only for localhost.",
         MessageKey.CockpitTimeZoneUnavailable => "This time zone is not available on the server.",
         MessageKey.CockpitTimeZoneBroken => "The time zone configuration on the server is invalid.",
         MessageKey.CockpitMailFromRequired => "Mailing needs a valid sender address when it is turned on.",

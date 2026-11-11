@@ -14,11 +14,12 @@ variable.
 
 | Variable | Type | Default | Effect |
 | --- | --- | --- | --- |
-| `PUBLIC_HOST` | host name or IPv4 address | `localhost` | The name people use to reach the instance. It is the host in the TURN addresses that browsers receive, the TURN realm, and the name in the self-signed certificate. When it changes, the container generates a new self-signed certificate on the next start. A certificate signed by an authority is left alone. |
-| `PUBLIC_IP` | IPv4 address or `auto` | empty | The public address that the TURN server advertises as its own. Set it when the host is behind NAT. `auto` looks up the A record of `PUBLIC_HOST` on every start. An invalid value, or `auto` without an A record, stops the container with an error. |
+| `STELLARR_DOMAIN` | host name or IP address | `localhost` | The name people use to reach the instance, and the one place it is set. It is the host of the public address, the host in the TURN addresses that browsers receive, the TURN realm, and the name in the self-signed certificate. When it changes, the container generates a new self-signed certificate on the next start. A certificate signed by an authority is left alone. `PUBLIC_HOST` is its older name and is read when `STELLARR_DOMAIN` is not set. |
+| `STELLARR_PUBLIC_PORT` | port number | `STELLARR_HTTPS_PORT` | The HTTPS port that browsers use. It is the published `STELLARR_HTTPS_PORT` when people reach the container directly, and `443` behind a [reverse proxy](reverse-proxy-and-tls.md#run-behind-a-reverse-proxy). It is left out of the public address when it is `443`. |
+| `PUBLIC_IP` | IPv4 address or `auto` | empty | The public address that the TURN server advertises as its own. Set it when the host is behind NAT. `auto` looks up the A record of `STELLARR_DOMAIN` on every start. An invalid value, or `auto` without an A record, stops the container with an error. |
 | `STELLARR_HTTPS_PORT` | port number | `8443` | Host port mapped to the HTTPS port of the container. It is also the port in the redirect from HTTP to HTTPS, and is left out of the address when it is `443`. A value outside 1-65535 stops the container. |
 | `STELLARR_HTTP_PORT` | port number | `8888` | Host port mapped to the HTTP port of the container, which only redirects to HTTPS. The value goes into the port mapping as written, so `127.0.0.1:8888` publishes the port on the loopback interface only. |
-| `STELLARR_PUBLIC_URL` | URL | empty | The address people use, for example `https://chat.example.com`. It is the **seed** of the Public URL in the operator settings, which password reset mail uses to build its link. It is also the origin that the instance reports to desktop clients in `/.well-known/stellarr/client`; when empty, the origin is taken from the request. A value that is not an absolute `http` or `https` origin without credentials, query or fragment makes that one endpoint answer 500. |
+| `STELLARR_PUBLIC_URL` | URL | empty | Overrides the public address, which the container otherwise builds as `https://` with `STELLARR_DOMAIN` and, unless it is `443`, `STELLARR_PUBLIC_PORT`. Password reset mail builds its link from the public address, and it is the origin that the instance reports to desktop clients in `/.well-known/stellarr/client`. Cockpit shows it on its settings page and cannot change it. A value that is not an absolute `http` or `https` origin without credentials, query or fragment makes that one endpoint answer 500. |
 | `STELLARR_VERSION` | image tag | `latest` | The tag of `ghcr.io/arkazzae/stellarr` that the stack runs. Releases are tagged `1.2.3` and `1.2`; `latest` follows the newest stable release. Pin a release for a real installation. |
 
 The container generates a self-signed certificate when
@@ -37,7 +38,7 @@ own, see [Reverse proxy and TLS](reverse-proxy-and-tls.md).
 | `STELLARR_MEDIA_PORT` | port number | `49000` | Host port for `49000/udp`, the media server's port. In the `sfu` topology browsers are told to use this port, so forward the same external port to it on the router. A value outside 1-65535 stops the container. |
 | `STELLARR_TURN_RELAY_RANGE` | port range | `49160-49200` | Host ports published for the relay range `49160-49200/udp` of the container. Browsers are told the container's port numbers, so when you publish a different range, forward public ports `49160-49200` to it on the router. |
 
-`PUBLIC_HOST` and `PUBLIC_IP` also belong to voice. [RTC and
+`STELLARR_DOMAIN` and `PUBLIC_IP` also belong to voice. [RTC and
 ports](../RTC_AND_PORTS.md) explains what each port does.
 
 ## Uploads and quotas
@@ -58,8 +59,8 @@ and other files 25 MiB. Nginx rejects a request body above 128 MiB.
 ## Mail
 
 Stellarr sends password reset mail and delivery tests through the Resend HTTPS
-API. Nothing is sent until a key is set. Reset mail also needs a public URL,
-from `STELLARR_PUBLIC_URL` or the operator settings.
+API. Nothing is sent until a key is set. Reset mail builds its link
+from the public address (`STELLARR_DOMAIN`).
 
 | Variable | Type | Default | Effect |
 | --- | --- | --- | --- |
@@ -125,7 +126,7 @@ file does not pass them. To set one, add it under `environment:` in a
 
 | Variable | Default | Effect |
 | --- | --- | --- |
-| `TLS_RENEW_BEFORE_SECONDS` | `2592000` (30 days) | The container renews a self-signed certificate when it expires within this time, or when it does not match `PUBLIC_HOST`. |
+| `TLS_RENEW_BEFORE_SECONDS` | `2592000` (30 days) | The container renews a self-signed certificate when it expires within this time, or when it does not match `STELLARR_DOMAIN`. |
 | `TLS_RENEW_CHECK_SECONDS` | `43200` (12 hours) | How often the container checks that certificate. |
 | `STELLARR_MEDIA_ADVERTISE` | empty | A comma-separated list of `ip:port` that the media server advertises to browsers instead of `PUBLIC_IP` and the container's own address. |
 | `STELLARR_MEDIA_LOG` | `info` | The media server's log filter, such as `info` or `stellarr_media=debug`. |
@@ -141,7 +142,7 @@ restored with it.
 `docker-compose.dev.yml` reads the variables below besides the ones above. Its
 defaults differ in two places: `STELLARR_TIME_ZONE` is `Europe/Warsaw` and
 `STELLARR_INSTANCE_NAME` is `Stellarr Dev`. It does not pass
-`STELLARR_PUBLIC_URL` or the TURN, upload, single sign-on and container limit
+`STELLARR_DOMAIN`, `STELLARR_PUBLIC_PORT`, `STELLARR_PUBLIC_URL` or the TURN, upload, single sign-on and container limit
 settings.
 
 | Variable | Default | Effect |

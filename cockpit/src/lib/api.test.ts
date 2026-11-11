@@ -267,7 +267,6 @@ describe("routes", () => {
     expect(init.method).toBe("PUT");
     expect(body).toEqual({
       instanceName: "Stellarr",
-      publicUrl: "https://chat.example",
       timeZone: "Europe/Warsaw",
       mailingEnabled: true,
       mailFromAddress: "cockpit@example.com",

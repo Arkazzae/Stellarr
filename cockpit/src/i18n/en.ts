@@ -235,7 +235,7 @@ export const en = {
   "settings.instance.description": "Name, public URL and the time zone used by scheduled jobs.",
   "settings.instance.name": "Instance name",
   "settings.instance.publicUrl": "Public URL",
-  "settings.instance.publicUrlHint": "Used in invitations and system messages.",
+  "settings.instance.publicUrlHint": "Comes from STELLARR_DOMAIN in the server's environment. Used in invitations and system messages.",
   "settings.instance.timeZone": "Server time zone",
   "settings.retention.title": "Data retention",
   "settings.retention.description":

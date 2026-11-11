@@ -138,7 +138,8 @@ public sealed class CockpitFlowTests : IClassFixture<StellarrWebApplicationFacto
         Assert.Equal("resend", saved.GetProperty("mailProvider").GetString());
 
         var reread = await JsonAsync(await owner.GetAsync("/api/cockpit/settings"));
-        Assert.Equal("http://localhost:3001", reread.GetProperty("publicUrl").GetString());
+        // The address belongs to the environment; one sent with the settings is ignored.
+        Assert.Equal("https://chat.test", reread.GetProperty("publicUrl").GetString());
         Assert.Equal(45, reread.GetProperty("logRetentionDays").GetInt32());
     }
 

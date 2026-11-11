@@ -165,7 +165,7 @@ public static partial class PasswordRecoveryEndpoints
         var mailingEnabled = settings?.MailingEnabled ?? configuration.GetValue<bool>("Mail:Enabled");
         var recoveryEnabled = settings?.RecoveryMailEnabled ?? true;
         var fromAddress = FirstNotBlank(settings?.MailFromAddress, options.FromAddress);
-        var publicUrl = FirstNotBlank(settings?.PublicUrl, configuration["Operations:PublicUrl"]).TrimEnd('/');
+        var publicUrl = CockpitEndpoints.PublicUrlOf(configuration);
         if (!mailingEnabled || !recoveryEnabled ||
             fromAddress.Length == 0 || publicUrl.Length == 0 || string.IsNullOrWhiteSpace(options.ResendApiKey))
         {

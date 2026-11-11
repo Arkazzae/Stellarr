@@ -59,8 +59,6 @@ public sealed class CockpitSettingsTests
 
     [Theory]
     [InlineData("instanceName", "", "instanceName")]
-    [InlineData("publicUrl", "ftp://chat.test", "publicUrl")]
-    [InlineData("publicUrl", "https://name:secret@chat.test", "publicUrl")]
     [InlineData("timeZone", "Mars/Olympus", "timeZone")]
     [InlineData("mailFromAddress", "", "mailFromAddress")]
     [InlineData("backupRetentionDays", 0, "backupRetentionDays")]
@@ -227,7 +225,6 @@ public sealed class CockpitSettingsTests
     private static Dictionary<string, object?> ValidSettings() => new()
     {
         ["instanceName"] = "Orbit",
-        ["publicUrl"] = "https://chat.test",
         ["timeZone"] = "UTC",
         ["mailingEnabled"] = false,
         ["mailFromAddress"] = "stellarr@example.net",

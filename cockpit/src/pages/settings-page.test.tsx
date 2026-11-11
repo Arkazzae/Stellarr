@@ -183,6 +183,15 @@ describe("SettingsPage saving", () => {
     });
   });
 
+  it("shows the public address read-only, as the environment sets it", async () => {
+    await renderLoaded();
+
+    const field = input("Publiczny adres");
+    expect(field.value).toBe("https://domek.example.net");
+    expect(field.readOnly).toBe(true);
+    expect(screen.getByText(/Wynika ze STELLARR_DOMAIN/)).toBeTruthy();
+  });
+
   it("clears the saved notice as soon as something is edited again", async () => {
     await renderLoaded();
     updateMock.mockResolvedValue(stored);
@@ -199,7 +208,6 @@ describe("SettingsPage saving", () => {
     updateMock.mockRejectedValue(
       new CockpitApiError(400, "Ustawienia są niepoprawne.", {
         instanceName: ["Nazwa jest wymagana.", "Druga uwaga."],
-        publicUrl: ["Adres musi być bezwzględny."],
         timeZone: ["Nieznana strefa."],
         mailFromAddress: ["Adres nadawcy jest niepoprawny."],
         backupRetentionDays: ["Wartość spoza zakresu."],
@@ -216,7 +224,6 @@ describe("SettingsPage saving", () => {
     expect(screen.queryByText("Druga uwaga.")).toBeNull();
     for (const [label, message] of [
       ["Nazwa instancji", "Nazwa jest wymagana."],
-      ["Publiczny adres", "Adres musi być bezwzględny."],
       ["Strefa czasowa serwera", "Nieznana strefa."],
       ["Adres nadawcy", "Adres nadawcy jest niepoprawny."],
       ["Backupy, dni", "Wartość spoza zakresu."],

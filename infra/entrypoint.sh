@@ -7,7 +7,11 @@ set -Eeuo pipefail
 shopt -s inherit_errexit
 
 data_root="${STELLARR_DATA_ROOT:-/data/stellarr}"
-public_host="${PUBLIC_HOST:-localhost}"
+# STELLARR_DOMAIN is the name people reach the instance at; PUBLIC_HOST is its
+# older name. It is exported under that name too, so tls-maintenance.sh issues
+# the certificate for the same host.
+public_host="${STELLARR_DOMAIN:-${PUBLIC_HOST:-localhost}}"
+export PUBLIC_HOST="$public_host"
 public_https_port="${PUBLIC_HTTPS_PORT:-443}"
 
 fail() {
@@ -45,8 +49,8 @@ resolve_public_ip() {
     auto)
       resolved="$(getent ahostsv4 "$public_host" 2>/dev/null | awk '$2 == "STREAM" { print $1; exit }')" || true
       is_ipv4_address "$resolved" ||
-        fail "PUBLIC_IP=auto could not resolve a public IPv4 address for PUBLIC_HOST=$public_host."
-      echo "Resolved PUBLIC_HOST=$public_host to the external IPv4 $resolved for TURN and the media server." >&2
+        fail "PUBLIC_IP=auto could not resolve a public IPv4 address for STELLARR_DOMAIN=$public_host."
+      echo "Resolved STELLARR_DOMAIN=$public_host to the external IPv4 $resolved for TURN and the media server." >&2
       echo "$resolved"
       ;;
     *)
@@ -66,6 +70,22 @@ require_boolean() {
 require_port() {
   if [[ ! "$2" =~ ^[0-9]{1,5}$ ]] || (( 10#$2 < 1 || 10#$2 > 65535 )); then
     fail "$1 must be an integer between 1 and 65535."
+  fi
+}
+
+# Prints the instance's public URL: the third argument as given when it is set,
+# otherwise https:// with the host and, unless it is 443, the port.
+public_url_for() {
+  local host="$1" port="$2" explicit="$3"
+  if [[ -n "$explicit" ]]; then
+    printf '%s' "${explicit%/}"
+    return
+  fi
+  [[ "$host" == *:* ]] && host="[$host]"
+  if (( 10#$port == 443 )); then
+    printf 'https://%s' "$host"
+  else
+    printf 'https://%s:%s' "$host" "$((10#$port))"
   fi
 }
 
@@ -115,6 +135,16 @@ export Storage__Bucket="${RUSTFS_BUCKET:-stellarr-images}"
 export ConnectionStrings__Database="Data Source=$data_root/db/stellarr.db;Cache=Shared;Pooling=True"
 export DataRoot="$data_root"
 export Rtc__PublicHost="$public_host"
+
+# The address in mail links and the desktop client's canonical origin: the
+# domain on the HTTPS port browsers use. Behind a proxy that is 443, not the
+# port this container publishes. STELLARR_PUBLIC_URL, when set, overrides it.
+public_port="${STELLARR_PUBLIC_PORT:-$public_https_port}"
+require_port STELLARR_PUBLIC_PORT "$public_port"
+public_url="$(public_url_for "$public_host" "$public_port" "${STELLARR_PUBLIC_URL:-}")"
+export Operations__PublicUrl="$public_url"
+export Desktop__CanonicalOrigin="$public_url"
+echo "The public address of this instance is $public_url." >&2
 export TURN_SHARED_SECRET="$turn_secret"
 export Rtc__TurnSharedSecret="$turn_secret"
 

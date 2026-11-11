@@ -111,6 +111,24 @@ and accounts written since the backup are lost.
 People who were signed in stay signed in, because the session keys are part of
 the archive.
 
+## Upgrade to Cockpit and STELLARR_DOMAIN
+
+The release that brought Stellarr Cockpit renamed the operator panel and moved
+the instance's address into the environment.
+
+- The operator panel is Cockpit, at `/cockpit/`. The old address `/ops/`
+  redirects there.
+- `STELLARR_DOMAIN` names the instance. An `.env` that sets `PUBLIC_HOST` keeps
+  working, because the container reads `PUBLIC_HOST` when `STELLARR_DOMAIN` is
+  not set.
+- The public address in reset links and in the desktop handshake comes only
+  from the environment: `https://` with `STELLARR_DOMAIN` and
+  `STELLARR_PUBLIC_PORT`, or `STELLARR_PUBLIC_URL` when that is set. A public
+  URL saved on the panel's settings page is no longer used. Behind a reverse
+  proxy on port 443, set `STELLARR_PUBLIC_PORT=443` or keep `STELLARR_PUBLIC_URL`.
+- In the development stack, `STELLARR_DEV_OPS_PORT` is now
+  `STELLARR_DEV_COCKPIT_PORT`.
+
 ## Upgrade from the Polish-only builds
 
 Builds that predate the language setting spoke Polish everywhere. `STELLARR_LANGUAGE`

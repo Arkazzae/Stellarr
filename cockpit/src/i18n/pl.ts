@@ -230,7 +230,7 @@ export const pl = {
   "settings.instance.description": "Nazwa, publiczny adres i czas używany w zadaniach.",
   "settings.instance.name": "Nazwa instancji",
   "settings.instance.publicUrl": "Publiczny adres",
-  "settings.instance.publicUrlHint": "Używany w zaproszeniach i wiadomościach systemowych.",
+  "settings.instance.publicUrlHint": "Wynika ze STELLARR_DOMAIN w środowisku serwera. Używany w zaproszeniach i wiadomościach systemowych.",
   "settings.instance.timeZone": "Strefa czasowa serwera",
   "settings.retention.title": "Retencja danych",
   "settings.retention.description":

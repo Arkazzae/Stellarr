@@ -81,7 +81,6 @@ public enum MessageKey
     CockpitAuditServerDeleted,
     CockpitAuditServerTransferred,
     CockpitInstanceNameLength,
-    CockpitPublicUrlInvalid,
     CockpitTimeZoneUnavailable,
     CockpitTimeZoneBroken,
     CockpitMailFromRequired,

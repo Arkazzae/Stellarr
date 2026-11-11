@@ -16,7 +16,7 @@ volume, and both Nginx and the TURN server use them:
 
 The container leaves a certificate that an authority signed alone. It treats any
 self-signed pair as its own, including one you made, and replaces it when it
-expires within 30 days or no longer matches `PUBLIC_HOST`.
+expires within 30 days or no longer matches `STELLARR_DOMAIN`.
 
 1. Put both files in a folder next to `docker-compose.yml`, for example
    `certs/`, with the names above.
@@ -31,7 +31,7 @@ expires within 30 days or no longer matches `PUBLIC_HOST`.
          - ./certs:/data/stellarr/tls:ro
    ```
 
-3. Set `PUBLIC_HOST` in `.env` to the name on the certificate, then recreate the
+3. Set `STELLARR_DOMAIN` in `.env` to the name on the certificate, then recreate the
    container:
 
    ```bash
@@ -89,9 +89,12 @@ forwards plain HTTP to the container's HTTP port, `8888` by default.
 Set these in `.env`:
 
 ```bash
-PUBLIC_HOST=chat.example.com
-STELLARR_PUBLIC_URL=https://chat.example.com
+STELLARR_DOMAIN=chat.example.com
+STELLARR_PUBLIC_PORT=443
 ```
+
+The public address is then `https://chat.example.com`, without the container's
+own HTTPS port.
 
 ### What the proxy has to forward
 
@@ -176,7 +179,7 @@ their own TCP, so they go straight to the host:
 | `5349` | TCP and UDP | TURN over TLS, with `STELLARR_TURNS_ENABLED=true` |
 
 Publish them on the host as the compose file does, and forward them on the
-router. `PUBLIC_HOST` has to name the machine that runs the container, not a
+router. `STELLARR_DOMAIN` has to name the machine that runs the container, not a
 service that passes only HTTP, because browsers send TURN traffic to that name.
 [Requirements](requirements.md) lists the ports and what to set behind NAT, and
 [RTC and ports](../RTC_AND_PORTS.md) covers the TURN settings.

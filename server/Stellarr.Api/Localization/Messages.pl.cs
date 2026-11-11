@@ -80,7 +80,6 @@ public sealed partial class Messages
         MessageKey.CockpitAuditServerDeleted => "usunął(a) serwer {name}",
         MessageKey.CockpitAuditServerTransferred => "przekazał(a) serwer {server} użytkownikowi {name}",
         MessageKey.CockpitInstanceNameLength => "Nazwa instancji musi mieć od 1 do 80 znaków.",
-        MessageKey.CockpitPublicUrlInvalid => "Podaj bezwzględny adres HTTPS. HTTP jest dozwolone tylko dla localhost.",
         MessageKey.CockpitTimeZoneUnavailable => "Ta strefa czasowa nie jest dostępna na serwerze.",
         MessageKey.CockpitTimeZoneBroken => "Konfiguracja strefy czasowej na serwerze jest nieprawidłowa.",
         MessageKey.CockpitMailFromRequired => "Włączony mailing wymaga poprawnego adresu nadawcy.",

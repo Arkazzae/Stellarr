@@ -85,7 +85,7 @@ On the router, forward to the Docker host:
 Set:
 
 ```bash
-PUBLIC_HOST=chat.example.com
+STELLARR_DOMAIN=chat.example.com
 PUBLIC_IP=auto # or a fixed public IPv4
 STELLARR_TURN_PORT=3480 # only when 3478 is taken
 STELLARR_TURNS_PORT=5349
@@ -93,9 +93,9 @@ STELLARR_RTC_TOPOLOGY=sfu # mesh by default
 STELLARR_MEDIA_PORT=49000
 ```
 
-`PUBLIC_HOST` goes into the ICE configuration returned to the client.
+`STELLARR_DOMAIN` goes into the ICE configuration returned to the client.
 `PUBLIC_IP` sets `external-ip` in coturn and must be the address seen from the
-Internet. The value `auto` resolves the A record of `PUBLIC_HOST` on every
+Internet. The value `auto` resolves the A record of `STELLARR_DOMAIN` on every
 container start and fails the start if it cannot get a valid IPv4 address; this
 prevents advertising a stale relay address.
 

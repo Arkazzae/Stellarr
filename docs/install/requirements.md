@@ -57,7 +57,7 @@ private address. Two things make voice work for them:
    port, or put a [reverse proxy](reverse-proxy-and-tls.md#run-behind-a-reverse-proxy)
    in front.
 2. Set `PUBLIC_IP` to the public IPv4 address, or to `auto` to look up the A
-   record of `PUBLIC_HOST` on every start.
+   record of `STELLARR_DOMAIN` on every start.
 
 Without `PUBLIC_IP` the TURN server hands out its own address inside Docker. A
 test allocation on a default instance returned the relay address
@@ -71,7 +71,7 @@ Media](../STELLARR_MEDIA.md) describes the topology and what it does not do yet.
 
 ## Name and certificate
 
-`PUBLIC_HOST` is `localhost` by default, which works on the machine itself.
+`STELLARR_DOMAIN` is `localhost` by default, which works on the machine itself.
 Everyone else needs a DNS name, or the host's IP address, that points at the
 host. On the first start the container generates a self-signed certificate for
 that name, and browsers show a warning for it.

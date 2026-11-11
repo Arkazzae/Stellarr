@@ -185,7 +185,6 @@ public sealed record SetCockpitUserStatusRequest(bool Disabled);
 
 public sealed record UpdateCockpitSettingsRequest(
     string? InstanceName,
-    string? PublicUrl,
     string? TimeZone,
     bool MailingEnabled,
     string? MailFromAddress,
@@ -206,9 +205,10 @@ public static class CockpitContractMappings
     public static CockpitSettingsDto ToCockpitDto(
         this OperationsSettings settings,
         string instanceName,
+        string publicUrl,
         bool resendApiKeyConfigured) => new(
         instanceName,
-        settings.PublicUrl,
+        publicUrl,
         settings.TimeZone,
         settings.MailingEnabled,
         "resend",
