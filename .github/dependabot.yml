@@ -35,6 +35,11 @@ updates:
       default-days: 5
     commit-message:
       prefix: build(deps)
+    # typescript-eslint, which the lint runs on, supports TypeScript below 6.1
+    # only, and TypeScript 7 fails the lint job. Lift this once it supports 7.
+    ignore:
+      - dependency-name: typescript
+        versions: [">=7"]
 
   - package-ecosystem: npm
     directory: /ops
@@ -50,6 +55,11 @@ updates:
       default-days: 5
     commit-message:
       prefix: build(deps)
+    # typescript-eslint, which the lint runs on, supports TypeScript below 6.1
+    # only, and TypeScript 7 fails the lint job. Lift this once it supports 7.
+    ignore:
+      - dependency-name: typescript
+        versions: [">=7"]
 
   - package-ecosystem: npm
     directory: /docs
