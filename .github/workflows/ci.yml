@@ -141,6 +141,24 @@ jobs:
         with:
           context: .
           platforms: linux/amd64
-          push: false
+          load: true
+          tags: stellarr:ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      # A build can succeed while a process inside cannot start, so run the
+      # image and wait until both the API and the web client answer.
+      - name: Start the image and check that it serves
+        run: |
+          docker run -d --name stellarr -e PUBLIC_HOST=localhost -p 8443:443 stellarr:ci
+          for _ in $(seq 1 60); do
+            status=$(docker inspect -f '{{.State.Health.Status}}' stellarr)
+            [[ $status == healthy || $status == unhealthy ]] && break
+            sleep 5
+          done
+          echo "Container health: $status"
+          if [[ $status != healthy ]] \
+             || ! curl -kfsS -o /dev/null https://localhost:8443/health \
+             || ! curl -kfsS -o /dev/null https://localhost:8443/login; then
+            docker logs stellarr 2>&1 | tail -n 80
+            exit 1
+          fi
