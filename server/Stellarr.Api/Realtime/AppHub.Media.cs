@@ -26,6 +26,13 @@ public sealed partial class AppHub
     /// </summary>
     public async Task<MediaSessionDto> OpenMediaSession(string channelId)
     {
+        // A replacement loop that never proves media is the one thing the
+        // client's backoff cannot be trusted to stop on its own.
+        if (!throttle.TryAcquire(Context.ConnectionId, HubThrottleGate.Policy.MediaSession))
+        {
+            throw new HubException("Media sessions open too fast.");
+        }
+
         RequireMediaServer();
         var roomId = ParseGuid(channelId, nameof(channelId));
         if (!presence.IsConnectionInVoice(Context.ConnectionId, roomId))
@@ -49,6 +56,13 @@ public sealed partial class AppHub
     /// </summary>
     public async Task SendMediaSignal(MediaSignalDto signal)
     {
+        // Every accepted signal becomes a call to the media server's control
+        // API, so this connection cannot decide that API's load.
+        if (!throttle.TryAcquire(Context.ConnectionId, HubThrottleGate.Policy.MediaSignalling))
+        {
+            throw new HubException("Media signals are too fast.");
+        }
+
         RequireMediaServer();
         if (signal is null)
         {

@@ -129,6 +129,32 @@ public sealed class SignalRFlowTests : IClassFixture<StellarrWebApplicationFacto
     }
 
     [Fact]
+    public async Task ATypingStreamThatNeverStopsIsRefused()
+    {
+        await using var actor = await BuildConnectionAsync("maja", "Aurora!2026");
+        await actor.StartAsync();
+
+        // An indicator lives six seconds, so a server cannot receive anything
+        // useful faster than human speed; a stream past the burst is refused
+        // rather than broadcast to the whole server.
+        await actor.InvokeAsync("SendTyping", GeneralChannelId);
+        Exception? refusal = null;
+        for (var i = 0; i < 24 && refusal is null; i++)
+        {
+            try
+            {
+                await actor.InvokeAsync("SendTyping", GeneralChannelId);
+            }
+            catch (Exception exception)
+            {
+                refusal = exception;
+            }
+        }
+
+        Assert.NotNull(refusal);
+    }
+
+    [Fact]
     public async Task ServerUpdatesAreGlobalButChannelReadsStayWithTheirUser()
     {
         await using var ada = await BuildConnectionAsync("ada", "Quasar!2026");

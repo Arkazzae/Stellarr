@@ -18,6 +18,7 @@ public sealed partial class AppHub(
     AppDbContext db,
     PresenceTracker presence,
     SoundboardPlaybackGate soundboardGate,
+    HubThrottleGate throttle,
     MediaTopology mediaTopology,
     MediaPlane mediaPlane,
     MediaControlClient mediaControl,
@@ -121,6 +122,13 @@ public sealed partial class AppHub(
     /// <summary>Tells the other members of the server that this account is typing in a text channel.</summary>
     public async Task SendTyping(string channelId)
     {
+        // One broadcast reaches the server's whole group and costs two lookups,
+        // so the cadence is decided here rather than trusted to every client.
+        if (!throttle.TryAcquire(Context.ConnectionId, HubThrottleGate.Policy.Typing))
+        {
+            throw new HubException("Typing is too fast.");
+        }
+
         var id = ParseGuid(channelId, nameof(channelId));
         var userId = Context.User!.RequireUserId();
         if (await TextChannelServerIdAsync(id, userId) is not { } serverId)

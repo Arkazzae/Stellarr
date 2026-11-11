@@ -25,6 +25,11 @@ export interface LocalMicrophoneEnv {
   onDeviceLost(): void;
 }
 
+interface MicrophoneTarget {
+  readonly link: Link;
+  readonly sender: RTCRtpSender;
+}
+
 /**
  * The microphone this client sends: its capture, mute state, and the swap to
  * a new capture without leaving the call.
@@ -123,10 +128,10 @@ export class LocalMicrophone {
    * Without `force`, only a capture-affecting change does anything. If the new
    * device cannot be opened, or one link cannot take it, the old capture is
    * still running, so the call goes on and the error is reported as
-   * recoverable rather than fatal. `superseded` is asked after the slow part:
-   * a newer request makes this result stale, and a stale capture is never
-   * put on the wire, not even for a moment. Resolves to whether a new capture
-   * took over.
+   * recoverable rather than fatal. A newer request discards the capture, undoing
+   * sender changes while the previous capture still owns the call. A capture
+   * belonging to a later call is never changed. Resolves to whether a new
+   * capture took over.
    */
   async replace(
     next: VoiceSettings,
@@ -140,10 +145,12 @@ export class LocalMicrophone {
     try {
       capture = await captureMicrophone(next, { translate: this.env.translate });
     } catch (cause) {
-      this.env.store.set({ error: { ...micError(this.env.translate, cause), recoverable: true } });
+      if (this.active === previous && !superseded()) {
+        this.env.store.set({ error: { ...micError(this.env.translate, cause), recoverable: true } });
+      }
       return false;
     }
-    if (superseded()) {
+    if (this.active !== previous || superseded()) {
       capture.dispose();
       return false;
     }
@@ -153,9 +160,24 @@ export class LocalMicrophone {
     // change swaps the track under a running call, and two graphs never meet
     // at the same sample or settle at the same loudness.
     capture.fadeIn();
-    if (!(await this.moveAllLinks(capture.track, previous.track))) {
+    const targets = [...this.env.links()].flatMap((link) =>
+      link.micSender ? [{ link, sender: link.micSender }] : [],
+    );
+    if (!(await this.moveAllLinks(capture.track, previous, targets))) {
       capture.dispose();
-      this.env.store.set({ error: micSwapFailedError(this.env.translate) });
+      if (this.active === previous && !superseded()) {
+        this.env.store.set({ error: micSwapFailedError(this.env.translate) });
+      }
+      return false;
+    }
+    // A newer settings request needs its old microphone back. A later call
+    // already has its own capture and senders, which this operation cannot own.
+    if (this.active !== previous || superseded()) {
+      try {
+        await this.moveBackTo(previous, targets);
+      } finally {
+        capture.dispose();
+      }
       return false;
     }
 
@@ -167,6 +189,32 @@ export class LocalMicrophone {
   }
 
   /**
+   * Restore only the senders this swap moved, while its original capture is
+   * still active. Recheck ownership after each await: leaving and rejoining
+   * must not restore a disposed track or rebuild links of a later call.
+   */
+  private async moveBackTo(
+    previous: MicCapture,
+    targets: readonly MicrophoneTarget[],
+  ): Promise<void> {
+    for (const { link, sender } of targets) {
+      if (this.active !== previous) return;
+      if (link.micSender !== sender || ![...this.env.links()].includes(link)) continue;
+      try {
+        await sender.replaceTrack(previous.track);
+      } catch {
+        if (
+          this.active === previous &&
+          link.micSender === sender &&
+          [...this.env.links()].includes(link)
+        ) {
+          await this.env.rebuildLink(link);
+        }
+      }
+    }
+  }
+
+  /**
    * Swap the track on every sender, all or nothing.
    *
    * Successful swaps are rolled back when one fails. A sender that refuses
@@ -175,26 +223,19 @@ export class LocalMicrophone {
    */
   private async moveAllLinks(
     track: MediaStreamTrack,
-    previousTrack: MediaStreamTrack,
+    previous: MicCapture,
+    targets: readonly MicrophoneTarget[],
   ): Promise<boolean> {
-    const targets = [...this.env.links()].filter(
-      (link): link is Link & { micSender: RTCRtpSender } => link.micSender !== null,
-    );
     const attempts = await Promise.allSettled(
-      targets.map((link) => link.micSender.replaceTrack(track)),
+      targets.map(({ sender }) => sender.replaceTrack(track)),
     );
     if (attempts.every((result) => result.status === "fulfilled")) {
-      await this.env.applyEncoding();
+      if (this.active === previous) await this.env.applyEncoding();
       return true;
     }
 
     const moved = targets.filter((_, index) => attempts[index]?.status === "fulfilled");
-    const rollbacks = await Promise.allSettled(
-      moved.map((link) => link.micSender.replaceTrack(previousTrack)),
-    );
-    for (const [index, link] of moved.entries()) {
-      if (rollbacks[index]?.status === "rejected") await this.env.rebuildLink(link);
-    }
+    await this.moveBackTo(previous, moved);
     return false;
   }
 

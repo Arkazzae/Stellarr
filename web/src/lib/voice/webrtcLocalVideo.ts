@@ -61,6 +61,8 @@ export interface LocalCameraEnv extends LocalVideoEnv {
  */
 export class LocalCamera {
   private capture: CameraCapture | null = null;
+  /** A stop that arrived while the camera was still opening, kept for it. */
+  private stoppedWhilePending = false;
 
   constructor(private readonly env: LocalCameraEnv) {}
 
@@ -81,10 +83,19 @@ export class LocalCamera {
     if (session === null || this.capture || !cameraSupported || cameraPending) return;
 
     env.store.set({ cameraPending: true, error: null });
+    this.stoppedWhilePending = false;
     const capture = await this.open(session);
     if (!capture) return;
     if (env.isStale(session)) {
       capture.dispose();
+      return;
+    }
+    // A stop during the opening is not lost: the camera that arrives after it
+    // is the one that has just been asked to be off.
+    if (this.stoppedWhilePending) {
+      this.stoppedWhilePending = false;
+      capture.dispose();
+      env.store.set({ cameraPending: false });
       return;
     }
 
@@ -96,7 +107,12 @@ export class LocalCamera {
 
   async stop(): Promise<void> {
     const capture = this.capture;
-    if (!capture) return;
+    if (!capture) {
+      // Nothing has opened yet, but an opening camera may: remember the stop
+      // so that the capture which lands is let go instead of adopted.
+      if (this.env.store.getSnapshot().cameraPending) this.stoppedWhilePending = true;
+      return;
+    }
     this.capture = null;
     capture.video.onended = null;
 
@@ -244,6 +260,13 @@ export class LocalCamera {
 /** The screen share this client sends: its picture and, when the picker gave one, its sound. */
 export class LocalScreen {
   private capture: ScreenCapture | null = null;
+  /**
+   * The picker this side waits for, with the stop asked of it. It belongs to
+   * the session that opened it: a leave and rejoin may open a newer picker,
+   * and then the older one owns nothing — it can neither clear the pending
+   * flag, report an error, nor undo a cancellation asked of the newest.
+   */
+  private starting: { session: number; cancelled: boolean } | null = null;
 
   constructor(private readonly env: LocalVideoEnv) {}
 
@@ -268,18 +291,46 @@ export class LocalScreen {
   async start(): Promise<void> {
     const { env } = this;
     const session = env.session();
-    if (session === null || this.capture) return;
+    const { screenSharePending } = env.store.getSnapshot();
+    // Only an attempt of this very session blocks a new one: after a leave
+    // and rejoin the newer start supersedes whatever old picker is still
+    // waiting, rather than being locked out by it.
+    if (session === null || this.capture || this.starting?.session === session || screenSharePending) {
+      return;
+    }
 
+    const attempt = { session, cancelled: false };
+    this.starting = attempt;
     env.store.set({ screenSharePending: true, error: null });
     let capture: ScreenCapture;
     try {
       capture = await captureScreen(undefined, env.settings().screenShareQuality, env.translate);
     } catch (cause) {
-      env.store.set({ screenSharePending: false, error: screenShareError(env.translate, cause) });
+      // A picker that a newer attempt replaced reports nothing: the pending
+      // flag and the error belong to whoever asked last.
+      if (this.starting === attempt) {
+        this.starting = null;
+        env.store.set({ screenSharePending: false, error: screenShareError(env.translate, cause) });
+      }
       return;
     }
     if (env.isStale(session)) {
+      if (this.starting === attempt) this.starting = null;
       stopTracks(capture);
+      return;
+    }
+    // A picker of a superseded attempt owns nothing: it lets go of what it
+    // picked and leaves the flag and any cancellation to the newest attempt.
+    if (this.starting !== attempt) {
+      stopTracks(capture);
+      return;
+    }
+    this.starting = null;
+    // A stop while the picker was open is not lost: the share picked after it
+    // is the one that has just been asked to be off.
+    if (attempt.cancelled) {
+      stopTracks(capture);
+      env.store.set({ screenSharePending: false });
       return;
     }
 
@@ -303,7 +354,13 @@ export class LocalScreen {
 
   async stop(): Promise<void> {
     const capture = this.capture;
-    if (!capture) return;
+    if (!capture) {
+      // Nothing has been picked yet, but the picker in flight may be stopped.
+      // The cancellation belongs to that attempt alone, so a late picker of
+      // an earlier one can neither take it nor undo it.
+      if (this.starting) this.starting.cancelled = true;
+      return;
+    }
     this.capture = null;
     capture.video.onended = null;
     if (capture.audio) capture.audio.onended = null;

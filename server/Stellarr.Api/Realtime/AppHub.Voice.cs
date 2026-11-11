@@ -91,6 +91,15 @@ public sealed partial class AppHub
 
     public async Task SendVoiceSignal(VoiceSignalDto signal)
     {
+        // A relay reaches every other connection in the room and may carry a
+        // hundred and twenty kilobytes, so the flood is capped before any of
+        // the lookups below. The burst covers several connections' ICE
+        // candidates arriving together, which is normal rather than flood.
+        if (!throttle.TryAcquire(Context.ConnectionId, HubThrottleGate.Policy.Signalling))
+        {
+            throw new HubException("Signalling is too fast.");
+        }
+
         if (signal is null)
         {
             throw new HubException("Invalid voice signal.");

@@ -71,6 +71,7 @@ builder.Services.AddSingleton<TurnCredentialService>();
 AddMediaServer(builder.Services);
 builder.Services.AddSingleton<SlowModeGate>();
 builder.Services.AddSingleton<SoundboardPlaybackGate>();
+builder.Services.AddSingleton<HubThrottleGate>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton(services => ClientDiscoveryIdentity.Load(services.GetRequiredService<IConfiguration>()));
 builder.Services.AddSingleton<DesktopReleaseCatalogue>();

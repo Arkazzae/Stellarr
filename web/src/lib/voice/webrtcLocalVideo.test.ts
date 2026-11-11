@@ -230,6 +230,26 @@ describe("LocalCamera.start", () => {
     expect(added.cameraSender).toBeNull();
     expect(camera.streamId).toBeNull();
   });
+
+  it("lets go of a camera that was stopped while it was opening", async () => {
+    const added = addPeer();
+    const video = track("video");
+    let openCamera!: (media: MediaStream) => void;
+    getUserMedia.mockImplementationOnce(
+      () => new Promise<MediaStream>((resolve) => (openCamera = resolve)),
+    );
+    const started = camera.start();
+
+    await camera.stop(); // nothing is on yet: the stop is kept for what opens
+    openCamera(stream(video));
+    await started;
+
+    expect(video.stop).toHaveBeenCalled();
+    expect(added.cameraSender).toBeNull();
+    expect(camera.streamId).toBeNull();
+    expect(store.getSnapshot()).toMatchObject({ cameraPending: false, localCamera: null });
+    expect(announce).not.toHaveBeenCalled();
+  });
 });
 
 describe("LocalCamera.stop and release", () => {
@@ -474,6 +494,76 @@ describe("LocalScreen", () => {
     await screen.start();
 
     expect(getDisplayMedia).toHaveBeenCalledOnce();
+  });
+
+  it("does not open a second picker while one is already waiting for the answer", async () => {
+    let picked!: (media: MediaStream) => void;
+    getDisplayMedia.mockImplementationOnce(
+      () => new Promise<MediaStream>((resolve) => (picked = resolve)),
+    );
+
+    const starting = screen.start();
+    const alsoStarting = screen.start();
+    picked(stream(track("video")));
+    await Promise.all([starting, alsoStarting]);
+
+    expect(getDisplayMedia).toHaveBeenCalledOnce();
+    expect(store.getSnapshot().localScreen).not.toBeNull();
+  });
+
+  it("lets go of a share that was stopped while the picker was open", async () => {
+    const added = addPeer();
+    const video = track("video");
+    const audio = track("audio", 2);
+    let picked!: (media: MediaStream) => void;
+    getDisplayMedia.mockImplementationOnce(
+      () => new Promise<MediaStream>((resolve) => (picked = resolve)),
+    );
+    const starting = screen.start();
+
+    await screen.stop(); // nothing is shared yet: the stop is kept for what is picked
+    picked(stream(video, audio));
+    await starting;
+
+    expect(video.stop).toHaveBeenCalled();
+    expect(audio.stop).toHaveBeenCalled();
+    expect(added.screenVideoSender).toBeNull();
+    expect(added.screenAudioSender).toBeNull();
+    expect(screen.streamId).toBeNull();
+    expect(store.getSnapshot()).toMatchObject({ screenSharePending: false, localScreen: null });
+    expect(announce).not.toHaveBeenCalled();
+  });
+
+  it("does not let a failed older picker undo the stop of the newer share", async () => {
+    let lateFail!: (cause: unknown) => void;
+    getDisplayMedia.mockImplementationOnce(
+      () =>
+        new Promise<MediaStream>((_resolve, reject) => {
+          lateFail = reject;
+        }),
+    );
+    const older = screen.start();
+
+    // The call was left and rejoined while the first picker was open: the
+    // second attempt owns the pending flag and the stop now, and an older
+    // picker answering late — with a failure or not — belongs to neither.
+    session = 2;
+    store.reset();
+    const video = track("video");
+    let picked!: (media: MediaStream) => void;
+    getDisplayMedia.mockImplementationOnce(
+      () => new Promise<MediaStream>((resolve) => (picked = resolve)),
+    );
+    const newer = screen.start();
+    await screen.stop();
+    lateFail(new DOMException("closed", "AbortError"));
+    picked(stream(video));
+    await Promise.all([older, newer]);
+
+    expect(video.stop).toHaveBeenCalled();
+    expect(screen.streamId).toBeNull();
+    expect(store.getSnapshot()).toMatchObject({ screenSharePending: false, localScreen: null });
+    expect(announce).not.toHaveBeenCalled();
   });
 
   it("does nothing outside a call", async () => {

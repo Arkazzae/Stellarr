@@ -40,6 +40,8 @@ let speech: { add: ReturnType<typeof vi.fn>; remove: ReturnType<typeof vi.fn> };
 let onDeviceLost: Mock<() => void>;
 let microphone: LocalMicrophone;
 let peers: Map<string, Link>;
+let applyEncoding: Mock<() => Promise<void>>;
+let rebuildLink: Mock<(link: Link) => Promise<void>>;
 
 beforeEach(() => {
   vi.mocked(captureMicrophone).mockReset();
@@ -47,14 +49,16 @@ beforeEach(() => {
   store = new VoiceStateStore();
   speech = { add: vi.fn(async () => true), remove: vi.fn() };
   onDeviceLost = vi.fn<() => void>();
+  applyEncoding = vi.fn(async () => undefined);
+  rebuildLink = vi.fn(async () => undefined);
   microphone = new LocalMicrophone({
     translate: polish,
     selfUserId: "u-a",
     store,
     speech: speech as unknown as SpeechDetector,
     links: () => peers.values(),
-    applyEncoding: vi.fn(async () => undefined),
-    rebuildLink: vi.fn(async () => undefined),
+    applyEncoding,
+    rebuildLink,
     onDeviceLost,
   });
 });
@@ -264,6 +268,190 @@ describe("LocalMicrophone", () => {
       expect(replacement.dispose).toHaveBeenCalled();
       expect(microphone.capture).toBe(running);
       expect(store.getSnapshot().error).toMatchObject({ kind: "mic-unavailable" });
+    });
+
+    it("drops a capture when the call was left while its senders were moving", async () => {
+      const running = fakeCapture();
+      const late = fakeCapture();
+      microphone.adopt(running, DEFAULT_SETTINGS);
+      const { sender } = peerWithSender();
+      vi.mocked(captureMicrophone).mockResolvedValue(late);
+      // Leaving the call mid-move: the links go first, so the move succeeds
+      // over an empty list while nobody is left to own the new capture.
+      let left = false;
+      sender.replaceTrack.mockImplementationOnce(async () => {
+        peers.clear();
+        microphone.release();
+        left = true;
+      });
+
+      const swapped = await microphone.replace(other, false, () => left);
+
+      expect(swapped).toBe(false);
+      expect(late.dispose).toHaveBeenCalled();
+      expect(sender.replaceTrack).toHaveBeenCalledOnce();
+      expect(microphone.capture).toBeNull();
+      expect(running.dispose).toHaveBeenCalled();
+    });
+
+    it("moves the senders back when a newer request waits after they were moved", async () => {
+      const running = fakeCapture();
+      const late = fakeCapture();
+      microphone.adopt(running, DEFAULT_SETTINGS);
+      const { sender } = peerWithSender();
+      vi.mocked(captureMicrophone).mockResolvedValue(late);
+      // A newer settings change waits in the queue exactly as the move ends.
+      // Its own reopen may yet fail, so the senders must not be left on a
+      // capture that dies here: they go back to the one that survives.
+      let newerWaiting = false;
+      sender.replaceTrack.mockImplementationOnce(async () => {
+        newerWaiting = true;
+      });
+
+      const swapped = await microphone.replace(other, false, () => newerWaiting);
+
+      expect(swapped).toBe(false);
+      expect(sender.replaceTrack).toHaveBeenNthCalledWith(1, late.track);
+      expect(sender.replaceTrack).toHaveBeenNthCalledWith(2, running.track);
+      expect(late.dispose).toHaveBeenCalled();
+      expect(microphone.capture).toBe(running);
+      expect(running.dispose).not.toHaveBeenCalled();
+      expect(store.getSnapshot().error).toBeNull();
+    });
+
+    it("leaves the new call's microphone alone when the old swap finishes after rejoining", async () => {
+      const running = fakeCapture();
+      const late = fakeCapture();
+      const rejoined = fakeCapture();
+      microphone.adopt(running, DEFAULT_SETTINGS);
+      peerWithSender();
+      vi.mocked(captureMicrophone).mockResolvedValueOnce(late);
+      let finishEncoding!: () => void;
+      let enteredEncoding!: () => void;
+      const encoding = new Promise<void>((resolve) => { finishEncoding = resolve; });
+      const encodingStarted = new Promise<void>((resolve) => { enteredEncoding = resolve; });
+      applyEncoding.mockImplementationOnce(() => {
+        enteredEncoding();
+        return encoding;
+      });
+      let left = false;
+      const swapping = microphone.replace(other, false, () => left);
+      await encodingStarted;
+
+      left = true;
+      peers.clear();
+      microphone.release();
+      microphone.adopt(rejoined, other);
+      const { sender } = peerWithSender();
+      finishEncoding();
+
+      expect(await swapping).toBe(false);
+      expect(sender.replaceTrack).not.toHaveBeenCalled();
+      expect(rebuildLink).not.toHaveBeenCalled();
+      expect(microphone.capture).toBe(rejoined);
+      expect(rejoined.dispose).not.toHaveBeenCalled();
+      expect(late.dispose).toHaveBeenCalledOnce();
+      expect(store.getSnapshot().error).toBeNull();
+    });
+
+    it("does not roll back links created after the swap began", async () => {
+      const running = fakeCapture();
+      const late = fakeCapture();
+      microphone.adopt(running, DEFAULT_SETTINGS);
+      const original = peerWithSender();
+      vi.mocked(captureMicrophone).mockResolvedValueOnce(late);
+      let newerWaiting = false;
+      const lateSender = { replaceTrack: vi.fn(async () => undefined) };
+      original.sender.replaceTrack.mockImplementationOnce(async () => {
+        peers.set("u-late", { micSender: lateSender } as unknown as Link);
+        newerWaiting = true;
+      });
+
+      expect(await microphone.replace(other, false, () => newerWaiting)).toBe(false);
+
+      expect(original.sender.replaceTrack).toHaveBeenNthCalledWith(2, running.track);
+      expect(lateSender.replaceTrack).not.toHaveBeenCalled();
+      expect(late.dispose).toHaveBeenCalledOnce();
+    });
+
+    it("stops a rollback if the call changes while restoring a sender", async () => {
+      const running = fakeCapture();
+      const late = fakeCapture();
+      const rejoined = fakeCapture();
+      microphone.adopt(running, DEFAULT_SETTINGS);
+      const { sender } = peerWithSender();
+      const second = { replaceTrack: vi.fn(async () => undefined) };
+      const secondLink = { micSender: second } as unknown as Link;
+      peers.set("u-y", secondLink);
+      vi.mocked(captureMicrophone).mockResolvedValueOnce(late);
+      let newerWaiting = false;
+      sender.replaceTrack
+        .mockImplementationOnce(async () => { newerWaiting = true; })
+        .mockImplementationOnce(async () => {
+          peers.clear();
+          microphone.release();
+          microphone.adopt(rejoined, other);
+          throw new Error("old connection closed");
+        });
+
+      expect(await microphone.replace(other, false, () => newerWaiting)).toBe(false);
+
+      expect(second.replaceTrack).toHaveBeenCalledOnce();
+      expect(rebuildLink).not.toHaveBeenCalled();
+      expect(microphone.capture).toBe(rejoined);
+      expect(rejoined.dispose).not.toHaveBeenCalled();
+      expect(late.dispose).toHaveBeenCalledOnce();
+    });
+
+    it("rebuilds a current link that refuses the rollback after a partial swap", async () => {
+      const running = fakeCapture();
+      const late = fakeCapture();
+      microphone.adopt(running, DEFAULT_SETTINGS);
+      const { sender } = peerWithSender();
+      const movedLink = peers.get("u-z");
+      sender.replaceTrack.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error("no rollback"));
+      const refused = { replaceTrack: vi.fn(async () => { throw new Error("no swap"); }) };
+      peers.set("u-y", { micSender: refused } as unknown as Link);
+      vi.mocked(captureMicrophone).mockResolvedValueOnce(late);
+
+      expect(await microphone.replace(other, false, () => false)).toBe(false);
+
+      expect(sender.replaceTrack).toHaveBeenNthCalledWith(2, running.track);
+      expect(refused.replaceTrack).toHaveBeenCalledOnce();
+      expect(rebuildLink).toHaveBeenCalledExactlyOnceWith(movedLink);
+      expect(microphone.capture).toBe(running);
+      expect(running.dispose).not.toHaveBeenCalled();
+      expect(late.dispose).toHaveBeenCalledOnce();
+    });
+
+    it.each(["opening", "moving"])("does not report a late %s failure in the new call", async (stage) => {
+      const running = fakeCapture();
+      const late = fakeCapture();
+      const rejoined = fakeCapture();
+      microphone.adopt(running, DEFAULT_SETTINGS);
+      const { sender } = peerWithSender();
+      let left = false;
+      const failAfterRejoining = async () => {
+        left = true;
+        peers.clear();
+        microphone.release();
+        microphone.adopt(rejoined, other);
+        throw new Error("old call ended");
+      };
+      if (stage === "opening") {
+        vi.mocked(captureMicrophone).mockImplementationOnce(failAfterRejoining);
+      } else {
+        vi.mocked(captureMicrophone).mockResolvedValueOnce(late);
+        sender.replaceTrack.mockImplementationOnce(failAfterRejoining);
+      }
+
+      expect(await microphone.replace(other, false, () => left)).toBe(false);
+
+      expect(microphone.capture).toBe(rejoined);
+      expect(rejoined.dispose).not.toHaveBeenCalled();
+      expect(store.getSnapshot().error).toBeNull();
+      expect(rebuildLink).not.toHaveBeenCalled();
+      if (stage === "moving") expect(late.dispose).toHaveBeenCalledOnce();
     });
   });
 });
