@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Stellarr.Api.Auth;
 using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
+using Stellarr.Api.Localization;
 using Stellarr.Api.Realtime;
 
 namespace Stellarr.Api.Endpoints;
@@ -28,8 +29,9 @@ public static class MessageReactionEndpoints
         HttpContext http,
         AppDbContext db,
         IHubContext<AppHub> hub,
+        Messages messages,
         CancellationToken cancellationToken) =>
-        SetAsync(messageId, emoji, added: true, http, db, hub, cancellationToken);
+        SetAsync(messageId, emoji, added: true, http, db, hub, messages, cancellationToken);
 
     private static Task<IResult> RemoveAsync(
         Guid messageId,
@@ -37,8 +39,9 @@ public static class MessageReactionEndpoints
         HttpContext http,
         AppDbContext db,
         IHubContext<AppHub> hub,
+        Messages messages,
         CancellationToken cancellationToken) =>
-        SetAsync(messageId, emoji, added: false, http, db, hub, cancellationToken);
+        SetAsync(messageId, emoji, added: false, http, db, hub, messages, cancellationToken);
 
     /// <summary>
     /// Makes the caller's reaction present or absent. Doing either twice is
@@ -52,6 +55,7 @@ public static class MessageReactionEndpoints
         HttpContext http,
         AppDbContext db,
         IHubContext<AppHub> hub,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         emoji = emoji.Trim();
@@ -59,7 +63,7 @@ public static class MessageReactionEndpoints
         {
             return Results.ValidationProblem(new Dictionary<string, string[]>
             {
-                ["emoji"] = [$"Reakcja musi mieć od 1 do {MaxEmojiLength} znaków i nie może zawierać spacji."],
+                ["emoji"] = [messages.Get(MessageKey.ReactionInvalid, ("max", MaxEmojiLength))],
             });
         }
 

@@ -121,7 +121,7 @@
   /*
    * ---------- KROPKA STATUSU ----------
    *
-   * `DESIGN.md` §4: status is never colour alone. Each state is a different
+   * Status is never colour alone. Each state is a different
    * shape as well as a different hue — a full disc, a crescent, a disc with a
    * bar, a hollow ring — so the app loses nothing in greyscale. The shape is
    * cut by one pseudo-element in the colour behind the dot, which is why the

@@ -64,7 +64,7 @@ services:
       Oidc__ClientId: ${STELLARR_OIDC_CLIENT_ID:-}
       Oidc__ClientSecret: ${STELLARR_OIDC_CLIENT_SECRET:-}
       Oidc__ClientSecretFile: ${STELLARR_OIDC_CLIENT_SECRET_FILE:-}
-      Oidc__DisplayName: ${STELLARR_OIDC_DISPLAY_NAME:-Konto główne}
+      Oidc__DisplayName: ${STELLARR_OIDC_DISPLAY_NAME:-Main account}
       Oidc__CallbackPath: /api/auth/oidc/callback
       Uploads__MaxStoredBytesPerUser: ${STELLARR_UPLOAD_USER_BYTES:-2147483648}
       Uploads__MaxStoredBytes: ${STELLARR_UPLOAD_TOTAL_BYTES:-21474836480}

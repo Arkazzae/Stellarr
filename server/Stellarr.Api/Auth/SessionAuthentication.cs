@@ -3,6 +3,7 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Stellarr.Api.Domain;
+using Stellarr.Api.Localization;
 
 namespace Stellarr.Api.Auth;
 
@@ -50,7 +51,7 @@ public static class SessionAuthentication
     }
 
     /// <summary>A new, not yet saved session for a sign-in arriving on this request.</summary>
-    public static UserSession CreateSession(HttpContext context, Guid userId)
+    public static UserSession CreateSession(HttpContext context, Guid userId, Messages messages)
     {
         var now = DateTime.UtcNow;
         var agent = context.Request.Headers.UserAgent.ToString().Trim();
@@ -58,7 +59,7 @@ public static class SessionAuthentication
         {
             Id = Guid.NewGuid(),
             UserId = userId,
-            Device = agent.Length == 0 ? "Nieznane urządzenie" : agent[..Math.Min(agent.Length, 300)],
+            Device = agent.Length == 0 ? messages.Get(MessageKey.UnknownDevice) : agent[..Math.Min(agent.Length, 300)],
             IpAddress = context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             CreatedAt = now,
             LastSeenAt = now,

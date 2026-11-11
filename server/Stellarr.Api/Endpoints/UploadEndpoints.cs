@@ -6,6 +6,7 @@ using Stellarr.Api.Auth;
 using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
 using Stellarr.Api.Domain;
+using Stellarr.Api.Localization;
 using Stellarr.Api.Storage;
 
 namespace Stellarr.Api.Endpoints;
@@ -46,17 +47,18 @@ public static class UploadEndpoints
         MediaStorage mediaStorage,
         UploadAdmissionGate admissionGate,
         IOptions<UploadOptions> uploadOptions,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         var inspection = await mediaStorage.InspectAttachmentAsync(file, uploadOptions.Value, cancellationToken);
         if (!inspection.Accepted)
         {
-            return Refusal(inspection);
+            return Refusal(inspection, messages);
         }
 
         var spec = inspection.Spec;
         var isVoiceMessage = voiceMessage == true;
-        if (MetadataProblem(spec, isVoiceMessage, durationSeconds, width, height) is { } problem)
+        if (MetadataProblem(spec, isVoiceMessage, durationSeconds, width, height, messages) is { } problem)
         {
             return problem;
         }
@@ -69,7 +71,7 @@ public static class UploadEndpoints
             var posterInspection = await mediaStorage.InspectImageAsync(poster, MaximumPosterBytes, cancellationToken);
             if (spec.Kind != UploadKind.Video || !posterInspection.Accepted)
             {
-                return Invalid("poster", "Podgląd wideo jest nieprawidłowy.");
+                return Invalid("poster", messages.Get(MessageKey.UploadPosterInvalid));
             }
 
             posterUpload = new PosterUpload(
@@ -86,7 +88,7 @@ public static class UploadEndpoints
             cancellationToken);
         if (!admission.Accepted)
         {
-            return NoRoom(admission.Failure);
+            return NoRoom(admission.Failure, messages);
         }
 
         await using var lease = admission.Lease;
@@ -137,29 +139,29 @@ public static class UploadEndpoints
     /// <summary>The still image that stands in for a video before it plays.</summary>
     private sealed record PosterUpload(IFormFile File, UploadSpec Spec, string Key);
 
-    private static IResult Refusal(UploadInspection inspection) => inspection.Failure switch
+    private static IResult Refusal(UploadInspection inspection, Messages messages) => inspection.Failure switch
     {
-        UploadFailure.Empty => Invalid("file", "Plik jest pusty."),
+        UploadFailure.Empty => Invalid("file", messages.Get(MessageKey.FileEmpty)),
         UploadFailure.UnsupportedType => Results.Problem(
             statusCode: StatusCodes.Status415UnsupportedMediaType,
-            title: "Nieobsługiwany format załącznika",
-            detail: "Dozwolone są obsługiwane obrazy, audio i wideo oraz pliki PDF, ZIP, TXT, JSON, DOCX, XLSX i PPTX."),
+            title: messages.Get(MessageKey.UploadTypeUnsupported),
+            detail: messages.Get(MessageKey.UploadTypesAllowed)),
         UploadFailure.TooLarge => Results.Problem(
             statusCode: StatusCodes.Status413PayloadTooLarge,
-            title: "Załącznik jest za duży",
-            detail: inspection.Spec?.Kind switch
+            title: messages.Get(MessageKey.UploadTooLarge),
+            detail: messages.Get(inspection.Spec?.Kind switch
             {
-                UploadKind.Image => "Maksymalny rozmiar obrazu to 10 MB.",
-                UploadKind.Audio => "Maksymalny rozmiar audio to 25 MB.",
-                UploadKind.Video => "Maksymalny rozmiar wideo to 100 MB.",
-                UploadKind.File => "Maksymalny rozmiar pliku to 25 MB.",
-                _ => "Załącznik przekracza limit.",
-            }),
+                UploadKind.Image => MessageKey.UploadImageMaximum,
+                UploadKind.Audio => MessageKey.UploadAudioMaximum,
+                UploadKind.Video => MessageKey.UploadVideoMaximum,
+                UploadKind.File => MessageKey.UploadFileMaximum,
+                _ => MessageKey.UploadOverLimit,
+            })),
         // A signature that does not fit the declared type.
         _ => Results.Problem(
             statusCode: StatusCodes.Status415UnsupportedMediaType,
-            title: "Nieprawidłowy format załącznika",
-            detail: "Zawartość pliku nie odpowiada zadeklarowanemu typowi."),
+            title: messages.Get(MessageKey.UploadTypeMismatch),
+            detail: messages.Get(MessageKey.FileContentMismatch)),
     };
 
     /// <summary>
@@ -171,7 +173,8 @@ public static class UploadEndpoints
         bool isVoiceMessage,
         double? durationSeconds,
         int? width,
-        int? height)
+        int? height,
+        Messages messages)
     {
         if (isVoiceMessage &&
             (spec.Kind != UploadKind.Audio ||
@@ -182,7 +185,9 @@ public static class UploadEndpoints
         {
             return Invalid(
                 "voiceMessage",
-                $"Wiadomość głosowa musi być nagraniem audio o długości do {MessageLimits.MaxVoiceMessageDurationSeconds / 60:0} minut.");
+                messages.Get(
+                    MessageKey.VoiceMessageInvalid,
+                    ("minutes", (MessageLimits.MaxVoiceMessageDurationSeconds / 60).ToString("0", CultureInfo.CurrentCulture))));
         }
 
         if (durationSeconds is { } duration &&
@@ -191,7 +196,7 @@ public static class UploadEndpoints
              duration <= 0 ||
              duration > MaximumMediaDurationSeconds))
         {
-            return Invalid("durationSeconds", "Czas trwania pliku jest nieprawidłowy.");
+            return Invalid("durationSeconds", messages.Get(MessageKey.MediaDurationInvalid));
         }
 
         if (width.HasValue != height.HasValue ||
@@ -199,23 +204,22 @@ public static class UploadEndpoints
             height is <= 0 or > MaximumMediaDimension ||
             (width.HasValue && spec.Kind is UploadKind.Audio or UploadKind.File))
         {
-            return Invalid("dimensions", "Wymiary pliku są nieprawidłowe.");
+            return Invalid("dimensions", messages.Get(MessageKey.MediaDimensionsInvalid));
         }
 
         return null;
     }
 
-    private static IResult NoRoom(UploadAdmissionFailure failure) => Results.Problem(
+    private static IResult NoRoom(UploadAdmissionFailure failure, Messages messages) => Results.Problem(
         statusCode: StatusCodes.Status507InsufficientStorage,
-        title: "Brak miejsca na załącznik",
-        detail: failure switch
+        title: messages.Get(MessageKey.StorageFull),
+        detail: messages.Get(failure switch
         {
-            UploadAdmissionFailure.UserQuota => "Wykorzystano limit miejsca dla tego konta.",
-            UploadAdmissionFailure.InstanceQuota => "Instancja wykorzystała skonfigurowany limit miejsca na załączniki.",
-            UploadAdmissionFailure.LowDiskSpace =>
-                "Serwer zachowuje rezerwę wolnego miejsca potrzebną bazie danych i logom.",
-            _ => "Serwer nie może teraz przyjąć kolejnego załącznika.",
-        });
+            UploadAdmissionFailure.UserQuota => MessageKey.StorageUserQuota,
+            UploadAdmissionFailure.InstanceQuota => MessageKey.StorageInstanceQuota,
+            UploadAdmissionFailure.LowDiskSpace => MessageKey.StorageLowDisk,
+            _ => MessageKey.StorageUnavailable,
+        }));
 
     private static IResult Invalid(string field, string message) =>
         Results.ValidationProblem(new Dictionary<string, string[]> { [field] = [message] });

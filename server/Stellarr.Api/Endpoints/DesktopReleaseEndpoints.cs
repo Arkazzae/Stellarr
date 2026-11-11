@@ -2,6 +2,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text.Json;
 using Stellarr.Api.Contracts;
+using Stellarr.Api.Localization;
 
 namespace Stellarr.Api.Endpoints;
 
@@ -15,7 +16,7 @@ public sealed class DesktopReleaseCatalogue(IConfiguration configuration) : Clie
         Architecture: "x86_64",
         DownloadPath: DesktopReleaseEndpoints.ArchDownloadPath,
         ContentType: "application/zstd",
-        UnavailableTitle: "Wydanie desktopowe jest chwilowo niedostępne."));
+        Unavailable: MessageKey.DesktopReleaseUnavailable));
 
 public static class DesktopReleaseEndpoints
 {
@@ -25,10 +26,12 @@ public static class DesktopReleaseEndpoints
     {
         endpoints.MapGet(
             "/api/desktop/release",
-            (HttpContext http, DesktopReleaseCatalogue catalogue) => ClientReleaseResults.Describe(http, catalogue));
+            (HttpContext http, DesktopReleaseCatalogue catalogue, Messages messages) =>
+                ClientReleaseResults.Describe(http, catalogue, messages));
         endpoints.MapGet(
             ArchDownloadPath,
-            (HttpContext http, DesktopReleaseCatalogue catalogue) => ClientReleaseResults.Download(http, catalogue));
+            (HttpContext http, DesktopReleaseCatalogue catalogue, Messages messages) =>
+                ClientReleaseResults.Download(http, catalogue, messages));
         return endpoints;
     }
 
@@ -58,7 +61,7 @@ public static class DesktopReleaseEndpoints
 /// <summary>Where one platform's release is published and what its manifest must declare.</summary>
 /// <param name="DirectoryName">The folder under <c>{DataRoot}/releases</c>.</param>
 /// <param name="DownloadPath">Where this server serves the package.</param>
-/// <param name="UnavailableTitle">What a client is told when the manifest is broken.</param>
+/// <param name="Unavailable">What a client is told when the manifest is broken.</param>
 public sealed record ClientReleaseKind(
     string DirectoryName,
     string ManifestFileName,
@@ -66,7 +69,7 @@ public sealed record ClientReleaseKind(
     string Architecture,
     string DownloadPath,
     string ContentType,
-    string UnavailableTitle);
+    MessageKey Unavailable);
 
 internal sealed record ClientReleaseManifest(
     int SchemaVersion,
@@ -152,23 +155,24 @@ internal static class ClientReleaseResults
     // revalidated soon after a release instead of being cached as immutable.
     public const string CacheControl = "public, max-age=60";
 
-    public static IResult Describe(HttpContext http, ClientReleaseCatalogue catalogue) =>
-        Respond(http, catalogue, release => Results.Ok(release.ToDto()));
+    public static IResult Describe(HttpContext http, ClientReleaseCatalogue catalogue, Messages messages) =>
+        Respond(http, catalogue, messages, release => Results.Ok(release.ToDto()));
 
-    public static IResult Download(HttpContext http, ClientReleaseCatalogue catalogue) =>
-        Respond(http, catalogue, release => Results.File(
+    public static IResult Download(HttpContext http, ClientReleaseCatalogue catalogue, Messages messages) =>
+        Respond(http, catalogue, messages, release => Results.File(
             release.FilePath,
             catalogue.Kind.ContentType,
             release.FileName,
             lastModified: release.PublishedAt,
             enableRangeProcessing: true));
 
-    public static IResult Unavailable(string title) =>
-        Results.Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: title);
+    public static IResult Unavailable(Messages messages, MessageKey title) =>
+        Results.Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: messages.Get(title));
 
     private static IResult Respond(
         HttpContext http,
         ClientReleaseCatalogue catalogue,
+        Messages messages,
         Func<PublishedClientRelease, IResult> answer)
     {
         try
@@ -183,7 +187,7 @@ internal static class ClientReleaseResults
         }
         catch (InvalidDataException)
         {
-            return Unavailable(catalogue.Kind.UnavailableTitle);
+            return Unavailable(messages, catalogue.Kind.Unavailable);
         }
     }
 }

@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using Stellarr.Api.Auth;
 using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
+using Stellarr.Api.Localization;
 
 namespace Stellarr.Api.Endpoints;
 
@@ -25,6 +26,7 @@ public static class AuthEndpoints
         LoginRequest request,
         AppDbContext db,
         PasswordService passwords,
+        Messages messages,
         HttpContext context,
         CancellationToken cancellationToken)
     {
@@ -40,10 +42,10 @@ public static class AuthEndpoints
             await Task.Delay(Random.Shared.Next(80, 180), cancellationToken);
             return Results.Problem(
                 statusCode: StatusCodes.Status401Unauthorized,
-                title: "Nieprawidłowy login lub hasło.");
+                title: messages.Get(MessageKey.SignInFailed));
         }
 
-        var session = SessionAuthentication.CreateSession(context, user.Id);
+        var session = SessionAuthentication.CreateSession(context, user.Id, messages);
         db.UserSessions.Add(session);
         await db.SaveChangesAsync(cancellationToken);
         await SessionAuthentication.SignInAsync(context, user, session.Id);
@@ -51,8 +53,14 @@ public static class AuthEndpoints
     }
 
     /// <summary>Whether the sign-in page should offer the provider, and under what name.</summary>
-    private static IResult GetOidcStatus(ExternalOidcOptions options) =>
-        Results.Ok(new { enabled = options.IsConfigured, displayName = options.DisplayName });
+    private static IResult GetOidcStatus(ExternalOidcOptions options, Messages messages) =>
+        Results.Ok(new
+        {
+            enabled = options.IsConfigured,
+            displayName = string.IsNullOrWhiteSpace(options.DisplayName)
+                ? messages.Get(MessageKey.OidcDefaultName)
+                : options.DisplayName,
+        });
 
     private static IResult ChallengeOidc(string? returnUrl, ExternalOidcOptions options) =>
         options.IsConfigured

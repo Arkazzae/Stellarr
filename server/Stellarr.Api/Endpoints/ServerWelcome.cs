@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
 using Stellarr.Api.Domain;
+using Stellarr.Api.Localization;
 using Stellarr.Api.Realtime;
 
 namespace Stellarr.Api.Endpoints;
@@ -20,6 +21,7 @@ internal static class ServerWelcome
         Guid serverId,
         User user,
         DateTime joinedAt,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         if (await FirstTextChannelIdAsync(db, serverId, cancellationToken) is not { } channelId)
@@ -36,7 +38,7 @@ internal static class ServerWelcome
             AuthorId = user.Id,
             Author = user,
             IsSystem = true,
-            Content = $"<b>{name}</b> dołącza do serwera. Przywitajcie się!",
+            Content = messages.Get(MessageKey.ServerWelcomeNotice, ("name", name)),
             CreatedAt = joinedAt,
         };
         db.Messages.Add(message);
@@ -48,10 +50,11 @@ internal static class ServerWelcome
         IHubContext<AppHub> hub,
         Guid serverId,
         Message? message,
+        Messages messages,
         CancellationToken cancellationToken) =>
         message is null
             ? Task.CompletedTask
-            : hub.Clients.Group(AppHub.ServerGroup(serverId)).SendAsync("MessageCreated", message.ToDto(), cancellationToken);
+            : hub.Clients.Group(AppHub.ServerGroup(serverId)).SendAsync("MessageCreated", message.ToDto(messages), cancellationToken);
 
     private static async Task<Guid?> FirstTextChannelIdAsync(
         AppDbContext db,

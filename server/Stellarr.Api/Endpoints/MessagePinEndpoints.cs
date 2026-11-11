@@ -4,6 +4,7 @@ using Stellarr.Api.Auth;
 using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
 using Stellarr.Api.Domain;
+using Stellarr.Api.Localization;
 using Stellarr.Api.Messaging;
 using Stellarr.Api.Realtime;
 
@@ -39,6 +40,7 @@ public static class MessagePinEndpoints
         Guid channelId,
         HttpContext http,
         AppDbContext db,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         if (!await db.Channels.TextChannelOnServer(channelId, http.RequireActiveServerId())
@@ -55,7 +57,7 @@ public static class MessagePinEndpoints
             .AsSplitQuery()
             .ToListAsync(cancellationToken);
         var viewerId = http.User.RequireUserId();
-        return Results.Ok(new PinnedMessagesDto(pinned.Select(x => x.ToDto(viewerId)).ToArray()));
+        return Results.Ok(new PinnedMessagesDto(pinned.Select(x => x.ToDto(messages, viewerId)).ToArray()));
     }
 
     private static Task<IResult> PinAsync(
@@ -63,16 +65,18 @@ public static class MessagePinEndpoints
         HttpContext http,
         AppDbContext db,
         IHubContext<AppHub> hub,
+        Messages messages,
         CancellationToken cancellationToken) =>
-        SetAsync(messageId, pinned: true, http, db, hub, cancellationToken);
+        SetAsync(messageId, pinned: true, http, db, hub, messages, cancellationToken);
 
     private static Task<IResult> UnpinAsync(
         Guid messageId,
         HttpContext http,
         AppDbContext db,
         IHubContext<AppHub> hub,
+        Messages messages,
         CancellationToken cancellationToken) =>
-        SetAsync(messageId, pinned: false, http, db, hub, cancellationToken);
+        SetAsync(messageId, pinned: false, http, db, hub, messages, cancellationToken);
 
     /// <summary>
     /// Pins or unpins a message, for whoever can manage messages in its
@@ -88,6 +92,7 @@ public static class MessagePinEndpoints
         HttpContext http,
         AppDbContext db,
         IHubContext<AppHub> hub,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         var serverId = http.RequireActiveServerId();
@@ -122,10 +127,7 @@ public static class MessagePinEndpoints
                 return Results.ValidationProblem(new Dictionary<string, string[]>
                 {
                     ["pins"] =
-                    [
-                        $"Kanał może mieć najwyżej {MaxPinsPerChannel} przypiętych wiadomości. " +
-                        "Odepnij coś, aby zrobić miejsce.",
-                    ],
+                    [messages.Get(MessageKey.PinLimitReached, ("max", MaxPinsPerChannel))],
                 });
             }
 
@@ -136,7 +138,7 @@ public static class MessagePinEndpoints
         // The event is shared by everyone, so it cannot say which reactions
         // are the viewer's own.
         await hub.Clients.Group(AppHub.ServerGroup(serverId))
-            .SendAsync("MessageUpdated", message.ToDto(), CancellationToken.None);
-        return Results.Ok(message.ToDto(userId));
+            .SendAsync("MessageUpdated", message.ToDto(messages), CancellationToken.None);
+        return Results.Ok(message.ToDto(messages, userId));
     }
 }

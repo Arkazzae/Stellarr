@@ -11,7 +11,7 @@
 # not fit in the release job. The web stage runs per target platform because
 # the standalone server bundles native image-processing binaries.
 
-FROM node:24-bookworm-slim AS web-build
+FROM node:26-bookworm-slim AS web-build
 WORKDIR /src/web
 COPY web/package.json web/package-lock.json ./
 RUN npm ci
@@ -21,7 +21,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 ENV NEXT_PUBLIC_GIPHY_API_KEY=${NEXT_PUBLIC_GIPHY_API_KEY}
 RUN npm run build
 
-FROM --platform=$BUILDPLATFORM node:24-bookworm-slim AS ops-build
+FROM --platform=$BUILDPLATFORM node:26-bookworm-slim AS ops-build
 WORKDIR /src/ops
 COPY ops/package.json ops/package-lock.json ./
 RUN npm ci
@@ -100,7 +100,7 @@ RUN cargo build --release --locked --target "$(cat /etc/rust-target)" \
     && install -D "target/$(cat /etc/rust-target)/release/stellarr-media" /out/stellarr-media
 
 FROM rustfs/rustfs:1.0.0-beta.11-preview.1 AS rustfs-bin
-FROM node:24-bookworm-slim AS node-runtime
+FROM node:26-bookworm-slim AS node-runtime
 
 # Target of docker-compose.dev.yml: the SDK with the source bind-mounted.
 FROM mcr.microsoft.com/dotnet/sdk:10.0-noble AS api-dev
@@ -117,8 +117,9 @@ WORKDIR /app
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble AS final
 
 # musl: the RustFS binary comes from an Alpine-based image.
+# libatomic1: the Node binary copied below links against it.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates coturn curl musl nginx openssl supervisor \
+    && apt-get install -y --no-install-recommends ca-certificates coturn curl libatomic1 musl nginx openssl supervisor \
     && rm -rf /var/lib/apt/lists/*
 
 COPY --from=rustfs-bin /usr/bin/rustfs /usr/bin/rustfs
@@ -144,8 +145,9 @@ ENV STELLARR_DATA_ROOT=/data/stellarr
 EXPOSE 80 443 3478/tcp 3478/udp 5349/tcp 5349/udp 49000/udp 49160-49200/udp
 VOLUME ["/data/stellarr"]
 
+# Healthy means both the API and the web client answer: either can fail on its own.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=5 \
-  CMD curl -kfsS https://127.0.0.1/health >/dev/null || exit 1
+  CMD curl -kfsS -o /dev/null https://127.0.0.1/health && curl -kfsS -o /dev/null https://127.0.0.1/login || exit 1
 
 ARG VERSION=dev
 ARG REVISION=unknown

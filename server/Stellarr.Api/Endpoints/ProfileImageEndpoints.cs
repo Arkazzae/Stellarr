@@ -5,6 +5,7 @@ using Stellarr.Api.Auth;
 using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
 using Stellarr.Api.Domain;
+using Stellarr.Api.Localization;
 using Stellarr.Api.Realtime;
 using Stellarr.Api.Storage;
 
@@ -17,21 +18,21 @@ public static class ProfileImageEndpoints
     private sealed record ImageKind(
         string Name,
         long MaxBytes,
-        string TooLargeDetail,
+        MessageKey TooLargeDetail,
         Func<User, string?> Read,
         Action<User, string?> Write);
 
     private static readonly ImageKind Avatar = new(
         "avatar",
         4 * 1024 * 1024,
-        "Awatar może mieć najwyżej 4 MB.",
+        MessageKey.AvatarMaximum,
         user => user.AvatarUrl,
         (user, url) => user.AvatarUrl = url);
 
     private static readonly ImageKind Banner = new(
         "banner",
         8 * 1024 * 1024,
-        "Baner może mieć najwyżej 8 MB.",
+        MessageKey.BannerMaximum,
         user => user.BannerUrl,
         (user, url) => user.BannerUrl = url);
 
@@ -51,6 +52,7 @@ public static class ProfileImageEndpoints
         MediaStorage mediaStorage,
         IHubContext<AppHub> hub,
         PresenceTracker presence,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         if (FindKind(kind) is not { } image)
@@ -61,7 +63,7 @@ public static class ProfileImageEndpoints
         var inspection = await mediaStorage.InspectImageAsync(file, image.MaxBytes, cancellationToken);
         if (!inspection.Accepted)
         {
-            return Refusal(inspection, image);
+            return Refusal(inspection, image, messages);
         }
 
         var user = await AccountEndpoints.FindCurrentAsync(principal, db, cancellationToken);
@@ -129,22 +131,23 @@ public static class ProfileImageEndpoints
         _ => null,
     };
 
-    private static IResult Refusal(UploadInspection inspection, ImageKind kind) => inspection.Failure switch
-    {
-        UploadFailure.Empty => Results.ValidationProblem(
-            new Dictionary<string, string[]> { ["file"] = ["Plik jest pusty."] }),
-        UploadFailure.TooLarge => Results.Problem(
-            statusCode: StatusCodes.Status413PayloadTooLarge,
-            title: "Obraz jest za duży",
-            detail: kind.TooLargeDetail),
-        UploadFailure.UnsupportedType => Results.Problem(
-            statusCode: StatusCodes.Status415UnsupportedMediaType,
-            title: "Nieobsługiwany format obrazu",
-            detail: "Dozwolone są obrazy JPEG, PNG, GIF i WebP."),
-        // A signature that does not fit the declared type.
-        _ => Results.Problem(
-            statusCode: StatusCodes.Status415UnsupportedMediaType,
-            title: "Nieprawidłowy format obrazu",
-            detail: "Zawartość pliku nie odpowiada zadeklarowanemu typowi."),
-    };
+    private static IResult Refusal(UploadInspection inspection, ImageKind kind, Messages messages) =>
+        inspection.Failure switch
+        {
+            UploadFailure.Empty => Results.ValidationProblem(
+                new Dictionary<string, string[]> { ["file"] = [messages.Get(MessageKey.FileEmpty)] }),
+            UploadFailure.TooLarge => Results.Problem(
+                statusCode: StatusCodes.Status413PayloadTooLarge,
+                title: messages.Get(MessageKey.ProfileImageTooLarge),
+                detail: messages.Get(kind.TooLargeDetail)),
+            UploadFailure.UnsupportedType => Results.Problem(
+                statusCode: StatusCodes.Status415UnsupportedMediaType,
+                title: messages.Get(MessageKey.ProfileImageTypeUnsupported),
+                detail: messages.Get(MessageKey.ImageTypesAllowed)),
+            // A signature that does not fit the declared type.
+            _ => Results.Problem(
+                statusCode: StatusCodes.Status415UnsupportedMediaType,
+                title: messages.Get(MessageKey.ProfileImageTypeMismatch),
+                detail: messages.Get(MessageKey.FileContentMismatch)),
+        };
 }

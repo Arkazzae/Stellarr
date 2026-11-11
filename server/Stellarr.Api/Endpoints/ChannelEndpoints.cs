@@ -3,6 +3,7 @@ using Stellarr.Api.Auth;
 using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
 using Stellarr.Api.Domain;
+using Stellarr.Api.Localization;
 
 namespace Stellarr.Api.Endpoints;
 
@@ -34,6 +35,7 @@ public static class ChannelEndpoints
         CreateChannelRequest request,
         HttpContext http,
         AppDbContext db,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         var serverId = http.RequireActiveServerId();
@@ -46,7 +48,7 @@ public static class ChannelEndpoints
         };
         if (!IsValidName(name) || kind is null)
         {
-            return Invalid("channel", "Nazwa lub typ kanału jest nieprawidłowy.");
+            return Invalid("channel", messages.Get(MessageKey.ChannelNameOrKindInvalid));
         }
 
         if (await db.Channels.AnyAsync(x => x.ServerId == serverId && x.Name == name, cancellationToken))
@@ -96,6 +98,7 @@ public static class ChannelEndpoints
         UpdateChannelRequest request,
         HttpContext http,
         AppDbContext db,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         var serverId = http.RequireActiveServerId();
@@ -115,7 +118,7 @@ public static class ChannelEndpoints
         var name = request.Name is null ? null : Normalize(request.Name);
         if (name is not null && !IsValidName(name))
         {
-            return Invalid("name", "Nazwa kanału jest nieprawidłowa.");
+            return Invalid("name", messages.Get(MessageKey.ChannelNameInvalid));
         }
 
         if (name is not null && await db.Channels.AnyAsync(
@@ -126,14 +129,14 @@ public static class ChannelEndpoints
 
         if (!AreSettingsInRange(request))
         {
-            return Invalid("channel", "Co najmniej jedno ustawienie kanału jest nieprawidłowe.");
+            return Invalid("channel", messages.Get(MessageKey.ChannelSettingInvalid));
         }
 
         var textOnly = request.Topic is not null || request.SlowModeSeconds is not null;
         var voiceOnly = request.AudioProfile is not null || request.UserLimit is not null;
         if (channel.Kind == ChannelKind.Text ? voiceOnly : textOnly)
         {
-            return Invalid("channel", "To ustawienie nie pasuje do typu kanału.");
+            return Invalid("channel", messages.Get(MessageKey.ChannelSettingWrongKind));
         }
 
         channel.Name = name ?? channel.Name;
@@ -149,6 +152,7 @@ public static class ChannelEndpoints
         ReorderChannelsRequest request,
         HttpContext http,
         AppDbContext db,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         var serverId = http.RequireActiveServerId();
@@ -163,7 +167,7 @@ public static class ChannelEndpoints
         if (order.Select(x => x.id).Distinct().Count() != order.Count ||
             !order.Select(x => x.id).ToHashSet().SetEquals(channels.Select(x => x.Id)))
         {
-            return Invalid("channelIds", "Lista musi zawierać każdy kanał dokładnie raz.");
+            return Invalid("channelIds", messages.Get(MessageKey.ChannelOrderIncomplete));
         }
 
         var positions = order.ToDictionary(x => x.id, x => x.position);

@@ -6,6 +6,7 @@ using Stellarr.Api.Auth;
 using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
 using Stellarr.Api.Domain;
+using Stellarr.Api.Localization;
 using Stellarr.Api.Realtime;
 
 namespace Stellarr.Api.Endpoints;
@@ -67,6 +68,7 @@ public static class AccountEndpoints
     private static async Task<IResult> UpdateAccountAsync(
         UpdateAccountRequest request,
         ClaimsPrincipal principal,
+        Messages messages,
         AppDbContext db,
         IHubContext<AppHub> hub,
         PresenceTracker presence,
@@ -74,12 +76,10 @@ public static class AccountEndpoints
     {
         if (request.Email is not null)
         {
-            return Invalid(
-                "email",
-                "Zmiana adresu odzyskiwania wymaga potwierdzenia nowego adresu i jest obecnie wyłączona.");
+            return Invalid("email", messages.Get(MessageKey.RecoveryEmailChangeDisabled));
         }
 
-        var errors = ValidateProfile(request);
+        var errors = ValidateProfile(request, messages);
         if (errors.Count > 0)
         {
             return Results.ValidationProblem(errors);
@@ -159,6 +159,7 @@ public static class AccountEndpoints
     private static async Task<IResult> UpdatePreferencesAsync(
         UpdatePreferencesRequest request,
         ClaimsPrincipal principal,
+        Messages messages,
         AppDbContext db,
         IHubContext<AppHub> hub,
         PresenceTracker presence,
@@ -166,7 +167,7 @@ public static class AccountEndpoints
     {
         if (request.VadSensitivity is < 0 or > 100)
         {
-            return Invalid("vadSensitivity", "Czułość wykrywania mowy musi mieścić się w zakresie od 0 do 100.");
+            return Invalid("vadSensitivity", messages.Get(MessageKey.VadSensitivityRange));
         }
 
         var userId = principal.RequireUserId();
@@ -180,7 +181,7 @@ public static class AccountEndpoints
             if (!Guid.TryParse(requestedSound, out var soundId) ||
                 !await CanPlaySoundAsync(db, userId, soundId, cancellationToken))
             {
-                return Invalid("joinSoundId", "Wybierz dźwięk z soundboardu serwera, na którym jesteś.");
+                return Invalid("joinSoundId", messages.Get(MessageKey.JoinSoundNotAvailable));
             }
 
             joinSoundId = soundId;
@@ -215,6 +216,7 @@ public static class AccountEndpoints
         ClaimsPrincipal principal,
         AppDbContext db,
         PasswordService passwords,
+        Messages messages,
         HttpContext context,
         CancellationToken cancellationToken)
     {
@@ -225,7 +227,7 @@ public static class AccountEndpoints
 
         if (PasswordPolicy.IsTooLong(request.NewPassword))
         {
-            return Invalid("newPassword", $"Nowe hasło może mieć najwyżej {PasswordPolicy.MaxLength} znaków.");
+            return Invalid("newPassword", messages.Get(MessageKey.NewPasswordTooLong, ("max", PasswordPolicy.MaxLength)));
         }
 
         var user = await FindCurrentAsync(principal, db, cancellationToken);
@@ -313,27 +315,27 @@ public static class AccountEndpoints
             .Select(x => x.ServerId)
             .ToArrayAsync(cancellationToken);
 
-    private static Dictionary<string, string[]> ValidateProfile(UpdateAccountRequest request)
+    private static Dictionary<string, string[]> ValidateProfile(UpdateAccountRequest request, Messages messages)
     {
         var errors = new Dictionary<string, string[]>();
         if (request.DisplayName is not null && request.DisplayName.Trim().Length is < 1 or > DisplayNameMaxLength)
         {
-            errors["displayName"] = [$"Nazwa wyświetlana musi mieć od 1 do {DisplayNameMaxLength} znaków."];
+            errors["displayName"] = [messages.Get(MessageKey.AccountDisplayNameLength, ("max", DisplayNameMaxLength))];
         }
 
         if (request.Bio is not null && request.Bio.Trim().Length > BioMaxLength)
         {
-            errors["bio"] = [$"Opis może mieć najwyżej {BioMaxLength} znaków."];
+            errors["bio"] = [messages.Get(MessageKey.BioTooLong, ("max", BioMaxLength))];
         }
 
         if (request.CustomStatus is not null && request.CustomStatus.Trim().Length > CustomStatusMaxLength)
         {
-            errors["customStatus"] = [$"Status może mieć najwyżej {CustomStatusMaxLength} znaków."];
+            errors["customStatus"] = [messages.Get(MessageKey.CustomStatusTooLong, ("max", CustomStatusMaxLength))];
         }
 
         if (request.Pronouns is not null && request.Pronouns.Trim().Length > PronounsMaxLength)
         {
-            errors["pronouns"] = [$"Zaimki mogą mieć najwyżej {PronounsMaxLength} znaki."];
+            errors["pronouns"] = [messages.Get(MessageKey.PronounsTooLong, ("max", PronounsMaxLength))];
         }
 
         return errors;

@@ -71,6 +71,10 @@ coverage.cobertura.xml
 .eslintcache
 .stylelintcache
 
+# Documentation site (docs/): VitePress build output and cache.
+/docs/.vitepress/dist/
+/docs/.vitepress/cache/
+
 # RNNoise is copied deterministically from the locked npm package by
 # web/scripts/copy-audio-assets.mjs. Keep our own VAD worklet tracked.
 /web/public/audio/rnnoise-worklet.js

@@ -1,9 +1,11 @@
+using System.Globalization;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Stellarr.Api.Auth;
 using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
 using Stellarr.Api.Domain;
+using Stellarr.Api.Localization;
 using Stellarr.Api.Realtime;
 using Stellarr.Api.Storage;
 
@@ -65,6 +67,7 @@ public static class SoundboardEndpoints
         HttpContext http,
         AppDbContext db,
         IHubContext<AppHub> hub,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         var serverId = http.RequireActiveServerId();
@@ -86,7 +89,7 @@ public static class SoundboardEndpoints
         {
             return Results.ValidationProblem(new Dictionary<string, string[]>
             {
-                ["attachmentId"] = ["Wybierz przesłany plik audio z rozpoznanym czasem trwania."],
+                ["attachmentId"] = [messages.Get(MessageKey.SoundAttachmentInvalid)],
             });
         }
 
@@ -99,7 +102,7 @@ public static class SoundboardEndpoints
                 request.Name, request.Glyph, request.TrimStartSeconds, request.TrimEndSeconds, duration,
                 out var name, out var glyph))
         {
-            return InvalidSound();
+            return InvalidSound(messages);
         }
 
         var lastPosition = await db.SoundboardSounds.Where(x => x.ServerId == serverId)
@@ -135,6 +138,7 @@ public static class SoundboardEndpoints
         HttpContext http,
         AppDbContext db,
         IHubContext<AppHub> hub,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         var serverId = http.RequireActiveServerId();
@@ -161,7 +165,7 @@ public static class SoundboardEndpoints
                 out var name,
                 out var glyph))
         {
-            return InvalidSound();
+            return InvalidSound(messages);
         }
 
         sound.Name = name;
@@ -261,12 +265,14 @@ public static class SoundboardEndpoints
             end - start >= MinClipSeconds && end - start <= MaxClipSeconds + TrimTolerance;
     }
 
-    private static IResult InvalidSound() => Results.ValidationProblem(new Dictionary<string, string[]>
+    private static IResult InvalidSound(Messages messages) => Results.ValidationProblem(new Dictionary<string, string[]>
     {
         ["sound"] =
         [
-            FormattableString.Invariant(
-                $"Nazwa musi mieć 1–32 znaki, symbol 1–16 znaków, a wycinek {MinClipSeconds:0.##}–{MaxClipSeconds:0} s."),
+            messages.Get(
+                MessageKey.SoundInvalid,
+                ("min", MinClipSeconds.ToString("0.##", CultureInfo.InvariantCulture)),
+                ("max", MaxClipSeconds.ToString("0", CultureInfo.InvariantCulture))),
         ],
     });
 

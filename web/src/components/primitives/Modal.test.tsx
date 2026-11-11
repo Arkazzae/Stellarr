@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -120,10 +120,18 @@ describe("Modal", () => {
   });
 
   it("applies the open class after mount and keeps the dialog for its exit", async () => {
+    // Hold the entry frame, so that the closed state can be seen before it runs
+    // whatever the speed of the machine.
+    const frames: FrameRequestCallback[] = [];
+    const requestFrame = vi
+      .spyOn(window, "requestAnimationFrame")
+      .mockImplementation((callback) => frames.push(callback));
     render(<Harness exitMs={40} />);
     const { user, dialog } = await openDialog();
     expect(dialog).not.toHaveClass("open");
-    await waitFor(() => expect(dialog).toHaveClass("open"));
+    act(() => frames.splice(0).forEach((callback) => callback(performance.now())));
+    expect(dialog).toHaveClass("open");
+    requestFrame.mockRestore();
 
     await user.keyboard("{Escape}");
 

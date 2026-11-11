@@ -100,9 +100,23 @@ public sealed class StellarrWebApplicationFactory : WebApplicationFactory<Progra
     protected override void Dispose(bool disposing)
     {
         base.Dispose(disposing);
-        if (disposing && _deleteStorageOnDispose && File.Exists(_databasePath))
+        if (disposing && _deleteStorageOnDispose)
         {
-            File.Delete(_databasePath);
+            // Pooled connections keep the database open, and deleting it under them strands
+            // its write-ahead files in the temp directory: about 8 MB for every factory.
+            // Only this factory's pool is cleared; other hosts run in parallel.
+            using (var connection = new Microsoft.Data.Sqlite.SqliteConnection($"Data Source={_databasePath}"))
+            {
+                Microsoft.Data.Sqlite.SqliteConnection.ClearPool(connection);
+            }
+
+            foreach (var path in new[] { _databasePath, _databasePath + "-wal", _databasePath + "-shm" })
+            {
+                if (File.Exists(path))
+                {
+                    File.Delete(path);
+                }
+            }
         }
         if (disposing && _deleteStorageOnDispose && Directory.Exists(_dataRoot))
         {

@@ -6,6 +6,7 @@ using Stellarr.Api.Auth;
 using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
 using Stellarr.Api.Domain;
+using Stellarr.Api.Localization;
 using Stellarr.Api.Realtime;
 
 namespace Stellarr.Api.Endpoints;
@@ -31,11 +32,12 @@ public static partial class RegistrationEndpoints
         AppDbContext db,
         PasswordService passwords,
         RegistrationGate gate,
+        Messages messages,
         IHubContext<AppHub> hub,
         HttpContext context,
         CancellationToken cancellationToken)
     {
-        var problems = Validate(request);
+        var problems = Validate(request, messages);
         if (problems.Count > 0)
         {
             return Results.ValidationProblem(problems);
@@ -50,7 +52,7 @@ public static partial class RegistrationEndpoints
         // critical section, so two first registrations cannot both found it.
         await using var turn = await gate.EnterAsync(cancellationToken);
 
-        var taken = await FindTakenAsync(db, normalizedUsername, normalizedEmail, cancellationToken);
+        var taken = await FindTakenAsync(db, normalizedUsername, normalizedEmail, messages, cancellationToken);
         if (taken.Count > 0)
         {
             return Results.ValidationProblem(taken);
@@ -63,7 +65,7 @@ public static partial class RegistrationEndpoints
             invite = await FindUsableInviteAsync(db, request.InviteCode, now, cancellationToken);
             if (invite is null)
             {
-                return InviteProblem("Zaproszenie wygasło, osiągnęło limit użyć albo jest nieprawidłowe.");
+                return InviteProblem(messages.Get(MessageKey.InviteUnusable));
             }
         }
 
@@ -72,19 +74,22 @@ public static partial class RegistrationEndpoints
             : await db.Servers.FindAsync([invite.ServerId], cancellationToken);
         if (invite is null && server is not null)
         {
-            return InviteProblem("Do utworzenia konta na istniejącej instancji wymagane jest zaproszenie.");
+            return InviteProblem(messages.Get(MessageKey.InviteRequired));
         }
 
         if (invite is not null && server is null)
         {
-            return InviteProblem("Serwer wskazany przez zaproszenie już nie istnieje.");
+            return InviteProblem(messages.Get(MessageKey.InviteServerGone));
         }
 
         ServerRole role;
         if (server is null)
         {
-            (server, role) = ServerDirectoryEndpoints.AddServer(
-                db, new ServerDirectoryEndpoints.StarterServer("Stellarr"), now);
+            var starter = new ServerDirectoryEndpoints.StarterServer(
+                "Stellarr",
+                messages.Get(MessageKey.DefaultTextChannelName),
+                messages.Get(MessageKey.DefaultVoiceChannelName));
+            (server, role) = ServerDirectoryEndpoints.AddServer(db, starter, messages, now);
         }
         else if (await ServerAccess.FindMemberRoleAsync(db, server.Id, cancellationToken) is { } memberRole)
         {
@@ -94,7 +99,7 @@ public static partial class RegistrationEndpoints
         {
             return Results.Problem(
                 statusCode: StatusCodes.Status503ServiceUnavailable,
-                title: "Instancja nie ma roli dla nowych użytkowników.");
+                title: messages.Get(MessageKey.InstanceHasNoMemberRole));
         }
 
         var id = Guid.NewGuid();
@@ -119,13 +124,13 @@ public static partial class RegistrationEndpoints
             OwnerSlot = role.IsOwner ? 1 : null,
             JoinedAt = now,
         });
-        var welcome = await ServerWelcome.CreateAsync(db, server.Id, user, now, cancellationToken);
+        var welcome = await ServerWelcome.CreateAsync(db, server.Id, user, now, messages, cancellationToken);
         if (invite is not null)
         {
             invite.Uses++;
         }
 
-        var session = SessionAuthentication.CreateSession(context, id);
+        var session = SessionAuthentication.CreateSession(context, id, messages);
         db.UserSessions.Add(session);
 
         try
@@ -137,7 +142,7 @@ public static partial class RegistrationEndpoints
             // Somebody else wrote the same username or address after our check:
             // answer as the check would have, not with a server error.
             db.ChangeTracker.Clear();
-            taken = await FindTakenAsync(db, normalizedUsername, normalizedEmail, cancellationToken);
+            taken = await FindTakenAsync(db, normalizedUsername, normalizedEmail, messages, cancellationToken);
             if (taken.Count > 0)
             {
                 return Results.ValidationProblem(taken);
@@ -147,14 +152,14 @@ public static partial class RegistrationEndpoints
         }
 
         await SessionAuthentication.SignInAsync(context, user, session.Id);
-        await ServerWelcome.PublishAsync(hub, server.Id, welcome, CancellationToken.None);
+        await ServerWelcome.PublishAsync(hub, server.Id, welcome, messages, CancellationToken.None);
         return Results.Created("/api/me", user.ToDto("online"));
     }
 
-    private static Dictionary<string, string[]> Validate(RegisterRequest request)
+    private static Dictionary<string, string[]> Validate(RegisterRequest request, Messages messages)
     {
         var errors = new Dictionary<string, string[]>(StringComparer.Ordinal);
-        if (PasswordPolicy.Violation(request.Password) is { } passwordProblem)
+        if (PasswordPolicy.Violation(request.Password, messages) is { } passwordProblem)
         {
             errors["password"] = [passwordProblem];
         }
@@ -162,13 +167,13 @@ public static partial class RegistrationEndpoints
         var username = request.Username?.Trim() ?? "";
         if (username.Length is < 3 or > 32 || !UsernameShape().IsMatch(username))
         {
-            errors["username"] = ["Nazwa użytkownika musi mieć 3–32 znaki: litery, cyfry, kropkę, myślnik lub podkreślenie."];
+            errors["username"] = [messages.Get(MessageKey.UsernameInvalid)];
         }
 
         var displayName = request.DisplayName?.Trim() ?? "";
         if (displayName.Length is < 1 or > 64)
         {
-            errors["displayName"] = ["Nazwa widoczna musi mieć od 1 do 64 znaków."];
+            errors["displayName"] = [messages.Get(MessageKey.RegistrationDisplayNameLength)];
         }
 
         var email = request.Email?.Trim() ?? "";
@@ -176,7 +181,7 @@ public static partial class RegistrationEndpoints
             !MailAddress.TryCreate(email, out var address) ||
             !string.Equals(address.Address, email, StringComparison.OrdinalIgnoreCase))
         {
-            errors["email"] = ["Podaj poprawny adres e-mail."];
+            errors["email"] = [messages.Get(MessageKey.EmailInvalid)];
         }
 
         return errors;
@@ -186,6 +191,7 @@ public static partial class RegistrationEndpoints
         AppDbContext db,
         string normalizedUsername,
         string normalizedEmail,
+        Messages messages,
         CancellationToken cancellationToken)
     {
         var existing = await db.Users.AsNoTracking()
@@ -196,12 +202,12 @@ public static partial class RegistrationEndpoints
         var errors = new Dictionary<string, string[]>(StringComparer.Ordinal);
         if (existing.Any(x => x.NormalizedUsername == normalizedUsername))
         {
-            errors["username"] = ["Ta nazwa użytkownika jest już zajęta."];
+            errors["username"] = [messages.Get(MessageKey.UsernameTaken)];
         }
 
         if (existing.Any(x => x.NormalizedEmail == normalizedEmail))
         {
-            errors["email"] = ["Konto z tym adresem e-mail już istnieje."];
+            errors["email"] = [messages.Get(MessageKey.EmailTaken)];
         }
 
         return errors;
