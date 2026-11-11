@@ -1,0 +1,6 @@
+services:
+  api:
+    environment:
+      RateLimiting__AuthWrite__PermitLimit: "1000"
+      RateLimiting__Login__PermitLimit: "1000"
+      RateLimiting__Uploads__PermitLimit: "1000"
