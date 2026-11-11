@@ -87,7 +87,9 @@ public static partial class CockpitEndpoints
                 sample.RealtimeConnections,
                 sample.Requests,
                 sample.ClientErrors,
-                sample.ServerErrors)).ToArray()));
+                sample.ServerErrors,
+                sample.DatabaseUp,
+                sample.DatabaseLatencyMs)).ToArray()));
     }
 
     /// <summary>

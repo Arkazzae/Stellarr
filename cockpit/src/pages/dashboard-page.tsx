@@ -1,25 +1,16 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 
 import { ActivityChart } from "@/components/activity-chart";
 import { CardTitleRow } from "@/components/card-title-row";
-import { Icon, type IconName } from "@/components/icons/icon";
+import type { IconName } from "@/components/icons/icon";
 import { Spinner } from "@/components/spinner";
-import { StatusBadge } from "@/components/status-badge";
-import { Badge } from "@/components/ui/badge";
+import { UptimeCard } from "@/components/uptime-card";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { t, type MessageKey } from "@/i18n";
 import { formatNumber } from "@/i18n/format";
 import { cockpitApi, type CockpitActivity } from "@/lib/api";
-import { readHealth, type HealthCheckState, type HealthSnapshot } from "@/lib/health";
+import { readHealth, type HealthSnapshot } from "@/lib/health";
 import { useCockpitResource } from "@/lib/use-cockpit-resource";
 import { cn } from "@/lib/utils";
 import { useCockpit } from "@/state/cockpit-context";
@@ -39,15 +30,6 @@ function formatBytes(value: number): string {
     unit += 1;
   }
   return `${formatNumber(size, { maximumFractionDigits: 1 })} ${BYTE_UNITS[unit]}`;
-}
-
-function HealthBadge({ state }: { state: HealthCheckState }) {
-  if (state === "checking") return <Badge variant="secondary">{t("dashboard.health.checking")}</Badge>;
-  return state === "healthy" ? (
-    <StatusBadge state="healthy" />
-  ) : (
-    <StatusBadge state="error" label={t("dashboard.health.unavailable")} />
-  );
 }
 
 function MetricCard({ icon, title, value, caption }: { icon: IconName; title: string; value: string; caption: string }) {
@@ -124,41 +106,12 @@ function ActivityCard({ activity, error }: { activity: CockpitActivity | null; e
   );
 }
 
-interface ServiceRowProps {
-  icon: IconName;
-  name: string;
-  detail: string;
-  /** Whether the detail is an identifier, set in the code face. */
-  code?: boolean;
-  status: ReactNode;
-  origin: string;
-}
-
-function ServiceRow({ icon, name, detail, code = false, status, origin }: ServiceRowProps) {
-  return (
-    <TableRow>
-      <TableCell>
-        <div className="flex items-center gap-3">
-          <span className="grid size-8 shrink-0 place-items-center rounded-md border text-muted-foreground">
-            <Icon name={icon} />
-          </span>
-          <div>
-            <p className="font-medium">{name}</p>
-            <p className={cn("text-xs text-muted-foreground", code && "font-mono")}>{detail}</p>
-          </div>
-        </div>
-      </TableCell>
-      <TableCell>{status}</TableCell>
-      <TableCell className="text-right text-xs text-muted-foreground">{origin}</TableCell>
-    </TableRow>
-  );
-}
-
 export function DashboardPage() {
   const { bootstrap, reload } = useCockpit();
   const [health, setHealth] = useState<Health>(CHECKING);
   const [rechecking, setRechecking] = useState(false);
   const activity = useCockpitResource(cockpitApi.activity, t("dashboard.activity.loadFailed"));
+  const runtime = useCockpitResource(cockpitApi.runtime, t("dashboard.uptime.loadFailed"));
 
   useEffect(() => {
     const controller = new AbortController();
@@ -173,7 +126,7 @@ export function DashboardPage() {
     setRechecking(true);
     setHealth(CHECKING);
     try {
-      const [next] = await Promise.all([readHealth(), reload(), activity.refresh()]);
+      const [next] = await Promise.all([readHealth(), reload(), activity.refresh(), runtime.refresh()]);
       setHealth(next);
     } finally {
       setRechecking(false);
@@ -183,7 +136,7 @@ export function DashboardPage() {
   if (!bootstrap) return null;
   const { overview } = bootstrap;
 
-  // The overview fills the area under the bar; the services table gives way and scrolls when space runs short.
+  // The overview fills the area under the bar.
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
       <div className="flex items-center justify-between gap-4">
@@ -213,57 +166,13 @@ export function DashboardPage() {
         <ActivityCard activity={activity.data} error={activity.error} />
       </div>
 
-      <Card className="min-h-0 gap-0 py-0">
-        <CardTitleRow icon="server" title={t("dashboard.services.title")} />
-        <div className="relative min-h-0 flex-1 overflow-auto px-3 pb-2 sm:px-5">
-          <Table containerClassName="overflow-visible">
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t("common.service")}</TableHead>
-                <TableHead>{t("common.status")}</TableHead>
-                <TableHead className="text-right">{t("dashboard.services.source")}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              <ServiceRow
-                icon="code"
-                name="API"
-                detail="/health/live"
-                code
-                status={<HealthBadge state={health.api} />}
-                origin={t("dashboard.services.originBackend")}
-              />
-              <ServiceRow
-                icon="clipboard"
-                name="SQLite"
-                detail="/health/ready"
-                code
-                status={<HealthBadge state={health.database} />}
-                origin={t("dashboard.services.originBackend")}
-              />
-              <ServiceRow
-                icon="wifi"
-                name={t("common.realtime")}
-                detail="PresenceTracker"
-                code
-                status={
-                  <Badge variant="outline">
-                    {t("dashboard.services.connections", { count: overview.realtimeConnectionCount })}
-                  </Badge>
-                }
-                origin={t("dashboard.services.originProcess")}
-              />
-              <ServiceRow
-                icon="image"
-                name={t("dashboard.objects.title")}
-                detail={t("dashboard.objects.detail")}
-                status={<Badge variant="outline">{formatBytes(overview.storedObjectBytes)}</Badge>}
-                origin={t("dashboard.services.originDatabase")}
-              />
-            </TableBody>
-          </Table>
-        </div>
-      </Card>
+      <UptimeCard
+        runtime={runtime.data}
+        error={runtime.error}
+        health={health}
+        realtimeConnections={overview.realtimeConnectionCount}
+        storedObjects={formatBytes(overview.storedObjectBytes)}
+      />
     </div>
   );
 }

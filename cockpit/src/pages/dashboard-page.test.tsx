@@ -2,7 +2,7 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { cockpitApi, type CockpitActivity, type CockpitOverview } from "@/lib/api";
+import { cockpitApi, type CockpitActivity, type CockpitOverview, type CockpitRuntime } from "@/lib/api";
 import { DashboardPage } from "@/pages/dashboard-page";
 import { CockpitContext, type CockpitContextValue } from "@/state/cockpit-context";
 import { selectPolish } from "@/test/locale";
@@ -10,10 +10,46 @@ import { cockpitValue } from "@/test/cockpit-fixtures";
 
 vi.mock("@/lib/api", async (importOriginal) => {
   const original = await importOriginal<typeof import("@/lib/api")>();
-  return { ...original, cockpitApi: { ...original.cockpitApi, activity: vi.fn() } };
+  return { ...original, cockpitApi: { ...original.cockpitApi, activity: vi.fn(), runtime: vi.fn() } };
 });
 
 const activityMock = vi.mocked(cockpitApi.activity);
+const runtimeMock = vi.mocked(cockpitApi.runtime);
+
+/** A process up for a day and a bit, sampled three minutes running; the database failed the middle check. */
+function runtime(): CockpitRuntime {
+  const sample = (at: string, databaseUp: boolean) => ({
+    at,
+    workingSetBytes: 1,
+    gcHeapBytes: 1,
+    threads: 1,
+    cpuPercent: 0,
+    realtimeConnections: 0,
+    requests: 0,
+    clientErrors: 0,
+    serverErrors: 0,
+    databaseUp,
+    databaseLatencyMs: 0.5,
+  });
+  return {
+    startedAt: "2026-11-10T10:00:00Z",
+    uptimeSeconds: 90061,
+    workingSetBytes: 1,
+    gcHeapBytes: 1,
+    threadCount: 1,
+    realtimeConnections: 0,
+    voiceRooms: 0,
+    databaseLatencyMs: 0.5,
+    services: [],
+    cpuPercent: 0,
+    sampleSeconds: 30,
+    history: [
+      sample("2026-11-11T11:58:00Z", true),
+      sample("2026-11-11T11:59:00Z", false),
+      sample("2026-11-11T12:00:00Z", true),
+    ],
+  };
+}
 const fetchMock = vi.fn<typeof fetch>();
 
 selectPolish();
@@ -37,6 +73,8 @@ beforeEach(() => {
   vi.stubGlobal("fetch", fetchMock);
   activityMock.mockReset();
   activityMock.mockResolvedValue(activity());
+  runtimeMock.mockReset();
+  runtimeMock.mockResolvedValue(runtime());
 });
 
 afterEach(() => {
@@ -63,7 +101,8 @@ function renderDashboard(value: CockpitContextValue = cockpitValue()) {
 }
 
 const counter = (title: string) => screen.getByRole("group", { name: title });
-const serviceRow = (endpoint: RegExp) => screen.getByRole("row", { name: endpoint });
+const service = (name: string) => screen.getByRole("group", { name });
+const uptimeCard = () => screen.getByText("Dostępność").closest("[data-slot=card]") as HTMLElement;
 
 describe("DashboardPage counters", () => {
   it("shows the overview's counters in the cards and the services table", () => {
@@ -81,8 +120,8 @@ describe("DashboardPage counters", () => {
     expect(counter("Użytkownicy").textContent).toContain((12345).toLocaleString("pl-PL"));
     expect(counter("Użytkownicy").textContent).toContain("7 w sieci");
     expect(counter("Wiadomości").textContent).toContain((987654).toLocaleString("pl-PL"));
-    expect(within(serviceRow(/PresenceTracker/)).getByText("9 połączeń")).toBeTruthy();
-    expect(within(serviceRow(/Obiekty/)).getByText("1,5 KB")).toBeTruthy();
+    expect(uptimeCard().textContent).toContain("Realtime9");
+    expect(uptimeCard().textContent).toContain("Obiekty1,5 KB");
   });
 
   it.each([
@@ -97,14 +136,7 @@ describe("DashboardPage counters", () => {
     answerProbes(200, 200);
     renderDashboard(sessionWith({ storedObjectBytes: bytes }));
 
-    expect(serviceRow(/Obiekty/).textContent).toContain(expected);
-  });
-
-  it("counts realtime connections in the services table", () => {
-    answerProbes(200, 200);
-    renderDashboard(sessionWith({ realtimeConnectionCount: 4 }));
-
-    expect(within(serviceRow(/PresenceTracker/)).getByText("4 połączeń")).toBeTruthy();
+    expect(uptimeCard().textContent).toContain(expected);
   });
 
   it("renders nothing until the session has a bootstrap", () => {
@@ -120,16 +152,16 @@ describe("DashboardPage health", () => {
     answerProbes(200, 503);
     renderDashboard();
 
-    expect(await within(serviceRow(/\/health\/live/)).findByText("Działa")).toBeTruthy();
-    expect(await within(serviceRow(/\/health\/ready/)).findByText("Niedostępne")).toBeTruthy();
+    expect(await within(service("API")).findByText("Działa")).toBeTruthy();
+    expect(await within(service("Baza danych")).findByText("Niedostępne")).toBeTruthy();
   });
 
   it("reports both services unavailable when the first probe cannot connect", async () => {
     fetchMock.mockRejectedValue(new TypeError("Failed to fetch"));
     renderDashboard();
 
-    expect(await within(serviceRow(/\/health\/live/)).findByText("Niedostępne")).toBeTruthy();
-    expect(within(serviceRow(/\/health\/ready/)).getByText("Niedostępne")).toBeTruthy();
+    expect(await within(service("API")).findByText("Niedostępne")).toBeTruthy();
+    expect(within(service("Baza danych")).getByText("Niedostępne")).toBeTruthy();
   });
 
   it("shows checking until the probes answer", async () => {
@@ -164,6 +196,7 @@ describe("DashboardPage health", () => {
 
     expect(value.reload).toHaveBeenCalledOnce();
     expect(activityMock).toHaveBeenCalledTimes(2);
+    expect(runtimeMock).toHaveBeenCalledTimes(2);
     expect(fetchMock.mock.calls.map(([input]) => String(input))).toEqual(["/health/live", "/health/ready"]);
     expect(screen.getAllByText("Sprawdzanie")).toHaveLength(2);
     expect((screen.getByRole("button", { name: "Sprawdź ponownie" }) as HTMLButtonElement).disabled).toBe(true);
@@ -227,5 +260,33 @@ describe("DashboardPage activity", () => {
     renderDashboard();
 
     expect((await screen.findByRole("alert")).textContent).toBe("Brak połączenia");
+  });
+});
+
+describe("DashboardPage availability", () => {
+  it("shows how long the process has run and the share of each service's last hour", async () => {
+    answerProbes(200, 200);
+    renderDashboard();
+
+    expect(await screen.findByText("1 d 1 h 1 min")).toBeTruthy();
+    expect(within(service("API")).getByText("100% w ostatniej godzinie")).toBeTruthy();
+    expect(within(service("Baza danych")).getByText(`${(66.7).toLocaleString("pl-PL")}% w ostatniej godzinie`)).toBeTruthy();
+    expect(await screen.findByText("Wszystko działa")).toBeTruthy();
+  });
+
+  it("says when a service is down now", async () => {
+    answerProbes(200, 503);
+    renderDashboard();
+
+    expect(await screen.findByText("Coś nie działa")).toBeTruthy();
+  });
+
+  it("says there is no data before the first sample", async () => {
+    answerProbes(200, 200);
+    runtimeMock.mockResolvedValue({ ...runtime(), history: [] });
+    renderDashboard();
+
+    await screen.findByText("1 d 1 h 1 min");
+    expect(within(service("API")).getByText("brak danych")).toBeTruthy();
   });
 });

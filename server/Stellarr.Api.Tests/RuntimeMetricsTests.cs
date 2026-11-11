@@ -41,6 +41,16 @@ public sealed class RuntimeMetricsTests
     }
 
     [Fact]
+    public void EachSampleKeepsTheDatabaseCheck()
+    {
+        var metrics = new RuntimeMetrics();
+
+        var down = metrics.Sample(Start, realtimeConnections: 0, databaseUp: false, databaseLatencyMs: 5000.123);
+
+        Assert.Equal((false, 5000.12), (down.DatabaseUp, down.DatabaseLatencyMs));
+    }
+
+    [Fact]
     public void ReportsTheProcessAndABoundedCpuShare()
     {
         var metrics = new RuntimeMetrics();

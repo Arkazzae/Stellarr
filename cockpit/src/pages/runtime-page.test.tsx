@@ -25,6 +25,8 @@ function sample(at: string, counts: Pick<CockpitRuntimeSample, "requests" | "cli
     threads: 30,
     cpuPercent: 10,
     realtimeConnections: 3,
+    databaseUp: true,
+    databaseLatencyMs: 0.4,
     ...counts,
   };
 }

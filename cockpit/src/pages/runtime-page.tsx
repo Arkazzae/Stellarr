@@ -20,23 +20,13 @@ import {
 import { getLocale, t } from "@/i18n";
 import { formatDateTime, formatMegabytes, formatNumber } from "@/i18n/format";
 import { cockpitApi, type CockpitRuntime } from "@/lib/api";
+import { formatUptime } from "@/lib/uptime";
 import { useCockpitResource } from "@/lib/use-cockpit-resource";
 
 const MEGABYTE = 1024 * 1024;
 const HOUR_MS = 60 * 60 * 1000;
 
 const formatMemory = (bytes: number) => formatMegabytes(bytes, 1);
-
-/** Days and hours are left out when zero; minutes are always shown. */
-function formatUptime(totalSeconds: number): string {
-  const days = Math.floor(totalSeconds / 86400);
-  const hours = Math.floor((totalSeconds % 86400) / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const parts = [t("runtime.uptime.minutes", { value: minutes })];
-  if (hours) parts.unshift(t("runtime.uptime.hours", { value: hours }));
-  if (days) parts.unshift(t("runtime.uptime.days", { value: days }));
-  return parts.join(" ");
-}
 
 function formatClock(at: string): string {
   return new Date(at).toLocaleTimeString(getLocale() === "pl" ? "pl-PL" : "en-GB", {

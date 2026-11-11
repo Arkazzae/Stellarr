@@ -107,7 +107,9 @@ public sealed record CockpitRuntimeSampleDto(
     int RealtimeConnections,
     int Requests,
     int ClientErrors,
-    int ServerErrors);
+    int ServerErrors,
+    bool DatabaseUp,
+    double DatabaseLatencyMs);
 
 public sealed record CockpitRuntimeDto(
     DateTime StartedAt,

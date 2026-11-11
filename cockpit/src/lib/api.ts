@@ -128,6 +128,9 @@ export interface CockpitRuntimeSample {
   requests: number;
   clientErrors: number;
   serverErrors: number;
+  /** Whether the database answered the check taken with this sample, and how fast. */
+  databaseUp: boolean;
+  databaseLatencyMs: number;
 }
 
 export interface CockpitRuntime {

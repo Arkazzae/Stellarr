@@ -110,6 +110,10 @@ describe("the navigation shell", () => {
 });
 
 describe("the overview", () => {
+  beforeEach(() => {
+    vi.mocked(cockpitApi.runtime).mockReturnValue(new Promise(() => {}));
+  });
+
   it("counts in English and groups digits like English", () => {
     fetchMock.mockImplementation(async () => new Response(null, { status: 200 }));
     const value = cockpitValue();
@@ -133,24 +137,17 @@ describe("the overview", () => {
     const users = screen.getByRole("group", { name: "Users" }).textContent;
     expect(users).toContain("12,345");
     expect(users).toContain("7 online");
-    expect(screen.getByRole("row", { name: /Stored objects/ }).textContent).toContain("1.5 KB");
+    expect(screen.getByText("1.5 KB")).toBeTruthy();
     expect(screen.getByRole("group", { name: "Messages" }).textContent).toContain("987,654");
   });
 
-  it("states the realtime connection count without a plural form", () => {
+  it("names the availability in English", async () => {
     fetchMock.mockImplementation(async () => new Response(null, { status: 200 }));
-    const value = cockpitValue();
-    renderWithSession(<DashboardPage />, {
-      ...value,
-      bootstrap: {
-        ...value.bootstrap!,
-        overview: { ...value.bootstrap!.overview, realtimeConnectionCount: 1 },
-      },
-    });
+    renderWithSession(<DashboardPage />, cockpitValue());
 
-    expect(screen.getByRole("row", { name: /PresenceTracker/ }).textContent).toContain(
-      "Connections: 1",
-    );
+    expect(screen.getByText("Availability")).toBeTruthy();
+    expect(screen.getByRole("group", { name: "Database" }).textContent).toContain("SQLite, checked every 30 s");
+    expect(await screen.findByText("All systems up")).toBeTruthy();
   });
 });
 
