@@ -97,6 +97,7 @@ describe("the navigation shell", () => {
     expect(labels).toEqual([
       "Overview",
       "Users",
+      "Servers",
       "Runtime",
       "Logs and audit",
       "Backups",

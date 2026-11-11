@@ -39,7 +39,7 @@ function activeLinks() {
 selectPolish();
 
 describe("AppShell navigation", () => {
-  it("lists the six areas of the panel in order", () => {
+  it("lists the seven areas of the panel in order", () => {
     renderShell("/");
 
     const labels = within(sidebarNavigation())
@@ -48,6 +48,7 @@ describe("AppShell navigation", () => {
     expect(labels).toEqual([
       "Przegląd",
       "Użytkownicy",
+      "Serwery",
       "Runtime",
       "Logi i audyt",
       "Backup",
@@ -65,6 +66,7 @@ describe("AppShell navigation", () => {
     ["/", "Przegląd"],
     ["/users", "Użytkownicy"],
     ["/users/user-1", "Użytkownicy"],
+    ["/servers", "Serwery"],
     ["/runtime", "Runtime"],
     ["/logs", "Logi i audyt"],
     ["/backups", "Backup"],
@@ -98,7 +100,7 @@ describe("AppShell mobile navigation", () => {
     await user.click(screen.getByRole("button", { name: "Otwórz nawigację" }));
     const sheet = await screen.findByRole("dialog");
     const sheetLinks = within(sheet).getAllByRole("link");
-    expect(sheetLinks).toHaveLength(6);
+    expect(sheetLinks).toHaveLength(7);
 
     await user.click(within(sheet).getByRole("link", { name: "Runtime" }));
 

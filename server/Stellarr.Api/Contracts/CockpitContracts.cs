@@ -27,6 +27,24 @@ public sealed record CockpitActivityDayDto(string Date, int Messages, int NewMem
 /// <summary>Daily activity, oldest day first and today last, in the named time zone.</summary>
 public sealed record CockpitActivityDto(string TimeZone, IReadOnlyList<CockpitActivityDayDto> Days);
 
+public sealed record CockpitServerPersonDto(string Id, string Username, string DisplayName);
+
+/// <summary>A server of the instance as Cockpit lists it; <c>IsInstance</c> marks the one the operator owns.</summary>
+public sealed record CockpitServerDto(
+    string Id,
+    string Name,
+    string Description,
+    bool IsPublic,
+    DateTime CreatedAt,
+    bool IsInstance,
+    CockpitServerPersonDto? Owner,
+    int MemberCount,
+    int ChannelCount);
+
+public sealed record CockpitServerMemberDto(string Id, string Username, string DisplayName, bool IsOwner);
+
+public sealed record TransferCockpitServerRequest(Guid UserId);
+
 public sealed record CockpitBootstrapDto(
     CockpitOperatorDto Operator,
     CockpitInstanceDto Instance,

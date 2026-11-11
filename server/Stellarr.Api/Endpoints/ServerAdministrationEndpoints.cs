@@ -318,18 +318,7 @@ public static class ServerAdministrationEndpoints
             return Invalid("userId", messages.Get(MessageKey.TransferTargetInvalid));
         }
 
-        var memberRole = await ServerAccess.FindMemberRoleAsync(db, actor.ServerId, cancellationToken)
-            ?? throw new InvalidOperationException("The server has no role for plain members.");
-
-        // The owner slot is unique, so it is freed before it is handed on. The
-        // transaction keeps the moment without an owner from being seen.
-        var ownerRoleId = owner.RoleId;
-        owner.RoleId = memberRole.Id;
-        owner.OwnerSlot = null;
-        await db.SaveChangesAsync(cancellationToken);
-
-        successor.RoleId = ownerRoleId;
-        successor.OwnerSlot = 1;
+        await ServerOwnership.HandOverAsync(db, actor.ServerId, owner, successor, cancellationToken);
         await StageAuditAsync(db, actor, messages.Get(MessageKey.AuditOwnershipTransferred), cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
@@ -349,8 +338,9 @@ public static class ServerAdministrationEndpoints
             return Results.Forbid();
         }
 
-        var deleted = await db.Servers.Where(x => x.Id == actor.ServerId).ExecuteDeleteAsync(cancellationToken);
-        return deleted == 0 ? Results.NotFound() : Results.NoContent();
+        return await ServerOwnership.DeleteAsync(db, actor.ServerId, cancellationToken)
+            ? Results.NoContent()
+            : Results.NotFound();
     }
 
     private static async Task<Actor?> AuthorizeAsync(

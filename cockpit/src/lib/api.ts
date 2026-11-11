@@ -88,6 +88,29 @@ export interface CockpitSession {
   current: boolean;
 }
 
+export interface CockpitServerPerson {
+  id: string;
+  username: string;
+  displayName: string;
+}
+
+/** A server of the instance; `isInstance` marks the one the operator owns, which Cockpit never deletes or hands over. */
+export interface CockpitServer {
+  id: string;
+  name: string;
+  description: string;
+  isPublic: boolean;
+  createdAt: string;
+  isInstance: boolean;
+  owner: CockpitServerPerson | null;
+  memberCount: number;
+  channelCount: number;
+}
+
+export interface CockpitServerMember extends CockpitServerPerson {
+  isOwner: boolean;
+}
+
 export interface CockpitRuntimeService {
   name: string;
   state: "healthy" | "warning" | "error" | "inactive";
@@ -275,6 +298,13 @@ export const cockpitApi = {
     signal?: AbortSignal,
   ) => request<CockpitRole>(`/api/cockpit/roles/${segment(roleId)}`, { method: "PATCH", body: input }, signal),
 
+  servers: (signal?: AbortSignal) => request<CockpitServer[]>("/api/cockpit/servers", {}, signal),
+  serverMembers: (serverId: string, signal?: AbortSignal) =>
+    request<CockpitServerMember[]>(`/api/cockpit/servers/${segment(serverId)}/members`, {}, signal),
+  transferServer: (serverId: string, userId: string, signal?: AbortSignal) =>
+    request<void>(`/api/cockpit/servers/${segment(serverId)}/transfer`, { method: "POST", body: { userId } }, signal),
+  deleteServer: (serverId: string, signal?: AbortSignal) =>
+    request<void>(`/api/cockpit/servers/${segment(serverId)}`, { method: "DELETE" }, signal),
   sessions: (signal?: AbortSignal) => request<CockpitSession[]>("/api/cockpit/sessions", {}, signal),
   revokeSession: (sessionId: string, signal?: AbortSignal) =>
     request<void>(`/api/cockpit/sessions/${segment(sessionId)}`, { method: "DELETE" }, signal),

@@ -44,7 +44,10 @@ const navigation: readonly NavigationGroup[] = [
   { items: [{ labelKey: "nav.overview", href: "/", icon: "apps" }] },
   {
     labelKey: "nav.group.community",
-    items: [{ labelKey: "nav.users", href: "/users", icon: "users" }],
+    items: [
+      { labelKey: "nav.users", href: "/users", icon: "users" },
+      { labelKey: "nav.servers", href: "/servers", icon: "server" },
+    ],
   },
   {
     labelKey: "nav.group.system",

@@ -183,6 +183,16 @@ describe("routes", () => {
   it.each([
     ["bootstrap", () => cockpitApi.bootstrap(), "GET", "/api/cockpit/bootstrap", undefined],
     ["activity", () => cockpitApi.activity(), "GET", "/api/cockpit/activity", undefined],
+    ["servers", () => cockpitApi.servers(), "GET", "/api/cockpit/servers", undefined],
+    ["serverMembers", () => cockpitApi.serverMembers("s/1"), "GET", "/api/cockpit/servers/s%2F1/members", undefined],
+    [
+      "transferServer",
+      () => cockpitApi.transferServer("s1", "u2"),
+      "POST",
+      "/api/cockpit/servers/s1/transfer",
+      { userId: "u2" },
+    ],
+    ["deleteServer", () => cockpitApi.deleteServer("s1"), "DELETE", "/api/cockpit/servers/s1", undefined],
     ["users", () => cockpitApi.users(), "GET", "/api/cockpit/users", undefined],
     [
       "createUser",

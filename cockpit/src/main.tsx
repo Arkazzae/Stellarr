@@ -10,6 +10,7 @@ import { DashboardPage } from "@/pages/dashboard-page";
 import { LogsPage } from "@/pages/logs-page";
 import { NotFoundPage } from "@/pages/not-found-page";
 import { RuntimePage } from "@/pages/runtime-page";
+import { ServersPage } from "@/pages/servers-page";
 import { SettingsPage } from "@/pages/settings-page";
 import { UsersPage } from "@/pages/users-page";
 import { CockpitProvider } from "@/state/cockpit-provider";
@@ -24,6 +25,7 @@ const router = createBrowserRouter(
       children: [
         { index: true, element: <DashboardPage /> },
         { path: "users", element: <UsersPage /> },
+        { path: "servers", element: <ServersPage /> },
         { path: "runtime", element: <RuntimePage /> },
         { path: "logs", element: <LogsPage /> },
         { path: "backups", element: <BackupsPage /> },

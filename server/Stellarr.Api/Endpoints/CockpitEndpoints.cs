@@ -28,6 +28,10 @@ public static partial class CockpitEndpoints
         cockpit.MapPatch("/users/{userId:guid}/role", SetUserRoleAsync);
         cockpit.MapPatch("/users/{userId:guid}/status", SetUserStatusAsync);
         cockpit.MapPost("/roles", CreateRoleAsync);
+        cockpit.MapGet("/servers", GetServersAsync);
+        cockpit.MapGet("/servers/{serverId:guid}/members", GetServerMembersAsync);
+        cockpit.MapPost("/servers/{serverId:guid}/transfer", TransferServerAsync);
+        cockpit.MapDelete("/servers/{serverId:guid}", DeleteServerAsync);
         cockpit.MapPatch("/roles/{roleId:guid}", UpdateRoleAsync);
         cockpit.MapGet("/sessions", GetSessionsAsync);
         cockpit.MapDelete("/sessions/{sessionId:guid}", RevokeSessionAsync);
