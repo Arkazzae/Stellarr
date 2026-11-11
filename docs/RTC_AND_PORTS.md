@@ -8,7 +8,7 @@
 | `8443` | TCP | Nginx | the application over HTTPS, the API and SignalR/WebSocket |
 | `3478` | UDP and TCP | coturn | STUN and TURN without TLS |
 | `5349` | UDP and TCP | coturn | TURN over TLS |
-| `49000` | UDP | reserved for Stellarr Media | the single port of the planned SFU; nothing listens on it yet |
+| `49000` | UDP | Stellarr Media | the single port of the media server: every call in the `sfu` topology; bound but idle in the mesh topology |
 | `49160-49200` | UDP | coturn | relay ports that TURN hands out to clients |
 
 The port set in `STELLARR_HTTPS_PORT` is also used in the HTTP to HTTPS
@@ -21,7 +21,10 @@ not redirected again.
 port advertised to the browser. `STELLARR_TURNS_PORT` sets the public port of
 encrypted TURN/TLS in the same way (default `5349`); the backend advertises it
 as `turns:...?...transport=tcp`. The host port of `49000/udp` is
-`STELLARR_MEDIA_PORT`.
+`STELLARR_MEDIA_PORT`, and like the TURN port it is also the advertised one:
+the media server puts it into its candidates and the API names it in the
+bootstrap's `mediaServer`. The router must therefore forward the same external
+port to it.
 
 The compose file sets `Rtc:TurnsEnabled=false` by default and does not advertise
 `turns:`, because the self-signed certificate the container generates is not
@@ -33,9 +36,12 @@ the TLS directory of the data volume (`/data/stellarr/tls/fullchain.pem` and
 The relay range covers 41 ports. The compose file advertises only TURN/UDP by
 default (`STELLARR_TURN_TCP_ENABLED=false`): a full mesh of five people then
 needs about 20 allocations instead of about 40 for UDP and TCP at the same time.
-The range is `min-port` and `max-port` in `infra/turnserver.conf.template`,
-repeated in the `ports` of `docker-compose.yml` and in the `EXPOSE` line of the
-`Dockerfile`. Before enabling TURN/TCP or raising the number of participants,
+In the `sfu` topology a browser has one connection instead of one per other
+person, so it takes one allocation per advertised TURN transport: five people
+need about 5. That relay ends at the media server's address inside the same
+container, so it needs no port beyond the relay range. The range is
+`min-port` and `max-port` in `infra/turnserver.conf.template`, repeated in the
+`ports` of `docker-compose.yml` and in the `EXPOSE` line of the `Dockerfile`. Before enabling TURN/TCP or raising the number of participants,
 widen it in all three places and forward the wider range on the host and the
 router.
 
@@ -51,6 +57,7 @@ remembered from before the deployment.
 | `3000/tcp` | Next.js standalone |
 | `5000/tcp` | ASP.NET Core API and SignalR |
 | `9000/tcp` | RustFS S3 API |
+| `5200/tcp` | Stellarr Media control API, on `127.0.0.1`; only the API calls it, with the bearer secret from `secrets/media-control-secret` |
 
 Compose does not publish these ports. Nginx passes `/api/`, `/assets/`,
 `/health`, `/hubs/` and `/.well-known/stellarr/client` to ASP.NET, serves the
@@ -61,8 +68,8 @@ only through the backend.
 ## An important distinction
 
 Nginx is the only public HTTP/HTTPS entry point, but it cannot replace the RTC
-ports. STUN, TURN and media use UDP or their own TCP, so `3478`, `5349` and the
-relay range must be exposed independently.
+ports. STUN, TURN and media use UDP or their own TCP, so `3478`, `5349`, the
+relay range and `49000` must be exposed independently.
 
 ## NAT and firewall
 
@@ -72,7 +79,8 @@ On the router, forward to the Docker host:
 - UDP and TCP `3478`;
 - optionally UDP and TCP `5349`;
 - UDP `49160-49200`;
-- UDP `49000`, once the Stellarr Media SFU is enabled.
+- UDP `49000` (or the port set in `STELLARR_MEDIA_PORT`), when the instance
+  runs the `sfu` topology.
 
 Set:
 
@@ -81,6 +89,8 @@ PUBLIC_HOST=chat.example.com
 PUBLIC_IP=auto # or a fixed public IPv4
 STELLARR_TURN_PORT=3480 # only when 3478 is taken
 STELLARR_TURNS_PORT=5349
+STELLARR_RTC_TOPOLOGY=sfu # mesh by default
+STELLARR_MEDIA_PORT=49000
 ```
 
 `PUBLIC_HOST` goes into the ICE configuration returned to the client.
@@ -88,6 +98,15 @@ STELLARR_TURNS_PORT=5349
 Internet. The value `auto` resolves the A record of `PUBLIC_HOST` on every
 container start and fails the start if it cannot get a valid IPv4 address; this
 prevents advertising a stale relay address.
+
+The media server advertises the same address, with `STELLARR_MEDIA_PORT`,
+followed by the container's own address with port `49000`, which is where
+coturn relays a browser that needs TURN. Without `PUBLIC_IP` only the container's address is
+left: a browser outside the host then reaches the media server only through
+TURN, and not at all when TURN is blocked as well. The container prints a
+warning at start when the topology is `sfu` and `PUBLIC_IP` is empty. On a
+network without a public address, set `PUBLIC_IP` to the address the browsers
+reach the host at.
 
 For signed-in users the backend issues one-hour TURN credentials generated with
 an HMAC. The container keeps only the shared coturn secret, and the client
@@ -98,14 +117,21 @@ never receives a permanent server password.
 [`RTC_STANDARD.md`](./RTC_STANDARD.md) defines the semantics and the versioning
 rules of the layer. This document stays the network and operations guide.
 
-Signalling runs through `AppHub`, and media travel over a mesh of direct
-connections between browsers. No third-party media platform is involved. The
-mesh keeps capture, ICE, TURN, Opus, muting and speech detection observable
-without hiding their behaviour under a ready-made platform.
+Signalling runs through `AppHub`. The topology decides where media travel. In
+the mesh topology, the default, they travel over direct connections between
+browsers. In the `sfu` topology every browser has one connection to Stellarr
+Media, the media server in the container, which forwards the packets to the
+rest of the room without decoding them; it is defined in
+[`STELLARR_MEDIA.md`](./STELLARR_MEDIA.md). No third-party media platform is
+involved in either, so capture, ICE, TURN, Opus, muting and speech detection
+stay observable without hiding their behaviour under a ready-made platform.
 
-A planned audio-only SFU would listen on `49000/udp`. The `VoiceClient`
-contract on the web side isolates the interface from the change of topology
-from mesh to SFU.
+Stellarr Media listens on `49000/udp` in both topologies and stays idle in the
+mesh topology. It forwards every kind from its first version: microphone,
+camera, screen picture and screen sound. What it does not do yet, such as
+adapting a stream to a slow receiver, is listed in `STELLARR_MEDIA.md`, and the
+default stays `mesh` until the first of those gaps is closed. The `VoiceClient`
+contract on the web side isolates the interface from the topology.
 
 ## Opus, noise suppression and detection
 
@@ -198,14 +224,17 @@ The current audio path:
 6. A local mixer, EQ and compressor for remote microphones.
 7. A smoothed ceiling adaptation from `RTCRtpSender.getStats()` and
    `setParameters()`.
-8. RTP/SRTP over the WebRTC mesh, and later over Stellarr's own SFU.
+8. RTP/SRTP over the WebRTC mesh, or over one connection to Stellarr Media in
+   the `sfu` topology.
 
 Screen sharing has four persistent profiles, from 720p15 at 1 Mb/s to 2160p60
 at 12 Mb/s. The default 1080p30 stays limited to about 2.5 Mb/s. VP9 is
 preferred for compressing a desktop, temporal layers let frames be dropped on
 a worse link, and the picture has a lower priority than the voice. In the mesh
 each receiver uses a separate send stream, which has to be taken into account
-for the Ultra profile.
+for the Ultra profile. In the `sfu` topology the publisher sends one stream and
+the media server forwards it unchanged to every receiver, also to one on a weak
+downlink.
 
 ## Diagnostics
 
@@ -213,8 +242,24 @@ When voice does not work, check in this order:
 
 1. Whether the application runs in a secure HTTPS context.
 2. Whether the browser has the microphone permission.
-3. Whether `3478/udp` (or the port set in `STELLARR_TURN_PORT`) answers from
+3. Which topology `GET /api/bootstrap` reports in `rtc.topology`.
+4. Whether `3478/udp` (or the port set in `STELLARR_TURN_PORT`) answers from
    the user's network.
-4. Whether `PUBLIC_IP` matches the real public IP of the host.
-5. Whether the firewall lets `49160-49200/udp` through.
-6. Whether both users receive `VoiceSignal` events through `/hubs/app`.
+5. Whether `PUBLIC_IP` matches the real public IP of the host.
+6. Whether the firewall lets `49160-49200/udp` through.
+7. Whether both users receive `VoiceSignal` events through `/hubs/app`.
+
+In the `sfu` topology, also:
+
+8. Whether `49000/udp` (or the port set in `STELLARR_MEDIA_PORT`) is forwarded
+   to the host on the same external port.
+9. Whether the container log shows the `media` program running, and no warning
+   about an empty `PUBLIC_IP`.
+10. Whether both users receive `MediaSignal` events through `/hubs/app`.
+11. Whether the media server lists both sessions as `connected`, with growing
+    `ingress` and `egress` counters. Inside the container:
+
+    ```bash
+    curl -s -H "Authorization: Bearer $(cat /data/stellarr/secrets/media-control-secret)" \
+      http://127.0.0.1:5200/v1/stats
+    ```
