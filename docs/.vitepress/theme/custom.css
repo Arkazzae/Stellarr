@@ -44,3 +44,139 @@
   --vp-c-brand-2: #b0aaf5;
   --vp-c-brand-soft: rgba(111, 101, 209, 0.16);
 }
+
+/*
+ * The site takes the shape of Stellarr Cockpit, the operator panel: on a wide
+ * screen the sidebar's tone runs behind the whole page, and the page sits in
+ * an inset panel beside the sidebar, 8 px from the window's edges, with
+ * Cockpit's radius and border. Navigation reads like Cockpit's: small grey
+ * group names, and the open page on a rounded tint instead of in the accent.
+ * The values are Cockpit's (cockpit/src/index.css and its app shell).
+ */
+:root {
+  /* Cockpit's sidebar is 17rem, 272 px at the default font size. */
+  --vp-sidebar-width: 272px;
+  /* The layout spans the window, as Cockpit's does; the page inside is capped below. */
+  --vp-layout-max-width: 100vw;
+  --cockpit-panel-gap: 8px;
+  --cockpit-radius: 12px;
+  --cockpit-nav-active: #ebebef;
+}
+
+.dark {
+  --cockpit-nav-active: #32363f;
+}
+
+/*
+ * The theme scopes its own rules with Vue's data attributes and chains of
+ * classes, which outrank a plain class selector; ":root .Layout" in front puts
+ * these rules above them.
+ */
+@media (min-width: 960px) {
+  :root .Layout:has(.VPContent.has-sidebar) {
+    background-color: var(--vp-c-bg-alt);
+  }
+
+  /* The top bar is in the sidebar's tone, with no rule under it; the page scrolls under it. */
+  :root .Layout .VPNav .VPNavBar.has-sidebar .content-body,
+  :root .Layout .VPNav .VPNavBar.has-sidebar.screen-open .content-body {
+    background-color: var(--vp-c-bg-alt);
+  }
+
+  :root .Layout .VPNav .VPNavBar.has-sidebar .divider {
+    display: none;
+  }
+
+  :root .Layout .VPNav .VPNavBar.has-sidebar .title {
+    padding-left: 24px;
+  }
+
+  /* Cockpit's brand row has no rule under it either. */
+  :root .Layout .VPNav .VPNavBarTitle.has-sidebar .title {
+    border-bottom-color: transparent;
+  }
+
+  /* The search field reads as a field on the tinted bar, as Cockpit's inputs do. */
+  :root .Layout .VPNav .VPNavBar.has-sidebar .DocSearch-Button {
+    background-color: var(--vp-c-bg);
+    border: 1px solid var(--vp-c-divider);
+  }
+
+  /* The page: an inset panel beside the sidebar. */
+  :root .Layout .VPContent.has-sidebar {
+    width: auto;
+    margin: var(--vp-nav-height) var(--cockpit-panel-gap) var(--cockpit-panel-gap) var(--vp-sidebar-width);
+    padding: 0;
+    min-height: calc(100vh - var(--vp-nav-height) - var(--cockpit-panel-gap));
+    background-color: var(--vp-c-bg);
+    border: 1px solid var(--vp-c-divider);
+    border-radius: var(--cockpit-radius);
+  }
+
+  /* Cockpit's page margins: 32 px around, more room for tables than the theme's default. */
+  :root .Layout .VPContent.has-sidebar .VPDoc {
+    padding: 32px 32px 0;
+  }
+
+  :root .Layout .VPDoc.has-aside .content-container {
+    max-width: 800px;
+  }
+
+  :root .Layout .VPDoc:not(.has-aside) .content-container {
+    max-width: 960px;
+  }
+
+  /* Navigation: 12 px from the sidebar's edges, each page a 36 px row. */
+  :root .Layout .VPSidebar {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  :root .Layout .VPSidebar .group + .group {
+    border-top: 0;
+  }
+
+  :root .Layout .VPSidebar .group {
+    padding-top: 12px;
+  }
+
+  :root .Layout .VPSidebar .VPSidebarItem.level-0 > .item > .text,
+  :root .Layout .VPSidebar .VPSidebarItem.level-0 > .item .text:only-child {
+    padding: 8px 12px 6px;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 16px;
+    color: var(--vp-c-text-2);
+  }
+
+  :root .Layout .VPSidebar .VPSidebarItem.level-1 > .item {
+    padding: 0 12px;
+    border-radius: 6px;
+    transition: background-color 0.25s;
+  }
+
+  :root .Layout .VPSidebar .VPSidebarItem.level-1 > .item:hover {
+    background-color: var(--cockpit-nav-active);
+  }
+
+  :root .Layout .VPSidebar .VPSidebarItem.level-1 > .item > .indicator {
+    display: none;
+  }
+
+  :root .Layout .VPSidebar .VPSidebarItem.level-1 .link > .text {
+    padding: 8px 0;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+    color: var(--vp-c-text-2);
+  }
+
+  :root .Layout .VPSidebar .VPSidebarItem.level-1.is-active > .item {
+    background-color: var(--cockpit-nav-active);
+  }
+
+  :root .Layout .VPSidebar .VPSidebarItem.level-1.is-active > .item .link > .text,
+  :root .Layout .VPSidebar .VPSidebarItem.level-1 > .item:hover .link > .text {
+    color: var(--vp-c-text-1);
+  }
+}
