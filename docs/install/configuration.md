@@ -14,15 +14,16 @@ variable.
 
 | Variable | Type | Default | Effect |
 | --- | --- | --- | --- |
-| `PUBLIC_HOST` | host name or IPv4 address | `localhost` | The name people use to reach the instance. It is the host in the TURN addresses that browsers receive, the TURN realm, and the name in the self-signed certificate. When it changes, the container generates a new self-signed certificate on the next start. A certificate you supplied is never replaced. |
+| `PUBLIC_HOST` | host name or IPv4 address | `localhost` | The name people use to reach the instance. It is the host in the TURN addresses that browsers receive, the TURN realm, and the name in the self-signed certificate. When it changes, the container generates a new self-signed certificate on the next start. A certificate signed by an authority is left alone. |
 | `PUBLIC_IP` | IPv4 address or `auto` | empty | The public address that the TURN server advertises as its own. Set it when the host is behind NAT. `auto` looks up the A record of `PUBLIC_HOST` on every start. An invalid value, or `auto` without an A record, stops the container with an error. |
 | `STELLARR_HTTPS_PORT` | port number | `8443` | Host port mapped to the HTTPS port of the container. It is also the port in the redirect from HTTP to HTTPS, and is left out of the address when it is `443`. A value outside 1-65535 stops the container. |
-| `STELLARR_HTTP_PORT` | port number | `8888` | Host port mapped to the HTTP port of the container, which only redirects to HTTPS. |
+| `STELLARR_HTTP_PORT` | port number | `8888` | Host port mapped to the HTTP port of the container, which only redirects to HTTPS. The value goes into the port mapping as written, so `127.0.0.1:8888` publishes the port on the loopback interface only. |
 | `STELLARR_PUBLIC_URL` | URL | empty | The address people use, for example `https://chat.example.com`. It is the **seed** of the Public URL in the operator settings, which password reset mail uses to build its link. It is also the origin that the instance reports to desktop clients in `/.well-known/stellarr/client`; when empty, the origin is taken from the request. A value that is not an absolute `http` or `https` origin without credentials, query or fragment makes that one endpoint answer 500. |
 | `STELLARR_VERSION` | image tag | `latest` | The tag of `ghcr.io/arkazzae/stellarr` that the stack runs. Releases are tagged `1.2.3` and `1.2`; `latest` follows the newest stable release. Pin a release for a real installation. |
 
 The container generates a self-signed certificate when
-`/data/stellarr/tls/fullchain.pem` and `privkey.pem` are missing.
+`/data/stellarr/tls/fullchain.pem` and `privkey.pem` are missing. To use your
+own, see [Reverse proxy and TLS](reverse-proxy-and-tls.md).
 
 ## Voice
 
@@ -123,7 +124,7 @@ file does not pass them. To set one, add it under `environment:` in a
 
 | Variable | Default | Effect |
 | --- | --- | --- |
-| `TLS_RENEW_BEFORE_SECONDS` | `2592000` (30 days) | A self-signed certificate that the container generated is renewed when it expires within this time, or when it does not match `PUBLIC_HOST`. |
+| `TLS_RENEW_BEFORE_SECONDS` | `2592000` (30 days) | The container renews a self-signed certificate when it expires within this time, or when it does not match `PUBLIC_HOST`. |
 | `TLS_RENEW_CHECK_SECONDS` | `43200` (12 hours) | How often the container checks that certificate. |
 
 On the first start the container also creates the secrets that its object

@@ -51,7 +51,8 @@ When the host sits behind a router, people outside your network cannot reach its
 private address. Two things make voice work for them:
 
 1. Forward the ports marked "voice" on the router to the host. Add the HTTPS
-   port, or put a reverse proxy in front.
+   port, or put a [reverse proxy](reverse-proxy-and-tls.md#run-behind-a-reverse-proxy)
+   in front.
 2. Set `PUBLIC_IP` to the public IPv4 address, or to `auto` to look up the A
    record of `PUBLIC_HOST` on every start.
 
@@ -65,6 +66,8 @@ test allocation on a default instance returned the relay address
 Everyone else needs a DNS name, or the host's IP address, that points at the
 host. On the first start the container generates a self-signed certificate for
 that name, and browsers show a warning for it.
+[Reverse proxy and TLS](reverse-proxy-and-tls.md) replaces it with one that
+browsers trust.
 
 ## Browser
 
