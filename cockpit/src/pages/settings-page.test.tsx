@@ -9,6 +9,7 @@ import { SettingsPage } from "@/pages/settings-page";
 import { CockpitContext, type CockpitContextValue } from "@/state/cockpit-context";
 import { LocaleProvider } from "@/state/locale-provider";
 import { selectPolish } from "@/test/locale";
+import { secret, secrets } from "@/test/secrets";
 import { cockpitValue } from "@/test/cockpit-fixtures";
 
 selectPolish();
@@ -17,7 +18,14 @@ vi.mock("@/lib/api", async (importOriginal) => {
   const original = await importOriginal<typeof import("@/lib/api")>();
   return {
     ...original,
-    cockpitApi: { ...original.cockpitApi, settings: vi.fn(), updateSettings: vi.fn(), sendTestMail: vi.fn() },
+    cockpitApi: {
+      ...original.cockpitApi,
+      settings: vi.fn(),
+      updateSettings: vi.fn(),
+      sendTestMail: vi.fn(),
+      secrets: vi.fn(),
+      setSecret: vi.fn(),
+    },
   };
 });
 
@@ -34,6 +42,8 @@ vi.stubGlobal(
 const settingsMock = vi.mocked(cockpitApi.settings);
 const updateMock = vi.mocked(cockpitApi.updateSettings);
 const testMailMock = vi.mocked(cockpitApi.sendTestMail);
+const secretsMock = vi.mocked(cockpitApi.secrets);
+const setSecretMock = vi.mocked(cockpitApi.setSecret);
 
 const stored: CockpitSettings = {
   instanceName: "Domek",
@@ -94,6 +104,9 @@ beforeEach(() => {
   settingsMock.mockReset();
   updateMock.mockReset();
   testMailMock.mockReset();
+  secretsMock.mockReset();
+  secretsMock.mockResolvedValue(secrets({ "mail.smtp-password": "environment" }));
+  setSecretMock.mockReset();
 });
 
 describe("SettingsPage loading", () => {
@@ -147,10 +160,11 @@ describe("SettingsPage loading", () => {
   });
 
   it("tells whether the SMTP password is set and which transport is active", async () => {
+    secretsMock.mockResolvedValue(secrets());
     await renderLoaded({ ...stored, smtpPasswordConfigured: false });
 
-    expect(screen.getByText("Brak hasła")).toBeTruthy();
-    expect(screen.queryByText("Skonfigurowany")).toBeNull();
+    expect(await screen.findByText("Nie ustawiony")).toBeTruthy();
+    expect(screen.getByText("STELLARR_SMTP_PASSWORD")).toBeTruthy();
     expect(screen.getByText("SMTP · gotowy")).toBeTruthy();
     expect(input("Serwer SMTP").value).toBe("smtp.example.net");
     expect(input("Login").value).toBe("mailer");
@@ -424,5 +438,23 @@ describe("SettingsPage panel language", () => {
 
     setLocale("pl");
     localStorage.removeItem("stellarr.cockpit.locale");
+  });
+});
+
+describe("SettingsPage SMTP password", () => {
+  it("saves the password on Enter without saving the rest of the settings", async () => {
+    const user = userEvent.setup();
+    await renderLoaded();
+    await screen.findByText("Ze środowiska");
+    setSecretMock.mockResolvedValue(secret("mail.smtp-password", "panel"));
+    secretsMock.mockResolvedValue(secrets({ "mail.smtp-password": "panel" }));
+
+    await user.type(screen.getByLabelText("Hasło SMTP"), "nowe hasło{Enter}");
+
+    expect(setSecretMock).toHaveBeenCalledWith("mail.smtp-password", "nowe hasło");
+    expect(updateMock).not.toHaveBeenCalled();
+    expect(await screen.findByText("Ustawiony tutaj")).toBeTruthy();
+    // Whether mail is ready depends on the password, so the settings are read again.
+    expect(settingsMock).toHaveBeenCalledTimes(2);
   });
 });

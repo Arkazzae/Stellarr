@@ -47,6 +47,9 @@ public static partial class CockpitEndpoints
         cockpit.MapGet("/desktop-release", GetDesktopReleaseAsync);
         cockpit.MapPut("/desktop-release", UpdateDesktopReleaseAsync);
         cockpit.MapPost("/mail/test", SendTestMailAsync);
+        cockpit.MapGet("/secrets", GetSecretsAsync);
+        cockpit.MapPut("/secrets/{name}", SetSecretAsync);
+        cockpit.MapDelete("/secrets/{name}", ClearSecretAsync);
         return endpoints;
     }
 

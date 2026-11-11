@@ -75,12 +75,12 @@ public sealed class SmtpDeliveryTests
     public void SmtpIsTheMainTransport()
     {
         var withHost = new OperationsSettings { MailSmtpHost = " smtp.example.net ", MailSmtpPort = 465, MailSmtpSecurity = "tls", MailSmtpUsername = "mailer" };
-        var transport = MailTransports.Resolve(withHost, new MailOptions { ResendApiKey = "re_x", SmtpPassword = "secret" });
+        var transport = MailTransports.Resolve(withHost, resendApiKey: "re_x", smtpPassword: "secret");
 
         Assert.Equal((MailProvider.Smtp, true), (transport.Provider, transport.Ready));
         Assert.Equal(new SmtpConnection("smtp.example.net", 465, SmtpSecurity.Tls, "mailer", "secret"), transport.Smtp);
-        Assert.False(MailTransports.Resolve(new OperationsSettings(), new MailOptions()).Ready);
-        Assert.Equal(SmtpSecurity.StartTls, MailTransports.Resolve(new OperationsSettings { MailSmtpHost = "h" }, new MailOptions()).Smtp!.Security);
+        Assert.False(MailTransports.Resolve(new OperationsSettings(), "", "").Ready);
+        Assert.Equal(SmtpSecurity.StartTls, MailTransports.Resolve(new OperationsSettings { MailSmtpHost = "h" }, "", "").Smtp!.Security);
     }
 
     [Theory]
@@ -99,7 +99,8 @@ public sealed class SmtpDeliveryTests
     {
         var transport = MailTransports.Resolve(
             new OperationsSettings { MailResendEnabled = resendEnabled, MailSmtpHost = smtpHost },
-            new MailOptions { ResendApiKey = resendKey });
+            resendKey,
+            smtpPassword: "");
 
         Assert.Equal((provider, ready), (transport.Provider, transport.Ready));
     }

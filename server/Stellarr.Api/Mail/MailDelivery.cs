@@ -23,7 +23,7 @@ public sealed class MailDelivery(ResendEmailDelivery resend, SmtpEmailDelivery s
 {
     public Task<string> SendAsync(EmailMessage message, MailTransport transport, CancellationToken cancellationToken) =>
         transport.Provider == MailProvider.Resend
-            ? resend.SendAsync(message, cancellationToken)
+            ? resend.SendAsync(message, transport.ResendApiKey, cancellationToken)
             : smtp.SendAsync(
                 message,
                 transport.Smtp ?? throw new InvalidOperationException("An SMTP transport carries its connection."),

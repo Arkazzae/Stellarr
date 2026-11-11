@@ -1,6 +1,7 @@
 using Stellarr.Api.Auth;
 using Stellarr.Api.Domain;
 using Stellarr.Api.Mail;
+using Stellarr.Api.Secrets;
 
 namespace Stellarr.Api.Contracts;
 
@@ -237,6 +238,15 @@ public sealed record UpdateCockpitSettingsRequest(
     string? SmtpUsername = null,
     bool? ResendEnabled = null);
 
+/// <summary>
+/// Whether a secret is set and where its value comes from: <c>panel</c>,
+/// <c>environment</c> or <c>none</c>. The value itself never leaves the server.
+/// <c>Variable</c> is what an operator would set in <c>.env</c> instead.
+/// </summary>
+public sealed record CockpitSecretDto(string Name, bool Configured, string Source, string Variable, DateTime? UpdatedAt);
+
+public sealed record SetCockpitSecretRequest(string? Value);
+
 public sealed record UpdateCockpitDesktopReleaseRequest(string? MinimumVersion, string? RecommendedVersion);
 
 public sealed record TestMailRequest(string? To);
@@ -247,9 +257,9 @@ public static class CockpitContractMappings
         this OperationsSettings settings,
         string instanceName,
         string publicUrl,
-        MailOptions mail)
+        ResolvedSecrets secrets)
     {
-        var transport = MailTransports.Resolve(settings, mail);
+        var transport = MailTransports.Resolve(settings, secrets);
         return new(
         instanceName,
         publicUrl,
@@ -257,7 +267,7 @@ public static class CockpitContractMappings
         settings.MailingEnabled,
         MailTransports.NameOf(transport.Provider),
         settings.MailFromAddress,
-        MailTransports.HasResendKey(mail),
+        secrets.ResendApiKey.IsSet,
         settings.InviteMailEnabled,
         settings.RecoveryMailEnabled,
         settings.AlertMailEnabled,
@@ -276,7 +286,7 @@ public static class CockpitContractMappings
             _ => MailTransports.StartTlsName,
         },
         settings.MailSmtpUsername,
-        MailTransports.HasSmtpPassword(mail),
+        secrets.SmtpPassword.IsSet,
         transport.Ready);
     }
 

@@ -1,9 +1,9 @@
 namespace Stellarr.Api.Domain;
 
 /// <summary>
-/// The operator's configuration of the instance. The mail provider's API key
-/// is deliberately not stored here but stays an environment secret, so this
-/// row holds only the non-secret delivery settings.
+/// The operator's configuration of the instance. Secrets such as the mail
+/// provider's key are not stored here: they are in <see cref="InstanceSecret"/>,
+/// encrypted, or in the environment.
 /// </summary>
 public sealed class OperationsSettings
 {

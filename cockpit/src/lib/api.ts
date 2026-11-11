@@ -216,6 +216,22 @@ export interface CockpitBackups {
   retentionDays: number;
 }
 
+export type CockpitSecretName = "mail.resend-api-key" | "mail.smtp-password" | "giphy.api-key";
+
+/**
+ * Whether a secret is set and where from. The value never comes back: the
+ * panel can set, replace or remove a secret, not read it. `variable` is the
+ * name an operator would set in `.env` instead.
+ */
+export interface CockpitSecret {
+  name: CockpitSecretName;
+  configured: boolean;
+  source: "panel" | "environment" | "none";
+  variable: string;
+  /** When the panel's value was set; null for any other source. */
+  updatedAt: string | null;
+}
+
 export type CockpitSmtpSecurity = "starttls" | "tls" | "none";
 
 export interface CockpitSettings {
@@ -406,6 +422,11 @@ export const cockpitApi = {
       },
       signal,
     ),
+  secrets: (signal?: AbortSignal) => request<CockpitSecret[]>("/api/cockpit/secrets", {}, signal),
+  setSecret: (name: CockpitSecretName, value: string, signal?: AbortSignal) =>
+    request<CockpitSecret>(`/api/cockpit/secrets/${segment(name)}`, { method: "PUT", body: { value } }, signal),
+  clearSecret: (name: CockpitSecretName, signal?: AbortSignal) =>
+    request<CockpitSecret>(`/api/cockpit/secrets/${segment(name)}`, { method: "DELETE" }, signal),
   sendTestMail: (to: string, signal?: AbortSignal) =>
     request<{ id: string; provider: CockpitSettings["mailProvider"] }>("/api/cockpit/mail/test", { method: "POST", body: { to } }, signal),
 

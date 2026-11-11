@@ -6,6 +6,7 @@ using Stellarr.Api.Domain;
 using Stellarr.Api.Localization;
 using Stellarr.Api.Messaging;
 using Stellarr.Api.Realtime;
+using Stellarr.Api.Secrets;
 
 namespace Stellarr.Api.Endpoints;
 
@@ -25,8 +26,8 @@ public static class BootstrapEndpoints
         // rather than a rebuild of the web client that would otherwise contain it.
         endpoints.MapGet(
                 "/api/config/giphy",
-                (IConfiguration configuration) =>
-                    Results.Ok(new { ApiKey = configuration["GIPHY_API_KEY"]?.Trim() ?? "" }))
+                async (InstanceSecrets secrets, CancellationToken cancellationToken) =>
+                    Results.Ok(new { ApiKey = (await secrets.ReadAsync(cancellationToken)).GiphyApiKey.Value }))
             .RequireAuthorization();
 
         return endpoints;

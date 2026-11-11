@@ -266,6 +266,7 @@ public sealed class CockpitAccessTests : IClassFixture<StellarrWebApplicationFac
                 CONSTRAINT "FK_OperationsSettings_Servers_ServerId"
                     FOREIGN KEY ("ServerId") REFERENCES "Servers" ("Id") ON DELETE CASCADE
             );
+            DROP TABLE "InstanceSecrets";
             """);
         // A row saved before SMTP came back, on an installation that sends through Resend.
         var serverId = TestData.ServerId.ToString().ToUpperInvariant();
@@ -287,12 +288,17 @@ public sealed class CockpitAccessTests : IClassFixture<StellarrWebApplicationFac
         Assert.Contains("DesktopRecommendedVersion", columns);
         Assert.Contains("MailSmtpHost", columns);
         Assert.Contains("MailResendEnabled", columns);
+        // Secrets set in Cockpit get their table on an installation that predates them.
+        var secretColumns = await db.Database.SqlQueryRaw<string>(
+                "SELECT name AS Value FROM pragma_table_info('InstanceSecrets')")
+            .ToArrayAsync();
+        Assert.Equal(["Name", "ProtectedValue", "UpdatedAt"], secretColumns);
 
         // The old SMTP values are gone, and the row keeps sending through Resend as before.
         var upgraded = await db.OperationsSettings.AsNoTracking().SingleAsync();
         Assert.Equal(("", OperationsSettings.DefaultSmtpPort, "starttls", (bool?)null),
             (upgraded.MailSmtpHost, upgraded.MailSmtpPort, upgraded.MailSmtpSecurity, upgraded.MailResendEnabled));
-        var transport = Stellarr.Api.Mail.MailTransports.Resolve(upgraded, new Stellarr.Api.Mail.MailOptions { ResendApiKey = "re_test" });
+        var transport = Stellarr.Api.Mail.MailTransports.Resolve(upgraded, resendApiKey: "re_test", smtpPassword: "");
         Assert.Equal((Stellarr.Api.Mail.MailProvider.Resend, true), (transport.Provider, transport.Ready));
 
         await db.OperationsSettings.ExecuteDeleteAsync();

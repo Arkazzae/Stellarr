@@ -9,6 +9,7 @@ using Stellarr.Api.Data;
 using Stellarr.Api.Domain;
 using Stellarr.Api.Localization;
 using Stellarr.Api.Mail;
+using Stellarr.Api.Secrets;
 
 namespace Stellarr.Api.Endpoints;
 
@@ -41,6 +42,7 @@ public static partial class PasswordRecoveryEndpoints
         AppDbContext db,
         IEmailDelivery delivery,
         IOptions<MailOptions> mailOptions,
+        InstanceSecrets secrets,
         IConfiguration configuration,
         Messages messages,
         ILoggerFactory loggers,
@@ -59,7 +61,7 @@ public static partial class PasswordRecoveryEndpoints
         }
 
         var server = await db.Servers.OrderBy(x => x.CreatedAt).FirstAsync(cancellationToken);
-        if (await FindMailingAsync(db, server, mailOptions.Value, configuration, cancellationToken) is not { } mailing)
+        if (await FindMailingAsync(db, server, mailOptions.Value, secrets, configuration, cancellationToken) is not { } mailing)
         {
             return Results.Accepted();
         }
@@ -158,6 +160,7 @@ public static partial class PasswordRecoveryEndpoints
         AppDbContext db,
         StellarrServer server,
         MailOptions options,
+        InstanceSecrets secrets,
         IConfiguration configuration,
         CancellationToken cancellationToken)
     {
@@ -167,7 +170,7 @@ public static partial class PasswordRecoveryEndpoints
         var recoveryEnabled = settings?.RecoveryMailEnabled ?? true;
         var fromAddress = FirstNotBlank(settings?.MailFromAddress, options.FromAddress);
         var publicUrl = CockpitEndpoints.PublicUrlOf(configuration);
-        var transport = MailTransports.Resolve(settings, options);
+        var transport = MailTransports.Resolve(settings, await secrets.ReadAsync(cancellationToken));
         if (!mailingEnabled || !recoveryEnabled ||
             fromAddress.Length == 0 || publicUrl.Length == 0 || !transport.Ready)
         {

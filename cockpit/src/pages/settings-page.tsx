@@ -2,7 +2,7 @@ import { useState, type ComponentProps, type FormEvent, type ReactNode } from "r
 
 import { Spinner } from "@/components/spinner";
 import { PageHeader } from "@/components/page-header";
-import { SecretRow } from "@/components/secret-row";
+import { SecretField } from "@/components/secret-field";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { LOCALES, t, type Locale, type MessageKey } from "@/i18n";
-import { CockpitApiError, cockpitApi, type CockpitSettings, type CockpitSmtpSecurity } from "@/lib/api";
+import {
+  CockpitApiError,
+  cockpitApi,
+  type CockpitSecret,
+  type CockpitSettings,
+  type CockpitSmtpSecurity,
+} from "@/lib/api";
 import { useCockpitResource } from "@/lib/use-cockpit-resource";
 import { useCockpit } from "@/state/cockpit-context";
 import { useLocale } from "@/state/locale-context";
@@ -212,7 +218,12 @@ const SMTP_SECURITY: readonly { value: CockpitSmtpSecurity; labelKey: MessageKey
   { value: "none", labelKey: "settings.smtp.security.none" },
 ];
 
-function MailCard({ settings, update, errors }: CardProps) {
+interface MailCardProps extends CardProps {
+  smtpPassword: CockpitSecret | null;
+  onSecretChanged: () => void;
+}
+
+function MailCard({ settings, update, errors, smtpPassword, onSecretChanged }: MailCardProps) {
   const throughResend = settings.mailProvider === "resend";
   const securityError = errors.smtpSecurity?.[0];
   return (
@@ -296,12 +307,7 @@ function MailCard({ settings, update, errors }: CardProps) {
         hint={t("settings.smtp.usernameHint")}
         errors={errors.smtpUsername}
       />
-      <SecretRow
-        title={t("settings.smtp.password")}
-        variable="Mail__SmtpPassword"
-        configured={settings.smtpPasswordConfigured}
-        missingKey="settings.smtp.passwordMissing"
-      />
+      <SecretField title={t("settings.smtp.password")} secret={smtpPassword} onChanged={onSecretChanged} />
     </Section>
   );
 }
@@ -409,6 +415,8 @@ function DeliveryCard({ settings, update }: Omit<CardProps, "errors">) {
 export function SettingsPage() {
   const { reload } = useCockpit();
   const { data, error: loadError } = useCockpitResource(cockpitApi.settings, t("settings.loadFailed"));
+  const secrets = useCockpitResource(cockpitApi.secrets, t("secret.loadFailed"));
+  const { refresh: refreshSecrets } = secrets;
   // What the server last stored, once a save has returned it, and the edits made since.
   const [stored, setStored] = useState<CockpitSettings | null>(null);
   const [edits, setEdits] = useState<Partial<CockpitSettings>>({});
@@ -426,6 +434,12 @@ export function SettingsPage() {
     setSaveError(null);
     setFieldErrors({});
   };
+
+  // A secret changes whether mail is ready, so the settings are read again with it.
+  async function secretChanged() {
+    const [fresh] = await Promise.all([cockpitApi.settings(), refreshSecrets()]);
+    setStored(fresh);
+  }
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -501,7 +515,13 @@ export function SettingsPage() {
             <LanguageCard />
           </div>
           <div className="space-y-6">
-            <MailCard settings={settings} update={update} errors={fieldErrors} />
+            <MailCard
+              settings={settings}
+              update={update}
+              errors={fieldErrors}
+              smtpPassword={secrets.data?.find((secret) => secret.name === "mail.smtp-password") ?? null}
+              onSecretChanged={() => void secretChanged()}
+            />
             <DeliveryCard settings={settings} update={update} />
           </div>
         </form>

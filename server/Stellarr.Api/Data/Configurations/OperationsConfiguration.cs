@@ -22,3 +22,12 @@ internal sealed class OperationsSettingsConfiguration : IEntityTypeConfiguration
             .OnDelete(DeleteBehavior.Cascade);
     }
 }
+
+internal sealed class InstanceSecretConfiguration : IEntityTypeConfiguration<InstanceSecret>
+{
+    public void Configure(EntityTypeBuilder<InstanceSecret> entity)
+    {
+        entity.HasKey(x => x.Name);
+        entity.Property(x => x.Name).HasMaxLength(64);
+    }
+}

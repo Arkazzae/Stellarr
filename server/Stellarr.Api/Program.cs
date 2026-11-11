@@ -15,6 +15,7 @@ using Stellarr.Api.Logging;
 using Stellarr.Api.Mail;
 using Stellarr.Api.Maintenance;
 using Stellarr.Api.Realtime;
+using Stellarr.Api.Secrets;
 using Stellarr.Api.Storage;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -102,6 +103,7 @@ builder.Services.AddScoped<InstanceMaintenance>();
 builder.Services.AddHostedService<MaintenanceWorker>();
 
 builder.Services.Configure<MailOptions>(builder.Configuration.GetSection(MailOptions.SectionName));
+builder.Services.AddScoped<InstanceSecrets>();
 builder.Services.AddSingleton<SmtpEmailDelivery>();
 builder.Services.AddScoped<IEmailDelivery, MailDelivery>();
 builder.Services.AddHttpClient<ResendEmailDelivery>(http =>

@@ -7,6 +7,7 @@ using Stellarr.Api.Data;
 using Stellarr.Api.Domain;
 using Stellarr.Api.Localization;
 using Stellarr.Api.Mail;
+using Stellarr.Api.Secrets;
 
 namespace Stellarr.Api.Endpoints;
 
@@ -20,12 +21,15 @@ public static partial class CockpitEndpoints
         HttpContext http,
         AppDbContext db,
         IConfiguration configuration,
-        IOptions<MailOptions> mail,
+        InstanceSecrets secrets,
         CancellationToken cancellationToken)
     {
         var server = http.RequireInstanceServer();
         var settings = await LoadSettingsAsync(db, server, configuration, cancellationToken);
-        return Results.Ok(settings.ToCockpitDto(server.Name, PublicUrlOf(configuration), mail.Value));
+        return Results.Ok(settings.ToCockpitDto(
+            server.Name,
+            PublicUrlOf(configuration),
+            await secrets.ReadAsync(cancellationToken)));
     }
 
     private static async Task<IResult> UpdateSettingsAsync(
@@ -33,7 +37,7 @@ public static partial class CockpitEndpoints
         HttpContext http,
         AppDbContext db,
         IConfiguration configuration,
-        IOptions<MailOptions> mail,
+        InstanceSecrets secrets,
         Messages messages,
         CancellationToken cancellationToken)
     {
@@ -74,7 +78,10 @@ public static partial class CockpitEndpoints
             return Results.Conflict();
         }
 
-        return Results.Ok(settings.ToCockpitDto(server.Name, PublicUrlOf(configuration), mail.Value));
+        return Results.Ok(settings.ToCockpitDto(
+            server.Name,
+            PublicUrlOf(configuration),
+            await secrets.ReadAsync(cancellationToken)));
     }
 
     private static async Task<IResult> GetDesktopReleaseAsync(
@@ -154,6 +161,7 @@ public static partial class CockpitEndpoints
         AppDbContext db,
         IEmailDelivery delivery,
         IOptions<MailOptions> mail,
+        InstanceSecrets secrets,
         IConfiguration configuration,
         Messages messages,
         CancellationToken cancellationToken)
@@ -172,7 +180,7 @@ public static partial class CockpitEndpoints
 
         var settings = await LoadSettingsAsync(db, server, configuration, cancellationToken);
         var options = mail.Value;
-        var transport = MailTransports.Resolve(settings, options);
+        var transport = MailTransports.Resolve(settings, await secrets.ReadAsync(cancellationToken));
         var fromAddress = string.IsNullOrWhiteSpace(settings.MailFromAddress)
             ? options.FromAddress.Trim()
             : settings.MailFromAddress.Trim();

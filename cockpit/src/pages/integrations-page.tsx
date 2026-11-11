@@ -2,7 +2,7 @@ import { useState } from "react";
 
 import { CardTitleRow } from "@/components/card-title-row";
 import { PageHeader } from "@/components/page-header";
-import { SecretRow } from "@/components/secret-row";
+import { SecretField } from "@/components/secret-field";
 import { Spinner } from "@/components/spinner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -10,7 +10,7 @@ import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { t } from "@/i18n";
-import { cockpitApi, type CockpitSettings } from "@/lib/api";
+import { cockpitApi, type CockpitSecret, type CockpitSettings } from "@/lib/api";
 import { useCockpitResource } from "@/lib/use-cockpit-resource";
 
 interface Notice {
@@ -21,12 +21,16 @@ interface Notice {
 /** Resend, the one integration so far: it replaces SMTP for outgoing mail while it is on. */
 function ResendCard({
   settings,
+  apiKey,
   saving,
   onToggle,
+  onSecretChanged,
 }: {
   settings: CockpitSettings;
+  apiKey: CockpitSecret | null;
   saving: boolean;
   onToggle: (enabled: boolean) => void;
+  onSecretChanged: () => void;
 }) {
   return (
     <Card className="gap-0 py-0">
@@ -37,12 +41,7 @@ function ResendCard({
       </CardTitleRow>
       <div className="space-y-5 px-5 py-5">
         <p className="text-sm text-muted-foreground">{t("integrations.resend.description")}</p>
-        <SecretRow
-          title={t("integrations.resend.key")}
-          variable="Mail__ResendApiKey"
-          configured={settings.resendApiKeyConfigured}
-          missingKey="settings.delivery.keyMissing"
-        />
+        <SecretField title={t("integrations.resend.key")} secret={apiKey} onChanged={onSecretChanged} />
         <div className="flex items-start justify-between gap-6 border-t pt-5">
           <div>
             <Label htmlFor="resend-enabled">{t("integrations.resend.toggle")}</Label>
@@ -66,7 +65,14 @@ function ResendCard({
 
 export function IntegrationsPage() {
   const { data, error, loading, refresh } = useCockpitResource(cockpitApi.settings, t("integrations.loadFailed"));
+  const secrets = useCockpitResource(cockpitApi.secrets, t("secret.loadFailed"));
   const [saving, setSaving] = useState(false);
+  const secret = (name: CockpitSecret["name"]) => secrets.data?.find((item) => item.name === name) ?? null;
+
+  // A key changes whether mail is ready, so the settings are read again with it.
+  function secretChanged() {
+    void Promise.all([refresh(), secrets.refresh()]);
+  }
   const [notice, setNotice] = useState<Notice | null>(null);
 
   async function setResend(enabled: boolean) {
@@ -110,7 +116,13 @@ export function IntegrationsPage() {
       {data ? (
         <div className="relative min-h-0 flex-1 overflow-y-auto">
           <div className="grid items-start gap-6 lg:grid-cols-2">
-            <ResendCard settings={data} saving={saving} onToggle={(enabled) => void setResend(enabled)} />
+            <ResendCard
+              settings={data}
+              apiKey={secret("mail.resend-api-key")}
+              saving={saving}
+              onToggle={(enabled) => void setResend(enabled)}
+              onSecretChanged={secretChanged}
+            />
           </div>
         </div>
       ) : null}

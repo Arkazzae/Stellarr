@@ -4,8 +4,7 @@ namespace Stellarr.Api.Data.Schema;
 
 /// <summary>
 /// Brings the owner-managed instance settings of an older installation up to
-/// date. The mail secrets, the Resend key and the SMTP password, are not part
-/// of them; they stay in the environment.
+/// date, with the table of secrets set in Cockpit, which keeps them encrypted.
 /// </summary>
 internal static class OperationsSchema
 {
@@ -64,6 +63,16 @@ internal static class OperationsSchema
                 "UpdatedAt" TEXT NOT NULL,
                 CONSTRAINT "FK_OperationsSettings_Servers_ServerId"
                     FOREIGN KEY ("ServerId") REFERENCES "Servers" ("Id") ON DELETE CASCADE
+            );
+            """,
+            cancellationToken);
+
+        await db.Database.ExecuteSqlRawAsync(
+            """
+            CREATE TABLE IF NOT EXISTS "InstanceSecrets" (
+                "Name" TEXT NOT NULL CONSTRAINT "PK_InstanceSecrets" PRIMARY KEY,
+                "ProtectedValue" TEXT NOT NULL,
+                "UpdatedAt" TEXT NOT NULL
             );
             """,
             cancellationToken);
