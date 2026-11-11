@@ -72,6 +72,8 @@ public static partial class CockpitEndpoints
             .CountAsync(
                 x => db.Channels.Any(channel => channel.Id == x.ChannelId && channel.ServerId == server.Id),
                 cancellationToken);
+        var serverCount = await db.Servers.AsNoTracking().CountAsync(cancellationToken);
+        var publicServerCount = await db.Servers.AsNoTracking().CountAsync(x => x.IsPublic, cancellationToken);
 
         return Results.Ok(new CockpitBootstrapDto(
             new CockpitOperatorDto(
@@ -85,7 +87,9 @@ public static partial class CockpitEndpoints
                 memberIds.Count(id => presence.PublicPresenceOf(id) != PresenceTracker.Offline),
                 memberIds.Sum(id => presence.ConnectionIds(id).Count),
                 attachmentBytes + emojiBytes,
-                messageCount)));
+                messageCount,
+                serverCount,
+                publicServerCount)));
     }
 
     /// <summary>

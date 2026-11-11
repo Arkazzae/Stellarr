@@ -1,7 +1,7 @@
 import { useState, type KeyboardEvent } from "react";
 
 import { formatDay, formatNumber } from "@/i18n/format";
-import { axisTop, CHART_CELL, CHART_GAP, CHART_HEIGHT, CHART_ROWS, litCells } from "@/lib/chart-scale";
+import { axisTop, CHART_GAP, CHART_MIN_HEIGHT, CHART_ROWS, litCells } from "@/lib/chart-scale";
 import { cn } from "@/lib/utils";
 
 export interface ActivityPoint {
@@ -33,7 +33,8 @@ interface ActivityChartProps {
 /**
  * Daily counts as columns of cells, a nod to the speaking meter in the logo.
  * Hover or the arrow keys pick a day; its exact value shows in a tooltip, and
- * every value is also in a table that assistive tech reads instead.
+ * every value is also in a table that assistive tech reads instead. The plot
+ * fills the height its container gives it, down to CHART_MIN_HEIGHT.
  */
 export function ActivityChart({ points, label, tableCaption, dateHeading }: ActivityChartProps) {
   const [active, setActive] = useState<number | null>(null);
@@ -61,11 +62,11 @@ export function ActivityChart({ points, label, tableCaption, dateHeading }: Acti
   const current = active === null ? null : points[active];
 
   return (
-    <figure className="m-0">
-      <div className="flex gap-3">
+    <figure className="m-0 flex flex-1 flex-col">
+      <div className="grid flex-1 grid-cols-[auto_minmax(0,1fr)] grid-rows-[minmax(0,1fr)_auto] gap-x-3">
         <div
           className="flex flex-col justify-between text-right text-xs text-muted-foreground tabular-nums"
-          style={{ height: CHART_HEIGHT }}
+          style={{ minHeight: CHART_MIN_HEIGHT }}
           aria-hidden="true"
         >
           {ticks.map((tick) => (
@@ -75,7 +76,7 @@ export function ActivityChart({ points, label, tableCaption, dateHeading }: Acti
           ))}
         </div>
 
-        <div className="relative min-w-0 flex-1">
+        <div className="relative" style={{ minHeight: CHART_MIN_HEIGHT }}>
           <div
             role="img"
             aria-label={label}
@@ -84,9 +85,8 @@ export function ActivityChart({ points, label, tableCaption, dateHeading }: Acti
             onFocus={() => setActive((value) => value ?? points.length - 1)}
             onBlur={() => setActive(null)}
             onPointerLeave={() => setActive(null)}
-            className="grid rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="grid h-full rounded-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
             style={{
-              height: CHART_HEIGHT,
               columnGap: CHART_GAP,
               gridTemplateColumns: `repeat(${points.length}, minmax(0, 1fr))`,
             }}
@@ -103,9 +103,8 @@ export function ActivityChart({ points, label, tableCaption, dateHeading }: Acti
                   {Array.from({ length: CHART_ROWS }, (_, row) => (
                     <span
                       key={row}
-                      style={{ height: CHART_CELL }}
                       className={cn(
-                        "w-full max-w-4 shrink-0 rounded-[2px] transition-opacity",
+                        "min-h-0 w-full max-w-4 flex-1 rounded-[2px] transition-opacity",
                         row < lit ? "bg-chart-1" : "bg-chart-track",
                         active !== null && active !== index && row < lit && "opacity-55",
                       )}
@@ -128,16 +127,16 @@ export function ActivityChart({ points, label, tableCaption, dateHeading }: Acti
               </p>
             </div>
           ) : null}
+        </div>
 
-          <div className="relative mt-2 h-4 text-xs text-muted-foreground" aria-hidden="true">
-            {labelled.map((index) =>
-              points[index] ? (
-                <span key={index} className="absolute whitespace-nowrap" style={placement(index, points.length)}>
-                  {formatDay(points[index].date, shortDay)}
-                </span>
-              ) : null,
-            )}
-          </div>
+        <div className="relative col-start-2 mt-2 h-4 text-xs text-muted-foreground" aria-hidden="true">
+          {labelled.map((index) =>
+            points[index] ? (
+              <span key={index} className="absolute whitespace-nowrap" style={placement(index, points.length)}>
+                {formatDay(points[index].date, shortDay)}
+              </span>
+            ) : null,
+          )}
         </div>
       </div>
 

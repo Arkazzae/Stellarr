@@ -13,6 +13,8 @@ function bootstrapFixture(): CockpitBootstrap {
       realtimeConnectionCount: 1,
       storedObjectBytes: 0,
       messageCount: 12,
+      serverCount: 2,
+      publicServerCount: 1,
     },
   };
 }

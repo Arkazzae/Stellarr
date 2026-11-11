@@ -49,10 +49,18 @@ export function CockpitProvider({ children }: { children: ReactNode }) {
     return () => controller.abort();
   }, [load]);
 
+  // A ready session that fails to refresh keeps what it shows unless the
+  // session itself is gone: a dropped connection is not a reason to leave the
+  // panel, and the overview refreshes every 30 s while the API may be down.
   const reload = useCallback(async () => {
     setSession((current) => (current.phase === "ready" ? current : LOADING));
-    await load();
-  }, [load]);
+    try {
+      setSession({ phase: "ready", bootstrap: await cockpitApi.bootstrap(), error: null });
+    } catch (cause) {
+      const after = sessionAfterFailure(cause);
+      setSession((current) => (current.phase === "ready" && after.phase === "error" ? current : after));
+    }
+  }, []);
 
   const login = useCallback(
     async (username: string, password: string) => {

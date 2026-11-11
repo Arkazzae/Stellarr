@@ -57,7 +57,7 @@ function ServiceLine({ name, detail, states, end, current }: ServiceLineProps) {
           <CurrentState state={current} />
         </div>
       </div>
-      <div className="flex h-8 gap-[2px]" aria-hidden="true">
+      <div className="flex h-6 gap-[2px]" aria-hidden="true">
         {states.map((state, index) => {
           const at = end - (SLOTS - 1 - index) * MINUTE_MS;
           return (
@@ -78,14 +78,13 @@ interface UptimeCardProps {
   error: string | null;
   health: { api: HealthCheckState; database: HealthCheckState };
   realtimeConnections: number;
-  storedObjects: string;
 }
 
 /**
  * How long the process has run and how available the API and the database
  * have been over the last hour, a bar per minute in the style of a status page.
  */
-export function UptimeCard({ runtime, error, health, realtimeConnections, storedObjects }: UptimeCardProps) {
+export function UptimeCard({ runtime, error, health, realtimeConnections }: UptimeCardProps) {
   const { end, slots } = minuteSlots(runtime?.history ?? []);
   const apiStates: SlotState[] = slots.map((samples) => (samples.length > 0 ? "up" : "none"));
   const databaseStates: SlotState[] = slots.map((samples) =>
@@ -96,15 +95,15 @@ export function UptimeCard({ runtime, error, health, realtimeConnections, stored
 
   return (
     <Card className="gap-0 py-0">
-      <CardTitleRow icon="signal" title={t("dashboard.uptime.title")}>
+      <CardTitleRow icon="wifi" title={t("dashboard.uptime.title")}>
         {checking ? null : (
           <Badge variant={allUp ? "success" : "destructive"}>
             {allUp ? t("dashboard.uptime.allUp") : t("dashboard.uptime.someDown")}
           </Badge>
         )}
       </CardTitleRow>
-      <div className="grid gap-6 px-5 py-5 lg:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
-        <div className="space-y-4">
+      <div className="grid gap-6 px-5 py-4 lg:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
+        <div className="space-y-3">
           <div>
             <p className="text-sm text-muted-foreground">{t("dashboard.uptime.since")}</p>
             <p className="mt-1 text-3xl leading-none font-semibold tracking-[-0.01em]">
@@ -116,18 +115,12 @@ export function UptimeCard({ runtime, error, health, realtimeConnections, stored
               </p>
             ) : null}
           </div>
-          <dl className="grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <dt className="text-xs text-muted-foreground">{t("common.realtime")}</dt>
-              <dd className="font-medium tabular-nums">{formatNumber(realtimeConnections)}</dd>
-            </div>
-            <div>
-              <dt className="text-xs text-muted-foreground">{t("dashboard.objects.title")}</dt>
-              <dd className="font-medium tabular-nums">{storedObjects}</dd>
-            </div>
+          <dl className="text-sm">
+            <dt className="text-xs text-muted-foreground">{t("dashboard.uptime.connections")}</dt>
+            <dd className="font-medium tabular-nums">{formatNumber(realtimeConnections)}</dd>
           </dl>
         </div>
-        <div className="space-y-5">
+        <div className="space-y-4">
           {error ? (
             <p role="alert" className="text-sm text-danger">
               {error}

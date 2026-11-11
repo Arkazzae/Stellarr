@@ -20,13 +20,30 @@ public sealed record CockpitOverviewDto(
     int OnlineUserCount,
     int RealtimeConnectionCount,
     long StoredObjectBytes,
-    int MessageCount);
+    int MessageCount,
+    int ServerCount,
+    int PublicServerCount);
 
-/// <summary>One day of the overview's activity chart; <c>Date</c> is the instance's local date.</summary>
-public sealed record CockpitActivityDayDto(string Date, int Messages, int NewMembers);
+/// <summary>
+/// One day of the overview's activity chart; <c>Date</c> is the instance's local
+/// date. Messages, active users, joins and reactions are the instance server's;
+/// uploads and sign-ins are the whole instance's.
+/// </summary>
+public sealed record CockpitActivityDayDto(
+    string Date,
+    int Messages,
+    int NewMembers,
+    int ActiveUsers,
+    int Reactions,
+    int Uploads,
+    int SignIns);
 
-/// <summary>Daily activity, oldest day first and today last, in the named time zone.</summary>
-public sealed record CockpitActivityDto(string TimeZone, IReadOnlyList<CockpitActivityDayDto> Days);
+/// <summary>
+/// Daily activity, oldest day first and today last, in the named time zone.
+/// <c>ActiveUsers</c> counts each person who wrote in the window once, which
+/// the daily counts cannot add up to.
+/// </summary>
+public sealed record CockpitActivityDto(string TimeZone, IReadOnlyList<CockpitActivityDayDto> Days, int ActiveUsers);
 
 public sealed record CockpitServerPersonDto(string Id, string Username, string DisplayName);
 

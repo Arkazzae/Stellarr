@@ -1,6 +1,9 @@
-import { ICON_PATHS, type IconName } from "./paths";
+import { COCKPIT_ICON_PATHS } from "./cockpit-paths";
+import { ICON_PATHS, type IconPath } from "./paths";
 
-export type { IconName };
+const PATHS: Record<IconName, readonly IconPath[]> = { ...ICON_PATHS, ...COCKPIT_ICON_PATHS };
+
+export type IconName = keyof typeof ICON_PATHS | keyof typeof COCKPIT_ICON_PATHS;
 
 interface IconProps {
   name: IconName;
@@ -13,7 +16,7 @@ const DEFAULT_STROKE_WIDTH = 1.5;
 
 /**
  * The web client's icon set (paths.ts, copied unchanged from
- * web/src/components/icons). Icons are decorative: the control that holds one
+ * web/src/components/icons) and the few Cockpit adds (cockpit-paths.ts). Icons are decorative: the control that holds one
  * carries the accessible name, so the glyph stays hidden from assistive tech.
  */
 export function Icon({ name, size = 16, className }: IconProps) {
@@ -27,7 +30,7 @@ export function Icon({ name, size = 16, className }: IconProps) {
       aria-hidden="true"
       focusable="false"
     >
-      {ICON_PATHS[name].map((path, index) => (
+      {PATHS[name].map((path, index) => (
         <path
           key={index}
           d={typeof path === "string" ? path : path.d}

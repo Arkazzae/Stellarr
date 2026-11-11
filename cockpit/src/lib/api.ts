@@ -19,19 +19,33 @@ export interface CockpitOverview {
   realtimeConnectionCount: number;
   storedObjectBytes: number;
   messageCount: number;
+  /** Every server on the instance, the instance's own included. */
+  serverCount: number;
+  publicServerCount: number;
 }
 
-/** One day of activity on the instance server; `date` is the instance's local date (YYYY-MM-DD). */
+/**
+ * One day of activity; `date` is the instance's local date (YYYY-MM-DD).
+ * Messages, active users, new members and reactions are the instance server's;
+ * uploads and sign-ins are the whole instance's.
+ */
 export interface CockpitActivityDay {
   date: string;
   messages: number;
   newMembers: number;
+  /** Different people who wrote that day. */
+  activeUsers: number;
+  reactions: number;
+  uploads: number;
+  signIns: number;
 }
 
 /** The last 30 days, oldest first and today last, counted in `timeZone`. */
 export interface CockpitActivity {
   timeZone: string;
   days: CockpitActivityDay[];
+  /** Different people who wrote in the whole window; the days do not add up to it. */
+  activeUsers: number;
 }
 
 export interface CockpitBootstrap {

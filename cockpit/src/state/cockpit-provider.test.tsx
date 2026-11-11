@@ -28,6 +28,8 @@ function bootstrapFor(instanceName: string): CockpitBootstrap {
       realtimeConnectionCount: 1,
       storedObjectBytes: 0,
       messageCount: 12,
+      serverCount: 1,
+      publicServerCount: 0,
     },
   };
 }
@@ -226,6 +228,33 @@ describe("reload", () => {
     });
     expect(result.current.phase).toBe("ready");
     expect(result.current.bootstrap?.instance.name).toBe("Dom nad jeziorem");
+  });
+
+  it("keeps a ready session on screen when a refresh fails to connect", async () => {
+    bootstrapMock.mockResolvedValueOnce(bootstrapFor("Domek"));
+    const { result } = renderOps();
+    await waitFor(() => expect(result.current.phase).toBe("ready"));
+
+    bootstrapMock.mockRejectedValueOnce(new TypeError("Failed to fetch"));
+    await act(async () => {
+      await result.current.reload();
+    });
+
+    expect(result.current.phase).toBe("ready");
+    expect(result.current.bootstrap?.instance.name).toBe("Domek");
+  });
+
+  it("leaves a ready session when a refresh finds it has ended", async () => {
+    bootstrapMock.mockResolvedValueOnce(bootstrapFor("Domek"));
+    const { result } = renderOps();
+    await waitFor(() => expect(result.current.phase).toBe("ready"));
+
+    bootstrapMock.mockRejectedValueOnce(new CockpitApiError(401, "Brak sesji."));
+    await act(async () => {
+      await result.current.reload();
+    });
+
+    expect(result.current.phase).toBe("anonymous");
   });
 
   it("shows loading when the session was not ready, then recovers", async () => {

@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppGate } from "@/components/app-gate";
 import { AppShell } from "@/components/app-shell";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { CockpitApiError, cockpitApi, type CockpitBackups, type CockpitRuntime, type CockpitUsers } from "@/lib/api";
 import { BackupsPage } from "@/pages/backups-page";
 import { DashboardPage } from "@/pages/dashboard-page";
@@ -22,6 +23,7 @@ vi.mock("@/lib/api", async (importOriginal) => {
     ...original,
     cockpitApi: {
       ...original.cockpitApi,
+      activity: vi.fn(),
       runtime: vi.fn(),
       backups: vi.fn(),
       users: vi.fn(),
@@ -44,7 +46,9 @@ afterEach(() => {
 function renderWithSession(ui: React.ReactNode, value: CockpitContextValue = cockpitValue()) {
   return render(
     <MemoryRouter>
-      <CockpitContext.Provider value={value}>{ui}</CockpitContext.Provider>
+      <CockpitContext.Provider value={value}>
+        <TooltipProvider>{ui}</TooltipProvider>
+      </CockpitContext.Provider>
     </MemoryRouter>,
   );
 }
@@ -112,6 +116,7 @@ describe("the navigation shell", () => {
 describe("the overview", () => {
   beforeEach(() => {
     vi.mocked(cockpitApi.runtime).mockReturnValue(new Promise(() => {}));
+    vi.mocked(cockpitApi.activity).mockReturnValue(new Promise(() => {}));
   });
 
   it("counts in English and groups digits like English", () => {
@@ -129,6 +134,8 @@ describe("the overview", () => {
             realtimeConnectionCount: 9,
             storedObjectBytes: 1536,
             messageCount: 987654,
+            serverCount: 3,
+            publicServerCount: 2,
           },
         },
       },
@@ -137,8 +144,25 @@ describe("the overview", () => {
     const users = screen.getByRole("group", { name: "Users" }).textContent;
     expect(users).toContain("12,345");
     expect(users).toContain("7 online");
-    expect(screen.getByText("1.5 KB")).toBeTruthy();
+    expect(screen.getByRole("group", { name: "Storage" }).textContent).toContain("1.5 KB");
     expect(screen.getByRole("group", { name: "Messages" }).textContent).toContain("987,654");
+    expect(screen.getByRole("group", { name: "Servers" }).textContent).toContain("public: 2");
+  });
+
+  it("names the activity series in English", async () => {
+    fetchMock.mockImplementation(async () => new Response(null, { status: 200 }));
+    const day = { messages: 1200, newMembers: 0, activeUsers: 2, reactions: 0, uploads: 0, signIns: 1 };
+    vi.mocked(cockpitApi.activity).mockResolvedValue({
+      timeZone: "Europe/London",
+      activeUsers: 3,
+      days: Array.from({ length: 30 }, (_, index) => ({ date: `2026-10-${String(index + 1).padStart(2, "0")}`, ...day })),
+    });
+    renderWithSession(<DashboardPage />, cockpitValue());
+
+    expect((await screen.findByRole("tab", { name: /Messages/ })).textContent).toContain("36,000");
+    expect(screen.getByRole("tab", { name: /Active users/ }).textContent).toContain("3");
+    expect(screen.getByRole("tab", { name: /Sign-ins/ }).textContent).toContain("30");
+    expect(screen.getByText("Last 30 days, Europe/London")).toBeTruthy();
   });
 
   it("names the availability in English", async () => {
