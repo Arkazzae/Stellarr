@@ -77,24 +77,6 @@ describe("AccountRow panel", () => {
 });
 
 describe("AccountRow shortcuts", () => {
-  it("opens direct messages when they are available", async () => {
-    const user = userEvent.setup();
-    const onOpenMessages = vi.fn();
-    setup({ onOpenMessages });
-
-    await user.click(screen.getByRole("button", { name: "Wiadomości prywatne" }));
-
-    expect(onOpenMessages).toHaveBeenCalledOnce();
-  });
-
-  it("keeps a disabled, labelled messages button while nothing is behind it", () => {
-    setup();
-
-    expect(
-      screen.getByRole("button", { name: "Wiadomości prywatne — jeszcze niedostępne" }),
-    ).toBeDisabled();
-  });
-
   it("opens user settings from the row", async () => {
     const user = userEvent.setup();
     const { onOpenSettings, panel } = setup();
@@ -103,5 +85,6 @@ describe("AccountRow shortcuts", () => {
 
     expect(onOpenSettings).toHaveBeenCalledOnce();
     expect(panel.onOpenSettings).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: /Wiadomości prywatne/ })).not.toBeInTheDocument();
   });
 });

@@ -79,7 +79,6 @@ function RailSkeleton() {
           <Block className={styles.accountStatus} />
         </span>
         <Block className={styles.squareControl} />
-        <Block className={styles.squareControl} />
       </div>
     </nav>
   );

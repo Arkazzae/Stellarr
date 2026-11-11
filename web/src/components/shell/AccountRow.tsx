@@ -17,12 +17,6 @@ import { useLanguage } from "@/state/hooks";
 export interface AccountRowProps {
   user: PersonVM;
   onOpenSettings: () => void;
-  /**
-   * Opens direct messages. Omitted while nothing is behind it: the control
-   * still renders, disabled and labelled, so that it does not appear later and
-   * move the settings button out from under the reader's cursor.
-   */
-  onOpenMessages?: () => void;
   /** Everything the panel above the row needs; the row only opens it. */
   panel: AccountPanelProps;
 }
@@ -31,7 +25,6 @@ export interface AccountRowProps {
 export function AccountRow({
   user,
   onOpenSettings,
-  onOpenMessages,
   panel,
 }: AccountRowProps) {
   const { t } = useLanguage();
@@ -45,8 +38,6 @@ export function AccountRow({
 
   const presenceLabel = t(SELF_PRESENCE_LABEL[user.presence]);
   const hasCustomStatus = panel.customStatus.trim().length > 0;
-  const messagesLabel =
-    onOpenMessages === undefined ? t("shell.dmUnavailable") : t("shell.dm");
 
   return (
     <div className="account">
@@ -91,14 +82,6 @@ export function AccountRow({
           onLogout={closing(panel.onLogout)}
         />
       </Popover>
-      <IconButton
-        icon="thread"
-        size={16}
-        label={messagesLabel}
-        title={messagesLabel}
-        disabled={onOpenMessages === undefined}
-        onClick={onOpenMessages}
-      />
       <IconButton
         icon="gear"
         size={16}

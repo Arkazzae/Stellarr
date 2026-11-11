@@ -69,14 +69,13 @@ describe("RailAccount", () => {
     expect(screen.getByRole("button", { name: /^…/ })).toBeInTheDocument();
   });
 
-  it("opens the account settings and the direct messages", async () => {
+  it("opens the account settings from the only shortcut beside the user", async () => {
     const user = userEvent.setup();
     render(<RailAccount />);
 
     await user.click(screen.getByRole("button", { name: "Ustawienia użytkownika" }));
-    await user.click(screen.getByRole("button", { name: "Wiadomości prywatne" }));
 
     expect(stubs.ui.openModal).toHaveBeenCalledWith("account");
-    expect(stubs.ui.openFriends).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("button", { name: "Wiadomości prywatne" })).not.toBeInTheDocument();
   });
 });

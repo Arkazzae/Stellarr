@@ -90,7 +90,6 @@ export function RailAccount() {
     <AccountRow
       user={self}
       onOpenSettings={openSettings}
-      onOpenMessages={ui.openFriends}
       panel={{
         presence,
         presenceSupported,
