@@ -1,9 +1,43 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
-@custom-variant dark (&:is(.dark *));
+/*
+ * The panel follows the documentation site (docs/.vitepress/theme/custom.css):
+ * the VitePress palette with the brand accent, set in Outfit, light or dark
+ * as the system asks. Tailwind's dark: variant follows the same media query.
+ */
+
+/* Outfit is the brand's typeface (branding/README.md). The unicode ranges are
+   the Latin and Latin Extended subsets, as on the documentation site, so a page
+   without Polish letters loads only the first file. Licence: assets/fonts/OFL.txt. */
+@font-face {
+  font-family: "Outfit";
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./assets/fonts/outfit-100-900-latin-ext.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308,
+    U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113,
+    U+2C60-2C7F, U+A720-A7FF;
+}
+
+@font-face {
+  font-family: "Outfit";
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./assets/fonts/outfit-100-900-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304,
+    U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
 
 @theme inline {
+  --font-sans: "Outfit", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+
+  /* The page title of the documentation: 32 px on 40, semibold, tightened. */
+  --text-display: 2rem;
+  --text-display--line-height: 2.5rem;
+  --text-display--letter-spacing: -0.02em;
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -12,16 +46,26 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+  --color-faint: var(--faint);
   --color-accent: var(--accent);
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-brand: var(--brand);
+  --color-brand-soft: var(--brand-soft);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warning: var(--warning);
+  --color-warning-soft: var(--warning-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -36,37 +80,92 @@
   --color-sidebar-ring: var(--sidebar-ring);
 }
 
+/*
+ * Light, the VitePress defaults the documentation uses. The accent #6f65d1
+ * carries white text at 4.71:1, so it fills the primary button. As text it is
+ * too light on white, so links and the current page use #5549b8, as in the
+ * documentation. Muted text is #67676c (5.6:1 on white); #929295 is only for
+ * marks that carry no meaning of their own.
+ */
 :root {
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
-    "Segoe UI", sans-serif;
-  color-scheme: light;
+  color-scheme: light dark;
   --radius: 0.5rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.5 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.87 0 0);
-  --ring: oklch(0.708 0 0);
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.205 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.94 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.9 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+
+  --background: #ffffff;
+  --foreground: #3c3c43;
+  --card: #ffffff;
+  --card-foreground: #3c3c43;
+  --popover: #ffffff;
+  --popover-foreground: #3c3c43;
+  --primary: #6f65d1;
+  --primary-foreground: #ffffff;
+  --primary-hover: #5f54c4;
+  --secondary: #f6f6f7;
+  --secondary-foreground: #3c3c43;
+  --muted: #f6f6f7;
+  --muted-foreground: #67676c;
+  --faint: #929295;
+  --accent: #ebebef;
+  --accent-foreground: #3c3c43;
+  --destructive: #b8272c;
+  --border: #e2e2e3;
+  --input: #c2c2c4;
+  --ring: #6f65d1;
+
+  --brand: #5549b8;
+  --brand-soft: rgba(111, 101, 209, 0.14);
+  --success: #18794e;
+  --success-soft: rgba(16, 185, 129, 0.14);
+  --warning: #915930;
+  --warning-soft: rgba(234, 179, 8, 0.14);
+  --danger: #b8272c;
+  --danger-soft: rgba(244, 63, 94, 0.14);
+
+  --sidebar: #f6f6f7;
+  --sidebar-foreground: #3c3c43;
+  --sidebar-primary: #5549b8;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #ebebef;
+  --sidebar-accent-foreground: #3c3c43;
+  --sidebar-border: #e2e2e3;
+  --sidebar-ring: #6f65d1;
+}
+
+/* Dark, the VitePress dark palette with the lighter accent step for text. */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #1b1b1f;
+    --foreground: #dfdfd6;
+    --card: #1b1b1f;
+    --card-foreground: #dfdfd6;
+    --popover: #202127;
+    --popover-foreground: #dfdfd6;
+    --secondary: #202127;
+    --secondary-foreground: #dfdfd6;
+    --muted: #202127;
+    --muted-foreground: #98989f;
+    --faint: #6a6a71;
+    --accent: #32363f;
+    --accent-foreground: #dfdfd6;
+    --border: #2e2e32;
+    --input: #3c3f44;
+
+    --brand: #a39cf2;
+    --brand-soft: rgba(111, 101, 209, 0.16);
+    --success: #3dd68c;
+    --success-soft: rgba(16, 185, 129, 0.16);
+    --warning: #f9b44e;
+    --warning-soft: rgba(234, 179, 8, 0.16);
+    --danger: #f66f81;
+    --danger-soft: rgba(244, 63, 94, 0.16);
+
+    --sidebar: #161618;
+    --sidebar-foreground: #dfdfd6;
+    --sidebar-primary: #a39cf2;
+    --sidebar-accent: #32363f;
+    --sidebar-accent-foreground: #dfdfd6;
+    --sidebar-border: #2e2e32;
+  }
 }
 
 @layer base {
@@ -77,6 +176,7 @@
   html {
     min-width: 320px;
     background: var(--background);
+    font-family: var(--font-sans);
   }
 
   body {
@@ -87,6 +187,7 @@
     color: var(--foreground);
     font-synthesis: none;
     text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
   }
 
   button,

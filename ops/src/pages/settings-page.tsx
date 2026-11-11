@@ -280,7 +280,7 @@ function TestMail({ settings }: { settings: OpsSettings }) {
         </Button>
       </div>
       {result ? (
-        <p className="text-xs text-emerald-700" role="status">
+        <p className="text-xs text-success" role="status">
           {result}
         </p>
       ) : null}
