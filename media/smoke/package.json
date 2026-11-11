@@ -1,0 +1,17 @@
+{
+  "name": "stellarr-media-smoke",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Drives headless Chromium through Stellarr Media and checks what arrives",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "cargo build --release --manifest-path ../Cargo.toml",
+    "smoke": "npm run build && node smoke.mjs"
+  },
+  "dependencies": {
+    "playwright-core": "1.64.1"
+  }
+}
