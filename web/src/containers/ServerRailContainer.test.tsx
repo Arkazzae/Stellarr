@@ -59,17 +59,16 @@ describe("ServerRailContainer", () => {
     expect(stubs.ui.setRailOpen).toHaveBeenCalledWith(false);
   });
 
-  it("offers the client download except inside the desktop client", async () => {
+  it("offers server creation and discovery without a client download", async () => {
     const user = userEvent.setup();
-    const first = render(<ServerRailContainer />);
-    await user.click(first.getByRole("button", { name: "Dodaj serwer i więcej" }));
-    await user.click(await first.findByRole("button", { name: /Pobierz aplikację/ }));
-    expect(stubs.ui.openModal).toHaveBeenCalledWith("client");
-    first.unmount();
+    render(<ServerRailContainer />);
+    await user.click(screen.getByRole("button", { name: "Dodaj serwer i więcej" }));
+    expect(screen.queryByRole("button", { name: /Pobierz aplikację/ })).toBeNull();
+    await user.click(screen.getByRole("button", { name: /Utwórz serwer/ }));
+    expect(stubs.ui.openModal).toHaveBeenCalledWith("server-create");
 
-    setStubs({ ports: { desktop: {} as never } });
-    const second = render(<ServerRailContainer />);
-    await user.click(second.getByRole("button", { name: "Dodaj serwer i więcej" }));
-    expect(second.queryByRole("button", { name: /Pobierz aplikację/ })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Dodaj serwer i więcej" }));
+    await user.click(screen.getByRole("button", { name: /Znajdź serwery/ }));
+    expect(stubs.ui.openModal).toHaveBeenCalledWith("server-discover");
   });
 });

@@ -35,8 +35,6 @@ export interface ServerRailProps {
    */
   onCreateServer?: () => void;
   onDiscoverServers?: () => void;
-  /** Opens the "which client" dialog. Left out by the desktop client, which is what it offers to install. */
-  onDownloadClient?: () => void;
 }
 
 /**
@@ -59,7 +57,6 @@ export function ServerRail({
   unread,
   onCreateServer,
   onDiscoverServers,
-  onDownloadClient,
 }: ServerRailProps) {
   const { t } = useLanguage();
 
@@ -79,16 +76,6 @@ export function ServerRail({
       onSelect: onDiscoverServers,
     },
   ];
-  if (onDownloadClient) {
-    launcherItems.push({
-      key: "client",
-      icon: "download",
-      label: t("shell.downloadClient"),
-      hint: t("shell.downloadClientHint"),
-      onSelect: onDownloadClient,
-    });
-  }
-
   const shownServers: RailServer[] = servers ?? [
     { id: activeServerId ?? "active", name, mark, iconUrl },
   ];

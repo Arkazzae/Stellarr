@@ -6,13 +6,11 @@ import { initials } from "@/lib/format";
 import {
   useDirectory,
   useFriends,
-  usePorts,
   useSession,
   useUi,
 } from "@/state/hooks";
 
 export function ServerRailContainer() {
-  const { desktop } = usePorts();
   const directory = useDirectory();
   const { server } = directory;
   const friends = useFriends();
@@ -51,11 +49,6 @@ export function ServerRailContainer() {
       unread={friends.unread}
       onCreateServer={() => ui.openModal("server-create")}
       onDiscoverServers={() => ui.openModal("server-discover")}
-      // The desktop client has no download to offer itself; `ports.desktop`
-      // exists only inside it.
-      {...(desktop === undefined
-        ? { onDownloadClient: () => ui.openModal("client") }
-        : {})}
     />
   );
 }

@@ -74,31 +74,6 @@ describe("ServerRail navigation", () => {
     expect(messages()).not.toHaveTextContent(/\d/);
   });
 
-  it("offers the client download only when a handler is given", async () => {
-    const user = userEvent.setup();
-    const onDownloadClient = vi.fn();
-    const { unmount } = render(
-      <ServerRail
-        open
-        onClose={vi.fn()}
-        name="Stellarr"
-        mark="ST"
-        dmSpace={false}
-        onOpenMessages={vi.fn()}
-        onOpenServer={vi.fn()}
-        unread={0}
-      />,
-    );
-    expect(screen.queryByRole("button", { name: /Pobierz aplikację/, hidden: true })).toBeNull();
-    unmount();
-
-    setup({ onDownloadClient });
-    await user.click(screen.getByRole("button", { name: "Dodaj serwer i więcej" }));
-    await user.click(screen.getByRole("button", { name: /Pobierz aplikację/ }));
-
-    expect(onDownloadClient).toHaveBeenCalledOnce();
-  });
-
   it("takes a closed column out of the tab order", () => {
     setup({ open: false });
 
