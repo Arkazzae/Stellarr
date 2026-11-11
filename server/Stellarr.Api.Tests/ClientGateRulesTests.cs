@@ -57,6 +57,7 @@ public sealed class ClientGateRulesTests
     [InlineData("web", "2.0.0")]
     [InlineData("WEB", "2.0.0")]
     [InlineData("  web  ", " 2.0.0 ")]
+    [InlineData("ops", "0.1.0")]
     [InlineData("mobile-android", "1.4")]
     [InlineData("desktop-linux", "9.9.9.9")]
     public async Task SupportedClientsAreAdmittedWhateverTheirLetterCase(string kind, string version)

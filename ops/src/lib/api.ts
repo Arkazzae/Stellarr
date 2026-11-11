@@ -179,6 +179,15 @@ export class OpsApiError extends Error {
   }
 }
 
+/**
+ * The API signs in only clients it recognises (`ClientGate` on the server),
+ * and the panel is one of them. Without these headers the panel's own sign-in
+ * is refused as an unsupported app.
+ */
+export const CLIENT_KIND = "ops";
+/** Kept in step with `package.json`; the server parses it as a version. */
+export const CLIENT_VERSION = "0.1.0";
+
 interface RequestOptions {
   method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
@@ -206,6 +215,8 @@ async function request<T>(
       credentials: "same-origin",
       headers: {
         Accept: "application/json",
+        "X-Stellarr-Client": CLIENT_KIND,
+        "X-Stellarr-Client-Version": CLIENT_VERSION,
         ...(hasBody && { "Content-Type": "application/json" }),
       },
       body: hasBody ? JSON.stringify(body) : undefined,

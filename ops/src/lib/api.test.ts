@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { OpsApiError, opsApi, type OpsSettings } from "./api";
+import { version as PACKAGE_VERSION } from "../../package.json";
+import { CLIENT_KIND, CLIENT_VERSION, OpsApiError, opsApi, type OpsSettings } from "./api";
 import { selectPolish } from "@/test/locale";
 
 const fetchMock = vi.fn<typeof fetch>();
@@ -44,6 +45,16 @@ async function failureOf(promise: Promise<unknown>) {
   return error as OpsApiError;
 }
 
+/** What the server's client gate needs before it lets the panel sign in. */
+const CLIENT_HEADERS = { "X-Stellarr-Client": "ops", "X-Stellarr-Client-Version": PACKAGE_VERSION };
+
+describe("client identity", () => {
+  it("reports the version from package.json", () => {
+    expect(CLIENT_KIND).toBe("ops");
+    expect(CLIENT_VERSION).toBe(PACKAGE_VERSION);
+  });
+});
+
 describe("request basics", () => {
   it("sends a plain JSON GET with same-origin credentials and returns the parsed body", async () => {
     const bootstrap = { operator: { id: "u1" } };
@@ -55,7 +66,7 @@ describe("request basics", () => {
     expect(url).toBe("/api/ops/bootstrap");
     expect(init.method).toBe("GET");
     expect(init.credentials).toBe("same-origin");
-    expect(headers).toEqual({ Accept: "application/json" });
+    expect(headers).toEqual({ Accept: "application/json", ...CLIENT_HEADERS });
     expect(body).toBeUndefined();
   });
 
@@ -63,12 +74,13 @@ describe("request basics", () => {
     fetchMock.mockImplementation(async () => jsonResponse({}));
 
     await opsApi.createBackup();
-    expect(sentRequest().headers).toEqual({ Accept: "application/json" });
+    expect(sentRequest().headers).toEqual({ Accept: "application/json", ...CLIENT_HEADERS });
     expect(sentRequest().body).toBeUndefined();
 
     await opsApi.login("ada", "secret");
     expect(sentRequest().headers).toEqual({
       Accept: "application/json",
+      ...CLIENT_HEADERS,
       "Content-Type": "application/json",
     });
     expect(sentRequest().body).toEqual({ username: "ada", password: "secret" });

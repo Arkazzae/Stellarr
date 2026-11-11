@@ -21,7 +21,7 @@ public sealed class ClientGateOptions
     /// under <c>Clients:Allowed</c> are admitted next to these and never
     /// instead of them.
     /// </summary>
-    public string[] Allowed { get; set; } = ["web", "desktop-linux", "mobile-android"];
+    public string[] Allowed { get; set; } = ["web", "ops", "desktop-linux", "mobile-android"];
 
     /// <summary>Where the current clients can be got; the refusal names it.</summary>
     public string? DownloadPath { get; set; } = "/";
@@ -33,8 +33,8 @@ public sealed class ClientGateOptions
 /// <remarks>
 /// <para>
 /// This is an allow-list rather than a block-list. The browser build, the
-/// desktop client and the Android client announce themselves with
-/// <c>X-Stellarr-Client</c> and a version. Anything that does not is an
+/// operator panel, the desktop client and the Android client announce
+/// themselves with <c>X-Stellarr-Client</c> and a version. Anything that does not is an
 /// abandoned build of an earlier product, or code written against an API it
 /// has no agreement with. Naming every bad build is impossible; naming the
 /// good ones is not.
