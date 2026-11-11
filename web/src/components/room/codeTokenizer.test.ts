@@ -98,6 +98,15 @@ describe("tokenizeCode", () => {
     expect(ofKind(tokens, "cm")).toEqual(["<!-- note -->"]);
   });
 
+  it("ends a markup comment where a browser does", () => {
+    const comments = (source: string) => ofKind(tokenizeCode(source, "html"), "cm");
+
+    expect(comments("<!-- a --!><b>")).toEqual(["<!-- a --!>"]);
+    expect(comments("<!--><b>")).toEqual(["<!-->"]);
+    expect(comments("<!---><b>")).toEqual(["<!--->"]);
+    expect(ofKind(tokenizeCode("<!-- a --!><b>", "html"), "tag")).toEqual(["<b>"]);
+  });
+
   it("never produces two neighbouring tokens of one kind", () => {
     for (const { id } of CODE_LANGUAGES) {
       const tokens = tokenizeCode("let a = 1\n\nlet b = 'x' 'y' // z\n// w", id);
