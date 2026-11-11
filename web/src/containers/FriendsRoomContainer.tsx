@@ -22,6 +22,7 @@ import {
 } from "@/state/hooks";
 
 import { NotificationInboxButton } from "./NotificationInboxContainer";
+import { FriendsActivityContainer } from "./FriendsActivityContainer";
 import { useChatTranslation } from "./useChatTranslation";
 
 /**
@@ -152,6 +153,7 @@ export function FriendsRoomContainer() {
       onAddFriend={friends.addFriend}
       onOpenProfile={profile.toggle}
       notificationButton={<NotificationInboxButton />}
+      activityPanel={<FriendsActivityContainer />}
     />
   );
 }

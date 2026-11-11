@@ -43,7 +43,7 @@ export function FriendsEmpty({ icon, title, detail, action }: FriendsEmptyProps)
         <Icon name={icon} size={20} />
       </span>
       <b>{title}</b>
-      <span>{detail}</span>
+      <span className="fr-empty-detail">{detail}</span>
       {action === undefined ? null : <span className="fr-empty-act">{action}</span>}
     </div>
   );

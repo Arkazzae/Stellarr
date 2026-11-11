@@ -130,6 +130,15 @@ export interface FriendVM {
   since?: string;
 }
 
+/** A reachable friend and the activity visible to the signed-in user. */
+export interface ActiveFriendVM {
+  person: PersonVM;
+  customStatus?: string;
+  inCall: boolean;
+  /** Only channels in the current server's visible directory are included. */
+  voiceChannel?: { name: string; serverName: string };
+}
+
 export interface FriendRequestVM {
   id: string;
   person: PersonVM;

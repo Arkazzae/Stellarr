@@ -25,13 +25,15 @@ export interface FriendsViewProps extends FriendsListActions {
   onToggleRail: () => void;
   onAddFriend: (username: string) => Promise<AddFriendResult>;
   notificationButton?: ReactNode;
+  /** Live friend activity, composed by the container and shown on wide screens. */
+  activityPanel?: ReactNode;
 }
 
 /**
  * The Friends view.
  *
- * The room, showing people instead of messages: same header height, same
- * 860px cap, same row rhythm as the roster, so moving between a channel and
+ * The room, showing people instead of messages: same header height and
+ * row rhythm as the roster, so moving between a channel and
  * this does not feel like moving between two applications.
  */
 export function FriendsView({
@@ -45,6 +47,7 @@ export function FriendsView({
   onToggleRail,
   onAddFriend,
   notificationButton,
+  activityPanel,
   ...actions
 }: FriendsViewProps) {
   const { t } = useLanguage();
@@ -57,7 +60,7 @@ export function FriendsView({
   const incoming = requests.filter((request) => request.direction === "incoming").length;
 
   return (
-    <main className="room friends">
+    <main className={activityPanel ? "room friends has-activity" : "room friends"}>
       <header className="room-header">
         <button
           type="button"
@@ -141,6 +144,7 @@ export function FriendsView({
           )}
         </div>
       </div>
+      {activityPanel}
     </main>
   );
 }

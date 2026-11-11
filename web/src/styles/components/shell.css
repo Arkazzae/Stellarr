@@ -2,9 +2,9 @@
   /*
    * SHELL — "one rail, one room"
    *
-   * A persistent server column, channel rail and room. Every panel here is a grid
-   * track that animates from 0 to its width rather than a floating layer, so
-   * the room genuinely reflows and nothing ends up underneath anything.
+   * A persistent server column, channel rail, room and roster. Grid widths
+   * change in one step so switching spaces keeps the content and right-hand
+   * panel aligned without repeatedly reflowing the transcript.
    *
    * The server rail is expressed as a custom property rather than a fourth
    * value repeated in each rule below: the column count is the same at every
@@ -19,7 +19,6 @@
     height: 100dvh;
     padding: env(safe-area-inset-top) env(safe-area-inset-right)
       env(safe-area-inset-bottom) env(safe-area-inset-left);
-    transition: grid-template-columns var(--dur-base) var(--ease-standard);
   }
 
   .app.roster-open {
