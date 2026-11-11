@@ -212,13 +212,14 @@ describe("the runtime page", () => {
 
 describe("the backups page", () => {
   it("labels the empty summary and the retention in English", async () => {
-    const empty: CockpitBackups = { backups: [], retentionDays: 1 };
+    const empty: CockpitBackups = { backups: [], retentionDays: 1, job: null, lastFailure: null };
     vi.mocked(cockpitApi.backups).mockResolvedValue(empty);
-    render(<BackupsPage />);
+    renderWithSession(<BackupsPage />);
 
     expect(await screen.findByRole("group", { name: "Backups · retention (days): 1" })).toBeTruthy();
     expect(screen.getByRole("group", { name: "Latest backup" }).textContent).toContain("None");
     expect(screen.getByText("No backups have been created yet.")).toBeTruthy();
+    expect(screen.getByText("What a backup holds")).toBeTruthy();
   });
 });
 

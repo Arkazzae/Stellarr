@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Stellarr.Api.Auth;
+using Stellarr.Api.Backups;
 using Stellarr.Api.Data;
 using Stellarr.Api.Embeds;
 using Stellarr.Api.Endpoints;
@@ -105,6 +106,7 @@ builder.Services.AddHostedService<MaintenanceWorker>();
 
 builder.Services.Configure<MailOptions>(builder.Configuration.GetSection(MailOptions.SectionName));
 builder.Services.AddScoped<InstanceSecrets>();
+builder.Services.AddSingleton<BackupJobs>();
 builder.Services.AddSingleton<SmtpEmailDelivery>();
 builder.Services.AddScoped<IEmailDelivery, MailDelivery>();
 // GIPHY takes its key in the query string: this client logs nothing, so the
@@ -262,6 +264,8 @@ static async Task InitializeApplicationAsync(WebApplication app)
     {
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         await DatabaseSchema.UpgradeAsync(db, stopping);
+        // A backup cut short by the last stop left a partial file; it is no backup.
+        BackupJobs.RemoveLeftovers(BackupJobs.Directory(app.Configuration));
         await EmbedRecovery.EnqueueStaleYouTubeAsync(db, app.Services.GetRequiredService<EmbedInbox>(), stopping);
     }
 

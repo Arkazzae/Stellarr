@@ -170,15 +170,38 @@ public sealed record CockpitLogsDto(
     IReadOnlyList<CockpitLogSourceDto> Sources,
     int Capacity);
 
+/// <summary>
+/// One backup. <c>Parts</c> says what it holds: <c>database</c>, <c>objects</c>,
+/// <c>keys</c>. A plain <c>.db</c> file holds the database alone.
+/// <c>MissingObjects</c> counts objects the store could not give when it was made.
+/// </summary>
 public sealed record CockpitBackupDto(
     string Id,
     long SizeBytes,
     DateTime CreatedAt,
-    DateTime? VerifiedAt);
+    DateTime? VerifiedAt,
+    IReadOnlyList<string> Parts,
+    int MissingObjects);
+
+/// <summary>The backup being written, and how far it has got.</summary>
+public sealed record CockpitBackupJobDto(
+    string Id,
+    IReadOnlyList<string> Parts,
+    DateTime StartedAt,
+    string Phase,
+    int ObjectsDone,
+    int ObjectsTotal);
+
+public sealed record CockpitBackupFailureDto(string Id, string Message, DateTime At);
 
 public sealed record CockpitBackupsDto(
     IReadOnlyList<CockpitBackupDto> Backups,
-    int RetentionDays);
+    int RetentionDays,
+    CockpitBackupJobDto? Job,
+    CockpitBackupFailureDto? LastFailure);
+
+/// <summary>What to back up. A request without a body asks for the database alone, as a plain SQLite file.</summary>
+public sealed record CreateCockpitBackupRequest(bool Database, bool Objects, bool Keys);
 
 public sealed record CockpitSettingsDto(
     string InstanceName,

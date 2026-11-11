@@ -212,10 +212,10 @@ export const pl = {
   "logs.loadingMore": "Wczytywanie starszych…",
   "logs.end": "To wszystkie pasujące wpisy spośród {capacity} najnowszych w pamięci.",
 
-  "backups.title": "Backup i odtwarzanie",
-  "backups.description": "Rzeczywiste kopie SQLite tworzone przez mechanizm online backup.",
+  "backups.title": "Kopie zapasowe",
+  "backups.description": "Kopie bazy danych, plików z magazynu i kluczy, trzymane na dysku serwera.",
   "backups.loadFailed": "Nie udało się pobrać backupów.",
-  "backups.create": "Utwórz backup",
+  "backups.create": "Utwórz kopię",
   "backups.created": "Utworzono {id}.",
   "backups.createFailed": "Nie udało się utworzyć backupu.",
   "backups.verify": "Sprawdź",
@@ -227,18 +227,39 @@ export const pl = {
   "backups.summary.latest": "Ostatni backup",
   "backups.summary.latestVerification": "Ostatnia weryfikacja",
   "backups.summary.count": "Kopii · retencja {days} dni",
-  "backups.table.title": "Kopie SQLite",
+  "backups.table.title": "Kopie",
   "backups.table.description":
-    "Każdą kopię można sprawdzić przez PRAGMA integrity_check i pobrać jako plik bazy.",
+    "Sprawdzenie bada bazę przez PRAGMA integrity_check, a w archiwum także każdy plik względem manifestu.",
   "backups.col.id": "Identyfikator",
   "backups.col.created": "Utworzono",
   "backups.col.size": "Rozmiar",
   "backups.col.verification": "Weryfikacja",
   "backups.col.actions": "Akcje",
   "backups.empty": "Nie utworzono jeszcze żadnej kopii.",
-  "backups.scope.title": "Zakres kopii",
+  "backups.part.database": "Baza danych",
+  "backups.part.objects": "Pliki z magazynu",
+  "backups.part.keys": "Klucze",
+  "backups.part.databaseHint":
+    "Konta, serwery, wiadomości i ustawienia, z sekretami ustawionymi w Cockpicie, zaszyfrowanymi.",
+  "backups.part.objectsHint": "Wszystko z magazynu obiektów: załączniki, awatary, emoji i dźwięki. Teraz {size}.",
+  "backups.part.keysHint":
+    "Klucze, którymi zaszyfrowane są sekrety z Cockpitu i podpisane sesje. Bez nich odtworzona baza nie odczyta sekretów.",
+  "backups.dialog.title": "Utwórz kopię",
+  "backups.dialog.description":
+    "Sama baza danych kopiuje się od razu jako plik SQLite. Z plikami albo kluczami kopia jest archiwum zip tworzonym w tle.",
+  "backups.dialog.parts": "Co wchodzi do kopii",
+  "backups.dialog.environment":
+    "Wartości z pliku .env serwera, np. sekrety magazynu i TURN, zostają na hoście i nie trafiają do archiwum. Trzymaj kopię .env razem z nim.",
+  "backups.dialog.nothing": "Wybierz co najmniej jedną część.",
+  "backups.dialog.cancel": "Anuluj",
+  "backups.job.title": "Tworzenie kopii: {phase}",
+  "backups.job.objects": "{done} z {total} plików",
+  "backups.failed": "Kopia {id} się nie udała",
+  "backups.missing": "brak plików: {count}",
+  "backups.col.contents": "Zawartość",
+  "backups.scope.title": "Co zawiera kopia",
   "backups.scope.description":
-    "Backup obejmuje bazę SQLite. Obiekty z zewnętrznego storage oraz sekrety środowiskowe nie są kopiowane przez ten endpoint.",
+    "Pełna kopia zawiera bazę danych, wszystkie pliki z magazynu i klucze: wszystko, co instancja przechowuje sama. Plik .env serwera zostaje na hoście, więc trzymaj jego kopię razem z archiwum. Trzymaj archiwum bezpiecznie: z kluczami da się odczytać sekrety ustawione w Cockpicie.",
 
 
   "settings.title": "Ustawienia instancji",

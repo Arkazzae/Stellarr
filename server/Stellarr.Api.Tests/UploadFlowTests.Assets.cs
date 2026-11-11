@@ -208,5 +208,8 @@ public sealed partial class UploadFlowTests
 
         public Task DeleteAsync(string key, CancellationToken cancellationToken) =>
             inner.DeleteAsync(key, cancellationToken);
+
+        public IAsyncEnumerable<StoredObjectInfo> ListAsync(CancellationToken cancellationToken) =>
+            inner.ListAsync(cancellationToken);
     }
 }

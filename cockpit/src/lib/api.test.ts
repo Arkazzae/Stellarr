@@ -73,7 +73,7 @@ describe("request basics", () => {
   it("sends a JSON content type only together with a body", async () => {
     fetchMock.mockImplementation(async () => jsonResponse({}));
 
-    await cockpitApi.createBackup();
+    await cockpitApi.verifyBackup("b1");
     expect(sentRequest().headers).toEqual({ Accept: "application/json", ...CLIENT_HEADERS });
     expect(sentRequest().body).toBeUndefined();
 
@@ -232,7 +232,13 @@ describe("routes", () => {
       undefined,
     ],
     ["backups", () => cockpitApi.backups(), "GET", "/api/cockpit/backups", undefined],
-    ["createBackup", () => cockpitApi.createBackup(), "POST", "/api/cockpit/backups", undefined],
+    [
+      "createBackup",
+      () => cockpitApi.createBackup({ database: true, objects: true, keys: false }),
+      "POST",
+      "/api/cockpit/backups",
+      { database: true, objects: true, keys: false },
+    ],
     ["verifyBackup", () => cockpitApi.verifyBackup("b1"), "POST", "/api/cockpit/backups/b1/verify", undefined],
     ["settings", () => cockpitApi.settings(), "GET", "/api/cockpit/settings", undefined],
     ["sendTestMail", () => cockpitApi.sendTestMail("a@b.c"), "POST", "/api/cockpit/mail/test", { to: "a@b.c" }],

@@ -204,17 +204,38 @@ function logQuery(filters: CockpitLogFilters, extra: Record<string, string> = {}
   return text ? `?${text}` : "";
 }
 
+export type CockpitBackupPart = "database" | "objects" | "keys";
+
 export interface CockpitBackup {
   id: string;
   sizeBytes: number;
   createdAt: string;
   verifiedAt: string | null;
+  /** What the backup holds; a plain `.db` file holds the database alone. */
+  parts: CockpitBackupPart[];
+  /** Objects the store could not give when the backup was made. */
+  missingObjects: number;
+}
+
+/** A backup being written in the background. */
+export interface CockpitBackupJob {
+  id: string;
+  parts: CockpitBackupPart[];
+  startedAt: string;
+  phase: CockpitBackupPart;
+  objectsDone: number;
+  objectsTotal: number;
 }
 
 export interface CockpitBackups {
   backups: CockpitBackup[];
   retentionDays: number;
+  job: CockpitBackupJob | null;
+  /** Why the last backup did not finish; cleared by the next one that does. */
+  lastFailure: { id: string; message: string; at: string } | null;
 }
+
+export type CockpitBackupChoice = Record<CockpitBackupPart, boolean>;
 
 export type CockpitSecretName = "mail.resend-api-key" | "mail.smtp-password" | "giphy.api-key";
 
@@ -389,8 +410,12 @@ export const cockpitApi = {
   logExportUrl: (filters: CockpitLogFilters) => `/api/cockpit/logs/export${logQuery(filters)}`,
 
   backups: (signal?: AbortSignal) => request<CockpitBackups>("/api/cockpit/backups", {}, signal),
-  createBackup: (signal?: AbortSignal) =>
-    request<CockpitBackup>("/api/cockpit/backups", { method: "POST" }, signal),
+  /**
+   * The database alone comes back at once as a plain SQLite file; anything
+   * more starts an archive in the background and comes back as its job.
+   */
+  createBackup: (choice: CockpitBackupChoice, signal?: AbortSignal) =>
+    request<CockpitBackup | CockpitBackupJob>("/api/cockpit/backups", { method: "POST", body: choice }, signal),
   verifyBackup: (backupId: string, signal?: AbortSignal) =>
     request<CockpitBackup>(`/api/cockpit/backups/${segment(backupId)}/verify`, { method: "POST" }, signal),
   backupDownloadUrl: (backupId: string) => `/api/cockpit/backups/${segment(backupId)}/download`,

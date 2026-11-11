@@ -201,6 +201,18 @@ internal sealed class FakeObjectStorage : IObjectStorage
         return Task.CompletedTask;
     }
 
+    public async IAsyncEnumerable<StoredObjectInfo> ListAsync(
+        [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        // A snapshot, so a test may change the store while a listing runs.
+        foreach (var (key, stored) in _objects.OrderBy(x => x.Key, StringComparer.Ordinal).ToArray())
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            yield return new StoredObjectInfo(key, stored.Bytes.LongLength);
+            await Task.Yield();
+        }
+    }
+
     internal bool Contains(string key) => _objects.ContainsKey(key);
     internal int Count => _objects.Count;
 }

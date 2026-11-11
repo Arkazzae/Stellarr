@@ -122,7 +122,7 @@ public static partial class CockpitEndpoints
     }
 
     /// <summary>Stages a line of the audit log; the caller saves it with the change it records.</summary>
-    private static async Task StageAuditAsync(
+    internal static async Task StageAuditAsync(
         AppDbContext db,
         Guid serverId,
         Guid actorId,

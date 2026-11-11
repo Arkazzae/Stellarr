@@ -217,8 +217,8 @@ export const en = {
   "logs.loadingMore": "Loading older lines…",
   "logs.end": "That is every matching line of the latest {capacity} in memory.",
 
-  "backups.title": "Backup and restore",
-  "backups.description": "Real SQLite copies made by the online backup mechanism.",
+  "backups.title": "Backups",
+  "backups.description": "Copies of the database, the stored files and the keys, kept on the server's disk.",
   "backups.loadFailed": "Could not load the backups.",
   "backups.create": "Create backup",
   "backups.created": "Created {id}.",
@@ -232,18 +232,39 @@ export const en = {
   "backups.summary.latest": "Latest backup",
   "backups.summary.latestVerification": "Latest verification",
   "backups.summary.count": "Backups · retention (days): {days}",
-  "backups.table.title": "SQLite backups",
+  "backups.table.title": "Backups",
   "backups.table.description":
-    "Each backup can be checked with PRAGMA integrity_check and downloaded as a database file.",
+    "Verify checks the database with PRAGMA integrity_check and, in an archive, every file against its manifest.",
   "backups.col.id": "ID",
   "backups.col.created": "Created",
   "backups.col.size": "Size",
   "backups.col.verification": "Verification",
   "backups.col.actions": "Actions",
   "backups.empty": "No backups have been created yet.",
-  "backups.scope.title": "Backup scope",
+  "backups.part.database": "Database",
+  "backups.part.objects": "Stored files",
+  "backups.part.keys": "Keys",
+  "backups.part.databaseHint":
+    "Accounts, servers, messages and settings, with the secrets set in Cockpit, encrypted.",
+  "backups.part.objectsHint": "Everything in the object store: attachments, avatars, emoji and sounds. {size} now.",
+  "backups.part.keysHint":
+    "The keys that encrypt the secrets set in Cockpit and sign sessions. Without them a restored database cannot read its secrets.",
+  "backups.dialog.title": "Create a backup",
+  "backups.dialog.description":
+    "The database alone is copied at once as a SQLite file. With files or keys the backup is a zip archive made in the background.",
+  "backups.dialog.parts": "What goes into the backup",
+  "backups.dialog.environment":
+    "Values in the server's .env file, such as the storage and TURN secrets, stay on the host and are not in the archive. Keep a copy of .env with it.",
+  "backups.dialog.nothing": "Choose at least one part.",
+  "backups.dialog.cancel": "Cancel",
+  "backups.job.title": "Making the backup: {phase}",
+  "backups.job.objects": "{done} of {total} files",
+  "backups.failed": "Backup {id} did not finish",
+  "backups.missing": "{count} files missing",
+  "backups.col.contents": "Contents",
+  "backups.scope.title": "What a backup holds",
   "backups.scope.description":
-    "A backup covers the SQLite database. Objects in external storage and environment secrets are not copied by this endpoint.",
+    "A full backup holds the database, every stored file and the keys: everything the instance keeps on its own. The server's .env file stays on the host, so keep a copy of it with the archive. Keep the archive safe: with the keys it can read the secrets set in Cockpit.",
 
 
   "settings.title": "Instance settings",

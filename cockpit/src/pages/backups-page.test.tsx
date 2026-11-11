@@ -2,8 +2,10 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { cockpitApi, type CockpitBackup, type CockpitBackups } from "@/lib/api";
+import { cockpitApi, type CockpitBackup, type CockpitBackupJob, type CockpitBackups } from "@/lib/api";
 import { BackupsPage } from "@/pages/backups-page";
+import { CockpitContext } from "@/state/cockpit-context";
+import { cockpitValue } from "@/test/cockpit-fixtures";
 import { selectPolish } from "@/test/locale";
 
 selectPolish();
@@ -27,16 +29,44 @@ const newest: CockpitBackup = {
   sizeBytes: 5 * 1024 * 1024 + 512 * 1024,
   createdAt: "2025-03-04T10:00:00Z",
   verifiedAt: null,
+  parts: ["database"],
+  missingObjects: 0,
 };
 const older: CockpitBackup = {
   id: "backup-1.db",
   sizeBytes: 3 * 1024 * 1024,
   createdAt: "2025-03-01T10:00:00Z",
   verifiedAt: "2025-03-02T12:30:00Z",
+  parts: ["database"],
+  missingObjects: 0,
+};
+const archive: CockpitBackup = {
+  id: "backup-3.zip",
+  sizeBytes: 40 * 1024 * 1024,
+  createdAt: "2025-03-05T10:00:00Z",
+  verifiedAt: null,
+  parts: ["database", "objects", "keys"],
+  missingObjects: 2,
+};
+const job: CockpitBackupJob = {
+  id: "backup-3.zip",
+  parts: ["database", "objects", "keys"],
+  startedAt: "2025-03-05T09:59:00Z",
+  phase: "objects",
+  objectsDone: 3,
+  objectsTotal: 10,
 };
 
-function list(backups: CockpitBackup[], retentionDays = 14): CockpitBackups {
-  return { backups, retentionDays };
+function list(backups: CockpitBackup[], retentionDays = 14, extra: Partial<CockpitBackups> = {}): CockpitBackups {
+  return { backups, retentionDays, job: null, lastFailure: null, ...extra };
+}
+
+function renderPage() {
+  return render(
+    <CockpitContext.Provider value={cockpitValue()}>
+      <BackupsPage />
+    </CockpitContext.Provider>,
+  );
 }
 
 function deferred<T>() {
@@ -51,7 +81,7 @@ function deferred<T>() {
 
 async function renderLoaded(backups: CockpitBackups = list([newest, older])) {
   backupsMock.mockResolvedValueOnce(backups);
-  render(<BackupsPage />);
+  renderPage();
   // The retention only shows a number once the list has been read.
   await screen.findByRole("group", { name: /^Kopii · retencja \d+ dni$/ });
 }
@@ -59,6 +89,13 @@ async function renderLoaded(backups: CockpitBackups = list([newest, older])) {
 const summary = (label: string) => within(screen.getByRole("group", { name: label }));
 const rowOf = (id: string) => screen.getByRole("row", { name: new RegExp(id.replace(".", "\\.")) });
 const button = (name: string) => screen.getByRole("button", { name }) as HTMLButtonElement;
+const dialog = () => within(screen.getByRole("dialog"));
+
+/** Opens the dialog and creates a backup of whatever is chosen in it. */
+async function createThroughDialog(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(button("Utwórz kopię"));
+  await user.click(dialog().getByRole("button", { name: "Utwórz kopię" }));
+}
 
 beforeEach(() => {
   backupsMock.mockReset();
@@ -109,7 +146,7 @@ describe("BackupsPage list", () => {
 
   it("does not claim the list is empty before it has loaded", () => {
     backupsMock.mockReturnValue(new Promise(() => {}));
-    render(<BackupsPage />);
+    renderPage();
 
     expect(screen.queryByText("Nie utworzono jeszcze żadnej kopii.")).toBeNull();
     expect(screen.getByRole("group", { name: "Kopii · retencja — dni" })).toBeTruthy();
@@ -117,7 +154,7 @@ describe("BackupsPage list", () => {
 
   it("shows the reason when the list cannot be read", async () => {
     backupsMock.mockRejectedValue(new Error("Backend odpowiedział kodem 500."));
-    render(<BackupsPage />);
+    renderPage();
 
     expect(await screen.findByText("Błąd backupu")).toBeTruthy();
     expect(screen.getByText("Backend odpowiedział kodem 500.")).toBeTruthy();
@@ -125,7 +162,7 @@ describe("BackupsPage list", () => {
 
   it("explains a list failure that carries no message", async () => {
     backupsMock.mockRejectedValue("boom");
-    render(<BackupsPage />);
+    renderPage();
 
     expect(await screen.findByText("Nie udało się pobrać backupów.")).toBeTruthy();
   });
@@ -139,10 +176,10 @@ describe("BackupsPage create", () => {
     createMock.mockReturnValue(creation.promise);
     backupsMock.mockResolvedValueOnce(list([newest, older]));
 
-    await user.click(button("Utwórz backup"));
+    await createThroughDialog(user);
 
-    expect(createMock).toHaveBeenCalledOnce();
-    expect(button("Tworzenie").disabled).toBe(true);
+    expect(createMock).toHaveBeenCalledExactlyOnceWith({ database: true, objects: true, keys: true });
+    expect((dialog().getByRole("button", { name: "Utwórz kopię" }) as HTMLButtonElement).disabled).toBe(true);
 
     creation.resolve(newest);
 
@@ -150,7 +187,7 @@ describe("BackupsPage create", () => {
     expect(screen.getByText("Gotowe")).toBeTruthy();
     expect(backupsMock).toHaveBeenCalledTimes(2);
     expect(rowOf("backup-2.db")).toBeTruthy();
-    expect(button("Utwórz backup").disabled).toBe(false);
+    expect(button("Utwórz kopię").disabled).toBe(false);
   });
 
   it("shows why a backup could not be created", async () => {
@@ -158,12 +195,12 @@ describe("BackupsPage create", () => {
     await renderLoaded();
     createMock.mockRejectedValue(new Error("Brak miejsca na dysku."));
 
-    await user.click(button("Utwórz backup"));
+    await createThroughDialog(user);
 
     expect(await screen.findByText("Brak miejsca na dysku.")).toBeTruthy();
     expect(screen.queryByText("Gotowe")).toBeNull();
     expect(backupsMock).toHaveBeenCalledOnce();
-    expect(button("Utwórz backup").disabled).toBe(false);
+    expect(button("Utwórz kopię").disabled).toBe(false);
   });
 
   it("explains a creation failure that carries no message", async () => {
@@ -171,7 +208,7 @@ describe("BackupsPage create", () => {
     await renderLoaded();
     createMock.mockRejectedValue("boom");
 
-    await user.click(button("Utwórz backup"));
+    await createThroughDialog(user);
 
     expect(await screen.findByText("Nie udało się utworzyć backupu.")).toBeTruthy();
   });
@@ -182,7 +219,7 @@ describe("BackupsPage create", () => {
     createMock.mockResolvedValue(newest);
     backupsMock.mockRejectedValueOnce(new Error("Backend odpowiedział kodem 500."));
 
-    await user.click(button("Utwórz backup"));
+    await createThroughDialog(user);
 
     expect(await screen.findByText("Utworzono backup-2.db.")).toBeTruthy();
     expect(screen.getByText("Backend odpowiedział kodem 500.")).toBeTruthy();
@@ -239,7 +276,7 @@ describe("BackupsPage verify", () => {
     await renderLoaded();
     createMock.mockResolvedValue(newest);
     backupsMock.mockResolvedValueOnce(list([newest, older]));
-    await user.click(button("Utwórz backup"));
+    await createThroughDialog(user);
     await screen.findByText("Utworzono backup-2.db.");
 
     verifyMock.mockRejectedValue(new Error("Plik kopii zniknął."));
@@ -254,7 +291,7 @@ describe("BackupsPage verify", () => {
     await renderLoaded();
     createMock.mockResolvedValue(newest);
     backupsMock.mockResolvedValueOnce(list([newest, older]));
-    await user.click(button("Utwórz backup"));
+    await createThroughDialog(user);
     await screen.findByText("Utworzono backup-2.db.");
     verifyMock.mockRejectedValue(new Error("Plik kopii zniknął."));
     await user.click(within(rowOf("backup-1.db")).getByRole("button", { name: "Sprawdź" }));
@@ -267,5 +304,67 @@ describe("BackupsPage verify", () => {
     expect(await screen.findByText("Kontrola integralności backup-1.db zakończona powodzeniem.")).toBeTruthy();
     expect(screen.queryByText("Plik kopii zniknął.")).toBeNull();
     expect(screen.queryByText("Utworzono backup-2.db.")).toBeNull();
+  });
+});
+
+describe("BackupsPage contents and archives", () => {
+  it("says what each backup holds and how many files it is missing", async () => {
+    await renderLoaded(list([archive, newest]));
+
+    const full = rowOf("backup-3.zip");
+    expect(within(full).getByText("Baza danych")).toBeTruthy();
+    expect(within(full).getByText("Pliki z magazynu")).toBeTruthy();
+    expect(within(full).getByText("Klucze")).toBeTruthy();
+    expect(within(full).getByText("brak plików: 2")).toBeTruthy();
+    expect(within(rowOf("backup-2.db")).queryByText("Pliki z magazynu")).toBeNull();
+  });
+
+  it("leaves out what is unticked and refuses a backup of nothing", async () => {
+    const user = userEvent.setup();
+    await renderLoaded();
+    createMock.mockResolvedValue(newest);
+    backupsMock.mockResolvedValueOnce(list([newest, older]));
+
+    await user.click(button("Utwórz kopię"));
+    for (const part of ["Baza danych", "Pliki z magazynu", "Klucze"]) {
+      await user.click(dialog().getByRole("checkbox", { name: new RegExp(part) }));
+    }
+    expect(dialog().getByRole("alert").textContent).toBe("Wybierz co najmniej jedną część.");
+    expect((dialog().getByRole("button", { name: "Utwórz kopię" }) as HTMLButtonElement).disabled).toBe(true);
+
+    await user.click(dialog().getByRole("checkbox", { name: /Baza danych/ }));
+    await user.click(dialog().getByRole("button", { name: "Utwórz kopię" }));
+
+    expect(createMock).toHaveBeenCalledExactlyOnceWith({ database: true, objects: false, keys: false });
+    expect(await screen.findByText("Utworzono backup-2.db.")).toBeTruthy();
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("follows an archive while it is written and says when it is ready", async () => {
+    const user = userEvent.setup();
+    await renderLoaded(list([older]));
+    createMock.mockResolvedValue(job);
+    backupsMock.mockResolvedValueOnce(list([older], 14, { job }));
+    backupsMock.mockResolvedValue(list([archive, older]));
+
+    await createThroughDialog(user);
+
+    expect(await screen.findByText("3 z 10 plików")).toBeTruthy();
+    expect(screen.getByText("Tworzenie kopii: Pliki z magazynu")).toBeTruthy();
+    expect(button("Utwórz kopię").disabled).toBe(true);
+    expect(await screen.findByText("Utworzono backup-3.zip.", {}, { timeout: 4000 })).toBeTruthy();
+    expect(rowOf("backup-3.zip")).toBeTruthy();
+    expect(screen.queryByText("3 z 10 plików")).toBeNull();
+  });
+
+  it("says why the last archive did not finish", async () => {
+    await renderLoaded(
+      list([older], 14, {
+        lastFailure: { id: "backup-3.zip", message: "Na dysku brakuje miejsca na kopię.", at: "2025-03-05T10:00:00Z" },
+      }),
+    );
+
+    expect(screen.getByText("Kopia backup-3.zip się nie udała")).toBeTruthy();
+    expect(screen.getByText("Na dysku brakuje miejsca na kopię.")).toBeTruthy();
   });
 });
