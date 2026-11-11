@@ -30,8 +30,9 @@ lists the settings.
 ## Ports
 
 The compose file publishes all the ports below on the host. With the default
-settings nothing listens on `3478/tcp`, `5349` and `49000`, and a connection to
-them is refused.
+settings nothing listens on `3478/tcp` and `5349`, and a connection to them is
+refused. The media server listens on `49000/udp` in both voice topologies, but
+in the default one it receives no calls and drops whatever arrives.
 
 | Default port | Protocol | Purpose | Needed | Setting |
 | --- | --- | --- | --- | --- |
@@ -41,7 +42,7 @@ them is refused.
 | `49160-49200` | UDP | The 41 relay ports that TURN hands out | Voice | `STELLARR_TURN_RELAY_RANGE` |
 | `3478` | TCP | TURN over TCP. Closed unless `STELLARR_TURN_TCP_ENABLED=true`. | Optional | `STELLARR_TURN_PORT` |
 | `5349` | TCP and UDP | TURN over TLS. Closed unless `STELLARR_TURNS_ENABLED=true`, which needs a certificate that browsers trust. | Optional | `STELLARR_TURNS_PORT` |
-| `49000` | UDP | Reserved. Nothing listens on it. | No | `STELLARR_MEDIA_PORT` |
+| `49000` | UDP | Stellarr Media, the media server of the `sfu` voice topology. Every browser in a call sends its audio and video here once. | Voice, in the `sfu` topology only | `STELLARR_MEDIA_PORT` |
 
 The database, the object store, the API and the web server listen only inside
 the container and are not published. [RTC and ports](../RTC_AND_PORTS.md) covers
@@ -61,6 +62,12 @@ private address. Two things make voice work for them:
 Without `PUBLIC_IP` the TURN server hands out its own address inside Docker. A
 test allocation on a default instance returned the relay address
 `172.20.0.2:49164`, which a browser on another network cannot reach.
+
+In the `sfu` topology (`STELLARR_RTC_TOPOLOGY=sfu`) also forward `49000/udp`,
+on the same external port as `STELLARR_MEDIA_PORT`. The media server advertises
+`PUBLIC_IP` with that port, so without `PUBLIC_IP` only browsers that reach the
+container's own address, or come through TURN, can join a call. [Stellarr
+Media](../STELLARR_MEDIA.md) describes the topology and what it does not do yet.
 
 ## Name and certificate
 

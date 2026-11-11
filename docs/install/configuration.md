@@ -29,11 +29,12 @@ own, see [Reverse proxy and TLS](reverse-proxy-and-tls.md).
 
 | Variable | Type | Default | Effect |
 | --- | --- | --- | --- |
+| `STELLARR_RTC_TOPOLOGY` | `mesh` or `sfu` | `mesh` | How the browsers of a call exchange media. `mesh` connects every browser to every other one. `sfu` sends each browser's media once to Stellarr Media, the media server in the container, which forwards it to the rest of the call; it needs `PUBLIC_IP` and `49000/udp` forwarded. An empty value means `mesh`; any other value stops the container. [Stellarr Media](../STELLARR_MEDIA.md) lists what `sfu` does not do yet. |
 | `STELLARR_TURN_PORT` | port number | `3478` | Host port for STUN and TURN, TCP and UDP. Browsers are told to use this port. |
 | `STELLARR_TURNS_PORT` | port number | `5349` | Host port for TURN over TLS, TCP and UDP. Browsers are told to use this port when `STELLARR_TURNS_ENABLED` is `true`. |
 | `STELLARR_TURN_TCP_ENABLED` | `true` or `false` | `false` | Offers TURN over TCP besides UDP. When `false`, the TURN server does not listen on TCP and browsers are not given a TCP address. Any other value stops the container. |
 | `STELLARR_TURNS_ENABLED` | `true` or `false` | `false` | Offers TURN over TLS. When `false`, the TURN server does not listen for TLS or DTLS. Turn it on only with a certificate that browsers trust. Any other value stops the container. |
-| `STELLARR_MEDIA_PORT` | port number | `49000` | Host port for `49000/udp`. It is reserved and nothing listens on it. |
+| `STELLARR_MEDIA_PORT` | port number | `49000` | Host port for `49000/udp`, the media server's port. In the `sfu` topology browsers are told to use this port, so forward the same external port to it on the router. A value outside 1-65535 stops the container. |
 | `STELLARR_TURN_RELAY_RANGE` | port range | `49160-49200` | Host ports published for the relay range `49160-49200/udp` of the container. Browsers are told the container's port numbers, so when you publish a different range, forward public ports `49160-49200` to it on the router. |
 
 `PUBLIC_HOST` and `PUBLIC_IP` also belong to voice. [RTC and
@@ -126,10 +127,13 @@ file does not pass them. To set one, add it under `environment:` in a
 | --- | --- | --- |
 | `TLS_RENEW_BEFORE_SECONDS` | `2592000` (30 days) | The container renews a self-signed certificate when it expires within this time, or when it does not match `PUBLIC_HOST`. |
 | `TLS_RENEW_CHECK_SECONDS` | `43200` (12 hours) | How often the container checks that certificate. |
+| `STELLARR_MEDIA_ADVERTISE` | empty | A comma-separated list of `ip:port` that the media server advertises to browsers instead of `PUBLIC_IP` and the container's own address. |
+| `STELLARR_MEDIA_LOG` | `info` | The media server's log filter, such as `info` or `stellarr_media=debug`. |
+| `STELLARR_MEDIA_CONTROL_SECRET` | the stored secret | Replaces the secret that the API and the media server share. |
 
 On the first start the container also creates the secrets that its object
-store and its TURN server share with the API, and keeps them in
-`/data/stellarr/secrets`. They are part of the data volume and have to be
+store, its TURN server and its media server share with the API, and keeps them
+in `/data/stellarr/secrets`. They are part of the data volume and have to be
 restored with it.
 
 ## Development stack
@@ -146,6 +150,8 @@ settings.
 | `STELLARR_DEV_OPS_PORT` | `3001` | Host port of the operator panel. |
 | `STELLARR_DEV_API_PORT` | `5000` | Host port of the API. |
 | `STELLARR_DEV_S3_PORT` | `9000` | Host port of the object store. |
+| `STELLARR_DEV_MEDIA_PORT` | `49100` | Host port of the media server's `49000/udp`, which it advertises on `127.0.0.1`. It differs from production's port so the two stacks can run on one host. |
+| `STELLARR_DEV_MEDIA_CONTROL_PORT` | `5200` | Host port of the media server's control API, published on the loopback interface only. |
 | `STELLARR_ALLOWED_DEV_ORIGINS` | empty | Extra host names, comma-separated, that may load the development server's chunks. `127.0.0.1` is always allowed. |
 | `STELLARR_API_ORIGIN` | `http://127.0.0.1:5000` | Where the development servers forward API requests: `next dev` sends `/api`, `/assets` and `/hubs` there, and the operator panel's dev server sends `/api` and `/health`. The development stack sets it to `http://api:5000` itself. |
 | `WATCHPACK_POLLING` | `true` | Makes the web dev server poll for file changes, which a bind mount needs on some hosts. |
