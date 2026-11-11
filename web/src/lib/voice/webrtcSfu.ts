@@ -51,6 +51,8 @@ const DEFAULT_RECOVERY_GRACE_MS = 10_000;
 const DEFAULT_REPLACEMENT_PAUSE_MS = 2_000;
 /** Replacements in a row before the call is given up; a replacement that proves media resets it. */
 const MAX_REPLACEMENTS = 3;
+/** The steady round of statistics comes every 3 s; a microphone is late, not missing, until then. */
+const DEFAULT_ARRIVAL_GRACE_MS = 3_000;
 
 export interface SfuDeps {
   readonly selfUserId: UserId;
@@ -70,6 +72,8 @@ export interface SfuDeps {
   recoveryGraceMs?: number;
   /** Pause before the first replacement in a row; each further one waits twice as long. */
   replacementPauseMs?: number;
+  /** How long somebody's microphone may take to arrive before the call counts as degraded. */
+  arrivalGraceMs?: number;
   settings(): VoiceSettings;
   /** The send ceiling the adaptive controller currently allows. */
   bitrate(): number;
@@ -85,6 +89,10 @@ export interface SfuDeps {
   changed(): void;
   /** What `transport()` reports may have changed. */
   transportChanged(): void;
+  /** Prove what flows now rather than at the next round of statistics. */
+  probe(): void;
+  /** The id of the stream this side's microphone and camera are sent in. */
+  voiceStreamId(): string | null;
 }
 
 /** One media session of the seat, and the one connection that belongs to it. */
@@ -104,11 +112,13 @@ interface MediaSessionLink {
   wantsOffer: boolean;
   /** The number of the media server offer being answered, echoed in the answer. */
   answering: number | null;
+  /** When the connection last came up, or null while it is not up. */
+  upAt: number | null;
   closed: boolean;
 }
 
 /**
- * The `sfu` topology: one connection to Stellarr Media, which forwards
+ * How a call is connected: one connection to Stellarr Media, which forwards
  * everybody else's tracks on it (the "Client rules" of
  * docs/STELLARR_MEDIA.md).
  *
@@ -144,14 +154,13 @@ export class Sfu implements CallTopology {
       bitrate: () => deps.bitrate(),
       screenAudioStereo: () => deps.screenAudioStereo(),
       send: (link, type, sdp) => this.sendDescription(link, type, sdp),
-      // The directory, not the description, says what each section carries.
-      remoteMediaLearned: () => undefined,
       audioUse: (link, section) => this.audioUse(link, section),
     });
     this.health = new SfuHealth({
       translate: deps.translate,
       store: deps.store,
       people,
+      arrivalGraceMs: deps.arrivalGraceMs ?? DEFAULT_ARRIVAL_GRACE_MS,
     });
     this.recovery = {
       graceMs: deps.recoveryGraceMs ?? DEFAULT_RECOVERY_GRACE_MS,
@@ -220,10 +229,9 @@ export class Sfu implements CallTopology {
 
     this.deps.transportChanged();
     this.deps.changed();
+    // Their microphone is on its way; say so as soon as it arrives.
+    if (arrived.length > 0) this.deps.probe();
   }
-
-  /** The hub refuses `offer`, `answer` and `candidate` on `VoiceSignal` in this topology. */
-  async handleSignal(): Promise<void> {}
 
   handleMediaSignal(signal: MediaSignal<MediaServerSignalKind>): Promise<void> {
     const session = this.session;
@@ -280,10 +288,6 @@ export class Sfu implements CallTopology {
   async repairUnhealthy(): Promise<void> {
     const state = this.session?.link.connection.connectionState;
     if (state === "failed" || state === "disconnected") this.replace();
-  }
-
-  async rebuild(link: Link): Promise<void> {
-    if (this.session?.link === link) this.replace();
   }
 
   transport(): TransportReport {
@@ -360,9 +364,6 @@ export class Sfu implements CallTopology {
       // Read now, not at join: a replacement late in a long call must not
       // reach for credentials that have expired.
       iceServers: this.deps.ice.current(),
-      // The media server yields when both offer at once.
-      polite: false,
-      sendOnly: true,
       recovery: this.recovery,
     });
     const session: MediaSessionLink = {
@@ -378,6 +379,7 @@ export class Sfu implements CallTopology {
       outbox: Promise.resolve(),
       wantsOffer: false,
       answering: null,
+      upAt: null,
       closed: false,
     };
     this.session = session;
@@ -422,7 +424,6 @@ export class Sfu implements CallTopology {
     this.health.forget();
 
     const { link } = session;
-    link.candidates.close();
     link.watchdog.dispose();
     const { connection } = link;
     connection.ontrack = null;
@@ -483,7 +484,10 @@ export class Sfu implements CallTopology {
 
     if (state === "connected") {
       link.watchdog.disarm();
+      session.upAt = Date.now();
+      this.deps.probe();
     } else if (state === "disconnected") {
+      session.upAt = null;
       // Transient by design: a Wi-Fi handover produces this routinely and ICE
       // usually recovers unaided. The watchdog replaces it after the grace.
       expectFreshMedia(link.flow);
@@ -500,6 +504,7 @@ export class Sfu implements CallTopology {
       link: this.session?.link ?? null,
       recovering: this.attempts > 0 || this.replacementTimer !== null || this.waitingForHub,
       exhausted: this.exhausted,
+      upAt: this.session?.upAt ?? null,
     };
   }
 
@@ -642,7 +647,7 @@ export class Sfu implements CallTopology {
     if (received) return received;
     if (streamId === null) return null;
     if (streamId === this.deps.screen.streamId) return "shared-sound";
-    if (streamId === this.deps.microphone.capture?.stream.id) return "speech";
+    if (streamId === this.deps.voiceStreamId()) return "speech";
     return null;
   }
 }

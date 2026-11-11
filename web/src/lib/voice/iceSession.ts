@@ -82,7 +82,7 @@ export class IceConfigError extends Error {
 
 /**
  * Supplies ICE servers to a voice session. `beginSession` runs once when
- * someone joins; `current` is read once per peer connection and does no work.
+ * someone joins; `current` is read for every new connection and does no work.
  */
 export interface VoiceIceProvider {
   /** Refresh and cache the list for the session about to start. Throws `IceConfigError`. */
@@ -107,14 +107,13 @@ export interface RuntimeIceProviderOptions {
  * Session-scoped ICE configuration, refreshed on every join.
  *
  * coturn credentials from `/api/bootstrap` last an hour, and a tab stays open
- * far longer. A client that kept the list from page load works all morning for
- * peers on the same LAN, then silently loses the ability to relay because the
- * TURN credential died hours ago.
+ * far longer. A client that kept the list from page load works all morning on
+ * a network that reaches the media server directly, then silently loses the
+ * ability to relay because the TURN credential died hours ago.
  *
  * So the list is refreshed when it is about to matter: at the start of a voice
- * session, before any peer connection exists. It is then frozen for that
- * session, which makes a three-person channel cost one fetch instead of three
- * and builds every peer from the same configuration.
+ * session, before any connection exists. It is then frozen for that session,
+ * so replacing the connection to the media server costs no fetch.
  */
 export class RuntimeIceProvider implements VoiceIceProvider {
   /** Last successfully resolved list: the seed first, then each refresh. */
@@ -166,8 +165,8 @@ export class RuntimeIceProvider implements VoiceIceProvider {
 
   current(): RTCIceServer[] {
     // The session can outlive a credential too, so every read prunes, whether
-    // the source is the session or the bootstrap seed. A peer that arrives late
-    // never receives a dead relay credential.
+    // the source is the session or the bootstrap seed. A connection replaced
+    // late in a call never receives a dead relay credential.
     const source = this.session ?? this.lastKnown;
     const { servers } = this.evaluate(source);
     return servers.length === source.length ? source : servers;

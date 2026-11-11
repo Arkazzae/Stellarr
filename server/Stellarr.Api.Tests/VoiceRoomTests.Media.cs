@@ -6,7 +6,7 @@ using Stellarr.Api.Realtime;
 namespace Stellarr.Api.Tests;
 
 /// <summary>
-/// The hub leg of the sfu topology: opening a media session for a seat,
+/// The hub leg of the media server: opening a media session for a seat,
 /// signalling the media server through the hub, and the rule that a session
 /// lives exactly as long as its seat. The media server is a fake behind the
 /// API's HTTP client.
@@ -17,30 +17,6 @@ public sealed partial class VoiceRoomTests
     private const string Answer = """{"type":"answer","sdp":"v=0 answer","negotiationId":7}""";
     private const string Candidate =
         """{"candidate":"candidate:1 1 udp 2122260223 192.0.2.1 54321 typ host","sdpMid":"0","sdpMLineIndex":0}""";
-
-    [Fact]
-    public async Task TheMeshTopologyRefusesMediaSessionsAndNeverCallsTheMediaServer()
-    {
-        var media = new FakeMediaServer();
-        await using var app = new VoiceApp(media, MediaTopology.Mesh);
-        var maja = await app.ConnectAsync("maja");
-        var ada = await app.ConnectAsync("ada");
-        await maja.JoinAsync(Salon);
-        await ada.JoinAsync(Salon);
-
-        await RefusedAsync("Media server is not enabled.", maja.OpenMediaAsync(Salon));
-        await RefusedAsync("Media server is not enabled.", maja.MediaSignalAsync(Salon, "session-1", "offer", Offer));
-
-        // Browser to browser signalling is what it was.
-        await maja.SignalAsync(Salon, "offer", Offer, toUserId: ada.Id.ToString());
-        Assert.Equal("offer", (await ada["VoiceSignal"].NextAsync()).GetProperty("kind").GetString());
-        await maja.LeaveAsync();
-        await ada.Connection.StopAsync();
-
-        // Longer than the pump's pause and poll would take, had it started.
-        await Task.Delay(TimeSpan.FromMilliseconds(500));
-        Assert.Empty(media.Requests);
-    }
 
     [Fact]
     public async Task ASessionNeedsTheCallersSeatInThatRoom()
@@ -265,10 +241,9 @@ public sealed partial class VoiceRoomTests
     }
 
     [Fact]
-    public async Task TheSfuTopologyRefusesSignalsThatWouldConnectBrowsersDirectly()
+    public async Task VoiceSignalRefusesSignalsThatWouldConnectBrowsersDirectly()
     {
-        var media = new FakeMediaServer();
-        await using var app = new VoiceApp(media);
+        await using var app = new VoiceApp();
         var maja = await app.ConnectAsync("maja");
         var ada = await app.ConnectAsync("ada");
         await maja.JoinAsync(Salon);

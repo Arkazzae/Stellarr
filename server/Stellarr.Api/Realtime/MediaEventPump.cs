@@ -23,12 +23,8 @@ namespace Stellarr.Api.Realtime;
 /// reached the pump tries again after a pause, and treats the first answer
 /// that follows as a possible new epoch.
 /// </para>
-/// <para>
-/// Nothing here runs in the mesh topology.
-/// </para>
 /// </remarks>
 public sealed class MediaEventPump(
-    MediaTopology topology,
     MediaControlClient control,
     MediaPlane plane,
     PresenceTracker presence,
@@ -38,11 +34,6 @@ public sealed class MediaEventPump(
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (!topology.IsSfu)
-        {
-            return;
-        }
-
         // The host goes on starting while the first reset waits for a media
         // server that may not be up yet.
         await Task.Yield();

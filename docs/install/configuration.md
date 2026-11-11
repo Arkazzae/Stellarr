@@ -10,7 +10,7 @@ Variables marked **seed** initialize settings that the instance owner can later 
 | --- | --- | --- | --- |
 | `STELLARR_DOMAIN` | hostname or IP | empty | Primary hostname or IP used for the public origin, ICE/TURN server URLs, TURN realm, and self-signed TLS certificate SAN. When unset, TLS and TURN fall back to `localhost`, password-reset links stay disabled (unless `STELLARR_PUBLIC_URL` is set), and desktop clients use the origin they connected to. Changing `STELLARR_DOMAIN` triggers regeneration of a self-signed certificate on next start (CA-signed certificates are never overwritten). Falls back to `PUBLIC_HOST` if unset. |
 | `STELLARR_PUBLIC_PORT` | port | `STELLARR_HTTPS_PORT` | External HTTPS port used by browsers (`STELLARR_HTTPS_PORT` when connecting directly, or `443` behind a [reverse proxy](reverse-proxy-and-tls.md#run-behind-a-reverse-proxy)). Omitted from the public URL when `443`. |
-| `PUBLIC_IP` | IPv4 or `auto` | empty | Public IPv4 advertised by `coturn` (`external-ip`) and `stellarr-media`. Required behind NAT. `auto` resolves the `A` record of `STELLARR_DOMAIN` on startup and fails if no valid IPv4 is returned. |
+| `PUBLIC_IP` | IPv4 or `auto` | empty | IPv4 address browsers reach the host at, advertised by `coturn` (`external-ip`) and `stellarr-media`. Required for voice from any browser not on the Docker host itself; without it, such a browser connects only through TURN. `auto` resolves the `A` record of `STELLARR_DOMAIN` on startup and fails if no valid IPv4 is returned. |
 | `STELLARR_HTTPS_PORT` | port (`1–65535`) | `8443` | Host port mapped to container port `443/tcp` and used in HTTP-to-HTTPS redirects. |
 | `STELLARR_HTTP_PORT` | port or `ip:port` | `8888` | Host port mapped to container port `80/tcp` (HTTP redirect only). Prefix with an IP (e.g. `127.0.0.1:8888`) to bind to a single host interface. |
 | `STELLARR_PUBLIC_URL` | origin URL | empty | Explicit public origin (e.g. `https://chat.example.com`), overriding the URL derived from `STELLARR_DOMAIN` and `STELLARR_PUBLIC_PORT`. Used in password-reset links and `/.well-known/stellarr/client`. Displayed read-only in Cockpit. Must be an absolute `http` or `https` origin without credentials, query, or fragment. |
@@ -22,12 +22,11 @@ If `/data/stellarr/tls/fullchain.pem` or `privkey.pem` is missing, the container
 
 | Variable | Type | Default | Description |
 | --- | --- | --- | --- |
-| `STELLARR_RTC_TOPOLOGY` | `mesh` \| `sfu` | `mesh` | Media routing topology. `mesh` sends WebRTC streams directly between browsers. `sfu` routes streams through [Stellarr Media](../STELLARR_MEDIA.md) inside the container (requires `PUBLIC_IP` and `STELLARR_MEDIA_PORT` forwarded). Empty defaults to `mesh`; any other value aborts startup. |
 | `STELLARR_TURN_PORT` | port (`1–65535`) | `3478` | Published host port and advertised port for STUN and TURN (`udp` and `tcp`). |
 | `STELLARR_TURNS_PORT` | port (`1–65535`) | `5349` | Published host port and advertised port for TURN over TLS (`STELLARR_TURNS_ENABLED=true`). |
 | `STELLARR_TURN_TCP_ENABLED` | `true` \| `false` | `false` | Enables the TURN/TCP listener in `coturn` and advertises `?transport=tcp` ICE URLs. |
 | `STELLARR_TURNS_ENABLED` | `true` \| `false` | `false` | Enables TURN over TLS/DTLS in `coturn` and advertises `turns:` ICE URLs. Requires a browser-trusted TLS certificate. |
-| `STELLARR_MEDIA_PORT` | port (`1–65535`) | `49000` | Published host UDP port for `stellarr-media` (`49000/udp`). Advertised in `sfu` ICE candidates and `/api/bootstrap`; must match the external router port. |
+| `STELLARR_MEDIA_PORT` | port (`1–65535`) | `49000` | Published host UDP port for [Stellarr Media](../STELLARR_MEDIA.md) (`49000/udp`), which carries every call. Advertised in ICE candidates and `/api/bootstrap`; must match the external router port. |
 | `STELLARR_TURN_RELAY_RANGE` | port range | `49160-49200` | Host UDP ports mapped to container ports `49160-49200/udp` for TURN allocations. |
 
 See [RTC and ports](../RTC_AND_PORTS.md) for port sizing and NAT rules.

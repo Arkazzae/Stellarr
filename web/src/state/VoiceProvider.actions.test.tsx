@@ -209,6 +209,16 @@ describe("VoiceProvider joining and leaving", () => {
     expect(fake().leave).not.toHaveBeenCalled();
     expect(triggerHaptic).not.toHaveBeenCalled();
   });
+
+  it("repairs the call through the client without leaving it", () => {
+    const view = mount();
+    act(() => view.result.current.join("ch-salon"));
+
+    act(() => view.result.current.reconnect());
+
+    expect(fake().reconnect).toHaveBeenCalledOnce();
+    expect(fake().leave).not.toHaveBeenCalled();
+  });
 });
 
 describe("VoiceProvider toggles", () => {

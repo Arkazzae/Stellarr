@@ -106,7 +106,7 @@ export interface VoiceDiagnostics {
   /** 0..1 */
   lossFraction: number | null;
   rttMs: number | null;
-  /** Cumulative audio RTP counters across every mesh leg. */
+  /** Cumulative audio RTP counters of the connection to the media server. */
   bytesSent: number;
   bytesReceived: number;
   packetsSent: number;
@@ -166,9 +166,9 @@ export const IDLE_VOICE_STATE: VoiceState = Object.freeze({
 });
 
 /**
- * The only RTC surface the UI may touch. Signaling, peer connections and any
- * future media server sit behind it and can change without touching a
- * component. Snapshots are immutable and referentially stable between
+ * The only RTC surface the UI may touch. Signaling, the connection to the
+ * media server and everything else of WebRTC sit behind it and can change
+ * without touching a component. Snapshots are immutable and referentially stable between
  * changes, so `getSnapshot` and `subscribe` plug straight into
  * `useSyncExternalStore`.
  */
@@ -177,6 +177,11 @@ export interface VoiceClient {
   subscribe(listener: () => void): () => void;
   join(channelId: ChannelId): Promise<void>;
   leave(): Promise<void>;
+  /**
+   * Repair the call in progress without leaving it: the others never see this
+   * person go. A call that has no seat joins again.
+   */
+  reconnect(): Promise<void>;
   setMuted(muted: boolean): void;
   /** Silences or restores every remote voice and screen sink; capture is unaffected. */
   setDeafened(deafened: boolean): void;
@@ -195,8 +200,8 @@ export interface VoiceClient {
   setPeerSuppression(userId: UserId, suppressed: boolean): void;
   /**
    * Applies changed settings to a live call. Replaces the outgoing track on
-   * every peer when a capture-affecting setting changed, without dropping the
-   * call.
+   * the connection when a capture-affecting setting changed, without dropping
+   * the call.
    */
   applySettings(settings: VoiceSettings): Promise<void>;
   /** Must be called synchronously from the click, or the user gesture is lost. */

@@ -243,19 +243,17 @@ export function parseJoinSoundLibrary(value: unknown, path: string): JoinSoundLi
 /**
  * The RTC contract the server issued, or undefined when it sent none.
  *
- * A missing or malformed protocol version reads as 0 and an unnamed topology
- * as "unknown". Both are deliberately incompatible with every protocol this
- * client speaks: quietly turning a contract it does not understand into v1
- * mesh would open capture on a protocol it cannot actually run.
+ * A missing or malformed protocol version reads as 0, which is deliberately
+ * incompatible with every protocol this client speaks: quietly reading a
+ * contract it does not understand as v1 would open capture on a protocol it
+ * cannot actually run.
  */
 function parseRtc(value: unknown): RtcConfig | undefined {
   if (!isRecord(value)) return undefined;
   const capabilities = isRecord(value["capabilities"]) ? value["capabilities"] : {};
-  const topology = value["topology"] ?? value["mode"];
   const iceServers = Array.isArray(value["iceServers"]) ? value["iceServers"] : [];
   return {
     protocolVersion: optionalNumber(value, "protocolVersion") ?? 0,
-    topology: typeof topology === "string" ? topology : "unknown",
     capabilities: {
       audioCodecs: stringArray(capabilities["audioCodecs"]),
       videoCodecs: stringArray(capabilities["videoCodecs"]),

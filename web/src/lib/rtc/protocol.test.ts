@@ -31,10 +31,13 @@ import {
 } from "./protocol";
 
 describe("Stellarr RTC protocol v1", () => {
-  it("has one explicit wire version and a closed signal-kind set", () => {
+  it("has one explicit wire version and lets browsers tell each other only their state", () => {
     expect(RTC_PROTOCOL_VERSION).toBe(1);
-    expect(isRtcSignalKind("offer")).toBe(true);
-    expect(isRtcSignalKind("renegotiate")).toBe(false);
+    expect(isRtcSignalKind("state")).toBe(true);
+    // Descriptions and candidates go to the media server, never to another browser.
+    for (const kind of ["offer", "answer", "candidate", "renegotiate"]) {
+      expect(isRtcSignalKind(kind)).toBe(false);
+    }
   });
 
   it("round-trips descriptions without accepting a mismatched kind", () => {
@@ -84,7 +87,7 @@ describe("Stellarr Media hub leg", () => {
   const mic: MediaTrack = { mid: "4", userId: "u-ola", kind: "audio", streamId: "mic-ola" };
   const share: MediaTrack = { mid: "5", userId: "u-ola", kind: "video", streamId: "share-ola" };
 
-  it("names the two methods and two events of the sfu topology", () => {
+  it("names the two methods and two events of the media server's leg", () => {
     expect(RTC_HUB.methods.openMediaSession).toBe("OpenMediaSession");
     expect(RTC_HUB.methods.mediaSignal).toBe("SendMediaSignal");
     expect(RTC_HUB.events.mediaSignal).toBe("MediaSignal");

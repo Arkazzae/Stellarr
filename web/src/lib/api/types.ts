@@ -437,7 +437,6 @@ export interface IceServerConfig {
   credential?: string;
 }
 
-export type RtcTopology = "mesh" | "sfu";
 
 export interface RtcCapabilities {
   audioCodecs: string[];
@@ -454,8 +453,6 @@ export interface RtcCapabilities {
  */
 export interface RtcConfig {
   protocolVersion: number;
-  /** Kept as received so an unknown topology can be rejected explicitly. */
-  topology: RtcTopology | (string & {});
   capabilities: RtcCapabilities;
   iceServers: IceServerConfig[];
   signalingHub: string;

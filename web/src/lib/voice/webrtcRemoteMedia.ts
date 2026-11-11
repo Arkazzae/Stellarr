@@ -1,4 +1,3 @@
-import { videoStreamIds } from "./sdp";
 import type { VoiceCamera, VoiceScreenShare } from "./types";
 
 /** What an audio stream carries: somebody's voice, or the sound of their screen share. */
@@ -13,7 +12,7 @@ export interface MediaAnnouncement {
 /**
  * Everything one remote person sends, and which stream is which.
  *
- * Nothing here depends on arrival order. Tracks, the remote description and the
+ * Nothing here depends on arrival order. Tracks, the directory and the
  * person's own announcement turn up in any sequence (screen audio routinely
  * beats both the microphone and the announcement), so this only records what
  * has been seen and answers `roleOf` from the whole picture. Owners ask again
@@ -22,8 +21,14 @@ export interface MediaAnnouncement {
 export class RemoteMedia {
   private readonly audio = new Map<string, MediaStream>();
   private readonly video = new Map<string, MediaStream>();
-  /** Stream ids known to carry video, from the remote description or a track. */
+  /** Stream ids known to carry video, from the directory or a track. */
   private readonly videoIds = new Set<string>();
+  /**
+   * Stream ids whose sound was filed while no picture was known on them: the
+   * person's voice. A camera is sent in the voice's stream, so the picture
+   * that joins it later must not turn the voice into a share's sound.
+   */
+  private readonly voiceIds = new Set<string>();
   /**
    * Stream ids with a sound: an audio track event arrived, or the video's own
    * stream already held an audio track when it did.
@@ -41,6 +46,7 @@ export class RemoteMedia {
   addAudio(stream: MediaStream, id: string = stream.id): void {
     this.audio.set(id, stream);
     this.soundIds.add(id);
+    if (!this.videoIds.has(id)) this.voiceIds.add(id);
   }
 
   hasAudio(streamId: string): boolean {
@@ -83,14 +89,9 @@ export class RemoteMedia {
     return announced;
   }
 
-  /** The remote description names the video msids before any track event fires. */
-  learnFromSdp(sdp: string | undefined | null): void {
-    for (const id of videoStreamIds(sdp)) this.learnVideo(id);
-  }
-
   /**
-   * A stream id is known to carry video before its track arrives, from a
-   * remote description or a media server's directory.
+   * A stream id is known to carry video before its track arrives, from the
+   * media server's directory.
    */
   learnVideo(streamId: string): void {
     this.videoIds.add(streamId);
@@ -109,14 +110,17 @@ export class RemoteMedia {
   }
 
   /**
-   * A stream is a screen share's sound when the person announced it or video
-   * was seen on it; Stellarr cameras are captured without audio, so nothing
-   * else can be. With no evidence yet it is taken for a microphone, and
+   * A stream is a screen share's sound when the person announced it, or when
+   * video was seen on it and its sound did not start out alone. The camera is
+   * sent in the voice's stream, so the sound of the announced camera stream,
+   * or of a stream that was a voice before any picture joined it, is the
+   * microphone. With no evidence yet a sound is taken for a microphone, and
    * `roleOf` moves it as soon as evidence arrives.
    */
   roleOf(streamId: string): AudioRole {
-    if (streamId === this.cameraId) return "microphone";
-    return streamId === this.screenId || this.videoIds.has(streamId) ? "screen" : "microphone";
+    if (streamId === this.screenId) return "screen";
+    if (streamId === this.cameraId || this.voiceIds.has(streamId)) return "microphone";
+    return this.videoIds.has(streamId) ? "screen" : "microphone";
   }
 
   /** The most recently received audio stream with this role. */

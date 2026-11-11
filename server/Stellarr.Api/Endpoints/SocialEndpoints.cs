@@ -362,9 +362,10 @@ public static class SocialEndpoints
     }
 
     /// <summary>
-    /// A WebRTC connection runs from browser to browser and would outlive the
-    /// block in the database. The private room is therefore emptied and both
-    /// clients are told, so that they let go of microphones and remote media.
+    /// A call's media keeps flowing through the media server until its seats
+    /// end, so it would outlive the block in the database. The private room is
+    /// therefore emptied, which closes both media sessions, and both clients
+    /// are told, so that they let go of microphones and remote media.
     /// The block is stored by now, so a client that hangs up must not keep
     /// the call alive.
     /// </summary>

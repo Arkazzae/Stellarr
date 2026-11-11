@@ -48,7 +48,7 @@ export const AUDIO_PROFILES: Record<AudioProfileId, AudioProfile> = {
   premium: speechProfile("premium", 128_000, 64_000),
   // Opus can spend roughly 256 kb/s on one full-band mono channel. Above that a
   // voice microphone gains no useful detail, and stereo would only encode room
-  // position while doubling the mesh-call cost for every listener.
+  // position while doubling what every listener has to receive.
   studio: speechProfile("studio", 256_000, 96_000),
   // Shared screen audio is music, a video soundtrack or a game, not speech. DTX
   // would clip the quiet passages it is meant to carry, and stereo is part of

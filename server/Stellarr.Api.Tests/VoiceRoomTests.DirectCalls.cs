@@ -27,11 +27,11 @@ public sealed partial class VoiceRoomTests
 
         Assert.Equal([maja.Id.ToString()], Occupants(await ada["VoiceParticipantChanged"].NextAsync(InRoom(room))));
         await ada.JoinAsync(room);
-        await maja.SignalAsync(room, "offer", "{}", toUserId: ada.Id.ToString());
+        await maja.SignalAsync(room, "state", "{}", toUserId: ada.Id.ToString());
         Assert.Equal(maja.Id.ToString(), (await ada["VoiceSignal"].NextAsync()).GetProperty("fromUserId").GetString());
         await stranger.SettleAsync();
         Assert.Empty(stranger["VoiceParticipantChanged"].Drain());
-        await RefusedAsync("Invalid voice signal.", stranger.SignalAsync(room, "offer", "{}"));
+        await RefusedAsync("Invalid voice signal.", stranger.SignalAsync(room, "state", "{}"));
     }
 
     [Theory]

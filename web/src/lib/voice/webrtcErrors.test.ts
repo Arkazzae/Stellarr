@@ -11,41 +11,21 @@ import {
   degradedNotice,
   iceConfigError,
   micError,
-  peerLostError,
-  peerStalledError,
   rtcIncompatibility,
   screenShareError,
 } from "./webrtcErrors";
 
 describe("rtcIncompatibility", () => {
-  it("accepts the mesh topology at the protocol version this client speaks", () => {
-    expect(rtcIncompatibility(polish, { protocolVersion: 1, topology: "mesh" })).toBeNull();
+  it("accepts the protocol version this client speaks", () => {
+    expect(rtcIncompatibility(polish, { protocolVersion: 1 })).toBeNull();
   });
 
   it("names the version the server announced", () => {
-    expect(rtcIncompatibility(polish, { protocolVersion: 2, topology: "mesh" })).toContain("(2)");
+    expect(rtcIncompatibility(polish, { protocolVersion: 2 })).toContain("(2)");
   });
 
-  it("accepts the sfu topology too", () => {
-    expect(rtcIncompatibility(polish, { protocolVersion: 1, topology: "sfu" })).toBeNull();
-  });
-
-  it("refuses a topology it cannot join, naming it", () => {
-    expect(rtcIncompatibility(polish, { protocolVersion: 1, topology: "quantum" })).toContain(
-      "quantum",
-    );
-  });
-
-  it("refuses a missing topology, which the bootstrap parser reads as unknown", () => {
-    expect(rtcIncompatibility(polish, { protocolVersion: 1, topology: "unknown" })).toContain(
-      "unknown",
-    );
-  });
-
-  it("checks the version before the topology", () => {
-    expect(rtcIncompatibility(polish, { protocolVersion: 0, topology: "unknown" })).toContain(
-      "wersji RTC",
-    );
+  it("refuses a missing version, which the bootstrap parser reads as 0", () => {
+    expect(rtcIncompatibility(polish, { protocolVersion: 0 })).toContain("wersji RTC");
   });
 });
 
@@ -121,21 +101,6 @@ describe("iceConfigError", () => {
 
   it("falls back to the unreachable wording for an unknown failure", () => {
     expect(iceConfigError(polish, new Error("network")).message).toContain("pobrać");
-  });
-});
-
-describe("peer transport errors", () => {
-  it("name the person and stay recoverable", () => {
-    expect(peerStalledError(polish, "Ola")).toMatchObject({
-      kind: "transport",
-      recoverable: true,
-      message: expect.stringContaining("Ola"),
-    });
-    expect(peerLostError(polish, "Ola")).toMatchObject({
-      kind: "transport",
-      recoverable: true,
-      message: expect.stringContaining("Ola"),
-    });
   });
 });
 

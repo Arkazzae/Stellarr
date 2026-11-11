@@ -56,7 +56,6 @@ const BOOTSTRAP = {
   voice: { "c-2": [] },
   rtc: {
     protocolVersion: 1,
-    topology: "mesh",
     capabilities: {
       audioCodecs: ["opus"],
       videoCodecs: ["vp9", "vp8", "h264"],
@@ -517,7 +516,6 @@ describe("http api client", () => {
     const { rtc } = await api.bootstrap();
 
     expect(rtc?.protocolVersion).toBe(1);
-    expect(rtc?.topology).toBe("mesh");
     expect(rtc?.capabilities.audioCodecs).toEqual(["opus"]);
     expect(rtc?.iceServers).toEqual([
       { urls: ["stun:example.org:3478"] },
@@ -529,14 +527,13 @@ describe("http api client", () => {
     ]);
   });
 
-  it("does not disguise an unknown RTC contract as v1 mesh", async () => {
+  it("does not disguise an unknown RTC contract as v1", async () => {
     fetchMock.mockResolvedValue(
       jsonResponse({
         ...BOOTSTRAP,
         rtc: {
           ...BOOTSTRAP.rtc,
           protocolVersion: undefined,
-          topology: "mesh-vNext",
         },
       }),
     );
@@ -544,7 +541,6 @@ describe("http api client", () => {
     const { rtc } = await api.bootstrap();
 
     expect(rtc?.protocolVersion).toBe(0);
-    expect(rtc?.topology).toBe("mesh-vNext");
   });
 
   it("rejects a payload that is missing required fields", async () => {

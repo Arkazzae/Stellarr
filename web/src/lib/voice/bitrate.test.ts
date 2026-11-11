@@ -239,8 +239,8 @@ describe("summariseMediaCounters", () => {
 });
 
 describe("worstSample", () => {
-  it("takes the worst of each dimension across the mesh", () => {
-    // The call is only as good as its weakest leg.
+  it("takes the worst of each dimension across the readings", () => {
+    // The call is only as good as its weakest reading.
     expect(
       worstSample([
         { lossFraction: 0.01, rttMs: 200 },

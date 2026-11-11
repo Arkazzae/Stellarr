@@ -74,6 +74,8 @@ export interface VoiceValue {
 
   join: (channelId: string, presentation?: VoiceRoomPresentation) => void;
   leave: () => Promise<void>;
+  /** Repair the call in progress without leaving it, so nobody sees this person go. */
+  reconnect: () => void;
   toggleMute: () => void;
   toggleDeafen: () => void;
   toggleCamera: () => void;
@@ -227,6 +229,13 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     await client?.leave();
   }, [holder, ports]);
 
+  const reconnect = useCallback(() => {
+    const client = holder.getClient();
+    if (client === null) return;
+    triggerHaptic("light");
+    void client.reconnect().catch(() => {});
+  }, [holder]);
+
   const toggleMute = useCallback(() => {
     const client = holder.getClient();
     if (client === null) return;
@@ -335,6 +344,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       soundboardEnabled: !view.privateCall && soundboard.supported && !soundCooling,
       join,
       leave,
+      reconnect,
       toggleMute,
       toggleDeafen,
       toggleCamera,
@@ -354,6 +364,7 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       soundCooling,
       join,
       leave,
+      reconnect,
       toggleMute,
       toggleDeafen,
       toggleCamera,

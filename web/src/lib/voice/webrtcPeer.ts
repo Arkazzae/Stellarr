@@ -1,5 +1,4 @@
 import { AUDIO_PROFILES, opusParameters, profileFor } from "./audioProfiles";
-import { RemoteCandidateQueue } from "./candidates";
 import { RecoveryWatchdog } from "./lifecycle";
 import {
   opusFirstCodecList,
@@ -19,35 +18,27 @@ export interface MediaFlow {
   requireFresh: boolean;
   lastSent: number;
   lastReceived: number;
-  /** Set only after the final recovery attempt had time to settle. */
-  recoveryFailed: boolean;
 }
 
 /**
- * One `RTCPeerConnection` and what this side does with it: the senders it
- * publishes on, the candidates waiting for a description, the negotiation
- * flags, the recovery watchdog and the proof that media flows.
+ * The `RTCPeerConnection` to Stellarr Media and what this side does with it:
+ * the senders it publishes on, the offer in progress, the recovery watchdog
+ * and the proof that media flows.
  *
- * Nothing here says whose media arrives on it. In the mesh there is one link
- * per other person; behind a media server there is one link in total, and it
- * carries everybody.
+ * Nothing here says whose media arrives on it. There is one link in total and
+ * it carries everybody; the media server's directory says whose track is whose.
  */
 export interface Link {
   readonly connection: RTCPeerConnection;
-  readonly candidates: RemoteCandidateQueue;
   /** What this side sends on the link; each is null while it is off. */
   micSender: RTCRtpSender | null;
   cameraSender: RTCRtpSender | null;
   screenVideoSender: RTCRtpSender | null;
   screenAudioSender: RTCRtpSender | null;
   readonly watchdog: RecoveryWatchdog;
-  /** Perfect-negotiation bookkeeping (https://w3c.github.io/webrtc-pc/#perfect-negotiation). */
-  readonly polite: boolean;
+  /** An offer of this side's is being made; a media server offer that meets it is ignored. */
   makingOffer: boolean;
-  settingRemoteAnswerPending: boolean;
   readonly flow: MediaFlow;
-  /** Each published track gets a send-only transceiver of its own; see `addSender`. */
-  readonly sendOnly: boolean;
 }
 
 export interface LinkRecovery {
@@ -60,11 +51,7 @@ export interface LinkRecovery {
 
 export interface LinkInit {
   iceServers: RTCIceServer[];
-  /** Which side yields when both offer at once; the topology decides. */
-  polite: boolean;
   recovery: LinkRecovery;
-  /** Publish on send-only transceivers, as a link to a media server must. */
-  sendOnly?: boolean;
 }
 
 export function createLink(init: LinkInit): Link {
@@ -78,10 +65,6 @@ export function createLink(init: LinkInit): Link {
 
   const link: Link = {
     connection,
-    candidates: new RemoteCandidateQueue({
-      hasRemoteDescription: () => connection.remoteDescription !== null,
-      addIceCandidate: (candidate) => connection.addIceCandidate(candidate ?? undefined),
-    }),
     micSender: null,
     cameraSender: null,
     screenVideoSender: null,
@@ -92,34 +75,28 @@ export function createLink(init: LinkInit): Link {
       onEscalate: () => recovery.onEscalate(link),
       onExhausted: () => recovery.onExhausted(link),
     }),
-    polite: init.polite,
     makingOffer: false,
-    settingRemoteAnswerPending: false,
     flow: {
       verified: false,
       silentSamples: 0,
       requireFresh: false,
       lastSent: 0,
       lastReceived: 0,
-      recoveryFailed: false,
     },
-    sendOnly: init.sendOnly ?? false,
   };
   return link;
 }
 
 /**
- * Start sending `track` on `link`.
+ * Start sending `track` on `link`, on a send-only transceiver of its own.
  *
- * Between browsers `addTrack` is right: the other side sends back on the same
- * section. Behind a media server it is not. Once the media server has added a
- * section to forward somebody's track, `addTrack` reuses that section for the
- * new track, and a section the media server created never carries what the
- * browser sends, so the track would silently go nowhere. A send-only
- * transceiver of its own is always a new section the media server accepts.
+ * Never `addTrack`: once the media server has added a section to forward
+ * somebody's track, `addTrack` reuses that section for the new track, and a
+ * section the media server created never carries what the browser sends, so
+ * the track would silently go nowhere. A send-only transceiver of its own is
+ * always a new section the media server accepts.
  */
 export function addSender(link: Link, track: MediaStreamTrack, stream: MediaStream): RTCRtpSender {
-  if (!link.sendOnly) return link.connection.addTrack(track, stream);
   return link.connection.addTransceiver(track, { direction: "sendonly", streams: [stream] }).sender;
 }
 
@@ -133,33 +110,28 @@ export interface NegotiatorEnv {
   settings(): VoiceSettings;
   /** The send ceiling the adaptive controller currently allows. */
   bitrate(): number;
-  /** Delivers a finished local description to the other end of `link`. */
+  /** Delivers a finished local description to the media server. */
   send(link: Link, type: "offer" | "answer", sdp: string): Promise<void>;
-  /**
-   * A remote description was applied to `link`. Its SDP names the streams
-   * that carry video, which whoever knows the people behind the link can use
-   * before the first track event fires.
-   */
-  remoteMediaLearned(link: Link, sdp: string | undefined): void;
   /** Whether the shared sound being sent has two channels. */
   screenAudioStereo(): boolean;
   /**
-   * Optional: what an audio section of `link` carries, for a section its
-   * senders do not claim by mid. Without it such a section takes the speech
-   * profile. A media server repeats each browser's own Opus parameters back to
-   * it, so there the offer that first carries a share's sound already sets its
-   * encoder, and the answer for somebody else's share sets the decoder.
+   * What an audio section of `link` carries, for a section its senders do not
+   * claim by mid; null leaves it on the speech profile. The media server
+   * repeats each browser's own Opus parameters back to it, so the offer that
+   * first carries a share's sound already sets its encoder, and the answer for
+   * somebody else's share sets the decoder.
    */
-  audioUse?(link: Link, section: { mid: string | null; streamId: string | null }): AudioSectionUse | null;
+  audioUse(link: Link, section: { mid: string | null; streamId: string | null }): AudioSectionUse | null;
 }
 
 /**
- * Offers and answers on any link, following the WebRTC spec's perfect
- * negotiation recipe.
+ * Makes this side's descriptions: offers of what it publishes, answers to
+ * what the media server offers, each with its Opus sections tuned.
  *
- * Both sides may offer at once, because the hub hands every participant the
- * same snapshot at the same moment, so glare is the normal case rather than an
- * edge case. The polite side yields; the impolite side drops the colliding offer.
+ * Glare is not handled here. The browser is the impolite side, so `Sfu` never
+ * hands over a media server offer that meets one of its own; the media server
+ * rolls its offer back and offers again (docs/STELLARR_MEDIA.md, "Negotiation
+ * rules").
  */
 export class Negotiator {
   constructor(private readonly env: NegotiatorEnv) {}
@@ -179,32 +151,12 @@ export class Negotiator {
     }
   }
 
-  /** Apply a description from the other side and answer it when it is an offer. */
+  /**
+   * Apply a description from the media server and answer it when it is an
+   * offer. Rejects when the browser refuses the description.
+   */
   async receive(link: Link, description: RTCSessionDescriptionInit): Promise<void> {
-    const { connection } = link;
-    const readyForOffer =
-      !link.makingOffer &&
-      (connection.signalingState === "stable" || link.settingRemoteAnswerPending);
-    const collision = description.type === "offer" && !readyForOffer;
-    if (collision && !link.polite) return;
-
-    link.settingRemoteAnswerPending = description.type === "answer";
-    try {
-      await connection.setRemoteDescription(description);
-    } catch (error) {
-      if (!collision) throw error;
-      // Implicit rollback is standard but not universal; do it by hand, once.
-      await connection.setLocalDescription({ type: "rollback" });
-      await connection.setRemoteDescription(description);
-    } finally {
-      link.settingRemoteAnswerPending = false;
-    }
-
-    // The description names the msids that carry video and lands before any
-    // track event, so routing can be right the first time.
-    this.env.remoteMediaLearned(link, connection.remoteDescription?.sdp);
-
-    await link.candidates.flush();
+    await link.connection.setRemoteDescription(description);
 
     if (description.type === "offer") {
       this.tuneMicSender(link);
@@ -245,7 +197,7 @@ export class Negotiator {
       link,
       this.env.settings(),
       this.env.screenAudioStereo(),
-      this.env.audioUse?.bind(this.env),
+      this.env.audioUse.bind(this.env),
     );
     const tuned = tuneLocalDescription(description, plan);
 
@@ -273,7 +225,7 @@ function audioTuningPlan(
   link: Link,
   settings: VoiceSettings,
   stereo: boolean,
-  audioUse?: NegotiatorEnv["audioUse"],
+  audioUse: NegotiatorEnv["audioUse"],
 ): AudioTuningPlan {
   const speech = profileFor(settings);
   const speechTuning: AudioSectionTuning = {
@@ -295,7 +247,6 @@ function audioTuningPlan(
       byMid.set(transceiver.mid, speechTuning);
     }
   }
-  if (!audioUse) return { byMid, fallback: speechTuning };
 
   // Whatever somebody else shares may have two channels; saying so costs
   // nothing when it has one.

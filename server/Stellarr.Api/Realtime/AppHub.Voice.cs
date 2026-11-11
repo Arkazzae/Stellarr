@@ -11,9 +11,10 @@ namespace Stellarr.Api.Realtime;
 
 /// <summary>
 /// Voice rooms. A room id is either a voice channel of a server the caller
-/// belongs to or a direct conversation between two people; both use the same
-/// signalling envelope, so the media client only relays and this hub decides
-/// who may take part.
+/// belongs to or a direct conversation between two people; both work the same
+/// way, and this hub decides who may take part. The browsers in a room tell
+/// each other their state through here, while their media goes through the
+/// media server.
 /// </summary>
 public sealed partial class AppHub
 {
@@ -98,10 +99,10 @@ public sealed partial class AppHub
 
         var roomId = ParseGuid(signal.ChannelId, nameof(signal.ChannelId));
         var senderId = Context.User!.RequireUserId();
-        // Behind the media server only the state travels from browser to
-        // browser; a direct connection would bypass it and give away addresses.
+        // Only the state travels from browser to browser. An offer, answer or
+        // candidate would connect two browsers directly, bypassing the media
+        // server and giving away their addresses, so IsRelayable refuses it.
         if (!IsRelayable(signal) ||
-            (mediaTopology.IsSfu && RtcProtocol.PeerConnectionKinds.Contains(signal.Kind)) ||
             !presence.IsConnectionInVoice(Context.ConnectionId, roomId) ||
             !(await VoiceRoomAccessAsync(roomId, senderId)).Allowed)
         {

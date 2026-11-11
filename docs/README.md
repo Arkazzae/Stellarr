@@ -12,7 +12,7 @@ Stellarr is a self-hosted text, voice, and video chat for small groups, deployed
 
 ## Understand
 
-- [Architecture](ARCHITECTURE.md): container processes, responsibilities, and topology boundaries.
+- [Architecture](ARCHITECTURE.md): container processes, their responsibilities, and the path call media takes.
 - [RTC and ports](RTC_AND_PORTS.md): port mappings, NAT/TURN behavior, audio/video pipeline overview, and troubleshooting.
 - [Stellarr RTC v1](RTC_STANDARD.md): versioned signaling, state, audio, screen-share, and camera specification.
 - [Stellarr Media](STELLARR_MEDIA.md): Rust SFU media server specification, hub signaling, and internal control API.

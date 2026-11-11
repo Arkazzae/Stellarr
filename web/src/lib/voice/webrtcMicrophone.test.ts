@@ -40,6 +40,8 @@ let speech: { add: ReturnType<typeof vi.fn>; remove: ReturnType<typeof vi.fn> };
 let onDeviceLost: Mock<() => void>;
 let microphone: LocalMicrophone;
 let peers: Map<string, Link>;
+/** The stream the microphone and the camera are both sent in. */
+const VOICE_STREAM = { id: "voice-a" } as MediaStream;
 
 beforeEach(() => {
   vi.mocked(captureMicrophone).mockReset();
@@ -52,9 +54,9 @@ beforeEach(() => {
     selfUserId: "u-a",
     store,
     speech: speech as unknown as SpeechDetector,
+    voiceStream: () => VOICE_STREAM,
     links: () => peers.values(),
     applyEncoding: vi.fn(async () => undefined),
-    rebuildLink: vi.fn(async () => undefined),
     onDeviceLost,
   });
 });
@@ -250,7 +252,7 @@ describe("LocalMicrophone", () => {
       expect(microphone.capture).toBe(running);
     });
 
-    it("keeps the running capture when a peer refuses the new one", async () => {
+    it("keeps the running capture when the sender refuses the new one", async () => {
       const running = fakeCapture();
       const replacement = fakeCapture();
       microphone.adopt(running, DEFAULT_SETTINGS);

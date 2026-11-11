@@ -82,7 +82,7 @@ public sealed class MediaControlTiming
 /// </remarks>
 public sealed class MediaControlClient(
     IHttpClientFactory httpClients,
-    MediaTopology topology,
+    MediaServerSettings settings,
     MediaControlTiming timing)
 {
     /// <summary>The named HTTP client that carries the base address and the connection settings.</summary>
@@ -231,9 +231,9 @@ public sealed class MediaControlClient(
 
             // Without a secret the control API listens on loopback only and
             // checks nothing, so an empty bearer would only be noise.
-            if (topology.ControlSecret.Length > 0)
+            if (settings.ControlSecret.Length > 0)
             {
-                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", topology.ControlSecret);
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", settings.ControlSecret);
             }
 
             using var http = httpClients.CreateClient(HttpClientName);

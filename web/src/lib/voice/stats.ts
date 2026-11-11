@@ -133,7 +133,7 @@ export function receivedAudioByMid(report: StatsLike): Map<string, number> {
   return byMid;
 }
 
-/** Worst reading across a mesh: the call is only as good as its weakest leg. */
+/** Worst of several readings: the call is only as good as its weakest one. */
 export function worstSample(samples: readonly NetworkSample[]): NetworkSample | null {
   if (samples.length === 0) return null;
   return samples.reduce((worst, sample) => ({

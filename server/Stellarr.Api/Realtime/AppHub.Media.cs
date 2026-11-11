@@ -8,13 +8,13 @@ using Stellarr.Api.Logging;
 namespace Stellarr.Api.Realtime;
 
 /// <summary>
-/// The hub leg of the sfu topology: a browser opens a media session for its
-/// seat and exchanges signals with the media server through the hub, which
-/// decides who may do so. The media server trusts the hub and nobody else.
+/// The hub leg of Stellarr Media, the media server every voice room goes
+/// through: a browser opens a media session for its seat and exchanges
+/// signals with the media server through the hub, which decides who may do
+/// so. The media server trusts the hub and nobody else.
 /// </summary>
 public sealed partial class AppHub
 {
-    private const string MediaNotEnabled = "Media server is not enabled.";
     private const string MediaUnavailable = "Media server is unavailable.";
     private const string InvalidMediaSignal = "Invalid media signal.";
     private const string NotSeated = "Not seated in this voice room.";
@@ -26,7 +26,6 @@ public sealed partial class AppHub
     /// </summary>
     public async Task<MediaSessionDto> OpenMediaSession(string channelId)
     {
-        RequireMediaServer();
         var roomId = ParseGuid(channelId, nameof(channelId));
         if (!presence.IsConnectionInVoice(Context.ConnectionId, roomId))
         {
@@ -49,7 +48,6 @@ public sealed partial class AppHub
     /// </summary>
     public async Task SendMediaSignal(MediaSignalDto signal)
     {
-        RequireMediaServer();
         if (signal is null)
         {
             throw new HubException(InvalidMediaSignal);
@@ -95,14 +93,6 @@ public sealed partial class AppHub
                 // server, which drops it by design; the browser answers that
                 // offer next.
                 break;
-        }
-    }
-
-    private void RequireMediaServer()
-    {
-        if (!mediaTopology.IsSfu)
-        {
-            throw new HubException(MediaNotEnabled);
         }
     }
 
