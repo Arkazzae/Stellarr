@@ -131,7 +131,7 @@ describe("the overview", () => {
     const users = screen.getByRole("group", { name: "Users" }).textContent;
     expect(users).toContain("12,345");
     expect(users).toContain("7 online");
-    expect(screen.getByRole("group", { name: "Stored objects" }).textContent).toContain("1.5 KB");
+    expect(screen.getByRole("row", { name: /Stored objects/ }).textContent).toContain("1.5 KB");
     expect(screen.getByRole("group", { name: "Messages" }).textContent).toContain("987,654");
   });
 

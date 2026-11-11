@@ -1,18 +1,13 @@
 import { useEffect, useState, type ReactNode } from "react";
 
-import { Spinner } from "@/components/spinner";
+import { ActivityChart } from "@/components/activity-chart";
+import { Icon, type IconName } from "@/components/icons/icon";
 import { PageHeader } from "@/components/page-header";
-import { Stat, StatGrid } from "@/components/stats";
+import { Spinner } from "@/components/spinner";
 import { StatusBadge } from "@/components/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -21,9 +16,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { t } from "@/i18n";
+import { t, type MessageKey } from "@/i18n";
 import { formatNumber } from "@/i18n/format";
+import { opsApi, type OpsActivity } from "@/lib/api";
 import { readHealth, type HealthCheckState, type HealthSnapshot } from "@/lib/health";
+import { useOpsResource } from "@/lib/use-ops-resource";
+import { cn } from "@/lib/utils";
 import { useOps } from "@/state/ops-context";
 
 type Health = Pick<HealthSnapshot, "api" | "database">;
@@ -52,19 +50,114 @@ function HealthBadge({ state }: { state: HealthCheckState }) {
   );
 }
 
+/** A card's title row: an icon and a name above a hairline. */
+function CardTitleRow({ icon, title, children }: { icon: IconName; title: string; children?: ReactNode }) {
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b px-5 py-3.5">
+      <Icon name={icon} size={18} className="text-muted-foreground" />
+      <h2 className="mr-auto text-base font-semibold">{title}</h2>
+      {children}
+    </div>
+  );
+}
+
+function MetricCard({ icon, title, value, caption }: { icon: IconName; title: string; value: string; caption: string }) {
+  return (
+    <Card role="group" aria-label={title} className="gap-0 py-0">
+      <CardTitleRow icon={icon} title={title} />
+      <div className="px-5 pt-6 pb-5">
+        <p className="text-hero font-semibold">{value}</p>
+        <p className="mt-3 text-sm text-muted-foreground">{caption}</p>
+      </div>
+    </Card>
+  );
+}
+
+type Series = "messages" | "newMembers";
+
+const seriesLabel: Record<Series, MessageKey> = {
+  messages: "dashboard.activity.messages",
+  newMembers: "dashboard.activity.members",
+};
+
+function ActivityCard({ activity, error }: { activity: OpsActivity | null; error: string | null }) {
+  const [series, setSeries] = useState<Series>("messages");
+  const label = t(seriesLabel[series]);
+
+  return (
+    <Card className="gap-0 py-0">
+      <CardTitleRow icon="signal" title={t("dashboard.activity.title")}>
+        <div role="group" aria-label={t("dashboard.activity.series")} className="flex gap-1.5">
+          {(Object.keys(seriesLabel) as Series[]).map((key) => (
+            <Button
+              key={key}
+              type="button"
+              variant="outline"
+              size="sm"
+              aria-pressed={series === key}
+              onClick={() => setSeries(key)}
+              className={cn(series === key ? "bg-accent" : "text-muted-foreground")}
+            >
+              <span
+                aria-hidden="true"
+                className={cn("size-2.5 rounded-[2px]", series === key ? "bg-chart-1" : "bg-chart-track")}
+              />
+              {t(seriesLabel[key])}
+            </Button>
+          ))}
+        </div>
+      </CardTitleRow>
+      <div className="px-5 pt-4 pb-5">
+        {activity ? (
+          <>
+            <p className="mb-8 text-sm text-muted-foreground">
+              {t("dashboard.activity.description", { zone: activity.timeZone })}
+            </p>
+            <ActivityChart
+              points={activity.days.map((day) => ({ date: day.date, value: day[series] }))}
+              label={label}
+              tableCaption={t("dashboard.activity.table")}
+              dateHeading={t("dashboard.activity.date")}
+            />
+          </>
+        ) : error ? (
+          <p role="alert" className="py-10 text-center text-sm text-danger">
+            {error}
+          </p>
+        ) : (
+          <div role="status" className="flex items-center justify-center gap-2 py-16 text-sm text-muted-foreground">
+            <Spinner />
+            {t("dashboard.activity.loading")}
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+}
+
 interface ServiceRowProps {
+  icon: IconName;
   name: string;
-  endpoint: string;
+  detail: string;
+  /** Whether the detail is an identifier, set in the code face. */
+  code?: boolean;
   status: ReactNode;
   origin: string;
 }
 
-function ServiceRow({ name, endpoint, status, origin }: ServiceRowProps) {
+function ServiceRow({ icon, name, detail, code = false, status, origin }: ServiceRowProps) {
   return (
     <TableRow>
       <TableCell>
-        <p className="font-medium">{name}</p>
-        <p className="font-mono text-xs text-muted-foreground">{endpoint}</p>
+        <div className="flex items-center gap-3">
+          <span className="grid size-8 shrink-0 place-items-center rounded-md border text-muted-foreground">
+            <Icon name={icon} />
+          </span>
+          <div>
+            <p className="font-medium">{name}</p>
+            <p className={cn("text-xs text-muted-foreground", code && "font-mono")}>{detail}</p>
+          </div>
+        </div>
       </TableCell>
       <TableCell>{status}</TableCell>
       <TableCell className="text-right text-xs text-muted-foreground">{origin}</TableCell>
@@ -76,6 +169,7 @@ export function DashboardPage() {
   const { bootstrap, reload } = useOps();
   const [health, setHealth] = useState<Health>(CHECKING);
   const [rechecking, setRechecking] = useState(false);
+  const activity = useOpsResource(opsApi.activity, t("dashboard.activity.loadFailed"));
 
   useEffect(() => {
     const controller = new AbortController();
@@ -90,7 +184,7 @@ export function DashboardPage() {
     setRechecking(true);
     setHealth(CHECKING);
     try {
-      const [next] = await Promise.all([readHealth(), reload()]);
+      const [next] = await Promise.all([readHealth(), reload(), activity.refresh()]);
       setHealth(next);
     } finally {
       setRechecking(false);
@@ -113,35 +207,26 @@ export function DashboardPage() {
         }
       />
 
-      <StatGrid label={t("dashboard.summary")} className="sm:grid-cols-2 xl:grid-cols-4">
-        <Stat
-          label={t("common.users")}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <MetricCard
+          icon="users"
+          title={t("common.users")}
           value={formatNumber(overview.userCount)}
-          detail={t("dashboard.users.detail", { count: overview.onlineUserCount })}
+          caption={t("dashboard.users.detail", { count: overview.onlineUserCount })}
         />
-        <Stat
-          label={t("dashboard.realtime.title")}
-          value={formatNumber(overview.realtimeConnectionCount)}
-          detail={t("dashboard.realtime.detail")}
-        />
-        <Stat
-          label={t("dashboard.objects.title")}
-          value={formatBytes(overview.storedObjectBytes)}
-          detail={t("dashboard.objects.detail")}
-        />
-        <Stat
-          label={t("dashboard.messages.title")}
+        <MetricCard
+          icon="send"
+          title={t("dashboard.messages.title")}
           value={formatNumber(overview.messageCount)}
-          detail={t("dashboard.messages.detail")}
+          caption={t("dashboard.messages.detail")}
         />
-      </StatGrid>
+      </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>{t("dashboard.services.title")}</CardTitle>
-          <CardDescription>{t("dashboard.services.description")}</CardDescription>
-        </CardHeader>
-        <CardContent className="px-4 sm:px-6">
+      <ActivityCard activity={activity.data} error={activity.error} />
+
+      <Card className="gap-0 py-0">
+        <CardTitleRow icon="server" title={t("dashboard.services.title")} />
+        <div className="px-3 pt-1 pb-2 sm:px-5">
           <Table>
             <TableHeader>
               <TableRow>
@@ -152,20 +237,26 @@ export function DashboardPage() {
             </TableHeader>
             <TableBody>
               <ServiceRow
+                icon="code"
                 name="API"
-                endpoint="/health/live"
+                detail="/health/live"
+                code
                 status={<HealthBadge state={health.api} />}
                 origin={t("dashboard.services.originBackend")}
               />
               <ServiceRow
+                icon="clipboard"
                 name="SQLite"
-                endpoint="/health/ready"
+                detail="/health/ready"
+                code
                 status={<HealthBadge state={health.database} />}
                 origin={t("dashboard.services.originBackend")}
               />
               <ServiceRow
+                icon="wifi"
                 name={t("common.realtime")}
-                endpoint="PresenceTracker"
+                detail="PresenceTracker"
+                code
                 status={
                   <Badge variant="outline">
                     {t("dashboard.services.connections", { count: overview.realtimeConnectionCount })}
@@ -173,9 +264,16 @@ export function DashboardPage() {
                 }
                 origin={t("dashboard.services.originProcess")}
               />
+              <ServiceRow
+                icon="image"
+                name={t("dashboard.objects.title")}
+                detail={t("dashboard.objects.detail")}
+                status={<Badge variant="outline">{formatBytes(overview.storedObjectBytes)}</Badge>}
+                origin={t("dashboard.services.originDatabase")}
+              />
             </TableBody>
           </Table>
-        </CardContent>
+        </div>
       </Card>
     </div>
   );

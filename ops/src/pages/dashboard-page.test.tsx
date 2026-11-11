@@ -2,19 +2,41 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { OpsOverview } from "@/lib/api";
+import { opsApi, type OpsActivity, type OpsOverview } from "@/lib/api";
 import { DashboardPage } from "@/pages/dashboard-page";
 import { OpsContext, type OpsContextValue } from "@/state/ops-context";
 import { selectPolish } from "@/test/locale";
 import { opsValue } from "@/test/ops-fixtures";
 
+vi.mock("@/lib/api", async (importOriginal) => {
+  const original = await importOriginal<typeof import("@/lib/api")>();
+  return { ...original, opsApi: { ...original.opsApi, activity: vi.fn() } };
+});
+
+const activityMock = vi.mocked(opsApi.activity);
 const fetchMock = vi.fn<typeof fetch>();
 
 selectPolish();
 
+/** Thirty days ending on 11 November 2026, with the given counts on the last days. */
+function activity(messages: number[] = [], newMembers: number[] = []): OpsActivity {
+  const days = Array.from({ length: 30 }, (_, index) => {
+    const date = new Date(Date.UTC(2026, 9, 13 + index)).toISOString().slice(0, 10);
+    const fromEnd = 29 - index;
+    return {
+      date,
+      messages: messages[messages.length - 1 - fromEnd] ?? 0,
+      newMembers: newMembers[newMembers.length - 1 - fromEnd] ?? 0,
+    };
+  });
+  return { timeZone: "Europe/Warsaw", days };
+}
+
 beforeEach(() => {
   fetchMock.mockReset();
   vi.stubGlobal("fetch", fetchMock);
+  activityMock.mockReset();
+  activityMock.mockResolvedValue(activity());
 });
 
 afterEach(() => {
@@ -44,7 +66,7 @@ const counter = (title: string) => screen.getByRole("group", { name: title });
 const serviceRow = (endpoint: RegExp) => screen.getByRole("row", { name: endpoint });
 
 describe("DashboardPage counters", () => {
-  it("shows the four counters of the overview", () => {
+  it("shows the overview's counters in the cards and the services table", () => {
     answerProbes(200, 200);
     renderDashboard(
       sessionWith({
@@ -58,9 +80,9 @@ describe("DashboardPage counters", () => {
 
     expect(counter("Użytkownicy").textContent).toContain((12345).toLocaleString("pl-PL"));
     expect(counter("Użytkownicy").textContent).toContain("7 w sieci");
-    expect(counter("Połączenia realtime").textContent).toContain("9");
-    expect(counter("Obiekty").textContent).toContain("1,5 KB");
     expect(counter("Wiadomości").textContent).toContain((987654).toLocaleString("pl-PL"));
+    expect(within(serviceRow(/PresenceTracker/)).getByText("9 połączeń")).toBeTruthy();
+    expect(within(serviceRow(/Obiekty/)).getByText("1,5 KB")).toBeTruthy();
   });
 
   it.each([
@@ -75,7 +97,7 @@ describe("DashboardPage counters", () => {
     answerProbes(200, 200);
     renderDashboard(sessionWith({ storedObjectBytes: bytes }));
 
-    expect(counter("Obiekty").textContent).toContain(expected);
+    expect(serviceRow(/Obiekty/).textContent).toContain(expected);
   });
 
   it("names the instance in the page description", () => {
@@ -148,6 +170,7 @@ describe("DashboardPage health", () => {
     await user.click(screen.getByRole("button", { name: "Sprawdź ponownie" }));
 
     expect(value.reload).toHaveBeenCalledOnce();
+    expect(activityMock).toHaveBeenCalledTimes(2);
     expect(fetchMock.mock.calls.map(([input]) => String(input))).toEqual(["/health/live", "/health/ready"]);
     expect(screen.getAllByText("Sprawdzanie")).toHaveLength(2);
     expect((screen.getByRole("button", { name: "Sprawdź ponownie" }) as HTMLButtonElement).disabled).toBe(true);
@@ -156,5 +179,60 @@ describe("DashboardPage health", () => {
 
     await waitFor(() => expect(screen.getAllByText("Niedostępne")).toHaveLength(2));
     expect((screen.getByRole("button", { name: "Sprawdź ponownie" }) as HTMLButtonElement).disabled).toBe(false);
+  });
+});
+
+describe("DashboardPage activity", () => {
+  const chart = () => screen.getByRole("table", { name: "Aktywność dzień po dniu" });
+  const valueOn = (day: string) =>
+    within(chart()).getByRole("rowheader", { name: new RegExp(day) }).nextElementSibling?.textContent;
+
+  it("charts the messages of the last thirty days in the instance's time zone", async () => {
+    answerProbes(200, 200);
+    activityMock.mockResolvedValue(activity([4, 12], [1, 0]));
+    renderDashboard();
+
+    expect(await screen.findByText("Ostatnie 30 dni, strefa czasowa Europe/Warsaw.")).toBeTruthy();
+    expect(within(chart()).getAllByRole("row")).toHaveLength(31);
+    expect(valueOn("11 listopada")).toBe("12");
+    expect(valueOn("10 listopada")).toBe("4");
+    expect(screen.getByRole("img", { name: "Wiadomości" })).toBeTruthy();
+  });
+
+  it("switches the chart to new users", async () => {
+    const user = userEvent.setup();
+    answerProbes(200, 200);
+    activityMock.mockResolvedValue(activity([4, 12], [3, 0]));
+    renderDashboard();
+    await screen.findByRole("img", { name: "Wiadomości" });
+
+    await user.click(screen.getByRole("button", { name: "Nowi użytkownicy" }));
+
+    expect(screen.getByRole("button", { name: "Nowi użytkownicy" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("img", { name: "Nowi użytkownicy" })).toBeTruthy();
+    expect(valueOn("10 listopada")).toBe("3");
+    expect(valueOn("11 listopada")).toBe("0");
+  });
+
+  it("shows the exact value of the day picked with the keyboard", async () => {
+    const user = userEvent.setup();
+    answerProbes(200, 200);
+    activityMock.mockResolvedValue(activity([4, 12]));
+    renderDashboard();
+    const plot = await screen.findByRole("img", { name: "Wiadomości" });
+
+    plot.focus();
+    expect((await screen.findByRole("status")).textContent).toContain("12");
+    await user.keyboard("{ArrowLeft}");
+    expect(screen.getByRole("status").textContent).toContain("4");
+    expect(screen.getByRole("status").textContent).toContain("10 listopada");
+  });
+
+  it("says so when the activity cannot be read", async () => {
+    answerProbes(200, 200);
+    activityMock.mockRejectedValue(new Error("Brak połączenia"));
+    renderDashboard();
+
+    expect((await screen.findByRole("alert")).textContent).toBe("Brak połączenia");
   });
 });

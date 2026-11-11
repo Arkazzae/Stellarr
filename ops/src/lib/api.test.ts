@@ -182,6 +182,7 @@ describe("routes", () => {
 
   it.each([
     ["bootstrap", () => opsApi.bootstrap(), "GET", "/api/ops/bootstrap", undefined],
+    ["activity", () => opsApi.activity(), "GET", "/api/ops/activity", undefined],
     ["users", () => opsApi.users(), "GET", "/api/ops/users", undefined],
     [
       "createUser",

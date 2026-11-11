@@ -22,6 +22,7 @@ public static partial class OpsEndpoints
             .AddEndpointFilter<InstanceOwnerFilter>();
 
         ops.MapGet("/bootstrap", GetBootstrapAsync);
+        ops.MapGet("/activity", GetActivityAsync);
         ops.MapGet("/users", GetUsersAsync);
         ops.MapPost("/users", CreateUserAsync);
         ops.MapPatch("/users/{userId:guid}/role", SetUserRoleAsync);

@@ -21,6 +21,19 @@ export interface OpsOverview {
   messageCount: number;
 }
 
+/** One day of activity on the instance server; `date` is the instance's local date (YYYY-MM-DD). */
+export interface OpsActivityDay {
+  date: string;
+  messages: number;
+  newMembers: number;
+}
+
+/** The last 30 days, oldest first and today last, counted in `timeZone`. */
+export interface OpsActivity {
+  timeZone: string;
+  days: OpsActivityDay[];
+}
+
 export interface OpsBootstrap {
   operator: OpsOperator;
   instance: OpsInstance;
@@ -225,6 +238,7 @@ const segment = encodeURIComponent;
 
 export const opsApi = {
   bootstrap: (signal?: AbortSignal) => request<OpsBootstrap>("/api/ops/bootstrap", {}, signal),
+  activity: (signal?: AbortSignal) => request<OpsActivity>("/api/ops/activity", {}, signal),
 
   users: (signal?: AbortSignal) => request<OpsUsers>("/api/ops/users", {}, signal),
   createUser: (

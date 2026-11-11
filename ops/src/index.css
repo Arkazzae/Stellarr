@@ -38,6 +38,14 @@
   --text-display--line-height: 2.5rem;
   --text-display--letter-spacing: -0.02em;
 
+  /* The headline figure of a metric card. */
+  --text-hero: 2.75rem;
+  --text-hero--line-height: 1;
+  --text-hero--letter-spacing: -0.02em;
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-track: var(--chart-track);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -121,6 +129,11 @@
   --danger: #b8272c;
   --danger-soft: rgba(244, 63, 94, 0.14);
 
+  /* The one data series: the accent, validated against both surfaces
+     (dataviz validate_palette.js). The track is the empty cell behind it. */
+  --chart-1: #6f65d1;
+  --chart-track: #ebebef;
+
   --sidebar: #f6f6f7;
   --sidebar-foreground: #3c3c43;
   --sidebar-primary: #5549b8;
@@ -158,6 +171,8 @@
     --warning-soft: rgba(234, 179, 8, 0.16);
     --danger: #f66f81;
     --danger-soft: rgba(244, 63, 94, 0.16);
+
+    --chart-track: #2a2b31;
 
     --sidebar: #161618;
     --sidebar-foreground: #dfdfd6;

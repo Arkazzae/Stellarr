@@ -21,6 +21,12 @@ public sealed record OpsOverviewDto(
     long StoredObjectBytes,
     int MessageCount);
 
+/// <summary>One day of the overview's activity chart; <c>Date</c> is the instance's local date.</summary>
+public sealed record OpsActivityDayDto(string Date, int Messages, int NewMembers);
+
+/// <summary>Daily activity, oldest day first and today last, in the named time zone.</summary>
+public sealed record OpsActivityDto(string TimeZone, IReadOnlyList<OpsActivityDayDto> Days);
+
 public sealed record OpsBootstrapDto(
     OpsOperatorDto Operator,
     OpsInstanceDto Instance,

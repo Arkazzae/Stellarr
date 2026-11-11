@@ -32,6 +32,14 @@ export function formatDate(value: string): string {
   return new Date(value).toLocaleDateString(intlTag());
 }
 
+/**
+ * A calendar date given as YYYY-MM-DD, shown as that day wherever the browser
+ * is: the date is the instance's, so it is read and formatted in UTC.
+ */
+export function formatDay(value: string, options: Intl.DateTimeFormatOptions): string {
+  return new Date(`${value}T00:00:00Z`).toLocaleDateString(intlTag(), { ...options, timeZone: "UTC" });
+}
+
 /** Lower-cases text for a case-insensitive search in the active language. */
 export function lowerCase(text: string): string {
   return text.toLocaleLowerCase(getLocale());
