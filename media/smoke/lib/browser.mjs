@@ -7,7 +7,7 @@
 
 import { createReadStream, existsSync } from "node:fs";
 import { createServer } from "node:http";
-import { extname, join } from "node:path";
+import { join } from "node:path";
 
 import { chromium } from "playwright-core";
 
@@ -21,22 +21,27 @@ export function browserPath() {
   return chosen;
 }
 
+// The page's files, by the address the page asks for. Nothing else is served,
+// so a request can never name a file of its own choosing.
+const PAGE_FILES = new Map([
+  ["/", { name: "index.html", type: "text/html" }],
+  ["/client.js", { name: "client.js", type: "text/javascript" }],
+]);
+
 /** Serves the client page on a spare loopback port. */
 export function servePage(dir) {
-  const types = { ".html": "text/html", ".js": "text/javascript" };
   const server = createServer((request, response) => {
-    const name = request.url === "/" ? "index.html" : request.url.slice(1);
-    if (name === "favicon.ico") {
+    if (request.url === "/favicon.ico") {
       response.writeHead(204).end();
       return;
     }
-    const path = join(dir, name);
-    if (!/^[a-z.]+$/.test(name) || !existsSync(path)) {
+    const file = PAGE_FILES.get(request.url);
+    if (file === undefined) {
       response.writeHead(404).end();
       return;
     }
-    response.writeHead(200, { "content-type": types[extname(path)] ?? "text/plain" });
-    createReadStream(path).pipe(response);
+    response.writeHead(200, { "content-type": file.type });
+    createReadStream(join(dir, file.name)).pipe(response);
   });
   return new Promise((resolve) => {
     server.listen(0, "127.0.0.1", () => {
