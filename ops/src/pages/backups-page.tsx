@@ -1,6 +1,7 @@
-import { Download, LoaderCircle } from "lucide-react";
 import { useState } from "react";
 
+import { Icon } from "@/components/icons/icon";
+import { Spinner } from "@/components/spinner";
 import { PageHeader } from "@/components/page-header";
 import { Stat, StatGrid } from "@/components/stats";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -44,12 +45,12 @@ function BackupRow({ backup, verifying, onVerify }: BackupRowProps) {
       <TableCell className="text-right">
         <div className="inline-flex gap-1">
           <Button variant="ghost" size="sm" disabled={verifying} onClick={onVerify}>
-            {verifying ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : null}
+            {verifying ? <Spinner /> : null}
             {t("backups.verify")}
           </Button>
           <Button variant="ghost" size="icon-sm" asChild>
             <a href={opsApi.backupDownloadUrl(backup.id)} download aria-label={t("backups.download", { id: backup.id })}>
-              <Download aria-hidden="true" />
+              <Icon name="download" />
             </a>
           </Button>
         </div>
@@ -109,7 +110,7 @@ export function BackupsPage() {
         description={t("backups.description")}
         actions={
           <Button onClick={() => void create()} disabled={creating}>
-            {creating ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : null}
+            {creating ? <Spinner /> : null}
             {creating ? t("common.creating") : t("backups.create")}
           </Button>
         }

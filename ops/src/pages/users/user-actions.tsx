@@ -1,6 +1,6 @@
-import { MoreHorizontal } from "lucide-react";
 import { useState } from "react";
 
+import { Icon } from "@/components/icons/icon";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -42,7 +42,7 @@ export function UserActions({ user, roles, perform }: UserActionsProps) {
           aria-label={t("accountActions.menu", { name: user.displayName })}
           disabled={pending}
         >
-          <MoreHorizontal aria-hidden="true" />
+          <Icon name="dots" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">

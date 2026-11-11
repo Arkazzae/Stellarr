@@ -1,6 +1,6 @@
-import { LoaderCircle } from "lucide-react";
 import { useState, type FormEvent } from "react";
 
+import { Spinner } from "@/components/spinner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -100,7 +100,7 @@ export function RoleForm({ role, open, onOpenChange, perform }: RoleFormProps) {
             ))}
           </fieldset>
           <Button type="submit" className="w-full" disabled={pending}>
-            {pending ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : null}
+            {pending ? <Spinner /> : null}
             {pending ? t("common.saving") : t("roleForm.submit")}
           </Button>
         </form>

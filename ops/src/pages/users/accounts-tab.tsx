@@ -1,5 +1,4 @@
-import { Search } from "lucide-react";
-
+import { Icon } from "@/components/icons/icon";
 import { UserAvatar } from "@/components/user-avatar";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -61,7 +60,7 @@ export function AccountsTab({ users, roles, filter, onFilterChange, perform }: A
         </div>
         <div className="flex gap-2">
           <div className="relative">
-            <Search className="absolute top-2.5 left-3 size-4 text-muted-foreground" aria-hidden="true" />
+            <Icon name="search" className="absolute top-2.5 left-3 size-4 text-muted-foreground" />
             <Input
               value={filter.query}
               onChange={(event) => onFilterChange({ ...filter, query: event.target.value })}

@@ -1,5 +1,4 @@
-import { LoaderCircle, RefreshCw } from "lucide-react";
-
+import { Spinner } from "@/components/spinner";
 import { PageHeader } from "@/components/page-header";
 import { Stat, StatGrid } from "@/components/stats";
 import { StatusBadge } from "@/components/status-badge";
@@ -64,7 +63,7 @@ export function RuntimePage() {
         description={t("runtime.description")}
         actions={
           <Button variant="outline" onClick={() => void refresh()} disabled={loading}>
-            <RefreshCw className={loading ? "animate-spin" : ""} aria-hidden="true" />
+            {loading ? <Spinner /> : null}
             {t("runtime.refresh")}
           </Button>
         }
@@ -82,7 +81,7 @@ export function RuntimePage() {
           role="status"
           className="flex min-h-48 items-center justify-center gap-2 text-sm text-muted-foreground"
         >
-          <LoaderCircle className="animate-spin" aria-hidden="true" />
+          <Spinner />
           {t("runtime.loading")}
         </div>
       ) : null}

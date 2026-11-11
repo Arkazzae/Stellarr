@@ -1,9 +1,9 @@
-import { ChevronDown, Menu } from "lucide-react";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 
 import logoForDark from "@/assets/logo/small.svg";
 import logoForLight from "@/assets/logo/mono.svg";
+import { Icon, type IconName } from "@/components/icons/icon";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -27,71 +27,90 @@ import type { OpsOperator } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { useOps } from "@/state/ops-context";
 
+const DOCUMENTATION_URL = "https://arkazzae.github.io/Stellarr/";
+
 interface NavigationItem {
   labelKey: MessageKey;
   href: string;
+  icon: IconName;
 }
 
-const navigation: readonly NavigationItem[] = [
-  { labelKey: "nav.overview", href: "/" },
-  { labelKey: "nav.users", href: "/users" },
-  { labelKey: "nav.runtime", href: "/runtime" },
-  { labelKey: "nav.logs", href: "/logs" },
-  { labelKey: "nav.backups", href: "/backups" },
-  { labelKey: "nav.settings", href: "/settings" },
+interface NavigationGroup {
+  /** The first group sits under the brand without a label. */
+  labelKey?: MessageKey;
+  items: readonly NavigationItem[];
+}
+
+const navigation: readonly NavigationGroup[] = [
+  { items: [{ labelKey: "nav.overview", href: "/", icon: "apps" }] },
+  {
+    labelKey: "nav.group.community",
+    items: [{ labelKey: "nav.users", href: "/users", icon: "users" }],
+  },
+  {
+    labelKey: "nav.group.system",
+    items: [
+      { labelKey: "nav.runtime", href: "/runtime", icon: "cpu" },
+      { labelKey: "nav.logs", href: "/logs", icon: "list" },
+      { labelKey: "nav.backups", href: "/backups", icon: "folder" },
+    ],
+  },
+  {
+    labelKey: "nav.group.configuration",
+    items: [{ labelKey: "nav.settings", href: "/settings", icon: "gear" }],
+  },
 ];
+
+const navigationItems = navigation.flatMap((group) => group.items);
 
 /** The root only matches itself; every other item also owns the pages beneath it. */
 function activeItem(pathname: string): NavigationItem | undefined {
-  return navigation.find((item) =>
+  return navigationItems.find((item) =>
     item.href === "/" ? pathname === "/" : pathname.startsWith(item.href),
   );
 }
 
-/** A list of text links, as in the documentation's sidebar: the current page takes the link colour. */
 function NavigationLinks({ onNavigate }: { onNavigate?: () => void }) {
   return (
-    <nav aria-label={t("shell.navigationLabel")} className="flex flex-col px-6 py-4">
-      {navigation.map(({ labelKey, href }) => (
-        <NavLink
-          key={href}
-          to={href}
-          onClick={onNavigate}
-          className={({ isActive }) =>
-            cn(
-              "flex h-9 items-center rounded-sm text-sm font-medium text-muted-foreground outline-none transition-colors hover:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring",
-              isActive && "text-sidebar-primary hover:text-sidebar-primary",
-            )
-          }
-        >
-          {t(labelKey)}
-        </NavLink>
+    <nav aria-label={t("shell.navigationLabel")} className="flex flex-1 flex-col overflow-y-auto px-3 pb-4">
+      {navigation.map((group, index) => (
+        <Fragment key={group.labelKey ?? index}>
+          {group.labelKey ? (
+            <p className="px-3 pt-5 pb-1.5 text-xs font-medium text-muted-foreground">{t(group.labelKey)}</p>
+          ) : null}
+          {group.items.map(({ labelKey, href, icon }) => (
+            <NavLink
+              key={href}
+              to={href}
+              onClick={onNavigate}
+              className={({ isActive }) =>
+                cn(
+                  "flex h-9 items-center gap-3 rounded-md px-3 text-sm font-medium text-muted-foreground outline-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring",
+                  isActive && "bg-sidebar-accent text-sidebar-foreground",
+                )
+              }
+            >
+              <Icon name={icon} size={18} />
+              {t(labelKey)}
+            </NavLink>
+          ))}
+        </Fragment>
       ))}
     </nav>
   );
 }
 
 /**
- * The mark and the wordmark, as the documentation shows them: the one-colour
- * mark on light, the small mark on dark. The gap is the height of the mark's
+ * The mark and the wordmark: the one-colour mark on light, the small mark on
+ * dark, as the documentation shows them. The gap is the height of the mark's
  * shortest bar, as the brand guidelines ask.
  */
 function Brand() {
   return (
-    <div className="flex h-16 items-center gap-1.5 px-6">
+    <div className="flex h-16 shrink-0 items-center gap-1.5 px-6">
       <img src={logoForLight} alt="" className="size-6 dark:hidden" />
       <img src={logoForDark} alt="" className="hidden size-6 dark:block" />
       <p className="truncate text-base font-semibold">{t("app.name")}</p>
-    </div>
-  );
-}
-
-function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
-  return (
-    <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
-      <Brand />
-      <div className="mx-6 border-t border-sidebar-border" />
-      <NavigationLinks onNavigate={onNavigate} />
     </div>
   );
 }
@@ -100,13 +119,19 @@ function OperatorMenu({ operator, onLogout }: { operator: OpsOperator; onLogout:
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="gap-2 px-2">
-          <UserAvatar displayName={operator.displayName} className="size-7" />
-          <span className="hidden text-sm sm:inline">{operator.displayName.split(" ")[0]}</span>
-          <ChevronDown className="size-3.5 text-muted-foreground" aria-hidden="true" />
-        </Button>
+        <button
+          type="button"
+          className="flex w-full items-center gap-3 rounded-lg border bg-background p-2 text-left outline-none transition-colors hover:bg-accent focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+        >
+          <UserAvatar displayName={operator.displayName} className="size-8" />
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-sm font-medium">{operator.displayName}</span>
+            <span className="block truncate text-xs text-muted-foreground">@{operator.username}</span>
+          </span>
+          <Icon name="caret" size={14} className="text-muted-foreground" />
+        </button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent align="start" side="top" className="w-60">
         <DropdownMenuLabel>
           <span className="block">{operator.displayName}</span>
           <span className="block text-xs font-normal text-muted-foreground">@{operator.username}</span>
@@ -116,9 +141,24 @@ function OperatorMenu({ operator, onLogout }: { operator: OpsOperator; onLogout:
           {/* A plain anchor: the app lives at the site root, outside this panel's /ops/ router base. */}
           <a href="/">{t("shell.openApp")}</a>
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={onLogout}>{t("shell.logout")}</DropdownMenuItem>
+        <DropdownMenuItem onSelect={onLogout}>
+          <Icon name="signout" />
+          {t("shell.logout")}
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+function Sidebar({ operator, onLogout, onNavigate }: { operator: OpsOperator; onLogout: () => void; onNavigate?: () => void }) {
+  return (
+    <div className="flex h-full flex-col bg-sidebar text-sidebar-foreground">
+      <Brand />
+      <NavigationLinks onNavigate={onNavigate} />
+      <div className="shrink-0 p-3">
+        <OperatorMenu operator={operator} onLogout={onLogout} />
+      </div>
+    </div>
   );
 }
 
@@ -129,46 +169,60 @@ export function AppShell() {
   if (!bootstrap) return null;
   const { instance, operator } = bootstrap;
   const item = activeItem(pathname);
+  const onLogout = () => void logout();
 
   return (
-    <div className="min-h-svh bg-background">
+    <div className="min-h-svh bg-sidebar">
       <aside className="fixed inset-y-0 left-0 z-30 hidden w-68 lg:block">
-        <Sidebar />
+        <Sidebar operator={operator} onLogout={onLogout} />
       </aside>
 
-      <div className="lg:pl-68">
-        <header className="sticky top-0 z-20 flex h-16 items-center gap-3 border-b bg-background px-4 sm:px-8">
-          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-            <SheetTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="-ml-2 lg:hidden"
-                aria-label={t("shell.openNavigation")}
-              >
-                <Menu aria-hidden="true" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-68 gap-0 border-r-0 p-0">
-              <SheetHeader className="sr-only">
-                <SheetTitle>{t("shell.navigationTitle")}</SheetTitle>
-                <SheetDescription>{t("shell.navigationDescription")}</SheetDescription>
-              </SheetHeader>
-              <Sidebar onNavigate={() => setMobileOpen(false)} />
-            </SheetContent>
-          </Sheet>
+      {/* On wide screens the page sits in an inset panel beside the sidebar. */}
+      <div className="lg:py-2 lg:pr-2 lg:pl-68">
+        <div className="min-h-svh bg-background lg:min-h-[calc(100svh-1rem)] lg:rounded-xl lg:border">
+          <header className="sticky top-0 z-20 flex h-14 items-center gap-3 border-b bg-background px-4 sm:px-6 lg:rounded-t-xl">
+            <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+              <SheetTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="-ml-2 lg:hidden"
+                  aria-label={t("shell.openNavigation")}
+                >
+                  <Icon name="sidebar" size={18} />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-68 gap-0 border-r-0 p-0">
+                <SheetHeader className="sr-only">
+                  <SheetTitle>{t("shell.navigationTitle")}</SheetTitle>
+                  <SheetDescription>{t("shell.navigationDescription")}</SheetDescription>
+                </SheetHeader>
+                <Sidebar operator={operator} onLogout={onLogout} onNavigate={() => setMobileOpen(false)} />
+              </SheetContent>
+            </Sheet>
 
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">{item ? t(item.labelKey) : t("app.name")}</p>
-            <p className="hidden truncate text-xs text-muted-foreground sm:block">{instance.name}</p>
-          </div>
+            <p className="flex min-w-0 flex-1 items-center gap-2 text-sm">
+              <span className="hidden truncate text-muted-foreground sm:inline">{instance.name}</span>
+              <span className="hidden text-faint sm:inline" aria-hidden="true">
+                /
+              </span>
+              <span className="truncate font-medium">{item ? t(item.labelKey) : t("app.name")}</span>
+            </p>
 
-          <OperatorMenu operator={operator} onLogout={() => void logout()} />
-        </header>
+            <a
+              href={DOCUMENTATION_URL}
+              target="_blank"
+              rel="noreferrer"
+              className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+            >
+              {t("shell.documentation")}
+            </a>
+          </header>
 
-        <main className="mx-auto w-full max-w-[1600px] px-4 py-6 sm:px-8 sm:py-8 lg:px-12">
-          <Outlet />
-        </main>
+          <main className="mx-auto w-full max-w-[1400px] px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
+            <Outlet />
+          </main>
+        </div>
       </div>
     </div>
   );

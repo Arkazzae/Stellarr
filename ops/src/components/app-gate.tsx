@@ -1,6 +1,6 @@
-import { LoaderCircle } from "lucide-react";
 import { useState, type FormEvent, type ReactNode } from "react";
 
+import { Spinner } from "@/components/spinner";
 import logoForDark from "@/assets/logo/small.svg";
 import logoForLight from "@/assets/logo/mono.svg";
 import { AppShell } from "@/components/app-shell";
@@ -83,7 +83,7 @@ function LoginScreen() {
               </Alert>
             ) : null}
             <Button type="submit" className="w-full" disabled={submitting}>
-              {submitting ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : null}
+              {submitting ? <Spinner /> : null}
               {submitting ? t("gate.login.submitting") : t("gate.login.submit")}
             </Button>
           </form>
@@ -105,7 +105,7 @@ export function AppGate() {
       return (
         <CenteredState>
           <div role="status" className="flex items-center gap-3 text-sm text-muted-foreground">
-            <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+            <Spinner className="size-4" />
             {t("gate.checking")}
           </div>
         </CenteredState>

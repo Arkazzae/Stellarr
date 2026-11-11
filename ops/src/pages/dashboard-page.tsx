@@ -1,6 +1,6 @@
-import { RefreshCw } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 
+import { Spinner } from "@/components/spinner";
 import { PageHeader } from "@/components/page-header";
 import { Stat, StatGrid } from "@/components/stats";
 import { StatusBadge } from "@/components/status-badge";
@@ -107,7 +107,7 @@ export function DashboardPage() {
         description={t("dashboard.description", { name: instance.name })}
         actions={
           <Button variant="outline" onClick={() => void recheck()} disabled={rechecking}>
-            <RefreshCw className={rechecking ? "animate-spin" : undefined} aria-hidden="true" />
+            {rechecking ? <Spinner /> : null}
             {t("dashboard.recheck")}
           </Button>
         }

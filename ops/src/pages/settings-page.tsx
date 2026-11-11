@@ -1,6 +1,6 @@
-import { LoaderCircle } from "lucide-react";
 import { useState, type ComponentProps, type FormEvent, type ReactNode } from "react";
 
+import { Spinner } from "@/components/spinner";
 import { PageHeader } from "@/components/page-header";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -262,7 +262,7 @@ function TestMail({ settings }: { settings: OpsSettings }) {
             sending || !settings.mailingEnabled || !settings.resendApiKeyConfigured || !recipient.trim()
           }
         >
-          {sending ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : null}
+          {sending ? <Spinner /> : null}
           {sending ? t("settings.test.sending") : t("settings.test.send")}
         </Button>
       </div>
@@ -381,7 +381,7 @@ export function SettingsPage() {
         description={t("settings.description")}
         actions={
           <Button type="submit" form="ops-settings-form" disabled={!settings || saving}>
-            {saving ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : null}
+            {saving ? <Spinner /> : null}
             {saving ? t("common.saving") : t("settings.save")}
           </Button>
         }
@@ -411,7 +411,7 @@ export function SettingsPage() {
           role="status"
           className="flex min-h-64 items-center justify-center gap-2 text-sm text-muted-foreground"
         >
-          <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+          <Spinner className="size-4" />
           {t("settings.loading")}
         </div>
       ) : null}

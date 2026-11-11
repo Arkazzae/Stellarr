@@ -1,6 +1,6 @@
-import { LoaderCircle } from "lucide-react";
 import { useCallback, useState } from "react";
 
+import { Spinner } from "@/components/spinner";
 import { PageHeader } from "@/components/page-header";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -73,7 +73,7 @@ export function UsersPage() {
           role="status"
           className="flex min-h-64 items-center justify-center gap-2 text-sm text-muted-foreground"
         >
-          <LoaderCircle className="size-4 animate-spin" aria-hidden="true" />
+          <Spinner className="size-4" />
           {t("users.loading")}
         </div>
       ) : null}

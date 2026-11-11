@@ -52,8 +52,12 @@ export const en = {
   "nav.logs": "Logs and audit",
   "nav.backups": "Backups",
   "nav.settings": "Settings",
+  "nav.group.community": "Community",
+  "nav.group.system": "System",
+  "nav.group.configuration": "Configuration",
 
   "shell.navigationLabel": "OPs navigation",
+  "shell.documentation": "Documentation",
   "shell.openApp": "Open the app",
   "shell.logout": "Log out",
   "shell.openNavigation": "Open navigation",

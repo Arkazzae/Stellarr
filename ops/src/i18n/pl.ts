@@ -47,8 +47,12 @@ export const pl = {
   "nav.logs": "Logi i audyt",
   "nav.backups": "Backup",
   "nav.settings": "Ustawienia",
+  "nav.group.community": "Społeczność",
+  "nav.group.system": "System",
+  "nav.group.configuration": "Konfiguracja",
 
   "shell.navigationLabel": "Nawigacja OPs",
+  "shell.documentation": "Dokumentacja",
   "shell.openApp": "Przejdź do aplikacji",
   "shell.logout": "Wyloguj się",
   "shell.openNavigation": "Otwórz nawigację",

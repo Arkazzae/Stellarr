@@ -1,7 +1,8 @@
-import { LoaderCircle, RefreshCw, Search } from "lucide-react";
 import { useState } from "react";
 
+import { Icon } from "@/components/icons/icon";
 import { PageHeader } from "@/components/page-header";
+import { Spinner } from "@/components/spinner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -129,7 +130,7 @@ export function LogsPage() {
         actions={
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => void refresh()} disabled={loading}>
-              <RefreshCw className={loading ? "animate-spin" : ""} aria-hidden="true" />
+              {loading ? <Spinner /> : null}
               {t("logs.refresh")}
             </Button>
             <Button variant="outline" asChild>
@@ -156,10 +157,7 @@ export function LogsPage() {
           </div>
           <div className="flex gap-2">
             <div className="relative">
-              <Search
-                className="absolute top-2.5 left-3 size-4 text-muted-foreground"
-                aria-hidden="true"
-              />
+              <Icon name="search" className="absolute top-2.5 left-3 size-4 text-muted-foreground" />
               <Input
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
@@ -187,7 +185,7 @@ export function LogsPage() {
               role="status"
               className="flex min-h-48 items-center justify-center gap-2 text-muted-foreground"
             >
-              <LoaderCircle className="animate-spin" aria-hidden="true" />
+              <Spinner />
               {t("logs.loading")}
             </div>
           ) : (
