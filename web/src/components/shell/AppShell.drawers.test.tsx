@@ -12,7 +12,6 @@ function setup(overrides: Partial<AppShellProps> = {}) {
     roster: <aside>Użytkownicy</aside>,
     railOpen: false,
     onRailOpenChange: vi.fn(),
-    serversOpen: false,
     rosterOpen: false,
     onRosterOpenChange: vi.fn(),
     ...overrides,

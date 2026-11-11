@@ -2,7 +2,7 @@
   /*
    * SHELL — "one rail, one room"
    *
-   * Two structural regions plus two on-demand ones. Every panel here is a grid
+   * A persistent server column, channel rail and room. Every panel here is a grid
    * track that animates from 0 to its width rather than a floating layer, so
    * the room genuinely reflows and nothing ends up underneath anything.
    *
@@ -12,7 +12,7 @@
    * get out of step than five copies of the same number.
    */
   .app {
-    --servers-w: 0px;
+    --servers-w: var(--servers-rail-w);
     display: grid;
     grid-template-columns: var(--servers-w) var(--rail-w) 1fr 0px;
     height: 100vh;
@@ -20,10 +20,6 @@
     padding: env(safe-area-inset-top) env(safe-area-inset-right)
       env(safe-area-inset-bottom) env(safe-area-inset-left);
     transition: grid-template-columns var(--dur-base) var(--ease-standard);
-  }
-
-  .app.servers-open {
-    --servers-w: var(--servers-rail-w);
   }
 
   .app.roster-open {

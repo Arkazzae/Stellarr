@@ -43,8 +43,6 @@ const jo: PersonVM = {
 function setup(overrides: Partial<RailProps> = {}) {
   const props: RailProps = {
     serverName: "Orbit",
-    serversOpen: false,
-    onToggleServers: vi.fn(),
     textChannels: [
       { id: "t-1", name: "ogólny" },
       { id: "t-2", name: "plany" },

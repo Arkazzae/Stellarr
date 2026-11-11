@@ -25,8 +25,6 @@ function setup(occupants: PersonVM[], overrides: Partial<RailProps> = {}) {
 
   const props: RailProps = {
     serverName: "Orbit",
-    serversOpen: false,
-    onToggleServers: vi.fn(),
     textChannels: [],
     voiceChannels: [channel],
     activeChannelId: "v-1",

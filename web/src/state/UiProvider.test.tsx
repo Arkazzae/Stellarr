@@ -217,15 +217,6 @@ describe("UiProvider drawers", () => {
     act(() => result.current.toggleRoster());
     expect(result.current).toMatchObject({ railOpen: false, rosterOpen: true });
   });
-
-  it("toggles the servers column independently of the drawers", () => {
-    const { result } = mountUi(PHONE);
-
-    act(() => result.current.toggleServers());
-    act(() => result.current.closeDrawers());
-
-    expect(result.current.serversOpen).toBe(true);
-  });
 });
 
 describe("UiProvider channel panel", () => {

@@ -27,8 +27,6 @@ function conversation(
 
 function baseProps(overrides: Partial<DmRailProps> = {}): DmRailProps {
   return {
-    serversOpen: false,
-    onToggleServers: vi.fn(),
     onBackToServer: vi.fn(),
     friendsActive: false,
     onOpenFriends: vi.fn(),
@@ -136,17 +134,14 @@ describe("DmRail header", () => {
       .toBeInTheDocument();
   });
 
-  it("opens the add-friend tab and toggles the server column", async () => {
+  it("opens the add-friend tab without a server-column toggle", async () => {
     const user = userEvent.setup();
-    const { onAddFriend, onToggleServers } = setup({ serversOpen: true });
+    const { onAddFriend } = setup();
 
     await user.click(screen.getByRole("button", { name: "Dodaj znajomego" }));
-    const toggle = screen.getByRole("button", { name: "Serwery i wiadomości prywatne" });
-    expect(toggle).toHaveAttribute("aria-expanded", "true");
-    await user.click(toggle);
+    expect(screen.queryByRole("button", { name: "Serwery i wiadomości prywatne" })).not.toBeInTheDocument();
 
     expect(onAddFriend).toHaveBeenCalledOnce();
-    expect(onToggleServers).toHaveBeenCalledOnce();
   });
 
   it("makes a shut drawer inert, and an open rail interactive", () => {

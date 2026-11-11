@@ -13,7 +13,8 @@ interface RailServer {
 
 export interface ServerRailProps {
   open: boolean;
-  onClose: () => void;
+  /** Dismisses the shared rail drawer on phones. */
+  onClose?: () => void;
   /** The active server. */
   name: string;
   mark: string;
@@ -41,8 +42,7 @@ export interface ServerRailProps {
 /**
  * The column of servers and direct messages.
  *
- * A grid track, not a drawer: opening it moves the whole app right, so nothing
- * sits underneath it and the channel rail beside it stays usable.
+ * A persistent grid track on wider screens, sharing the channel drawer on phones.
  */
 export function ServerRail({
   open,
@@ -97,16 +97,15 @@ export function ServerRail({
   const selectServer = (serverId: string) => {
     if (serverId !== currentId) onSelectServer?.(serverId);
     else if (dmSpace) onOpenServer();
-    else onClose();
+    else onClose?.();
   };
 
   return (
     <nav
       className="srv-rail"
       aria-label={t("shell.serversAndMessages")}
-      // The track is 0 wide when closed, so the contents must also leave the
-      // tab order and the accessibility tree. `inert` does both; `aria-hidden`
-      // could hide the button still finishing the closing click.
+      // A closed phone drawer must also leave the tab order and the
+      // accessibility tree. `inert` does both.
       inert={!open}
     >
       <div className="srv-inner">

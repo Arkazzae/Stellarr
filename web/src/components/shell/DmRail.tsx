@@ -14,9 +14,6 @@ import { useLanguage } from "@/state/hooks";
  * anyone who cannot see the colour.
  */
 export interface DmRailProps {
-  /** Whether the servers / DM column is open; the switch reports it. */
-  serversOpen: boolean;
-  onToggleServers: () => void;
   /** Returns directly to the last selected server channel. */
   onBackToServer: () => void;
   /** True while the Friends view is showing rather than a conversation. */
@@ -104,8 +101,6 @@ function ConversationRow({ conversation, current, onSelect }: ConversationRowPro
  * the conversations; it is where you go when you do not want one of them.
  */
 export function DmRail({
-  serversOpen,
-  onToggleServers,
   onBackToServer,
   friendsActive,
   onOpenFriends,
@@ -146,16 +141,6 @@ export function DmRail({
           onClick={onBackToServer}
         >
           <Icon name="caretL" size={17} />
-        </button>
-        <button
-          type="button"
-          className="rail-switch"
-          title={t("shell.serversAndMessages")}
-          aria-label={t("shell.serversAndMessages")}
-          aria-expanded={serversOpen}
-          onClick={onToggleServers}
-        >
-          <Icon name="sidebar" size={17} />
         </button>
         <button
           type="button"

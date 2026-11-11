@@ -17,6 +17,33 @@
   border-radius: var(--radius-sm);
 }
 
+.serverRail {
+  display: none;
+  min-height: 0;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0;
+  border-right: 1px solid var(--line);
+}
+
+.serverTile,
+.serverLauncher {
+  width: 46px;
+  height: 46px;
+  border-radius: 16px;
+}
+
+.serverDivider {
+  width: 28px;
+  height: 1px;
+  background: var(--line);
+}
+
+.serverLauncher {
+  margin-top: auto;
+}
+
 .rail {
   display: none;
   min-height: 0;
@@ -481,9 +508,10 @@
 
 @media (min-width: 768px) {
   .shell {
-    grid-template-columns: var(--rail-w) minmax(0, 1fr);
+    grid-template-columns: var(--servers-rail-w) var(--rail-w) minmax(0, 1fr);
   }
 
+  .serverRail,
   .rail {
     display: flex;
   }
@@ -520,7 +548,7 @@
 
 @media (min-width: 1024px) {
   .shell {
-    grid-template-columns: var(--rail-w) minmax(0, 1fr) var(--roster-mini-w);
+    grid-template-columns: var(--servers-rail-w) var(--rail-w) minmax(0, 1fr) var(--roster-mini-w);
   }
 
   .roster {
@@ -534,7 +562,7 @@
 
 @media (min-width: 1440px) {
   .shell {
-    grid-template-columns: var(--rail-w) minmax(0, 1fr) var(--roster-w);
+    grid-template-columns: var(--servers-rail-w) var(--rail-w) minmax(0, 1fr) var(--roster-w);
   }
 
   .rosterMini {

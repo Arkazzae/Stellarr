@@ -132,8 +132,6 @@ export function RailContainer() {
   return (
     <Rail
       serverName={server.name}
-      serversOpen={ui.serversOpen}
-      onToggleServers={ui.toggleServers}
       textChannels={texts}
       threadsByChannel={threadRows}
       activeThreadId={thread?.rootId ?? null}

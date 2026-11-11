@@ -75,8 +75,6 @@ export function DmRailContainer() {
 
   return (
     <DmRail
-      serversOpen={ui.serversOpen}
-      onToggleServers={ui.toggleServers}
       onBackToServer={ui.openServer}
       friendsActive={ui.activeDmId === null}
       onOpenFriends={ui.openFriends}

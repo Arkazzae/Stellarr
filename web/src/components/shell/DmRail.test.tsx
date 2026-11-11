@@ -6,8 +6,6 @@ import { DmRail, type DmRailProps } from "./DmRail";
 
 function setup(overrides: Partial<DmRailProps> = {}) {
   const props: DmRailProps = {
-    serversOpen: false,
-    onToggleServers: vi.fn(),
     onBackToServer: vi.fn(),
     friendsActive: true,
     onOpenFriends: vi.fn(),

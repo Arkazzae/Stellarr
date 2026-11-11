@@ -26,16 +26,14 @@ export function ServerRailContainer() {
   };
 
   // Below 768 the column rides inside the rail drawer instead of being its
-  // own grid track, so "open" is the drawer's answer there, not the toggle's.
+  // own grid track. On wider screens it stays open.
   const railIsDrawer = useMediaQuery("(max-width: 767px)", false);
-  const open = railIsDrawer ? ui.railOpen : ui.serversOpen;
+  const open = !railIsDrawer || ui.railOpen;
 
   return (
     <ServerRail
       open={open}
-      onClose={() =>
-        railIsDrawer ? ui.setRailOpen(false) : ui.setServersOpen(false)
-      }
+      onClose={railIsDrawer ? () => ui.setRailOpen(false) : undefined}
       name={server.name}
       mark={initials(server.name)}
       activeServerId={server.id}

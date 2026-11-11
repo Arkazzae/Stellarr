@@ -56,14 +56,10 @@ export type Space = "server" | "dm";
 
 interface PanelsValue {
   railOpen: boolean;
-  /** The servers / DM column, which widens the whole grid when open. */
-  serversOpen: boolean;
   rosterOpen: boolean;
   setRailOpen: (open: boolean) => void;
-  setServersOpen: (open: boolean) => void;
   setRosterOpen: (open: boolean) => void;
   toggleRail: () => void;
-  toggleServers: () => void;
   toggleRoster: () => void;
   closeDrawers: () => void;
 
@@ -121,7 +117,7 @@ export interface UiValue extends PanelsValue, DialogsValue {
 }
 
 /**
- * The rail, the servers column, the roster and the channel panel.
+ * The rail drawer, the roster and the channel panel.
  *
  * Below 1024px the roster is a drawer, and below 1280px so is the channel
  * panel; drawers share one mobile layer, so opening one dismisses the others.
@@ -134,7 +130,6 @@ function usePanels(): PanelsValue {
   const rosterFits = useMediaQuery("(min-width: 1440px)", true);
 
   const [railOpen, setRailState] = useState(false);
-  const [serversOpen, setServersOpen] = useState(false);
   /*
    * The wide roster holds "no preference yet" rather than an initial `true`: the
    * default depends on the viewport, which the server render does not have, and
@@ -199,20 +194,16 @@ function usePanels(): PanelsValue {
   }, []);
 
   const closeChannelPanel = useCallback(() => setChannelPanel(null), []);
-  const toggleServers = useCallback(() => setServersOpen((open) => !open), []);
   const toggleRail = useCallback(() => setRailOpen(!railOpen), [setRailOpen, railOpen]);
   const toggleRoster = useCallback(() => setRosterOpen(!rosterOpen), [setRosterOpen, rosterOpen]);
 
   return useMemo(
     () => ({
       railOpen,
-      serversOpen,
       rosterOpen,
       setRailOpen,
-      setServersOpen,
       setRosterOpen,
       toggleRail,
-      toggleServers,
       toggleRoster,
       closeDrawers,
       channelPanel,
@@ -223,12 +214,10 @@ function usePanels(): PanelsValue {
     }),
     [
       railOpen,
-      serversOpen,
       rosterOpen,
       setRailOpen,
       setRosterOpen,
       toggleRail,
-      toggleServers,
       toggleRoster,
       closeDrawers,
       channelPanel,

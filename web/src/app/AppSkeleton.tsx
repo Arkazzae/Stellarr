@@ -17,11 +17,21 @@ function Block({ className = "" }: { className?: string }) {
   return <span className={`${styles.block} ${className}`} />;
 }
 
+function ServerRailSkeleton() {
+  return (
+    <nav className={styles.serverRail} aria-hidden="true">
+      <Block className={styles.serverTile} />
+      <span className={styles.serverDivider} />
+      <Block className={styles.serverTile} />
+      <Block className={styles.serverLauncher} />
+    </nav>
+  );
+}
+
 function RailSkeleton() {
   return (
     <nav className={styles.rail} aria-hidden="true">
       <div className={styles.railHeader}>
-        <Block className={styles.squareControl} />
         <Block className={styles.serverName} />
         <Block className={styles.roundControl} />
         <Block className={styles.roundControl} />
@@ -194,6 +204,7 @@ export function AppSkeleton({ label }: AppSkeletonProps) {
 
   return (
     <div className={styles.shell} role="region" aria-busy="true" aria-label={accessibleLabel}>
+      <ServerRailSkeleton />
       <RailSkeleton />
       <RoomSkeleton />
       <RosterSkeleton />

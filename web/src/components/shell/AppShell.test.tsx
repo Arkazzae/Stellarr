@@ -10,7 +10,6 @@ const baseProps: AppShellProps = {
   roster: <button>Użytkownicy</button>,
   railOpen: false,
   onRailOpenChange: vi.fn(),
-  serversOpen: false,
   rosterOpen: false,
   onRosterOpenChange: vi.fn(),
 };

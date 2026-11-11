@@ -34,9 +34,6 @@ export { voiceMoveRequest } from "@/components/shell/voiceMove";
 
 export interface RailProps {
   serverName: string;
-  /** Whether the servers / DM column is open; the button reports it. */
-  serversOpen: boolean;
-  onToggleServers: () => void;
   textChannels: TextChannelVM[];
   /** Complete thread lists keyed by their text channel. */
   threadsByChannel?: Readonly<Record<string, ChannelThreadVM[]>>;
@@ -139,8 +136,6 @@ function CreateChannelButton({
 
 export function Rail({
   serverName,
-  serversOpen,
-  onToggleServers,
   textChannels,
   threadsByChannel = {},
   activeThreadId = null,
@@ -314,8 +309,6 @@ export function Rail({
     >
       <RailHeader
         serverName={serverName}
-        serversOpen={serversOpen}
-        onToggleServers={onToggleServers}
         onEditServer={canAccessServerSettings ? onEditServer : undefined}
         onInvite={canManageServer ? onInvite : undefined}
       />

@@ -15,7 +15,6 @@ beforeEach(() => {
   resetStubs();
   setStubs({
     directory: { server: ORBIT, servers: [ORBIT, KOMETA] },
-    ui: { serversOpen: true },
   });
 });
 
@@ -35,19 +34,19 @@ describe("ServerRailContainer", () => {
     expect(stubs.session.reload).toHaveBeenCalled();
   });
 
-  it("closes the column through its own toggle on a wide screen", async () => {
+  it("keeps the column open when the active server is clicked on a wide screen", async () => {
     const user = userEvent.setup();
     render(<ServerRailContainer />);
 
     await user.click(screen.getByRole("button", { name: "Orbit" }));
 
-    expect(stubs.ui.setServersOpen).toHaveBeenCalledWith(false);
+    expect(screen.getByRole("navigation")).not.toHaveAttribute("inert");
     expect(stubs.ui.setRailOpen).not.toHaveBeenCalled();
   });
 
   it("follows the rail drawer instead on a narrow screen", async () => {
     window.innerWidth = 500;
-    setStubs({ ui: { serversOpen: true, railOpen: false } });
+    setStubs({ ui: { railOpen: false } });
     const user = userEvent.setup();
     const { container, rerender } = render(<ServerRailContainer />);
     expect(container.querySelector("nav")).toHaveAttribute("inert");
@@ -58,7 +57,6 @@ describe("ServerRailContainer", () => {
 
     await user.click(screen.getByRole("button", { name: "Orbit" }));
     expect(stubs.ui.setRailOpen).toHaveBeenCalledWith(false);
-    expect(stubs.ui.setServersOpen).not.toHaveBeenCalled();
   });
 
   it("offers the client download except inside the desktop client", async () => {

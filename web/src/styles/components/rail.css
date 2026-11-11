@@ -9,7 +9,7 @@
     height:52px;padding:0 12px 0 10px;border-bottom:1px solid var(--line-subtle);flex:none;
     display:flex;align-items:center;gap:4px;
   }
-  /* The way out of this server, immediately left of its name. */
+  /* The DM rail's return-to-server action. */
   .rail-switch{
     width:32px;height:32px;border-radius:var(--radius-sm);flex:none;
     display:inline-flex;align-items:center;justify-content:center;
@@ -17,13 +17,11 @@
     transition:background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
   }
   .rail-switch:hover{background:var(--surface-overlay);color:var(--text)}
-  .rail-switch[aria-expanded="true"]{background:var(--surface-overlay);color:var(--accent-text)}
 
   /* ---------- RAIL SERWERÓW / PW ---------- */
   /*
-   * A grid track, not a layer over one. Opening it moves the whole app right
-   * instead of covering the channel rail, which is the difference between a
-   * place you are and a menu you are holding open.
+   * A persistent grid track beside the channel rail. On phones the two
+   * columns share one drawer.
    */
   .srv-rail{
     overflow:hidden;min-width:0;
@@ -31,8 +29,7 @@
     display:flex;flex-direction:column;align-items:center;gap:10px;
     padding:12px 0;
   }
-  /* Closed the track is 0 wide, so the contents must leave the tab order and
-     the accessibility tree rather than merely being clipped. */
+  /* A closed phone drawer leaves the tab order and the accessibility tree. */
   .srv-rail[inert]{border-right:none}
   .srv-inner{
     width:var(--servers-rail-w);flex:1;min-height:0;

@@ -96,7 +96,6 @@ function Shell() {
         dmSpace={dm}
         railOpen={ui.railOpen}
         onRailOpenChange={ui.setRailOpen}
-        serversOpen={ui.serversOpen}
         rosterOpen={ui.rosterOpen}
         onRosterOpenChange={ui.setRosterOpen}
         stageFull={ui.cinema}

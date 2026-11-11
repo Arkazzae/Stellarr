@@ -7,7 +7,7 @@ import { useContextMenuPolicy } from "@/hooks/useContextMenuPolicy";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 export interface AppShellProps {
-  /** The servers and messages column. Always rendered; its track is 0 wide when shut. */
+  /** The persistent servers and messages column; part of the rail drawer on phones. */
   serverRail: ReactNode;
   rail: ReactNode;
   room: ReactNode;
@@ -15,7 +15,6 @@ export interface AppShellProps {
   /** Below 768px the rail is a drawer; above that the CSS ignores this. */
   railOpen: boolean;
   onRailOpenChange: (open: boolean) => void;
-  serversOpen: boolean;
   rosterOpen: boolean;
   onRosterOpenChange: (open: boolean) => void;
   /** Cinema mode: the roster steps aside and the stage takes its width. */
@@ -45,7 +44,6 @@ export function AppShell({
   roster,
   railOpen,
   onRailOpenChange,
-  serversOpen,
   rosterOpen,
   onRosterOpenChange,
   stageFull,
@@ -89,7 +87,6 @@ export function AppShell({
     "app",
     rosterOpen && "roster-open",
     railOpen && "rail-open",
-    serversOpen && "servers-open",
     stageFull && "stage-full",
     dmSpace && "dm-space",
   ]

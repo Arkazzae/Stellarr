@@ -80,13 +80,6 @@
       transform: translateX(var(--servers-rail-w));
     }
 
-    /* The server column is always part of the drawer here, so the toggle
-       that widens it on desktop has nothing left to do. The DM rail's back
-       arrow carries no aria-expanded and stays. */
-    .rail-switch[aria-expanded] {
-      display: none;
-    }
-
     /* Osoby takes three fifths of the view from the right; the dimmed strip
        that remains is the scrim, and tapping it is the way back — the whole
        left edge closes the panel instead of being dead space. */
