@@ -11,7 +11,7 @@ import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { t } from "@/i18n";
-import { cockpitApi, type CockpitSecret, type CockpitSettings } from "@/lib/api";
+import { cockpitApi, type CockpitIntegrationSwitches, type CockpitSecret, type CockpitSettings } from "@/lib/api";
 import { useCockpitResource } from "@/lib/use-cockpit-resource";
 
 interface Notice {
@@ -171,12 +171,12 @@ export function IntegrationsPage() {
     void Promise.all([refresh(), secrets.refresh()]);
   }
 
-  async function save(change: Partial<CockpitSettings>, done: string) {
+  async function save(change: CockpitIntegrationSwitches, done: string) {
     if (!data) return;
     setSaving(true);
     setNotice(null);
     try {
-      await cockpitApi.updateSettings({ ...data, ...change });
+      await cockpitApi.updateSettings(data, change);
       await refresh();
       setNotice({ message: done, error: false });
     } catch (cause) {

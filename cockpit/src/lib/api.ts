@@ -253,6 +253,9 @@ export interface CockpitSecret {
   updatedAt: string | null;
 }
 
+/** An integration switch the operator flipped; one left out stays as stored. */
+export type CockpitIntegrationSwitches = Partial<Pick<CockpitSettings, "resendEnabled" | "giphyEnabled">>;
+
 export type CockpitSmtpSecurity = "starttls" | "tls" | "none";
 
 export interface CockpitSettings {
@@ -424,7 +427,10 @@ export const cockpitApi = {
   // The server owns publicUrl (it comes from the environment), mailProvider,
   // resendApiKeyConfigured, smtpPasswordConfigured, mailReady, giphyKeyConfigured and updatedAt,
   // so they are never sent back.
-  updateSettings: (settings: CockpitSettings, signal?: AbortSignal) =>
+  // The integration switches go only when the operator flips one. The settings
+  // carry their effective state, and sending that back would turn "never
+  // chosen" (on as soon as a key exists) into an explicit "off".
+  updateSettings: (settings: CockpitSettings, switches: CockpitIntegrationSwitches = {}, signal?: AbortSignal) =>
     request<CockpitSettings>(
       "/api/cockpit/settings",
       {
@@ -445,8 +451,7 @@ export const cockpitApi = {
           smtpPort: settings.smtpPort,
           smtpSecurity: settings.smtpSecurity,
           smtpUsername: settings.smtpUsername,
-          resendEnabled: settings.resendEnabled,
-          giphyEnabled: settings.giphyEnabled,
+          ...switches,
         },
       },
       signal,

@@ -59,6 +59,40 @@ public sealed class CockpitGiphyTests
     }
 
     [Fact]
+    public async Task SavingTheSettingsWithoutTheSwitchesLeavesThemUnchosen()
+    {
+        // The panel saves its settings without the integration switches unless one
+        // was flipped; a key added afterwards must still turn its integration on.
+        using var factory = Factory("");
+        using var owner = await OwnerAsync(factory);
+        var settings = new Dictionary<string, object?>
+        {
+            ["instanceName"] = "Orbit",
+            ["timeZone"] = "UTC",
+            ["mailingEnabled"] = true,
+            ["mailFromAddress"] = "stellarr@example.net",
+            ["inviteMailEnabled"] = true,
+            ["recoveryMailEnabled"] = true,
+            ["alertMailEnabled"] = false,
+            ["backupRetentionDays"] = 14,
+            ["logRetentionDays"] = 30,
+            ["orphanObjectRetentionDays"] = 1,
+            ["automaticCleanupEnabled"] = true,
+            ["smtpHost"] = "",
+        };
+        (await owner.PutAsJsonAsync("/api/cockpit/settings", settings)).EnsureSuccessStatusCode();
+
+        (await owner.PutAsJsonAsync("/api/cockpit/secrets/giphy.api-key", new { value = "late-key" })).EnsureSuccessStatusCode();
+        var config = await JsonAsync(await owner.GetAsync("/api/config/giphy"));
+        var saved = await JsonAsync(await owner.GetAsync("/api/cockpit/settings"));
+
+        Assert.True(config.GetProperty("enabled").GetBoolean());
+        Assert.Equal("late-key", config.GetProperty("apiKey").GetString());
+        // The test environment has a Resend key and no SMTP host: Resend, as before the switch.
+        Assert.Equal("resend", saved.GetProperty("mailProvider").GetString());
+    }
+
+    [Fact]
     public async Task TheConnectionCheckReportsAWorkingKey()
     {
         var giphy = new StubGiphy(HttpStatusCode.OK);

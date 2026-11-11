@@ -280,7 +280,7 @@ describe("routes", () => {
     expect(sentRequest().url).toBe(`/api/cockpit/backups/${encoded}/verify`);
   });
 
-  it("sends only the twelve editable settings, never the server-owned ones", async () => {
+  it("sends the editable settings, never the server-owned ones nor an integration switch nobody flipped", async () => {
     fetchMock.mockResolvedValueOnce(jsonResponse(settings));
 
     await cockpitApi.updateSettings(settings);
@@ -303,9 +303,16 @@ describe("routes", () => {
       smtpPort: 465,
       smtpSecurity: "tls",
       smtpUsername: "cockpit",
-      resendEnabled: true,
-      giphyEnabled: true,
     });
+  });
+
+  it("sends an integration switch the operator flipped", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse(settings));
+
+    await cockpitApi.updateSettings(settings, { giphyEnabled: false });
+
+    expect(sentRequest().body).toMatchObject({ giphyEnabled: false });
+    expect(sentRequest().body).not.toHaveProperty("resendEnabled");
   });
 
   it("builds download links without calling the server", () => {

@@ -93,7 +93,7 @@ describe("IntegrationsPage", () => {
     settingsMock.mockResolvedValue({ ...stored, resendEnabled: true, mailProvider: "resend" });
     await user.click(screen.getByRole("switch", { name: "Wysyłaj pocztę przez Resend" }));
 
-    expect(updateMock).toHaveBeenCalledWith({ ...stored, resendEnabled: true });
+    expect(updateMock).toHaveBeenCalledWith(stored, { resendEnabled: true });
     expect(await screen.findByText("Poczta idzie teraz przez Resend.")).toBeTruthy();
     expect(card.getByText("Aktywna")).toBeTruthy();
   });
@@ -195,7 +195,7 @@ describe("IntegrationsPage GIPHY", () => {
     settingsMock.mockResolvedValue({ ...withKey, giphyEnabled: true });
     await user.click(giphySwitch());
 
-    expect(updateMock).toHaveBeenCalledWith({ ...withKey, giphyEnabled: true });
+    expect(updateMock).toHaveBeenCalledWith(withKey, { giphyEnabled: true });
     expect(await screen.findByText("Klient web pokazuje teraz GIF-y.")).toBeTruthy();
     expect(giphySwitch().getAttribute("aria-checked")).toBe("true");
   });
