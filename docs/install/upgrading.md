@@ -1,26 +1,21 @@
 # Upgrading
 
-An upgrade replaces the image and keeps the data volume. The new server brings
-the database up to date when it starts.
+Upgrading replaces the container image while preserving the `stellarr-v2_stellarr_data` volume. The API applies schema updates automatically on startup.
 
 > [!CAUTION]
-> `docker compose down -v` deletes the data volume with every message, upload,
-> account and secret. Never use `-v` on an installation you want to keep.
+> Never run `docker compose down -v` on a production instance. The `-v` flag deletes the data volume, including all messages, uploads, accounts, and secrets.
 
-## Back up
+## 1. Back up the data volume
 
-Back up before every upgrade. The copy has to be taken while the container is
-stopped, because the database is a SQLite file that the server writes to.
+Always take a full volume backup while the container is stopped so SQLite (`stellarr.db`) and its WAL files are consistent.
 
-1. Note the version that runs now, to know what to go back to:
+1. Record the currently running image version:
 
    ```bash
    docker inspect --format '{{ index .Config.Labels "org.opencontainers.image.version" }}' stellarr-v2
    ```
 
-2. Stop the container and archive the data volume. Compose names the volume
-   `<project>_<volume>`, which is `stellarr-v2_stellarr_data` with the compose file
-   as shipped. `docker volume ls` shows it.
+2. Stop the container and archive `stellarr-v2_stellarr_data`:
 
    ```bash
    docker compose stop
@@ -28,118 +23,72 @@ stopped, because the database is a SQLite file that the server writes to.
      tar czf /backup/stellarr-data-$(date +%F).tar.gz -C /data .
    ```
 
-Start the container again with `docker compose start` if you do not upgrade
-straight away.
+The archive contains the SQLite database, uploaded objects, session keys, shared secrets, and TLS private key. Store it securely off-host. Note that online database snapshots created inside Cockpit only back up SQLite on the same volume and do not include uploaded files or secrets.
 
-The archive holds the database, the uploaded files, the session keys, the
-secrets and the private key of the certificate. Keep it as safe as the server.
-The operator panel can also copy the database, but those copies stay in the same
-volume and leave out the uploaded files, so they do not replace the archive.
+## 2. Pull and start the new version
 
-## Upgrade
+Release notes are published at <https://github.com/Arkazzae/Stellarr/releases>.
 
-The notes of each release are at <https://github.com/Arkazzae/Stellarr/releases>.
-
-1. Choose the release in `.env`. A pinned version changes only when you change
-   it, while `latest` moves with every stable release.
+1. Update `STELLARR_VERSION` in `.env` (or keep `latest` to track the newest stable release):
 
    ```bash
    STELLARR_VERSION=1.2.3
    ```
 
-2. Download the image and recreate the container. The tag has to exist: for a
-   missing one, Compose falls back to building the image and, in a folder
-   without the `Dockerfile`, fails with `failed to read dockerfile: open
-   Dockerfile: no such file or directory`.
+2. Pull the image and recreate the container:
 
    ```bash
    docker compose pull
    docker compose up -d
    ```
 
-3. Check the container and the page, then the version:
+   If `STELLARR_VERSION` references a tag that does not exist in GHCR, `docker compose` attempts a local build and fails if no `Dockerfile` is present.
+
+3. Verify the upgrade:
 
    ```bash
    docker compose ps
-   curl -sk -o /dev/null -w '%{http_code}\n' https://localhost:8443/
+   curl -sk -o /dev/null -w '%{http_code}\n' https://localhost:8443/login
    docker inspect --format '{{ index .Config.Labels "org.opencontainers.image.version" }}' stellarr-v2
    ```
 
-   `docker compose ps` lists the service as `healthy` after about 15 seconds,
-   and `curl` prints `200`.
+   Confirm that `docker compose ps` reports `healthy` (which checks both `/health` and `/login`) and `curl` returns `200`.
 
-> [!WARNING]
-> The health check calls only the API. If the web server fails to start, the
-> container still reports `healthy` and Nginx answers 502 for every page. Request
-> the page, as in step 3, and read `docker compose logs` if it does not answer 200.
+## Database schema updates
 
-## What the server does to the database
+On startup, the API enables SQLite WAL mode and runs idempotent schema initialization steps (creating missing tables/indexes, adding columns, and backfilling values). Schema changes modify the database in place and are not backward-compatible; do not start an older image against a volume opened by a newer version. Use the volume backup to roll back.
 
-Before the server accepts requests, it creates the database if there is none,
-switches it to write-ahead logging and runs a fixed list of steps. Each step
-creates a missing table or index, adds a missing column or backfills a value. One
-step drops four columns of the old mail settings. The steps run on every start and
-do nothing on a database that is up to date. There is no version table and no
-migration command.
+## Rollback
 
-The steps change the database in place. Do not start an older image on a volume
-that a newer one has already opened. To go back, restore the archive.
+Rolling back restores the entire data volume to the backup snapshot; any messages, uploads, or accounts created since the backup are lost.
 
-A volume written by an earlier build starts on the new image with its accounts
-intact.
-
-## Go back
-
-Restoring replaces everything in the volume with the archive. Messages, uploads
-and accounts written since the backup are lost.
-
-1. Stop the container and restore the archive. Replace the file name with your
-   archive:
+1. Stop the stack and restore the archive:
 
    ```bash
    docker compose down
    docker run --rm -v stellarr-v2_stellarr_data:/data -v "$PWD":/backup alpine \
-     sh -c "find /data -mindepth 1 -delete && tar xzf /backup/stellarr-data-2026-11-11.tar.gz -C /data"
+     sh -c "find /data -mindepth 1 -delete && tar xzf /backup/stellarr-data-YYYY-MM-DD.tar.gz -C /data"
    ```
 
-2. Set `STELLARR_VERSION` in `.env` to the version you noted, and start:
+2. Set `STELLARR_VERSION` in `.env` to the previous version tag and start the container:
 
    ```bash
    docker compose up -d
    ```
 
-People who were signed in stay signed in, because the session keys are part of
-the archive.
+Existing user sessions remain valid because the data-protection keys are restored with the archive.
 
-## Upgrade to Cockpit and STELLARR_DOMAIN
+## Migration notes
 
-The release that brought Stellarr Cockpit renamed the operator panel and moved
-the instance's address into the environment.
+### Cockpit and `STELLARR_DOMAIN`
 
-- The operator panel is Cockpit, at `/cockpit/`. The old address `/ops/`
-  redirects there.
-- `STELLARR_DOMAIN` names the instance. An `.env` that sets `PUBLIC_HOST` keeps
-  working, because the container reads `PUBLIC_HOST` when `STELLARR_DOMAIN` is
-  not set.
-- The public address in reset links and in the desktop handshake comes only
-  from the environment: `https://` with `STELLARR_DOMAIN` and
-  `STELLARR_PUBLIC_PORT`, or `STELLARR_PUBLIC_URL` when that is set. A public
-  URL saved on the panel's settings page is no longer used. Behind a reverse
-  proxy on port 443, set `STELLARR_PUBLIC_PORT=443` or keep `STELLARR_PUBLIC_URL`.
-- In the development stack, `STELLARR_DEV_OPS_PORT` is now
-  `STELLARR_DEV_COCKPIT_PORT`.
+- The operator panel has been renamed from `ops` to **Stellarr Cockpit** and is served at `/cockpit/` (`/ops/` redirects with `308`).
+- `STELLARR_DOMAIN` replaces `PUBLIC_HOST` as the primary hostname variable (`PUBLIC_HOST` is still read as a fallback when `STELLARR_DOMAIN` is unset).
+- The public origin used in password-reset links and `/.well-known/stellarr/client` is now derived exclusively from environment variables (`https://<STELLARR_DOMAIN>:<STELLARR_PUBLIC_PORT>`, or `STELLARR_PUBLIC_URL` when set) and is read-only in Cockpit. Behind a reverse proxy on port `443`, set `STELLARR_PUBLIC_PORT=443` or `STELLARR_PUBLIC_URL`.
+- In `docker-compose.dev.yml`, `STELLARR_DEV_OPS_PORT` has been renamed to `STELLARR_DEV_COCKPIT_PORT`.
 
-## Upgrade from the Polish-only builds
+### Language default (`STELLARR_LANGUAGE`)
 
-Builds that predate the language setting spoke Polish everywhere. `STELLARR_LANGUAGE`
-now sets the language of the instance, and it is `en` unless you set it.
-
-- To keep server messages, mail and the default interface language in Polish, add
-  `STELLARR_LANGUAGE=pl` to `.env` before you start the new image. Anyone who
-  chose a language in the settings keeps that choice.
-- Text saved earlier keeps its language, whichever value you set. Channel names,
-  role names and messages are not translated.
-- The single sign-on button was labelled `Konto główne` by default. It now reads
-  `Main account`. To keep the old label, set `STELLARR_OIDC_DISPLAY_NAME=Konto główne`.
-
-[Configuration](configuration.md#language) describes the language setting.
+- Instances now default to English (`STELLARR_LANGUAGE=en`).
+- When upgrading an older Polish-only deployment, set `STELLARR_LANGUAGE=pl` in `.env` to keep server-generated messages, emails, and the default interface language in Polish. Users who explicitly selected a language in their browser keep their preference, and existing database records retain the language in which they were written.
+- The default OIDC sign-in button label changed from `Konto główne` to `Main account`. Set `STELLARR_OIDC_DISPLAY_NAME=Konto główne` to keep the Polish label.

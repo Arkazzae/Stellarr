@@ -1,100 +1,85 @@
-# Stellarr localization
+# Localization
 
-## Two independent settings
+Stellarr supports English (`en`, default) and Polish (`pl`) across the web client, the Cockpit operator panel, and the ASP.NET Core API, plus optional client-side message translation powered by Bergamot WASM.
 
-Stellarr keeps the interface language separate from message translation:
+## Locale resolution and `STELLARR_LANGUAGE`
 
-- `locale` selects the application text and the format of dates and times;
-- chat translation is optional, has its own target language, and never changes
-  the original message.
+Interface language and chat message translation are independent settings:
 
-The supported languages are `pl` and `en`. English is the default. The
-operator can change the instance default to Polish with `STELLARR_LANGUAGE=pl`;
-the web server reads it on every request, so one image serves every instance.
-The language of a request is resolved in this order: the `stellarr_locale`
-cookie, `STELLARR_LANGUAGE`, English. The operator panel has its own catalogs
-in `cockpit/src/i18n/` and follows the same cookie (see [`cockpit/README.md`](../cockpit/README.md)).
+- **Interface language (`locale`)**: Controls UI copy and `Intl` date/time/number formatting.
+- **Chat translation**: Optional client-side translation of chat messages into a chosen target language (`pl` or `en`); never alters stored message content.
 
-## The interface catalog
+Setting `STELLARR_LANGUAGE=pl` (or `en`) configures the instance default:
 
-The source of the types is [web/src/i18n/messages/pl.ts](../web/src/i18n/messages/pl.ts).
-The English catalog uses `satisfies Record<keyof typeof pl, string>`, so a
-missing or extra key stops the typecheck. Text is accessed through the typed
-`Translator` (`t(key, values)`). `{name}` values are interpolated without
-interpreting HTML, and a placeholder with no value stays visible as written.
-A test keeps Polish letters out of the source outside the catalogs, so every
-sentence a person reads exists once per language.
+1. **Web client (`web/`)**: Resolves the request locale in order:
+   1. `stellarr_locale` cookie (written only when a user explicitly selects a language in Settings).
+   2. `STELLARR_LANGUAGE` environment variable (read dynamically per request).
+   3. `en`.
+2. **Cockpit (`cockpit/`)**: Resolves the locale in the browser on load (see [`cockpit/README.md`](../cockpit/README.md)):
+   1. `stellarr_locale` cookie.
+   2. First match in `navigator.languages` (`pl` or `en`).
+   3. `en`.
+3. **API (`server/Stellarr.Api/`)**: Reads `Stellarr:Language` (`STELLARR_LANGUAGE`) at startup (`LanguageOptions`). Used for API problem details, validation errors, system join notices, initial role/channel names on new servers, audit log entries, and password-reset/test emails. Records already persisted in SQLite keep the language in which they were written.
 
-`LanguageProvider` stores:
+## Message catalogs
 
-- `stellarr_locale` in a cookie, only so that SSR and hydration have the same
-  `<html lang>` from the start;
-- `stellarr_language_settings` in `localStorage`: the language, enabling
-  translation, auto-translate and the target language. The language is stored
-  only when the person chose one, so a later change of the instance default
-  still reaches everyone who never picked a language.
+### Web client (`web/src/i18n/`)
 
-User content and channel names remain data. They must not be put into the
-catalog or translated without an explicit user action.
+- [web/src/i18n/messages/pl.ts](../web/src/i18n/messages/pl.ts) defines the canonical `MessageKey` union.
+- [web/src/i18n/messages/en.ts](../web/src/i18n/messages/en.ts) is typed with `satisfies Record<keyof typeof pl, string>`, ensuring missing or extra keys fail `npm run typecheck`.
+- Components format strings via `t(key, values)`. `{name}` placeholders are interpolated as plain text without HTML parsing; unprovided placeholders remain literal (`{name}`).
+- `LanguageProvider` persists:
+  - `stellarr_locale` cookie so SSR and client hydration render the same `<html lang>`.
+  - `stellarr_language_settings` in `localStorage` (`locale`, `chatTranslationEnabled`, `chatAutoTranslateEnabled`, `chatTranslationTargetLanguage`).
 
-## How the translator loads
+### Cockpit (`cockpit/src/i18n/`)
 
-1. Enabling translation checks the three files of the language pair in the
-   local `web/public/bergamot-models/registry.json`.
-2. A missing model is streamed through the same origin: the client tries
-   `/bergamot-models/` first and then `/bergamot-models-gcs/`. Only the registry
-   file lives under the first path, so the models come through the second, which
-   is a rewrite in `web/next.config.ts` during development and an Nginx proxy
-   (`infra/nginx.conf`) in production, in both cases to the official Bergamot
-   model store.
-3. Progress is visible in the settings. Each complete file goes into the
-   IndexedDB database `bergamot-models`, store `files`; an incomplete file is
-   not saved.
-4. A worker loads the copied WASM runtime (`web/public/codecs/bergamot/`) and
-   the model without blocking the main thread.
-5. CLD3 detects the language of the message. A message already written in the
-   target language does not go through the model.
-6. The result goes into a bounded memory cache (1,000 entries) and into the
-   `stellarr-chat-translations` database (5,000 entries, oldest trimmed
-   first). Identical parallel requests share one job, and messages the reader
-   is looking at take priority in the queue.
+- Catalogs live in `cockpit/src/i18n/en.ts` and `cockpit/src/i18n/pl.ts` with identical key sets and `{name}` placeholder interpolation via `t(key, values)`.
 
-The interface offers Polish and English as target languages, which are the
-`plen` and `enpl` pairs in the registry. A language name in a list without a
-model behind it is not language support.
+### Backend API (`server/Stellarr.Api/Localization/`)
 
-## Adding another interface language
+- `MessageKey.cs` enumerates all server-facing text keys.
+- `Messages.en.cs` and `Messages.pl.cs` implement exhaustive switch expressions over `MessageKey`, and `Messages.Get(key, ...)` interpolates `{name}` placeholders.
 
-1. Add the code to `SUPPORTED_LOCALES` in `web/src/i18n/index.ts` and a separate,
-   complete catalog in `web/src/i18n/messages/`, registered in `catalogs` in the
-   same file. Every catalog needs a `language.name.<code>` key.
-2. Add the native name to `NATIVE_NAMES` in
-   `web/src/components/account/panes/LanguagePane.tsx`. Storage validation and
-   the choice list already follow `SUPPORTED_LOCALES`.
-3. Add the `Intl` tag to `LOCALE_TAG` in `web/src/lib/format.ts` and a test of
-   dates and plural forms. `pluralForm` returns `one`, `few` or `many`, so
-   check the counted messages against the plural rules of the new language.
-4. Move new texts into the catalog; do not import state into presentational
-   components, pass them `t` or a ready view model.
-5. The choice list of the translation target uses the same locales.
-   `TranslationTargetLanguage` in `web/src/i18n/index.ts` and `primaryPair` in
-   `web/src/lib/chatTranslation/modelStatus.ts` name only `pl` and `en`, and
-   `primaryPair` maps every target other than `en` to the `enpl` model. Extend both
-   together with the registry entries and a runtime test of the new pair.
+## Client-side chat translation
+
+1. Enabling chat translation checks the three model files (`model`, `lex`, `vocab`) for the language pair (`plen` or `enpl`) listed in `web/public/bergamot-models/registry.json`.
+2. Missing model files are fetched from `/bergamot-models/` first and then `/bergamot-models-gcs/`, which rewrites to the Bergamot GCS bucket in `web/next.config.ts` (development) and `infra/nginx.conf` (production).
+3. Downloaded files are stored in IndexedDB (`bergamot-models`, store `files`) only after full completion.
+4. A Web Worker loads the local Bergamot WASM runtime (`web/public/codecs/bergamot/`) and model off the main thread.
+5. CLD3 detects the source message language; messages already in the target language bypass translation.
+6. Translations are cached in memory (up to 1,000 entries) and in IndexedDB (`stellarr-chat-translations`, up to 5,000 entries, LRU-trimmed). Concurrent requests for the same text are deduplicated, and visible viewport messages are prioritized.
+
+## Adding a new language
+
+1. **Web client**:
+   - Add the locale code to `SUPPORTED_LOCALES` in `web/src/i18n/index.ts`, create `web/src/i18n/messages/<code>.ts`, register it in `catalogs`, and add `language.name.<code>` to all catalogs.
+   - Add the native language label to `NATIVE_NAMES` in `web/src/components/account/panes/LanguagePane.tsx`.
+   - Add the `Intl` BCP 47 tag to `LOCALE_TAG` in `web/src/lib/format.ts` and verify plural rules (`pluralForm`).
+   - If supporting local chat translation for the new language, update `TranslationTargetLanguage` in `web/src/i18n/index.ts`, `primaryPair` in `web/src/lib/chatTranslation/modelStatus.ts`, and `web/public/bergamot-models/registry.json`.
+2. **Cockpit**:
+   - Add `cockpit/src/i18n/<code>.ts` and register the locale in `cockpit/src/i18n/index.ts`.
+3. **Backend API**:
+   - Add the code to `LanguageOptions.cs`, add `Messages.<code>.cs`, and wire it into `Messages.cs`.
 
 ## Verification
 
 ```bash
+# Web client
 cd web
 npm test
 npm run typecheck
 npm run lint
 npm run test:translation-runtime
+
+# Cockpit
+cd ../cockpit
+npm test
+npm run typecheck
+
+# Server localization tests
+cd ..
+dotnet test server/Stellarr.Api.Tests --filter LocalizationTests
 ```
 
-The last command runs the system Chromium and a real worker and WASM, translates
-a Polish sentence into English, and then runs the test again on the same
-profile. The test fails if the second start downloads the model instead of
-reading it from IndexedDB. It downloads the models, so it needs network access
-to the model store, and it is not part of CI. The Chromium path defaults to
-`/usr/bin/chromium` and can be changed with `STELLARR_CHROMIUM`.
+`npm run test:translation-runtime` runs headless Chromium (`/usr/bin/chromium` or `STELLARR_CHROMIUM`) against the real Bergamot worker and WASM runtime, translates a sample message, and verifies that a second run loads the model from IndexedDB without re-downloading.

@@ -1,265 +1,119 @@
 # RTC and ports
 
-## Host ports
+Protocol semantics and versioning rules are defined in [`RTC_STANDARD.md`](./RTC_STANDARD.md), and the `sfu` media server in [`STELLARR_MEDIA.md`](./STELLARR_MEDIA.md). This document covers port mappings, NAT/TURN configuration, the client audio/video pipeline, and operational diagnostics.
+
+## Published host ports
 
 | Default port | Protocol | Process | Purpose |
 | --- | --- | --- | --- |
-| `8888` | TCP | Nginx | HTTP, redirects to HTTPS |
-| `8443` | TCP | Nginx | the application over HTTPS, the API and SignalR/WebSocket |
-| `3478` | UDP and TCP | coturn | STUN and TURN without TLS |
-| `5349` | UDP and TCP | coturn | TURN over TLS |
-| `49000` | UDP | Stellarr Media | the single port of the media server: every call in the `sfu` topology; bound but idle in the mesh topology |
-| `49160-49200` | UDP | coturn | relay ports that TURN hands out to clients |
+| `8888` | TCP | Nginx | HTTP redirect to HTTPS (`STELLARR_HTTP_PORT`) |
+| `8443` | TCP | Nginx | HTTPS: web client, API, SignalR WebSocket, and Cockpit (`STELLARR_HTTPS_PORT`) |
+| `3478` | UDP, TCP | `coturn` | STUN and TURN (`STELLARR_TURN_PORT`) |
+| `5349` | UDP, TCP | `coturn` | TURN over TLS/DTLS (`STELLARR_TURNS_PORT`) |
+| `49000` | UDP | `stellarr-media` | SFU media port (`STELLARR_MEDIA_PORT`); active in `sfu` topology, bound but idle in `mesh` |
+| `49160-49200` | UDP | `coturn` | TURN relay port range (`STELLARR_TURN_RELAY_RANGE`) |
 
-The port set in `STELLARR_HTTPS_PORT` is also used in the HTTP to HTTPS
-redirect. With the default setup the redirect therefore leads to `:8443`; with
-`STELLARR_HTTPS_PORT=443` the port is left out of the address. A request that a
-TLS proxy in front of the container forwards with `X-Forwarded-Proto: https` is
-not redirected again.
+- `STELLARR_HTTPS_PORT` is also used in HTTP-to-HTTPS redirects (omitted when set to `443`). Requests forwarded by an upstream TLS proxy with `X-Forwarded-Proto: https` are not redirected.
+- `STELLARR_TURN_PORT`, `STELLARR_TURNS_PORT`, and `STELLARR_MEDIA_PORT` set both the published host port and the port advertised to browsers. In `sfu` mode, the router must forward the same external UDP port to `STELLARR_MEDIA_PORT`.
+- `STELLARR_TURNS_ENABLED` defaults to `false` (`Rtc:TurnsEnabled=false`) because browsers reject self-signed certificates on `turns:` URLs. Enable it only after mounting a CA-signed certificate in `/data/stellarr/tls/`.
+- `STELLARR_TURN_TCP_ENABLED` defaults to `false`. Disabled transports are closed in `/etc/turnserver.conf` (`no-tcp`, `no-tls`, `no-dtls`) as well as omitted from `/api/bootstrap`.
 
-`STELLARR_TURN_PORT` changes both the published host port and the STUN/TURN
-port advertised to the browser. `STELLARR_TURNS_PORT` sets the public port of
-encrypted TURN/TLS in the same way (default `5349`); the backend advertises it
-as `turns:...?...transport=tcp`. The host port of `49000/udp` is
-`STELLARR_MEDIA_PORT`, and like the TURN port it is also the advertised one:
-the media server puts it into its candidates and the API names it in the
-bootstrap's `mediaServer`. The router must therefore forward the same external
-port to it.
+### Relay port sizing
 
-The compose file sets `Rtc:TurnsEnabled=false` by default and does not advertise
-`turns:`, because the self-signed certificate the container generates is not
-trusted by browsers. TURNS can be enabled with `STELLARR_TURNS_ENABLED=true`
-only after a certificate from a publicly trusted authority has been placed in
-the TLS directory of the data volume (`/data/stellarr/tls/fullchain.pem` and
-`privkey.pem`).
+The default relay range (`49160-49200/udp`) provides 41 UDP ports:
 
-The relay range covers 41 ports. The compose file advertises only TURN/UDP by
-default (`STELLARR_TURN_TCP_ENABLED=false`): a full mesh of five people then
-needs about 20 allocations instead of about 40 for UDP and TCP at the same time.
-In the `sfu` topology a browser has one connection instead of one per other
-person, so it takes one allocation per advertised TURN transport: five people
-need about 5. That relay ends at the media server's address inside the same
-container, so it needs no port beyond the relay range. The range is
-`min-port` and `max-port` in `infra/turnserver.conf.template`, repeated in the
-`ports` of `docker-compose.yml` and in the `EXPOSE` line of the `Dockerfile`. Before enabling TURN/TCP or raising the number of participants,
-widen it in all three places and forward the wider range on the host and the
-router.
+- In `mesh` mode with UDP-only TURN, a 5-user full mesh uses up to 20 relay allocations (up to 40 if both UDP and TCP TURN are enabled).
+- In `sfu` mode, each browser establishes a single peer connection to `stellarr-media`, requiring at most 1 TURN allocation per participant (~5 for 5 users), relayed internally to the container's local UDP socket.
 
-A disabled transport is removed from coturn as well as from the bootstrap: the
-container sets `no-tcp`, `no-tls` and `no-dtls` in `/etc/turnserver.conf`. An
-older open tab therefore cannot keep reserving ports through an ICE list
-remembered from before the deployment.
+To expand the relay range for larger rooms or TURN/TCP, update `min-port`/`max-port` in `infra/turnserver.conf.template`, `ports` in `docker-compose.yml`, `EXPOSE` in `Dockerfile`, and your host/router firewall rules.
 
-## Services reachable only inside the container
+## Container-internal ports
 
 | Port | Service |
 | --- | --- |
-| `3000/tcp` | Next.js standalone |
-| `5000/tcp` | ASP.NET Core API and SignalR |
-| `9000/tcp` | RustFS S3 API |
-| `5200/tcp` | Stellarr Media control API, on `127.0.0.1`; only the API calls it, with the bearer secret from `secrets/media-control-secret` |
+| `3000/tcp` | Next.js standalone server (`127.0.0.1`) |
+| `5000/tcp` | ASP.NET Core API and SignalR (`127.0.0.1`) |
+| `9000/tcp` | RustFS S3 API (`127.0.0.1`) |
+| `5200/tcp` | `stellarr-media` HTTP control API (`127.0.0.1`, authenticated via `secrets/media-control-secret`) |
 
-Compose does not publish these ports. Nginx passes `/api/`, `/assets/`,
-`/health`, `/hubs/` and `/.well-known/stellarr/client` to ASP.NET, serves the
-operator panel, Cockpit, from `/cockpit/`, proxies `/bergamot-models-gcs/` to the store of
-translation models, and sends every other path to Next.js. RustFS is reachable
-only through the backend.
+Nginx routes `/api/`, `/assets/`, `/health`, `/hubs/`, and `/.well-known/stellarr/client` to ASP.NET Core, serves Cockpit statically from `/cockpit/`, proxies `/bergamot-models-gcs/` to the Bergamot model bucket, and forwards all other HTTP paths to Next.js.
 
-## An important distinction
+## NAT and firewall configuration
 
-Nginx is the only public HTTP/HTTPS entry point, but it cannot replace the RTC
-ports. STUN, TURN and media use UDP or their own TCP, so `3478`, `5349`, the
-relay range and `49000` must be exposed independently.
+Nginx only proxies HTTP and WebSocket traffic; WebRTC STUN, TURN, and SFU UDP traffic bypasses HTTP proxies and must be reachable on the host.
 
-## NAT and firewall
+Forward on your router to the Docker host:
 
-On the router, forward to the Docker host:
+- TCP `80/443` (or your external `STELLARR_HTTP_PORT` / `STELLARR_HTTPS_PORT`)
+- UDP `3478` (and TCP `3478` if `STELLARR_TURN_TCP_ENABLED=true`)
+- UDP/TCP `5349` (if `STELLARR_TURNS_ENABLED=true`)
+- UDP `49160-49200`
+- UDP `49000` (or `STELLARR_MEDIA_PORT`, when `STELLARR_RTC_TOPOLOGY=sfu`)
 
-- TCP `80/443`, or the external ports chosen for `8888/8443`;
-- UDP and TCP `3478`;
-- optionally UDP and TCP `5349`;
-- UDP `49160-49200`;
-- UDP `49000` (or the port set in `STELLARR_MEDIA_PORT`), when the instance
-  runs the `sfu` topology.
-
-Set:
+Recommended `.env` settings behind NAT:
 
 ```bash
 STELLARR_DOMAIN=chat.example.com
-PUBLIC_IP=auto # or a fixed public IPv4
-STELLARR_TURN_PORT=3480 # only when 3478 is taken
-STELLARR_TURNS_PORT=5349
-STELLARR_RTC_TOPOLOGY=sfu # mesh by default
+PUBLIC_IP=auto          # or a static public IPv4 address
+STELLARR_RTC_TOPOLOGY=sfu # or mesh (default)
 STELLARR_MEDIA_PORT=49000
 ```
 
-`STELLARR_DOMAIN` goes into the ICE configuration returned to the client.
-`PUBLIC_IP` sets `external-ip` in coturn and must be the address seen from the
-Internet. The value `auto` resolves the A record of `STELLARR_DOMAIN` on every
-container start and fails the start if it cannot get a valid IPv4 address; this
-prevents advertising a stale relay address.
+- `PUBLIC_IP` sets `external-ip` in `coturn` and the public host candidate in `stellarr-media`. `PUBLIC_IP=auto` resolves the IPv4 `A` record of `STELLARR_DOMAIN` at container startup and aborts startup if resolution fails.
+- In `sfu` mode, `stellarr-media` advertises `PUBLIC_IP:STELLARR_MEDIA_PORT` followed by the container's local IPv4 address on port `49000` (used when `coturn` relays a TURN client inside the container). If `PUBLIC_IP` is unset in `sfu` mode, the container logs a startup warning because external clients can only connect via TURN.
+- The API issues short-lived (1-hour) HMAC-derived TURN credentials to authenticated users; the static shared secret never leaves the container.
 
-The media server advertises the same address, with `STELLARR_MEDIA_PORT`,
-followed by the container's own address with port `49000`, which is where
-coturn relays a browser that needs TURN. Without `PUBLIC_IP` only the container's address is
-left: a browser outside the host then reaches the media server only through
-TURN, and not at all when TURN is blocked as well. The container prints a
-warning at start when the topology is `sfu` and `PUBLIC_IP` is empty. On a
-network without a public address, set `PUBLIC_IP` to the address the browsers
-reach the host at.
+## Audio and video pipeline
 
-For signed-in users the backend issues one-hour TURN credentials generated with
-an HMAC. The container keeps only the shared coturn secret, and the client
-never receives a permanent server password.
+### Opus bitrate profiles
 
-## The current RTC layer
-
-[`RTC_STANDARD.md`](./RTC_STANDARD.md) defines the semantics and the versioning
-rules of the layer. This document stays the network and operations guide.
-
-Signalling runs through `AppHub`. The topology decides where media travel. In
-the mesh topology, the default, they travel over direct connections between
-browsers. In the `sfu` topology every browser has one connection to Stellarr
-Media, the media server in the container, which forwards the packets to the
-rest of the room without decoding them; it is defined in
-[`STELLARR_MEDIA.md`](./STELLARR_MEDIA.md). No third-party media platform is
-involved in either, so capture, ICE, TURN, Opus, muting and speech detection
-stay observable without hiding their behaviour under a ready-made platform.
-
-Stellarr Media listens on `49000/udp` in both topologies and stays idle in the
-mesh topology. It forwards every kind from its first version: microphone,
-camera, screen picture and screen sound. What it does not do yet, such as
-adapting a stream to a slow receiver, is listed in `STELLARR_MEDIA.md`, and the
-default stays `mesh` until the first of those gaps is closed. The `VoiceClient`
-contract on the web side isolates the interface from the topology.
-
-## Opus, noise suppression and detection
-
-In Chromium, Opus is the right codec for calls: the WebRTC profile requires it,
-and it gives much better speech quality than the fallback G.711. Stellarr adds
-neither AAC nor a codec of its own in JavaScript, because that would break
-interoperability between browsers and bypass their network-aware jitter buffer
-and congestion control.
-
-The current version offers five microphone profiles and one for screen audio:
-
-| Profile | Opus ceiling | Adaptation minimum | Channels | DTX | FEC | Packet time |
+| Profile | Max bitrate | Min adaptation bitrate | Channels | DTX | In-band FEC | Packet time |
 | --- | ---: | ---: | --- | --- | --- | ---: |
 | Economy | 32 kb/s | 16 kb/s | mono | yes | yes | 20 ms |
 | Balanced | 64 kb/s | 24 kb/s | mono | no | yes | 20 ms |
 | Clarity | 96 kb/s | 32 kb/s | mono | no | yes | 20 ms |
 | Premium (default) | 128 kb/s | 64 kb/s | mono | no | yes | 20 ms |
 | Studio | 256 kb/s | 96 kb/s | mono | no | yes | 20 ms |
-| Screen audio | 160 kb/s | 96 kb/s | stereo, when the peer accepts it | no | yes | 20 ms |
+| Screen audio | 160 kb/s | 96 kb/s | stereo (when negotiated) | no | yes | 20 ms |
 
-The browser still performs the fast congestion control. Stellarr only moves the
-bitrate ceiling slowly, from smoothed packet loss and round-trip time, with
-hysteresis so the quality does not jump. FEC stays on. DTX switches off the
-transmission of silence only in the deliberately economical profile; the
-quality profiles transmit continuously, so a detector inside the encoder never
-decides where a syllable begins.
+WebRTC handles fast congestion control; the client adjusts the Opus bitrate ceiling gradually from smoothed packet-loss and RTT stats (`RTCRtpSender.getStats()` / `setParameters()`) with hysteresis.
 
-Noise reduction has five modes: the browser's own, off, and three that run
-locally as WASM in an `AudioWorklet`: RNNoise, GTCRN and Speex. RNNoise is the
-default for a new user, and an explicit saved choice still takes precedence.
-GTCRN handles keyboards, eating and sudden sounds better at a higher CPU cost;
-Speex is a classic DSP filter, the lightest and the weakest. The worklets and
-WASM binaries are copied from the npm package into `web/public/audio/` at build time
-(`web/scripts/copy-audio-assets.mjs`) and shipped in the image; nothing depends
-on a CDN. If a suppressor cannot start, the path tries to fall back to the
-browser's reduction and shows the degraded state explicitly.
+### Capture, processing, and playback chain
 
-The speech detector runs on the audio thread. It has an adjustable
-sensitivity, a noise-floor estimate, hysteresis, a hangover, and a separate
-detection of short impulses based on the rise in level and the peak/RMS ratio.
-A series of keyboard or controller clicks does not open detection and cannot
-use the hangover of the previous utterance. It analyses 10 ms frames, finishes
-its warm-up after 120 ms, and has a separate, faster adaptation to constant
-noise so that the indicator does not stay stuck on "speaking".
+1. **Capture**: `getUserMedia` at 48 kHz mono.
+2. **Input gain**: Fixed pre-gain (`-12 dB` to `+24 dB`).
+3. **Noise suppression**: Five selectable modes—`rnnoise` (default), `gtcrn`, `speex` (all running locally as WASM in an `AudioWorklet` from bundled assets in `web/public/audio/`), `browser` (native WebRTC processing), or `off`. If a WASM worklet fails to initialize, the pipeline falls back to native browser processing and surfaces a degraded indicator.
+4. **Speech detection (VAD), input gate, and leveler**:
+   - The audio-thread detector analyzes 10 ms frames using noise-floor estimation, hysteresis, hangover, and transient/click rejection (peak-to-RMS ratio and pitch check between 60–400 Hz).
+   - The **input gate** (enabled by default) uses an 80 ms lookahead buffer so word onsets are not clipped, attenuating inter-sentence noise to silence after a 600 ms hold without stopping the RTP stream.
+   - The **automatic leveler** updates gain only during voiced frames so background noise is not amplified between utterances.
+5. **Receive chain**: Remote microphone tracks pass through per-user volume controls (`0–200%`) and an optional Web Audio EQ + compressor with automatic make-up gain (`Off`, `Natural`, `Studio`, `Broadcast`, or `Custom` ±12 dB at 160 Hz, 360 Hz, 3.1 kHz, and 8 kHz). Screen-share audio bypasses voice EQ.
+6. **Per-account storage**: Device and voice processing settings are scoped by account ID in `localStorage`.
 
-The detector itself never touches the sent samples. The input gate does, using
-its decision. It is on by default and can be turned off in the settings. The
-gate delays the output by an 80 ms lookahead, so when it opens it reaches back
-to the start of the word, and between sentences it lowers the signal to
-silence. An onset needs a pitch between 60 and 400 Hz (only the top of the
-sensitivity dial drops this requirement), and an open gate closes after 600 ms
-without a voiced frame. The track and RTP keep running, and Opus sees a
-continuous stream.
+### Screen sharing
 
-Automatic volume is the pipeline's own leveller, not the platform's AGC. It
-learns the level only from frames that the detector marked as voiced, so it
-never raises the room between sentences. The browser's AGC is used only when the
-capture graph cannot be built. A fixed gain from −12 to +24 dB sits in front of
-the whole chain.
-
-The local device and processing settings are stored separately for each account
-identifier. An older shared entry is assigned once to the account that is active
-during the migration, so switching users in the same browser does not inherit
-another person's microphone, output or voice profile.
-
-Remote microphones can be played through the native Web Audio EQ and a
-compressor with automatic make-up gain. The options are Off, the presets
-Natural, Studio and Broadcast, and the Custom profile with ±12 dB of control
-over the bands at 160 Hz, 360 Hz, 3.1 kHz and 8 kHz; a per-person volume of
-0–200% is available as well. Everything works on the receiving side only. The
-audio of a shared screen bypasses the voice correction. If Web Audio is
-unavailable, the client keeps the direct path through the `<audio>` element and
-does not interrupt the call.
-
-The speaker test in the settings plays a local voice sample in a loop through the
-same EQ and compression profile, the current volume and the chosen output
-device. This lets you tune the profile without a second person.
-
-The current audio path:
-
-1. `getUserMedia` at 48 kHz and mono for the microphone.
-2. A fixed input gain.
-3. An optional suppressor (RNNoise, GTCRN or Speex) in an `AudioWorklet`, or the
-   browser's native processing.
-4. The input gate and the leveller, driven by the speech detector; the level
-   meter and the speaking ring read the same detector on a separate monitor
-   stream, off the main interface thread.
-5. Opus with FEC, continuous transmission in the quality profiles, and the
-   bitrate profile.
-6. A local mixer, EQ and compressor for remote microphones.
-7. A smoothed ceiling adaptation from `RTCRtpSender.getStats()` and
-   `setParameters()`.
-8. RTP/SRTP over the WebRTC mesh, or over one connection to Stellarr Media in
-   the `sfu` topology.
-
-Screen sharing has four persistent profiles, from 720p15 at 1 Mb/s to 2160p60
-at 12 Mb/s. The default 1080p30 stays limited to about 2.5 Mb/s. VP9 is
-preferred for compressing a desktop, temporal layers let frames be dropped on
-a worse link, and the picture has a lower priority than the voice. In the mesh
-each receiver uses a separate send stream, which has to be taken into account
-for the Ultra profile. In the `sfu` topology the publisher sends one stream and
-the media server forwards it unchanged to every receiver, also to one on a weak
-downlink.
+Four profiles are defined in `web/src/lib/voice/screenShare.ts`, from `720p15` (1 Mb/s) to `2160p60` (12 Mb/s), defaulting to `1080p30` (2.5 Mb/s). VP9 with temporal scalability layers is preferred, and video senders use lower network priority than Opus audio. In `mesh` mode, the sender encodes a stream per peer; in `sfu` mode, the sender uploads a single stream that `stellarr-media` forwards to all receivers.
 
 ## Diagnostics
 
-When voice does not work, check in this order:
+When voice fails to connect, verify in order:
 
-1. Whether the application runs in a secure HTTPS context.
-2. Whether the browser has the microphone permission.
-3. Which topology `GET /api/bootstrap` reports in `rtc.topology`.
-4. Whether `3478/udp` (or the port set in `STELLARR_TURN_PORT`) answers from
-   the user's network.
-5. Whether `PUBLIC_IP` matches the real public IP of the host.
-6. Whether the firewall lets `49160-49200/udp` through.
-7. Whether both users receive `VoiceSignal` events through `/hubs/app`.
+1. The page is loaded over `https://` (or `http://localhost`).
+2. Microphone permissions are granted in the browser.
+3. `GET /api/bootstrap` returns the expected `rtc.topology` (`mesh` or `sfu`).
+4. `3478/udp` (`STELLARR_TURN_PORT`) is reachable from the client network.
+5. `PUBLIC_IP` matches the host's public IPv4 address.
+6. `49160-49200/udp` (`STELLARR_TURN_RELAY_RANGE`) is open in the host firewall and forwarded on the router.
+7. Clients receive `VoiceSignal` events on `/hubs/app`.
 
-In the `sfu` topology, also:
+When `rtc.topology` is `sfu`, also verify:
 
-8. Whether `49000/udp` (or the port set in `STELLARR_MEDIA_PORT`) is forwarded
-   to the host on the same external port.
-9. Whether the container log shows the `media` program running, and no warning
-   about an empty `PUBLIC_IP`.
-10. Whether both users receive `MediaSignal` events through `/hubs/app`.
-11. Whether the media server lists both sessions as `connected`, with growing
-    `ingress` and `egress` counters. Inside the container:
+8. `49000/udp` (`STELLARR_MEDIA_PORT`) is forwarded to the host on the same external UDP port.
+9. Container logs show the `media` service running without an empty-`PUBLIC_IP` warning.
+10. Clients receive `MediaSignal` events on `/hubs/app`.
+11. `stellarr-media` lists active sessions as `connected` with advancing `ingress` and `egress` counters:
 
     ```bash
-    curl -s -H "Authorization: Bearer $(cat /data/stellarr/secrets/media-control-secret)" \
-      http://127.0.0.1:5200/v1/stats
+    docker compose exec stellarr sh -c \
+      'curl -s -H "Authorization: Bearer $(cat /data/stellarr/secrets/media-control-secret)" http://127.0.0.1:5200/v1/stats'
     ```

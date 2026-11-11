@@ -1,56 +1,43 @@
 # Architecture
 
-The binding, versioned media contract is described in
-[`RTC_STANDARD.md`](./RTC_STANDARD.md), and the `sfu` topology in
-[`STELLARR_MEDIA.md`](./STELLARR_MEDIA.md).
+The versioned WebRTC contract is specified in [`RTC_STANDARD.md`](./RTC_STANDARD.md), and the `sfu` media server in [`STELLARR_MEDIA.md`](./STELLARR_MEDIA.md).
 
 ```text
 Browser
-        |
-        | HTTPS + WebSocket
-        v
-      Nginx :443
-       |         \
-       |          \__ Next.js :3000
-       |           \__ Cockpit, the operator panel, static files under /cockpit/
-       |
-       \__ ASP.NET Core :5000
-              |       \
-              |        \__ SignalR signaling / presence
-              |
-              +__ SQLite WAL
-              |
-              +__ RustFS S3 :9000
-              |
-              \__ Stellarr Media control API 127.0.0.1:5200 (sfu only)
+  |
+  | HTTPS + WebSocket
+  v
+Nginx :443
+  |-- Next.js :3000 (web client)
+  |-- Cockpit (/cockpit/, static operator SPA)
+  `-- ASP.NET Core :5000
+        |-- SignalR (/hubs/app: signaling & presence)
+        |-- SQLite WAL (/data/stellarr/db/stellarr.db)
+        |-- RustFS S3 :9000 (/data/stellarr/objects)
+        `-- Stellarr Media control API 127.0.0.1:5200 (sfu only)
 
-Browser <---- ICE / TURN ----> coturn :3478 / :5349 / relay UDP
-                                  |
-                                  \__ relays to Stellarr Media (sfu)
+Browser <---- ICE / STUN / TURN ----> coturn :3478 / :5349 / 49160-49200/udp
+                                        |
+                                        `-- relays to Stellarr Media (sfu)
 
 mesh (default)   Browser <---- WebRTC ----> Browser
-
-sfu              Browser <---- WebRTC, :49000/udp ----> Stellarr Media
-                                                          |
-                                                          \__ forwards to every
-                                                              other browser of
-                                                              the room
+sfu              Browser <---- WebRTC :49000/udp ----> Stellarr Media
+                                                         |
+                                                         `-- forwards RTP to room peers
 ```
 
-## Responsibilities
+## Component responsibilities
 
-- Next.js owns the interface and the browser implementation of the versioned `VoiceClient`; the UI knows only its public contract.
-- Cockpit, the operator panel (`cockpit/`), is a separate single-page build that Nginx serves under `/cockpit/`. It talks to the `/api/cockpit/` endpoints of the same API and needs the owner role. The old address `/ops/` redirects to it.
-- ASP.NET Core is the control plane: sessions, users, channels, public and direct messages, uploads, presence and signaling. In the `sfu` topology it is also the only authority over media sessions: it opens and closes them in the media server through its control API on every change of a seat, and relays the negotiation between the browser and the media server.
-- Direct messages are persisted in SQLite and pushed as targeted SignalR events;
-  the identifier of a two-person conversation can also serve as a private RTC room.
-- SQLite holds the application state. Binary objects do not go into the database.
-- RustFS holds uploaded files (images, audio, video and documents), but it is not a public CDN. The backend authorizes and streams the downloads.
-- coturn solves NAT traversal. It implements neither room logic nor media routing. In the `sfu` topology it relays a browser that needs TURN to the media server's address inside the container.
-- Stellarr Media (`media/`, Rust) is the data plane of the `sfu` topology: ICE-lite on one UDP port, DTLS, SRTP and the forwarding of microphone, camera and screen packets to the rest of the room, with RTCP feedback handled per connection. It trusts nothing but its control API, which listens on loopback and which only the API calls. It never decodes, mixes or transcodes media, but it does decrypt each connection to forward the packets, so media is readable in its memory, which the mesh never allowed. In exchange, every browser connects only to it, and browsers no longer learn each other's addresses. In the mesh topology, still the default, the process runs and stays idle.
+- **Next.js (`web/`)**: Serves the web interface and implements the browser-side `VoiceClient`. UI components interact exclusively with the public `VoiceClient` and `VoiceState` contract.
+- **Stellarr Cockpit (`cockpit/`)**: Standalone single-page operator panel served by Nginx under `/cockpit/` (`/ops/` redirects with `308`). Calls `/api/cockpit/*` and requires the built-in instance owner role.
+- **ASP.NET Core (`server/Stellarr.Api`)**: Control plane handling authentication, sessions, servers, channels, public and direct messages, uploads, presence, and SignalR signaling. In the `sfu` topology, it also manages media session lifecycles via the `stellarr-media` loopback control API and brokers SDP/ICE signaling.
+- **SQLite**: Stores relational application state in WAL mode. Binary attachments are never stored in SQLite.
+- **RustFS**: S3-compatible object store on loopback (`127.0.0.1:9000`) holding uploaded images, audio, video, and documents. Clients never access RustFS directly; the API authorizes and streams all downloads.
+- **coturn**: Provides STUN and HMAC-authenticated TURN relay. It contains no room or application logic. In the `sfu` topology, TURN allocations relay media to the container's local `stellarr-media` UDP socket.
+- **Stellarr Media (`media/`, Rust)**: Selective Forwarding Unit (SFU) for the `sfu` topology. Runs ICE-lite on a single UDP port (`49000/udp`), terminates DTLS/SRTP per client, and forwards microphone, camera, and screen-share RTP packets without transcoding or mixing, while handling RTCP feedback (NACK, RTX, TWCC, PLI/FIR) per leg. Controlled exclusively by the API over `127.0.0.1:5200`. In the default `mesh` topology, the process runs idle.
 
-## Why one container
+## Single-container deployment model
 
-The final image contains several processes but has one deployment cycle and one persistent volume. Supervisor keeps the processes running (RustFS, Stellarr Media, the API, the Next.js server, coturn, Nginx and the TLS certificate maintenance, see `infra/supervisord.conf`), and Nginx provides a single origin. This is a deliberate profile for a small private instance, not a horizontal scaling model.
+All runtime services—RustFS, Stellarr Media, ASP.NET Core, Next.js, `coturn`, Nginx, and `stellarr-tls-maintenance`—are supervised by `supervisord` (`infra/supervisord.conf`) inside a single container image backed by one persistent volume (`/data/stellarr`). Nginx provides a single HTTP/HTTPS origin on the outside.
 
-If the instance grows, the first boundaries to separate should be the media plane and coturn. The frontend contract and the backend control plane stay unchanged.
+This packaging targets private self-hosted instances with a single deployment lifecycle and backup volume. If scaling beyond a single host is required, the media plane (`stellarr-media`) and `coturn` are already decoupled at the protocol boundary and can be separated without changing the browser or API contracts.
