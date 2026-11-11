@@ -249,12 +249,15 @@ export const en = {
   "backups.part.objectsHint": "Everything in the object store: attachments, avatars, emoji and sounds. {size} now.",
   "backups.part.keysHint":
     "The keys that encrypt the secrets set in Cockpit and sign sessions. Without them a restored database cannot read its secrets.",
+  "backups.part.instance": "Instance files",
+  "backups.part.instanceHint":
+    "The secrets the container generated (storage, TURN), the TLS certificates and the desktop client releases.",
   "backups.dialog.title": "Create a backup",
   "backups.dialog.description":
     "The database alone is copied at once as a SQLite file. With files or keys the backup is a zip archive made in the background.",
   "backups.dialog.parts": "What goes into the backup",
   "backups.dialog.environment":
-    "Values in the server's .env file, such as the storage and TURN secrets, stay on the host and are not in the archive. Keep a copy of .env with it.",
+    "Values you set yourself in the server's .env file stay on the host and are not in the archive. Keep a copy of .env with it.",
   "backups.dialog.nothing": "Choose at least one part.",
   "backups.dialog.cancel": "Cancel",
   "backups.job.title": "Making the backup: {phase}",
@@ -264,7 +267,7 @@ export const en = {
   "backups.col.contents": "Contents",
   "backups.scope.title": "What a backup holds",
   "backups.scope.description":
-    "A full backup holds the database, every stored file and the keys: everything the instance keeps on its own. The server's .env file stays on the host, so keep a copy of it with the archive. Keep the archive safe: with the keys it can read the secrets set in Cockpit.",
+    "A full backup holds the database, every stored file, the keys and the instance files: what the instance keeps on its data volume, apart from logs and older backups. The .env file you wrote stays on the host, so keep a copy of it with the archive. Keep the archive safe: it holds the instance's secrets.",
 
 
   "settings.title": "Instance settings",

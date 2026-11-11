@@ -15,24 +15,31 @@ public sealed class CockpitBackupArchiveTests
     private const string SqliteHeader = "SQLite format 3\0";
 
     [Fact]
-    public async Task AFullBackupHoldsTheDatabaseEveryObjectAndTheKeys()
+    public async Task AFullBackupHoldsTheDatabaseEveryObjectTheKeysAndTheInstanceFiles()
     {
         var storage = new FakeObjectStorage();
         await PutAsync(storage, "attachments/one/photo.png", "first object");
         await PutAsync(storage, "avatars/two.webp", "second object");
         using var factory = Factory(storage);
         using var owner = await OwnerAsync(factory);
+        // What the container's entrypoint keeps on the data volume, next to what a backup leaves out.
+        WriteDataFile(factory, "secrets/storage-secret-key", "generated secret");
+        WriteDataFile(factory, "tls/fullchain.pem", "certificate");
+        WriteDataFile(factory, "releases/desktop/desktop-release.json", "{}");
+        WriteDataFile(factory, "logs/stellarr.log", "a log line");
 
-        var started = await owner.PostAsJsonAsync("/api/cockpit/backups", new { database = true, objects = true, keys = true });
+        var started = await owner.PostAsJsonAsync(
+            "/api/cockpit/backups",
+            new { database = true, objects = true, keys = true, instance = true });
 
         Assert.Equal(HttpStatusCode.Accepted, started.StatusCode);
         var job = await JsonAsync(started);
         var id = job.GetProperty("id").GetString()!;
         Assert.Matches(@"^backup-\d{8}-\d{6}-[0-9a-f]{32}\.zip$", id);
-        Assert.Equal(["database", "objects", "keys"], job.GetProperty("parts").EnumerateArray().Select(x => x.GetString()));
+        Assert.Equal(["database", "objects", "keys", "instance"], job.GetProperty("parts").EnumerateArray().Select(x => x.GetString()));
 
         var listed = await FinishedAsync(owner, id);
-        Assert.Equal(["database", "objects", "keys"], listed.GetProperty("parts").EnumerateArray().Select(x => x.GetString()));
+        Assert.Equal(["database", "objects", "keys", "instance"], listed.GetProperty("parts").EnumerateArray().Select(x => x.GetString()));
         Assert.Equal(0, listed.GetProperty("missingObjects").GetInt32());
 
         var download = await owner.GetAsync($"/api/cockpit/backups/{id}/download");
@@ -44,10 +51,17 @@ public sealed class CockpitBackupArchiveTests
         Assert.Equal("first object", Encoding.UTF8.GetString(await ReadAsync(zip, "objects/attachments/one/photo.png")));
         Assert.Equal("second object", Encoding.UTF8.GetString(await ReadAsync(zip, "objects/avatars/two.webp")));
         Assert.Contains(zip.Entries, x => x.FullName.StartsWith("keys/", StringComparison.Ordinal));
+        Assert.Equal("generated secret", Encoding.UTF8.GetString(await ReadAsync(zip, "instance/secrets/storage-secret-key")));
+        Assert.Equal("certificate", Encoding.UTF8.GetString(await ReadAsync(zip, "instance/tls/fullchain.pem")));
+        Assert.NotNull(zip.GetEntry("instance/releases/desktop/desktop-release.json"));
+        Assert.DoesNotContain(zip.Entries, x => x.FullName.Contains("logs/", StringComparison.Ordinal));
+        Assert.DoesNotContain(zip.Entries, x => x.FullName.Contains("backups/", StringComparison.Ordinal));
 
         using var manifest = JsonDocument.Parse(await ReadAsync(zip, BackupArchive.ManifestEntry));
         Assert.Equal("stellarr-backup", manifest.RootElement.GetProperty("format").GetString());
         Assert.Equal(2, manifest.RootElement.GetProperty("objectCount").GetInt32());
+        Assert.Equal(3, manifest.RootElement.GetProperty("instanceFiles").GetInt32());
+        (await owner.PostAsync($"/api/cockpit/backups/{id}/verify", null)).EnsureSuccessStatusCode();
         // The test environment sets the Resend key: its name is listed, its value is not in the archive.
         Assert.Contains(
             "STELLARR_RESEND_API_KEY",
@@ -184,6 +198,13 @@ public sealed class CockpitBackupArchiveTests
             services.RemoveAll<IObjectStorage>();
             services.AddSingleton(storage);
         });
+
+    private static void WriteDataFile(StellarrWebApplicationFactory factory, string relativePath, string text)
+    {
+        var path = Path.Combine(factory.DataRoot, relativePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, text);
+    }
 
     private static Task PutAsync(FakeObjectStorage storage, string key, string text) =>
         storage.PutAsync(key, new MemoryStream(Encoding.UTF8.GetBytes(text)), "application/octet-stream", CancellationToken.None);

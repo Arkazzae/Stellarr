@@ -20,7 +20,13 @@ public enum BackupParts
     /// <summary>The data-protection keys, without which the secrets set in Cockpit and the sessions cannot be read.</summary>
     Keys = 4,
 
-    All = Database | Objects | Keys,
+    /// <summary>
+    /// The instance's own files on the data volume: the secrets the container
+    /// generated (storage, TURN), the TLS certificates and the desktop releases.
+    /// </summary>
+    Instance = 8,
+
+    All = Database | Objects | Keys | Instance,
 }
 
 public static class BackupPartNames
@@ -28,12 +34,14 @@ public static class BackupPartNames
     public const string Database = "database";
     public const string Objects = "objects";
     public const string Keys = "keys";
+    public const string Instance = "instance";
 
     public static IReadOnlyList<string> Of(BackupParts parts) =>
     [
         .. parts.HasFlag(BackupParts.Database) ? [Database] : Array.Empty<string>(),
         .. parts.HasFlag(BackupParts.Objects) ? [Objects] : Array.Empty<string>(),
         .. parts.HasFlag(BackupParts.Keys) ? [Keys] : Array.Empty<string>(),
+        .. parts.HasFlag(BackupParts.Instance) ? [Instance] : Array.Empty<string>(),
     ];
 }
 
@@ -54,7 +62,8 @@ public sealed record BackupManifest(
     long ObjectBytes,
     IReadOnlyList<string> MissingObjects,
     int KeyFiles,
-    IReadOnlyList<string> EnvironmentSecrets)
+    IReadOnlyList<string> EnvironmentSecrets,
+    int InstanceFiles = 0)
 {
     public const string FormatName = "stellarr-backup";
     public const int CurrentVersion = 1;
@@ -68,7 +77,8 @@ public sealed record BackupSources(
     string KeysDirectory,
     string InstanceName,
     IReadOnlyList<string> EnvironmentSecrets,
-    string WorkDirectory);
+    string WorkDirectory,
+    string DataRoot);
 
 /// <summary>How far a running backup has got; read by Cockpit while it runs.</summary>
 public sealed class BackupProgress
@@ -89,8 +99,9 @@ public sealed class BackupFailedException(string message) : Exception(message);
 
 /// <summary>
 /// A backup as one zip file: <c>manifest.json</c>, <c>database/stellarr.db</c>,
-/// <c>objects/…</c> under their own keys, and <c>keys/…</c>. Objects are stored
-/// without compression, as they mostly are compressed media already.
+/// <c>objects/…</c> under their own keys, <c>keys/…</c> and <c>instance/…</c>
+/// as the folders sit on the data volume. Objects are stored without
+/// compression, as they mostly are compressed media already.
 /// </summary>
 public static class BackupArchive
 {
@@ -98,6 +109,14 @@ public static class BackupArchive
     public const string DatabaseEntry = "database/stellarr.db";
     public const string ObjectsFolder = "objects/";
     public const string KeysFolder = "keys/";
+    public const string InstanceFolder = "instance/";
+
+    /// <summary>
+    /// The folders of the data volume that make up the instance files. The
+    /// database, the keys, the object store's own data, the logs and the
+    /// backups are elsewhere in the archive or not wanted in it.
+    /// </summary>
+    public static readonly IReadOnlyList<string> InstanceFolders = ["secrets", "tls", "releases"];
 
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web) { WriteIndented = true };
 
@@ -119,6 +138,7 @@ public static class BackupArchive
         var objectBytes = 0L;
         var missing = new List<string>();
         var keyFiles = 0;
+        var instanceFiles = 0;
 
         await using (var file = new FileStream(archivePath, FileMode.CreateNew, FileAccess.Write, FileShare.None, 81920, useAsync: true))
         await using (var zip = new ZipArchive(file, ZipArchiveMode.Create))
@@ -183,6 +203,16 @@ public static class BackupArchive
                 }
             }
 
+            if (parts.HasFlag(BackupParts.Instance))
+            {
+                progress.Phase = BackupPartNames.Instance;
+                foreach (var (path, entryName) in InstanceFiles(sources.DataRoot))
+                {
+                    await AddFileAsync(zip, path, entryName, CompressionLevel.Optimal, cancellationToken);
+                    instanceFiles++;
+                }
+            }
+
             var manifest = new BackupManifest(
                 BackupManifest.FormatName,
                 BackupManifest.CurrentVersion,
@@ -194,7 +224,8 @@ public static class BackupArchive
                 objectBytes,
                 missing,
                 keyFiles,
-                sources.EnvironmentSecrets);
+                sources.EnvironmentSecrets,
+                instanceFiles);
             var manifestEntry = zip.CreateEntry(ManifestEntry, CompressionLevel.Optimal);
             await using (var target = await manifestEntry.OpenAsync(cancellationToken))
             {
@@ -273,6 +304,12 @@ public static class BackupArchive
                 return $"The archive holds {keys} key files; its manifest names {manifest.KeyFiles}.";
             }
 
+            var instance = zip.Entries.Count(x => x.FullName.StartsWith(InstanceFolder, StringComparison.Ordinal));
+            if (instance != manifest.InstanceFiles)
+            {
+                return $"The archive holds {instance} instance files; its manifest names {manifest.InstanceFiles}.";
+            }
+
             // Reading every entry to its end checks that none is cut short or damaged.
             foreach (var entry in zip.Entries)
             {
@@ -323,6 +360,25 @@ public static class BackupArchive
         catch (Exception exception) when (exception is not OperationCanceledException)
         {
             return null;
+        }
+    }
+
+    /// <summary>Every file of the instance folders, with the entry it goes to, in a stable order.</summary>
+    public static IEnumerable<(string Path, string EntryName)> InstanceFiles(string dataRoot)
+    {
+        foreach (var folder in InstanceFolders)
+        {
+            var directory = Path.Combine(dataRoot, folder);
+            if (!Directory.Exists(directory))
+            {
+                continue;
+            }
+
+            foreach (var path in Directory.EnumerateFiles(directory, "*", SearchOption.AllDirectories).Order(StringComparer.Ordinal))
+            {
+                var relative = Path.GetRelativePath(dataRoot, path).Replace(Path.DirectorySeparatorChar, '/');
+                yield return (path, InstanceFolder + relative);
+            }
         }
     }
 

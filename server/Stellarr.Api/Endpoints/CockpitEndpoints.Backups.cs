@@ -58,7 +58,8 @@ public static partial class CockpitEndpoints
             ? BackupParts.Database
             : (request.Database ? BackupParts.Database : BackupParts.None)
                 | (request.Objects ? BackupParts.Objects : BackupParts.None)
-                | (request.Keys ? BackupParts.Keys : BackupParts.None);
+                | (request.Keys ? BackupParts.Keys : BackupParts.None)
+                | (request.Instance ? BackupParts.Instance : BackupParts.None);
         if (parts == BackupParts.None)
         {
             return Results.ValidationProblem(new Dictionary<string, string[]>

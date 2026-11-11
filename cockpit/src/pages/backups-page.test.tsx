@@ -178,7 +178,7 @@ describe("BackupsPage create", () => {
 
     await createThroughDialog(user);
 
-    expect(createMock).toHaveBeenCalledExactlyOnceWith({ database: true, objects: true, keys: true });
+    expect(createMock).toHaveBeenCalledExactlyOnceWith({ database: true, objects: true, keys: true, instance: true });
     expect((dialog().getByRole("button", { name: "Utwórz kopię" }) as HTMLButtonElement).disabled).toBe(true);
 
     creation.resolve(newest);
@@ -326,7 +326,7 @@ describe("BackupsPage contents and archives", () => {
     backupsMock.mockResolvedValueOnce(list([newest, older]));
 
     await user.click(button("Utwórz kopię"));
-    for (const part of ["Baza danych", "Pliki z magazynu", "Klucze"]) {
+    for (const part of ["Baza danych", "Pliki z magazynu", "Klucze", "Pliki instancji"]) {
       await user.click(dialog().getByRole("checkbox", { name: new RegExp(part) }));
     }
     expect(dialog().getByRole("alert").textContent).toBe("Wybierz co najmniej jedną część.");
@@ -335,7 +335,7 @@ describe("BackupsPage contents and archives", () => {
     await user.click(dialog().getByRole("checkbox", { name: /Baza danych/ }));
     await user.click(dialog().getByRole("button", { name: "Utwórz kopię" }));
 
-    expect(createMock).toHaveBeenCalledExactlyOnceWith({ database: true, objects: false, keys: false });
+    expect(createMock).toHaveBeenCalledExactlyOnceWith({ database: true, objects: false, keys: false, instance: false });
     expect(await screen.findByText("Utworzono backup-2.db.")).toBeTruthy();
     expect(screen.queryByRole("dialog")).toBeNull();
   });

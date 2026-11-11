@@ -234,10 +234,10 @@ describe("routes", () => {
     ["backups", () => cockpitApi.backups(), "GET", "/api/cockpit/backups", undefined],
     [
       "createBackup",
-      () => cockpitApi.createBackup({ database: true, objects: true, keys: false }),
+      () => cockpitApi.createBackup({ database: true, objects: true, keys: false, instance: true }),
       "POST",
       "/api/cockpit/backups",
-      { database: true, objects: true, keys: false },
+      { database: true, objects: true, keys: false, instance: true },
     ],
     ["verifyBackup", () => cockpitApi.verifyBackup("b1"), "POST", "/api/cockpit/backups/b1/verify", undefined],
     ["settings", () => cockpitApi.settings(), "GET", "/api/cockpit/settings", undefined],

@@ -244,12 +244,15 @@ export const pl = {
   "backups.part.objectsHint": "Wszystko z magazynu obiektów: załączniki, awatary, emoji i dźwięki. Teraz {size}.",
   "backups.part.keysHint":
     "Klucze, którymi zaszyfrowane są sekrety z Cockpitu i podpisane sesje. Bez nich odtworzona baza nie odczyta sekretów.",
+  "backups.part.instance": "Pliki instancji",
+  "backups.part.instanceHint":
+    "Sekrety wygenerowane przez kontener (magazyn, TURN), certyfikaty TLS i wydania klienta desktop.",
   "backups.dialog.title": "Utwórz kopię",
   "backups.dialog.description":
     "Sama baza danych kopiuje się od razu jako plik SQLite. Z plikami albo kluczami kopia jest archiwum zip tworzonym w tle.",
   "backups.dialog.parts": "Co wchodzi do kopii",
   "backups.dialog.environment":
-    "Wartości z pliku .env serwera, np. sekrety magazynu i TURN, zostają na hoście i nie trafiają do archiwum. Trzymaj kopię .env razem z nim.",
+    "Wartości wpisane samodzielnie w plik .env serwera zostają na hoście i nie trafiają do archiwum. Trzymaj kopię .env razem z nim.",
   "backups.dialog.nothing": "Wybierz co najmniej jedną część.",
   "backups.dialog.cancel": "Anuluj",
   "backups.job.title": "Tworzenie kopii: {phase}",
@@ -259,7 +262,7 @@ export const pl = {
   "backups.col.contents": "Zawartość",
   "backups.scope.title": "Co zawiera kopia",
   "backups.scope.description":
-    "Pełna kopia zawiera bazę danych, wszystkie pliki z magazynu i klucze: wszystko, co instancja przechowuje sama. Plik .env serwera zostaje na hoście, więc trzymaj jego kopię razem z archiwum. Trzymaj archiwum bezpiecznie: z kluczami da się odczytać sekrety ustawione w Cockpicie.",
+    "Pełna kopia zawiera bazę danych, wszystkie pliki z magazynu, klucze i pliki instancji: to, co instancja trzyma na wolumenie danych, poza logami i starszymi kopiami. Plik .env, który piszesz sam, zostaje na hoście, więc trzymaj jego kopię razem z archiwum. Trzymaj archiwum bezpiecznie: zawiera sekrety instancji.",
 
 
   "settings.title": "Ustawienia instancji",

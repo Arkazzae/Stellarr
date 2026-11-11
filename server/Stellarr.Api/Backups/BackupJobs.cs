@@ -131,7 +131,8 @@ public sealed partial class BackupJobs(
 
             var connectionString = db.Database.GetDbConnection().ConnectionString;
             var keysDirectory = KeysDirectory(services);
-            EnsureSpace(directory, Estimate(job.Parts, connectionString, objects, keysDirectory), messages);
+            var dataRoot = Path.GetFullPath(configuration["DataRoot"] ?? "data");
+            EnsureSpace(directory, Estimate(job.Parts, connectionString, objects, keysDirectory, dataRoot), messages);
 
             var server = await db.Servers.AsNoTracking().SingleAsync(x => x.Id == serverId, cancellationToken);
             var resolved = await services.GetRequiredService<InstanceSecrets>().ReadAsync(cancellationToken);
@@ -143,7 +144,7 @@ public sealed partial class BackupJobs(
             await BackupArchive.WriteAsync(
                 partial,
                 job.Parts,
-                new BackupSources(connectionString, storage, objects, keysDirectory, server.Name, environmentSecrets, directory),
+                new BackupSources(connectionString, storage, objects, keysDirectory, server.Name, environmentSecrets, directory, dataRoot),
                 progress,
                 cancellationToken);
             File.Move(partial, Path.Combine(directory, job.Id));
@@ -204,7 +205,8 @@ public sealed partial class BackupJobs(
         BackupParts parts,
         string connectionString,
         IReadOnlyList<StoredObjectInfo> objects,
-        string keysDirectory)
+        string keysDirectory,
+        string dataRoot)
     {
         var bytes = 0L;
         if (parts.HasFlag(BackupParts.Database))
@@ -222,6 +224,11 @@ public sealed partial class BackupJobs(
         if (parts.HasFlag(BackupParts.Keys) && System.IO.Directory.Exists(keysDirectory))
         {
             bytes += System.IO.Directory.EnumerateFiles(keysDirectory).Sum(SizeOf);
+        }
+
+        if (parts.HasFlag(BackupParts.Instance))
+        {
+            bytes += BackupArchive.InstanceFiles(dataRoot).Sum(file => SizeOf(file.Path));
         }
 
         return bytes;

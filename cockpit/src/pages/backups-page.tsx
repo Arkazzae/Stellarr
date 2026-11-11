@@ -42,21 +42,23 @@ const formatSize = (bytes: number) => formatMegabytes(bytes, 2);
 /** How often the list is read again while an archive is being written. */
 const JOB_POLL_MS = 1500;
 
-const PARTS: readonly CockpitBackupPart[] = ["database", "objects", "keys"];
+const PARTS: readonly CockpitBackupPart[] = ["database", "objects", "keys", "instance"];
 
 const PART_LABEL: Record<CockpitBackupPart, MessageKey> = {
   database: "backups.part.database",
   objects: "backups.part.objects",
   keys: "backups.part.keys",
+  instance: "backups.part.instance",
 };
 
 const PART_HINT: Record<CockpitBackupPart, MessageKey> = {
   database: "backups.part.databaseHint",
   objects: "backups.part.objectsHint",
   keys: "backups.part.keysHint",
+  instance: "backups.part.instanceHint",
 };
 
-const EVERYTHING: CockpitBackupChoice = { database: true, objects: true, keys: true };
+const EVERYTHING: CockpitBackupChoice = { database: true, objects: true, keys: true, instance: true };
 
 function isJob(result: CockpitBackup | CockpitBackupJob): result is CockpitBackupJob {
   return "phase" in result;

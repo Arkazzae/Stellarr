@@ -172,7 +172,7 @@ public sealed record CockpitLogsDto(
 
 /// <summary>
 /// One backup. <c>Parts</c> says what it holds: <c>database</c>, <c>objects</c>,
-/// <c>keys</c>. A plain <c>.db</c> file holds the database alone.
+/// <c>keys</c>, <c>instance</c>. A plain <c>.db</c> file holds the database alone.
 /// <c>MissingObjects</c> counts objects the store could not give when it was made.
 /// </summary>
 public sealed record CockpitBackupDto(
@@ -201,7 +201,7 @@ public sealed record CockpitBackupsDto(
     CockpitBackupFailureDto? LastFailure);
 
 /// <summary>What to back up. A request without a body asks for the database alone, as a plain SQLite file.</summary>
-public sealed record CreateCockpitBackupRequest(bool Database, bool Objects, bool Keys);
+public sealed record CreateCockpitBackupRequest(bool Database, bool Objects, bool Keys, bool Instance = false);
 
 public sealed record CockpitSettingsDto(
     string InstanceName,

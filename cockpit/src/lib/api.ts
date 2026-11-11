@@ -204,7 +204,7 @@ function logQuery(filters: CockpitLogFilters, extra: Record<string, string> = {}
   return text ? `?${text}` : "";
 }
 
-export type CockpitBackupPart = "database" | "objects" | "keys";
+export type CockpitBackupPart = "database" | "objects" | "keys" | "instance";
 
 export interface CockpitBackup {
   id: string;
