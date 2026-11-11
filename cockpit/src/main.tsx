@@ -15,6 +15,7 @@ import { ServersPage } from "@/pages/servers-page";
 import { SettingsPage } from "@/pages/settings-page";
 import { UsersPage } from "@/pages/users-page";
 import { CockpitProvider } from "@/state/cockpit-provider";
+import { LocaleProvider } from "@/state/locale-provider";
 
 import "./index.css";
 
@@ -40,14 +41,16 @@ const router = createBrowserRouter(
   { basename: import.meta.env.BASE_URL.replace(/\/$/, "") || "/" },
 );
 
-// The language is decided once, before anything renders: the web client's cookie, then the browser.
+// The language is set before anything renders: the one chosen in Settings, else English.
 setLocale(detectLocale());
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <CockpitProvider>
       <TooltipProvider>
-        <RouterProvider router={router} />
+        <LocaleProvider>
+          <RouterProvider router={router} />
+        </LocaleProvider>
       </TooltipProvider>
     </CockpitProvider>
   </StrictMode>,

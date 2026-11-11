@@ -264,6 +264,10 @@ export const pl = {
   "settings.retention.backups": "Backupy, dni",
   "settings.retention.logs": "Logi, dni",
   "settings.retention.objects": "Obiekty, dni",
+  "settings.language.title": "Język panelu",
+  "settings.language.description":
+    "Zmienia się od razu i zostaje zapamiętany w tej przeglądarce. Język instancji (STELLARR_LANGUAGE) i klienta web zostaje bez zmian.",
+  "settings.language.label": "Język",
   "settings.cleanup.title": "Automatyczne sprzątanie",
   "settings.cleanup.description":
     "Włącza okresowe usuwanie przeterminowanych backupów, logów i osieroconych obiektów.",

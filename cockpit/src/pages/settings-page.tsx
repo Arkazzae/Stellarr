@@ -10,10 +10,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { t, type MessageKey } from "@/i18n";
+import { LOCALES, t, type Locale, type MessageKey } from "@/i18n";
 import { CockpitApiError, cockpitApi, type CockpitSettings, type CockpitSmtpSecurity } from "@/lib/api";
 import { useCockpitResource } from "@/lib/use-cockpit-resource";
 import { useCockpit } from "@/state/cockpit-context";
+import { useLocale } from "@/state/locale-context";
 
 type FieldErrors = Record<string, string[]>;
 type Update = <K extends keyof CockpitSettings>(key: K, value: CockpitSettings[K]) => void;
@@ -89,6 +90,33 @@ interface CardProps {
   settings: CockpitSettings;
   update: Update;
   errors: FieldErrors;
+}
+
+/** Each language named in itself, so it can be found whatever the panel shows now. */
+const LANGUAGE_NAMES: Record<Locale, string> = { en: "English", pl: "Polski" };
+
+/** The panel's own language: applied at once and kept in this browser, apart from the saved settings. */
+function LanguageCard() {
+  const { locale, changeLocale } = useLocale();
+  return (
+    <Section title={t("settings.language.title")} description={t("settings.language.description")}>
+      <div className="space-y-2">
+        <Label htmlFor="panel-language">{t("settings.language.label")}</Label>
+        <select
+          id="panel-language"
+          value={locale}
+          onChange={(event) => changeLocale(event.target.value as Locale)}
+          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
+        >
+          {LOCALES.map((option) => (
+            <option key={option} value={option} lang={option}>
+              {LANGUAGE_NAMES[option]}
+            </option>
+          ))}
+        </select>
+      </div>
+    </Section>
+  );
 }
 
 function InstanceCard({ settings, update, errors }: CardProps) {
@@ -470,6 +498,7 @@ export function SettingsPage() {
           <div className="space-y-6">
             <InstanceCard settings={settings} update={update} errors={fieldErrors} />
             <RetentionCard settings={settings} update={update} errors={fieldErrors} />
+            <LanguageCard />
           </div>
           <div className="space-y-6">
             <MailCard settings={settings} update={update} errors={fieldErrors} />

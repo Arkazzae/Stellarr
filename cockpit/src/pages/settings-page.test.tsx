@@ -2,9 +2,12 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import { getLocale, setLocale } from "@/i18n";
+
 import { CockpitApiError, cockpitApi, type CockpitSettings } from "@/lib/api";
 import { SettingsPage } from "@/pages/settings-page";
 import { CockpitContext, type CockpitContextValue } from "@/state/cockpit-context";
+import { LocaleProvider } from "@/state/locale-provider";
 import { selectPolish } from "@/test/locale";
 import { cockpitValue } from "@/test/cockpit-fixtures";
 
@@ -69,7 +72,9 @@ async function renderLoaded(settings: CockpitSettings = stored, context: Cockpit
   settingsMock.mockResolvedValue(settings);
   render(
     <CockpitContext.Provider value={context}>
-      <SettingsPage />
+      <LocaleProvider>
+        <SettingsPage />
+      </LocaleProvider>
     </CockpitContext.Provider>,
   );
   await screen.findByLabelText("Nazwa instancji");
@@ -96,7 +101,9 @@ describe("SettingsPage loading", () => {
     settingsMock.mockReturnValue(new Promise(() => {}));
     render(
       <CockpitContext.Provider value={cockpitValue()}>
+        <LocaleProvider>
         <SettingsPage />
+      </LocaleProvider>
       </CockpitContext.Provider>,
     );
 
@@ -109,7 +116,9 @@ describe("SettingsPage loading", () => {
     settingsMock.mockRejectedValue(new Error("Backend odpowiedział kodem 500."));
     render(
       <CockpitContext.Provider value={cockpitValue()}>
+        <LocaleProvider>
         <SettingsPage />
+      </LocaleProvider>
       </CockpitContext.Provider>,
     );
 
@@ -397,5 +406,23 @@ describe("SettingsPage mail", () => {
 
     await userEvent.type(input("Odbiorca testu"), "   ");
     expect(button("Wyślij test").disabled).toBe(true);
+  });
+});
+
+describe("SettingsPage panel language", () => {
+  it("switches the panel to English at once and remembers it in this browser", async () => {
+    await renderLoaded();
+
+    await userEvent.selectOptions(screen.getByLabelText("Język"), "English");
+
+    expect(getLocale()).toBe("en");
+    expect(localStorage.getItem("stellarr.cockpit.locale")).toBe("en");
+    expect(await screen.findByLabelText("Instance name")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Save settings" })).toBeTruthy();
+    // The page is drawn afresh in the new language, so it reads the settings again.
+    expect(settingsMock).toHaveBeenCalledTimes(2);
+
+    setLocale("pl");
+    localStorage.removeItem("stellarr.cockpit.locale");
   });
 });

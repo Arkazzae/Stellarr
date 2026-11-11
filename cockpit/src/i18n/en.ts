@@ -269,6 +269,10 @@ export const en = {
   "settings.retention.backups": "Backups, days",
   "settings.retention.logs": "Logs, days",
   "settings.retention.objects": "Objects, days",
+  "settings.language.title": "Panel language",
+  "settings.language.description":
+    "Applies at once and is remembered in this browser. The instance's language (STELLARR_LANGUAGE) and the web client's stay as they are.",
+  "settings.language.label": "Language",
   "settings.cleanup.title": "Automatic cleanup",
   "settings.cleanup.description":
     "Periodically deletes expired backups, logs and orphaned objects.",
