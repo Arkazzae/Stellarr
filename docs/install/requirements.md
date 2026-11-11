@@ -4,6 +4,8 @@ Stellarr runs as one Docker container. The host needs Docker, memory and disk
 for that container and, for voice with people outside your own network, open
 ports.
 
+To try it on one machine, follow the [quick start](quick-start.md).
+
 ## Host
 
 | Item | Requirement |

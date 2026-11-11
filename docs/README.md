@@ -3,6 +3,19 @@
 Stellarr is a self-hosted text and voice chat for a small group of friends. The
 data of an instance stays on your own server.
 
+## Install
+
+- [Requirements](install/requirements.md): the host, the ports to publish and
+  what voice needs behind NAT.
+- [Quick start](install/quick-start.md): from a machine with Docker to two
+  people in a voice channel.
+- [Configuration](install/configuration.md): every setting of the compose files,
+  with its default and effect.
+- [Reverse proxy and TLS](install/reverse-proxy-and-tls.md): a certificate of
+  your own, running behind a proxy, and what a proxy cannot carry.
+- [Upgrading](install/upgrading.md): backing up, upgrading, going back, and
+  installations that ran the Polish-only builds.
+
 ## Understand
 
 - [Architecture](ARCHITECTURE.md): the processes inside the container, what
