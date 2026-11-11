@@ -51,8 +51,10 @@ function scan(
 
 /* ------------------------------------------------------------- markup, css */
 
+// A comment ends where a browser ends it: at "-->", at the "--!>" it also
+// accepts, or at once in the empty "<!-->" and "<!--->".
 const MARKUP_PATTERN =
-  /(?<cm><!--[\s\S]*?-->)|(?<str>"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|(?<tag><\/?[A-Za-z][\w:.-]*|\/?>)|(?<attr>[A-Za-z_:][\w:.-]*(?=\s*=))|(?<entity>&(?:#\d+|#x[\da-f]+|\w+);)|(?<num>-?\b\d+(?:\.\d+)?\b)/gi;
+  /(?<cm><!--(?:-?>|[\s\S]*?--!?>))|(?<str>"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*')|(?<tag><\/?[A-Za-z][\w:.-]*|\/?>)|(?<attr>[A-Za-z_:][\w:.-]*(?=\s*=))|(?<entity>&(?:#\d+|#x[\da-f]+|\w+);)|(?<num>-?\b\d+(?:\.\d+)?\b)/gi;
 const MARKUP_KINDS: GroupKinds = {
   cm: "cm",
   str: "str",
