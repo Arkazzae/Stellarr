@@ -992,7 +992,7 @@ fn opus_fmtp(sdp: &str, mid: &str) -> Option<String> {
 }
 
 /// Gives every Opus payload type of a description these parameters, as the
-/// mesh client does to its local descriptions.
+/// web client does to its local descriptions.
 fn with_opus_fmtp(sdp: &str, params: &str) -> String {
     let opus: Vec<String> = sdp
         .lines()
@@ -1067,7 +1067,7 @@ fn the_publisher_s_opus_parameters_come_back_in_answers_and_offers() {
 }
 
 /// A real offer of Chromium 153 for a microphone and a camera, with the Opus
-/// parameters the mesh client writes, scrubbed of its addresses.
+/// parameters the web client writes, scrubbed of its addresses.
 const CHROMIUM_OFFER: &str = include_str!("fixtures/chromium-offer.sdp");
 
 #[test]

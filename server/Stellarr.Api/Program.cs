@@ -175,10 +175,11 @@ if (builder.Environment.IsDevelopment())
 
 var app = builder.Build();
 
-// Read once before anything is served, so an unknown Rtc:Topology stops the
-// API at start instead of at the first call that needs it. It is read from the
-// built host because only there does it see every source of configuration.
-app.Services.GetRequiredService<MediaTopology>();
+// Read once before anything is served, so an unusable media server setting
+// stops the API at start instead of at the first call that needs it. It is
+// read from the built host because only there does it see every source of
+// configuration.
+app.Services.GetRequiredService<MediaServerSettings>();
 
 // Outermost, so it counts the status the client gets, the exception handler's 500 included.
 var runtimeMetrics = app.Services.GetRequiredService<RuntimeMetrics>();
@@ -292,18 +293,17 @@ static async Task InitializeApplicationAsync(WebApplication app)
     }
 }
 
-// Stellarr Media, the selective forwarding unit of the sfu topology. Everything
-// is registered in both topologies; in the mesh topology the background
-// services return at once and no seat ever holds a media session, so the API
-// never calls the media server.
+// Stellarr Media, the selective forwarding unit every voice room goes through.
+// The background services follow its events and close the sessions of seats
+// that ended, from the moment the API starts.
 static void AddMediaServer(IServiceCollection services)
 {
-    services.AddSingleton(provider => MediaTopology.Load(provider.GetRequiredService<IConfiguration>()));
+    services.AddSingleton(provider => MediaServerSettings.Load(provider.GetRequiredService<IConfiguration>()));
     services.AddSingleton<MediaControlTiming>();
     services
         .AddHttpClient(MediaControlClient.HttpClientName, (provider, http) =>
         {
-            http.BaseAddress = provider.GetRequiredService<MediaTopology>().ControlUrl;
+            http.BaseAddress = provider.GetRequiredService<MediaServerSettings>().ControlUrl;
             // Each call sets its own, shorter limit; this only catches one
             // that slipped past it.
             http.Timeout = TimeSpan.FromMinutes(1);

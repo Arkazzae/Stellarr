@@ -137,8 +137,8 @@ describe("SignalR RTC envelope", () => {
     channelId: "channel-1",
     fromUserId: "user-1",
     toUserId: "user-2",
-    kind: "offer",
-    payload: '{"type":"offer","sdp":"v=0"}',
+    kind: "state",
+    payload: '{"muted":false,"screenStreamId":null,"cameraStreamId":null}',
   };
 
   it("accepts the current version", () => {
@@ -148,6 +148,12 @@ describe("SignalR RTC envelope", () => {
   it("drops unknown versions and signal kinds at the adapter boundary", () => {
     expect(parseVoiceSignal({ ...signal, protocolVersion: 2 })).toBeNull();
     expect(parseVoiceSignal({ ...signal, kind: "execute" })).toBeNull();
+  });
+
+  it("drops a description or candidate, which only the media server takes", () => {
+    for (const kind of ["offer", "answer", "candidate"]) {
+      expect(parseVoiceSignal({ ...signal, kind })).toBeNull();
+    }
   });
 });
 
@@ -214,13 +220,13 @@ describe("SignalR media session", () => {
     await expect(client.openMediaSession("voice-1")).rejects.toThrow("no session id");
   });
 
-  it("passes on the hub's refusal in the mesh topology", async () => {
+  it("passes on the hub's refusal", async () => {
     const { client } = openConnection(async () => {
-      throw new Error("Media server is not enabled.");
+      throw new Error("Media server is unavailable.");
     });
     await client.start();
 
-    await expect(client.openMediaSession("voice-1")).rejects.toThrow("not enabled");
+    await expect(client.openMediaSession("voice-1")).rejects.toThrow("unavailable");
   });
 
   it("sends a media signal through SendMediaSignal unchanged", async () => {

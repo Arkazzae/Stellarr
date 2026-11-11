@@ -223,7 +223,7 @@ class Scenario {
     this.logFrom = env.logText().length;
   }
 
-  /** Seats a person. A tunes Opus in its descriptions like the mesh client. */
+  /** Seats a person. A tunes Opus in its descriptions like the web client. */
   async join(name, { mic = true, via } = {}) {
     const identity = this.env.identities.find((i) => i.name === name);
     const client = await Client.open({

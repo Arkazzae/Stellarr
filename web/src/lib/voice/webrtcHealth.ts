@@ -14,6 +14,12 @@ import type { Link, MediaFlow } from "./webrtcPeer";
 import type { CallTopology, LinkReading } from "./webrtcTopology";
 
 const DEFAULT_STATS_INTERVAL_MS = 3000;
+/**
+ * Pauses between the rounds that prove a connection that just came up: media
+ * flows within a fraction of a second, and the dock should say so then rather
+ * than at the next steady round.
+ */
+const PROBE_PAUSES_MS = [250, 250, 500, 1000];
 const ICE_REFRESH_RETRY_MS = 30_000;
 /** Samples a connected link may go without RTP proof before it counts as silent. */
 const SILENT_SAMPLE_LIMIT = 3;
@@ -38,15 +44,16 @@ export interface CallHealthEnv {
 
 /**
  * What the dock says about the call, and the clocks that keep the call
- * working, whatever its topology.
+ * working.
  *
- * The topology decides what counts as working: which links there are, when
- * media is proven, and how a broken link is repaired. This class publishes
+ * The topology (`webrtcSfu`) decides what counts as working: which link there
+ * is, when media is proven, and how a broken link is replaced. This class publishes
  * what it reports, samples it on a timer, turns the samples into diagnostics
  * and the adaptive bitrate, and swaps TURN credentials in before they expire.
  */
 export class CallHealth {
   private statsTimer: ReturnType<typeof setInterval> | null = null;
+  private probeTimer: ReturnType<typeof setTimeout> | null = null;
   private refreshTimer: ReturnType<typeof setTimeout> | null = null;
 
   constructor(private readonly env: CallHealthEnv) {}
@@ -80,6 +87,47 @@ export class CallHealth {
     this.statsTimer = setInterval(() => {
       void this.sample();
     }, this.env.statsIntervalMs ?? DEFAULT_STATS_INTERVAL_MS);
+  }
+
+  /**
+   * A connection came up or somebody arrived: prove what flows now instead of
+   * at the next steady round. Rounds follow at short, growing pauses until the
+   * topology reports media proven, and the steady cadence then starts over
+   * from that moment, so its next round is a whole interval away. These rounds
+   * only settle the transport; the diagnostics and the adaptive bitrate keep
+   * their steady cadence.
+   */
+  probe(): void {
+    this.stopProbe();
+    const session = this.env.activeSession();
+    if (session === null) return;
+
+    const step = (index: number) => {
+      const pause = PROBE_PAUSES_MS[index];
+      if (pause === undefined) return;
+      this.probeTimer = setTimeout(() => {
+        this.probeTimer = null;
+        void this.settleRound(session).then((proven) => {
+          if (this.env.activeSession() !== session || this.probeTimer !== null) return;
+          if (!proven) {
+            step(index + 1);
+          } else if (this.statsTimer !== null) {
+            this.startStats();
+          }
+        });
+      }, pause);
+    };
+    step(0);
+  }
+
+  /** Settle one round of the topology's statistics; true when media is proven. */
+  private async settleRound(session: number): Promise<boolean> {
+    const round = await this.env.topology().sample();
+    if (this.env.activeSession() !== session) return false;
+    const { store } = this.env;
+    round.settle(store.getSnapshot().muted);
+    const { media } = store.getSnapshot().transport;
+    return media === "connected" || media === "ready";
   }
 
   /**
@@ -236,7 +284,14 @@ export class CallHealth {
   /** Cancel the sampling and the pending credential refresh. */
   stop(): void {
     this.stopStats();
+    this.stopProbe();
     this.stopIceRefresh();
+  }
+
+  private stopProbe(): void {
+    if (this.probeTimer === null) return;
+    clearTimeout(this.probeTimer);
+    this.probeTimer = null;
   }
 
   private stopStats(): void {
@@ -252,8 +307,8 @@ export class CallHealth {
   }
 }
 
-// The proof of flow belongs to links, whichever topology made them. These are
-// the pieces every topology needs to prove it.
+// The proof of flow belongs to the link. These are the pieces the topology's
+// health (`webrtcSfuHealth`) proves it with.
 
 /** Read one link's statistics. Never rejects: a link that cannot report reads as empty. */
 export async function readLink(link: Link): Promise<LinkReading> {

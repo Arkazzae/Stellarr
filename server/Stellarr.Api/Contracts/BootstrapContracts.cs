@@ -22,9 +22,15 @@ public sealed record BootstrapDto(
 
 public sealed record VoiceOccupantDto(string UserId, string DisplayName, bool Muted);
 
+/// <summary>How a client takes part in voice on this instance.</summary>
+/// <param name="ProtocolVersion">The version of the signalling contract, <c>RtcProtocol.Version</c>.</param>
+/// <param name="SignalingHub">The path of the hub that carries the signals.</param>
+/// <param name="MediaServer">
+/// The public endpoint of the media server, always <c>udp://{host}:{Rtc:MediaPort}</c>.
+/// Diagnostic only: a browser connects to the candidates in the SDP.
+/// </param>
 public sealed record RtcConfigurationDto(
     int ProtocolVersion,
-    string Topology,
     RtcCapabilitiesDto Capabilities,
     IReadOnlyList<IceServerDto> IceServers,
     string SignalingHub,

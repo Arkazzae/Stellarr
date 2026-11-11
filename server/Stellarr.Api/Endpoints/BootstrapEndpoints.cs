@@ -53,7 +53,7 @@ public static class BootstrapEndpoints
         AppDbContext db,
         PresenceTracker presence,
         TurnCredentialService turnCredentials,
-        MediaTopology mediaTopology,
+        MediaServerSettings mediaServer,
         Messages messages,
         IConfiguration configuration,
         CancellationToken cancellationToken)
@@ -118,7 +118,7 @@ public static class BootstrapEndpoints
             recent.OrderBy(x => x.CreatedAt).Select(x => x.ToDto(messages, userId)).ToArray(),
             reads,
             voice,
-            BuildRtcConfiguration(configuration, turnCredentials.Create(userId), mediaTopology),
+            BuildRtcConfiguration(configuration, turnCredentials.Create(userId), mediaServer),
             ServerAccess.ToNames(permissions)));
     }
 
@@ -172,14 +172,13 @@ public static class BootstrapEndpoints
     }
 
     /// <remarks>
-    /// Capabilities and ICE servers are the same in both topologies; TURN
-    /// stays in the list in the sfu topology too, for browsers on networks
-    /// that block UDP.
+    /// Every voice room goes through the media server. TURN stays in the ICE
+    /// servers for browsers on networks that block UDP.
     /// </remarks>
     private static RtcConfigurationDto BuildRtcConfiguration(
         IConfiguration configuration,
         TurnCredentials turn,
-        MediaTopology mediaTopology)
+        MediaServerSettings mediaServer)
     {
         var host = configuration["Rtc:PublicHost"] ?? "localhost";
         var turnPort = configuration.GetValue("Rtc:TurnPort", 3478);
@@ -213,7 +212,6 @@ public static class BootstrapEndpoints
 
         return new RtcConfigurationDto(
             ProtocolVersion: RtcProtocol.Version,
-            Topology: mediaTopology.Name,
             Capabilities: new RtcCapabilitiesDto(
                 AudioCodecs: ["opus"],
                 VideoCodecs: ["vp9", "vp8", "h264"],
@@ -223,6 +221,6 @@ public static class BootstrapEndpoints
                 ScreenAudio: true),
             IceServers: iceServers,
             SignalingHub: "/hubs/app",
-            MediaServer: mediaTopology.PublicEndpoint(host));
+            MediaServer: mediaServer.PublicEndpoint(host));
     }
 }

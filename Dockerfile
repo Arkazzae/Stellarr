@@ -139,9 +139,9 @@ COPY --from=web-build /src/web/public /opt/stellarr/web/public
 COPY --from=media-build /out/stellarr-media /opt/stellarr/media/stellarr-media
 
 ENV STELLARR_DATA_ROOT=/data/stellarr
-# 49000/udp is the single UDP port of Stellarr Media. It carries every call in
-# the sfu topology and is bound but idle in the mesh topology. The media
-# server's control API (5200/tcp) listens on loopback and is not exposed.
+# 49000/udp is the single UDP port of Stellarr Media and carries every call.
+# The media server's control API (5200/tcp) listens on loopback and is not
+# exposed.
 EXPOSE 80 443 3478/tcp 3478/udp 5349/tcp 5349/udp 49000/udp 49160-49200/udp
 VOLUME ["/data/stellarr"]
 

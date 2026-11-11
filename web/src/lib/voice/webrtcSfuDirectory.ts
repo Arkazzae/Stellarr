@@ -106,16 +106,22 @@ export class TrackDirectory {
     }
   }
 
-  /** What the audio section `mid` carries, when the directory names it. */
+  /**
+   * What the audio section `mid` carries, when the directory names it. The
+   * person's own account decides; a sound in a stream that also carries a
+   * picture is taken for a share's only while the person is not known yet,
+   * since a camera shares the voice's stream.
+   */
   useOf(mid: string): AudioSectionUse | null {
     const entry = this.entries.get(mid);
     if (!entry || entry.kind !== "audio") return null;
-    const withPicture = [...this.entries.values()].some(
-      (other) =>
-        other.kind === "video" && other.userId === entry.userId && other.streamId === entry.streamId,
-    );
     const person = this.env.people.get(entry.userId);
-    const shared = withPicture || person?.media.roleOf(entry.streamId) === "screen";
+    const shared = person
+      ? person.media.roleOf(entry.streamId) === "screen"
+      : [...this.entries.values()].some(
+          (other) =>
+            other.kind === "video" && other.userId === entry.userId && other.streamId === entry.streamId,
+        );
     return shared ? "received-shared-sound" : "speech";
   }
 

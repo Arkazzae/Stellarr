@@ -115,15 +115,8 @@ function occupantToPerson(
   };
 }
 
-export function deriveDirectoryView(snapshot: DirectorySnapshot): DirectoryView {
-  const { server, channels, members, permissions, occupancy } = snapshot;
-  const membersById = new Map(members.map((member) => [member.id, member]));
-  const peopleOn = (channelId: string): PersonVM[] =>
-    (occupancy.get(channelId) ?? NO_OCCUPANTS).map((occupant) =>
-      occupantToPerson(occupant, membersById),
-    );
-
-  const textChannels: TextChannelVM[] = channels
+export function deriveTextChannels(channels: readonly Channel[]): TextChannelVM[] {
+  return channels
     .filter((channel) => channel.kind === "text")
     .map((channel) => ({
       id: channel.id,
@@ -131,6 +124,23 @@ export function deriveDirectoryView(snapshot: DirectorySnapshot): DirectoryView 
       ...(channel.topic === undefined ? {} : { topic: channel.topic }),
       ...(channel.sectionId === undefined ? {} : { sectionId: channel.sectionId }),
     }));
+}
+
+/**
+ * `textChannels` lets a caller pass the list it already derived from this
+ * snapshot's `channels`, so that list keeps its identity while only occupancy
+ * or presence moves.
+ */
+export function deriveDirectoryView(
+  snapshot: DirectorySnapshot,
+  textChannels: TextChannelVM[] = deriveTextChannels(snapshot.channels),
+): DirectoryView {
+  const { server, channels, members, permissions, occupancy } = snapshot;
+  const membersById = new Map(members.map((member) => [member.id, member]));
+  const peopleOn = (channelId: string): PersonVM[] =>
+    (occupancy.get(channelId) ?? NO_OCCUPANTS).map((occupant) =>
+      occupantToPerson(occupant, membersById),
+    );
 
   const voiceChannels: VoiceChannelVM[] = channels
     .filter((channel) => channel.kind === "voice")

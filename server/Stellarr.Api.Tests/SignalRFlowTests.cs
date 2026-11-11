@@ -279,8 +279,8 @@ public sealed class SignalRFlowTests : IClassFixture<StellarrWebApplicationFacto
             protocolVersion = 1,
             channelId = conversationId,
             toUserId = AdaId,
-            kind = "offer",
-            payload = "{\"type\":\"offer\",\"sdp\":\"private-test\"}",
+            kind = "state",
+            payload = "{\"screenStreamId\":\"private-test\"}",
         });
         var delivered = await signal.Task.WaitAsync(TimeSpan.FromSeconds(2));
         Assert.Equal(MajaId, delivered.GetProperty("fromUserId").GetString());
@@ -310,7 +310,7 @@ public sealed class SignalRFlowTests : IClassFixture<StellarrWebApplicationFacto
         var signal = new TaskCompletionSource<JsonElement>(TaskCreationOptions.RunContinuationsAsynchronously);
         using var signalSubscription = ada.On<JsonElement>("VoiceSignal", payload =>
         {
-            if (payload.GetProperty("kind").GetString() == "offer")
+            if (payload.GetProperty("kind").GetString() == "state")
             {
                 signal.TrySetResult(payload);
             }
@@ -333,8 +333,8 @@ public sealed class SignalRFlowTests : IClassFixture<StellarrWebApplicationFacto
             protocolVersion = 1,
             channelId = SalonChannelId,
             toUserId = AdaId,
-            kind = "offer",
-            payload = "{\"type\":\"offer\",\"sdp\":\"test\"}",
+            kind = "state",
+            payload = "{\"screenStreamId\":\"test\"}",
         });
 
         var delivered = await signal.Task.WaitAsync(TimeSpan.FromSeconds(2));
@@ -346,8 +346,8 @@ public sealed class SignalRFlowTests : IClassFixture<StellarrWebApplicationFacto
             protocolVersion = 1,
             channelId = SalonChannelId,
             toUserId = JoId,
-            kind = "offer",
-            payload = "{\"type\":\"offer\",\"sdp\":\"test\"}",
+            kind = "state",
+            payload = "{\"screenStreamId\":\"test\"}",
         }));
     }
 

@@ -5,7 +5,7 @@ public static partial class MediaLog
     [LoggerMessage(
         EventId = 5001,
         Level = LogLevel.Warning,
-        Message = "The media server's control API is unavailable; voice in the sfu topology waits for it.")]
+        Message = "The media server's control API is unavailable; voice waits until it answers.")]
     public static partial void ControlUnavailable(ILogger logger, Exception exception);
 
     [LoggerMessage(
@@ -73,4 +73,5 @@ public static partial class MediaLog
         Level = LogLevel.Warning,
         Message = "Media event {Seq} of type {Type} and kind {Kind} was ignored.")]
     public static partial void EventIgnored(ILogger logger, long seq, string type, string? kind);
+
 }

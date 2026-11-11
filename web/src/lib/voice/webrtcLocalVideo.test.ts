@@ -18,6 +18,9 @@ function track(kind: "audio" | "video", channelCount = 2): MediaStreamTrack {
   } as unknown as MediaStreamTrack;
 }
 
+/** The stream the camera is sent in, which the microphone shares. */
+const VOICE_STREAM = { id: "voice-a" } as MediaStream;
+
 let streamCounter = 0;
 function stream(...tracks: MediaStreamTrack[]): MediaStream {
   return {
@@ -41,13 +44,15 @@ class FakeSender {
   });
 }
 
+/** A connection to the media server: every published track gets a send-only transceiver of its own. */
 class FakeConnection {
   senders: FakeSender[] = [];
   removed: FakeSender[] = [];
-  addTrack = vi.fn((media: MediaStreamTrack) => {
+  addTransceiver = vi.fn((media: MediaStreamTrack, init: { direction: RTCRtpTransceiverDirection }) => {
+    if (init.direction !== "sendonly") throw new Error("published tracks are send-only");
     const sender = new FakeSender(media);
     this.senders.push(sender);
-    return sender;
+    return { sender };
   });
   removeTrack = vi.fn((sender: FakeSender) => {
     this.removed.push(sender);
@@ -102,6 +107,7 @@ beforeEach(() => {
 
   const env: LocalCameraEnv = {
     translate: polish,
+    voiceStream: () => VOICE_STREAM,
     store,
     links: () => peers.values(),
     settings: () => settings,
@@ -150,7 +156,8 @@ describe("LocalCamera.start", () => {
       cameraPending: false,
       localCamera: { streamId: media.id, stream: media },
     });
-    expect(camera.streamId).toBe(media.id);
+    // Announced as the voice's stream, which the camera is sent in.
+    expect(camera.streamId).toBe(VOICE_STREAM.id);
     expect(announce).toHaveBeenCalledOnce();
   });
 
@@ -271,7 +278,7 @@ describe("LocalCamera.stop and release", () => {
     camera.addTo(late);
     camera.addTo(late);
 
-    expect(connectionOf(late).addTrack).toHaveBeenCalledOnce();
+    expect(connectionOf(late).addTransceiver).toHaveBeenCalledOnce();
   });
 
   it("caps the camera encoder at the chosen quality", async () => {
@@ -321,7 +328,7 @@ describe("LocalCamera.follow", () => {
 
     for (const item of added) {
       expect(senderOf(item.cameraSender).replaceTrack).toHaveBeenCalledWith(second.video);
-      expect(senderOf(item.cameraSender).setStreams).toHaveBeenCalledWith(second.media);
+      expect(senderOf(item.cameraSender).setStreams).not.toHaveBeenCalled();
     }
     expect(first.video.stop).toHaveBeenCalled();
     expect(second.video.stop).not.toHaveBeenCalled();

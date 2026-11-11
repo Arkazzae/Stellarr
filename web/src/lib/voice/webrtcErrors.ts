@@ -24,18 +24,13 @@ import type { VoiceError } from "./types";
 /** Why this client cannot speak the server's RTC contract, or null when it can. */
 export function rtcIncompatibility(
   t: Translator,
-  config: Pick<RtcConfig, "protocolVersion" | "topology">,
+  config: Pick<RtcConfig, "protocolVersion">,
 ): string | null {
-  if (config.protocolVersion !== RTC_PROTOCOL_VERSION) {
-    return t("voiceClient.rtcVersion", {
-      version: config.protocolVersion,
-      supported: RTC_PROTOCOL_VERSION,
-    });
-  }
-  if (config.topology !== "mesh" && config.topology !== "sfu") {
-    return t("voiceClient.rtcTopology", { topology: config.topology });
-  }
-  return null;
+  if (config.protocolVersion === RTC_PROTOCOL_VERSION) return null;
+  return t("voiceClient.rtcVersion", {
+    version: config.protocolVersion,
+    supported: RTC_PROTOCOL_VERSION,
+  });
 }
 
 export function micError(t: Translator, cause: unknown): VoiceError {
@@ -148,24 +143,8 @@ export const iceRefreshPartialError = (t: Translator): VoiceError => ({
   recoverable: true,
 });
 
-export function peerStalledError(t: Translator, displayName: string): VoiceError {
-  return {
-    kind: "transport",
-    message: t("voiceClient.peerStalled", { name: displayName }),
-    recoverable: true,
-  };
-}
-
-export function peerLostError(t: Translator, displayName: string): VoiceError {
-  return {
-    kind: "transport",
-    message: t("voiceClient.peerLost", { name: displayName }),
-    recoverable: true,
-  };
-}
-
 /**
- * Behind a media server there is one connection, so when it carries nothing
+ * There is one connection, to the media server, so when it carries nothing
  * nobody can be named: the fault is the connection's, not a person's.
  */
 export const mediaServerStalledError = (t: Translator): VoiceError => ({

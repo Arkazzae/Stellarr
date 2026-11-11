@@ -304,6 +304,11 @@ export function tuneLocalDescription(
   return sdp === description.sdp ? description : { ...description, sdp };
 }
 
+// Both spellings of a section's stream id: the unified-plan `a=msid:` line and
+// the older per-ssrc form.
+const MSID_LINE = /^a=msid:(\S+)/;
+const SSRC_MSID_LINE = /^a=ssrc:\d+\s+msid:(\S+)/;
+
 /** The `a=msid` stream id of every audio section in order, null where it names none. */
 function audioSectionStreamIds(sdp: string): Array<string | null> {
   const { lines } = parseSdp(sdp);
@@ -360,33 +365,4 @@ export function opusFirstCodecList(
   const isOpus = ({ mimeType }: RTCRtpCodec) => /\/opus$/i.test(mimeType);
   if (!codecs.some(isOpus)) return null;
   return [...codecs.filter(isOpus), ...codecs.filter((codec) => !isOpus(codec))];
-}
-
-const MSID_LINE = /^a=msid:(\S+)/;
-const SSRC_MSID_LINE = /^a=ssrc:\d+\s+msid:(\S+)/;
-
-/**
- * Stream ids (msid) that carry video in this description.
- *
- * This makes remote-track classification order-independent. A screen share is
- * the only thing that sends video, so any audio track whose msid also appears
- * on a video section belongs to that share. That is knowable from the SDP
- * alone, before a single track event fires and without waiting for the peer's
- * own announcement. Both spellings are read: the unified-plan `a=msid:` line
- * and the older per-ssrc form.
- */
-export function videoStreamIds(sdp: string | undefined | null): Set<string> {
-  const ids = new Set<string>();
-  if (typeof sdp !== "string" || sdp.length === 0) return ids;
-
-  const { lines } = parseSdp(sdp);
-  for (const section of mediaSections(lines)) {
-    if (section.kind !== "video") continue;
-    for (const line of lines.slice(section.start, section.end)) {
-      const id = (MSID_LINE.exec(line) ?? SSRC_MSID_LINE.exec(line))?.[1];
-      // `-` is the placeholder for "no stream", not a stream called "-".
-      if (id !== undefined && id !== "-") ids.add(id);
-    }
-  }
-  return ids;
 }

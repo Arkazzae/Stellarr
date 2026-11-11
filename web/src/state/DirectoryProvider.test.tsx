@@ -1,7 +1,7 @@
 import { act, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { useEffect, type ReactNode } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { createRuntime, type Runtime } from "@/adapters";
 import type { Bootstrap, Channel, ServerPermission, User } from "@/lib/api/types";
@@ -46,6 +46,17 @@ async function mount(
     </PortsProvider>,
   );
   return { runtime, realtime, api };
+}
+
+/** Reports each text-channel list the provider hands out, once per new list. */
+function TextChannelsSpy({
+  onChange,
+}: {
+  onChange: (textChannels: DirectoryValue["textChannels"]) => void;
+}) {
+  const { textChannels } = useDirectoryContext();
+  useEffect(() => onChange(textChannels), [onChange, textChannels]);
+  return null;
 }
 
 function result(): unknown {
@@ -183,6 +194,37 @@ describe("DirectoryProvider voice occupancy", () => {
     );
 
     await waitFor(() => expect(result()).toEqual([SELF.id]));
+  });
+
+  it("keeps the same text channels while people join, mute and change presence", async () => {
+    const handedOut = vi.fn();
+    const { realtime } = await mount(
+      (directory) => ({
+        voice: directory.occupantsOf(VOICE_CHANNEL.id).map((person) => [person.id, person.muted]),
+        ada: directory.people.find((person) => person.id === ADA.id)?.presence,
+      }),
+      occupied,
+      fullApi(),
+      <TextChannelsSpy onChange={handedOut} />,
+    );
+    const self = { userId: SELF.id, displayName: SELF.displayName };
+
+    act(() =>
+      realtime.push("VoiceParticipantChanged", {
+        channelId: VOICE_CHANNEL.id,
+        participants: [{ ...self, muted: false }],
+      }),
+    );
+    act(() =>
+      realtime.push("VoiceParticipantChanged", {
+        channelId: VOICE_CHANNEL.id,
+        participants: [{ ...self, muted: true }],
+      }),
+    );
+    act(() => realtime.push("PresenceChanged", { userId: ADA.id, presence: "dnd" }));
+
+    await waitFor(() => expect(result()).toEqual({ voice: [[SELF.id, true]], ada: "dnd" }));
+    expect(handedOut).toHaveBeenCalledTimes(1);
   });
 });
 

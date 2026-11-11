@@ -9,19 +9,6 @@ function stream(id: string, audioTracks = 0): MediaStream {
 
 const NO_ANNOUNCEMENT = { screenStreamId: null, cameraStreamId: null };
 
-function sdpWithVideoOn(streamId: string): string {
-  return [
-    "v=0",
-    "m=audio 9 UDP/TLS/RTP/SAVPF 111",
-    "a=mid:0",
-    "a=msid:mic-stream mic-track",
-    "m=video 9 UDP/TLS/RTP/SAVPF 96",
-    "a=mid:1",
-    `a=msid:${streamId} video-track`,
-    "",
-  ].join("\r\n");
-}
-
 let media: RemoteMedia;
 
 beforeEach(() => {
@@ -33,17 +20,34 @@ describe("telling a microphone from a share's sound", () => {
     expect(media.roleOf("unknown")).toBe("microphone");
   });
 
-  it("recognises the sound of a share by the video on the same stream", () => {
-    media.addAudio(stream("share"));
-    expect(media.roleOf("share")).toBe("microphone");
-
+  it("recognises the sound of a share by the video already seen on its stream", () => {
     media.addVideo(stream("share"));
+    media.addAudio(stream("share"));
 
     expect(media.roleOf("share")).toBe("screen");
   });
 
-  it("recognises it from the remote description before any track exists", () => {
-    media.learnFromSdp(sdpWithVideoOn("share"));
+  it("keeps a voice a voice when a camera joins its stream", () => {
+    media.addAudio(stream("voice"));
+    media.addVideo(stream("voice"));
+    expect(media.roleOf("voice")).toBe("microphone");
+
+    media.announce({ screenStreamId: null, cameraStreamId: "voice" });
+
+    expect(media.roleOf("voice")).toBe("microphone");
+    expect(media.camera?.streamId).toBe("voice");
+    expect(media.screen).toBeNull();
+  });
+
+  it("takes an announced share for one even when its sound came first", () => {
+    media.addAudio(stream("share"));
+    media.announce({ screenStreamId: "share", cameraStreamId: null });
+
+    expect(media.roleOf("share")).toBe("screen");
+  });
+
+  it("recognises it from the directory before any track exists", () => {
+    media.learnVideo("share");
 
     expect(media.roleOf("share")).toBe("screen");
     expect(media.roleOf("mic-stream")).toBe("microphone");
@@ -71,20 +75,13 @@ describe("telling a microphone from a share's sound", () => {
     expect(media.roleOf("share")).toBe("microphone");
   });
 
-  it("gets the evidence back from a later remote description", () => {
+  it("gets the evidence back from a later directory", () => {
     media.addVideo(stream("share"));
     media.removeVideo("share");
 
-    media.learnFromSdp(sdpWithVideoOn("share"));
+    media.learnVideo("share");
 
     expect(media.roleOf("share")).toBe("screen");
-  });
-
-  it("tolerates a missing description", () => {
-    media.learnFromSdp(null);
-    media.learnFromSdp(undefined);
-
-    expect(media.roleOf("anything")).toBe("microphone");
   });
 });
 
@@ -273,12 +270,17 @@ describe("streams filed under an id they were given", () => {
     expect(media.holdsAudio(sound)).toBe(false);
   });
 
-  it("takes a sound for a share's once it is known to carry a picture, before the picture", () => {
-    media.addAudio(stream("x"), "share-now");
-    expect(media.roleOf("share-now")).toBe("microphone");
-
+  it("takes a sound for a share's when a picture was known on its stream first", () => {
     media.learnVideo("share-now");
+    media.addAudio(stream("x"), "share-now");
 
     expect(media.roleOf("share-now")).toBe("screen");
+  });
+
+  it("keeps a voice under its given id when the directory names a camera picture on it", () => {
+    media.addAudio(stream("x"), "voice-now");
+    media.learnVideo("voice-now");
+
+    expect(media.roleOf("voice-now")).toBe("microphone");
   });
 });

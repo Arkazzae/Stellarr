@@ -21,7 +21,6 @@ function turnUsername(expiresAtMs: number): string {
 function rtcConfig(expiresAtMs: number): RtcConfig {
   return {
     protocolVersion: 1,
-    topology: "mesh",
     capabilities: {
       audioCodecs: ["opus"],
       videoCodecs: [],

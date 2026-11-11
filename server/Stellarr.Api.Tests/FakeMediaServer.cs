@@ -43,6 +43,13 @@ internal sealed class FakeMediaServer : HttpMessageHandler
     internal TimeSpan CommandTimeout { get; init; } = TimeSpan.FromSeconds(3);
 
     /// <summary>
+    /// How long the API's event poll waits for an event, which <see cref="Install"/>
+    /// sets. Short, so a test sees a change of state at once; a host that only
+    /// needs a media server to be there can wait as long as the API does.
+    /// </summary>
+    internal int EventWaitMs { get; init; } = 250;
+
+    /// <summary>
     /// When set, creating a session issues this signal for the new session at
     /// once and answers only after a poll has handed the signal out, as a
     /// media server that offers its forwarded tracks straight away can.
@@ -82,14 +89,17 @@ internal sealed class FakeMediaServer : HttpMessageHandler
         }
     }
 
-    /// <summary>Wires this fake in as the media server of an application in the sfu topology, with short pauses.</summary>
+    /// <summary>
+    /// Wires this fake in as the application's media server, with short pauses.
+    /// Installed after another fake, it replaces that one.
+    /// </summary>
     internal void Install(IServiceCollection services)
     {
         services.AddHttpClient(MediaControlClient.HttpClientName).ConfigurePrimaryHttpMessageHandler(() => this);
         services.AddSingleton(new MediaControlTiming
         {
             CommandTimeout = CommandTimeout,
-            EventWaitMs = 250,
+            EventWaitMs = EventWaitMs,
             RetryPause = TimeSpan.FromMilliseconds(100),
         });
     }

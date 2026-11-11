@@ -22,14 +22,13 @@
 # profile to test a connection that has to cross a NAT. It uses the host
 # network, so it listens on the host's own ports 3478 and 49160-49200.
 #
-# The media server runs in both topologies, as in production; set
-# STELLARR_RTC_TOPOLOGY=sfu to send calls through it. Its one candidate is
-# 127.0.0.1 with the published port, because Docker forwards that port into the
-# container on every host, while the container's own address is reachable from
-# the host only on Linux. So only a browser on this machine reaches it: not one
-# on another device, and not one forced through the turn profile's coturn,
-# which refuses loopback peers. The port is not production's 49000, so this
-# stack starts next to a running production container.
+# Every call goes through the media server, as in production. Its one
+# candidate is 127.0.0.1 with the published port, because Docker forwards that
+# port into the container on every host, while the container's own address is
+# reachable from the host only on Linux. So only a browser on this machine
+# reaches it: not one on another device, and not one forced through the turn
+# profile's coturn, which refuses loopback peers. The port is not production's
+# 49000, so this stack starts next to a running production container.
 
 name: stellarr-dev
 
@@ -121,7 +120,6 @@ services:
       ConnectionStrings__Database: Data Source=/data/stellarr/stellarr-dev.db;Cache=Shared;Pooling=True
       DataRoot: /data/stellarr
       Rtc__PublicHost: ${PUBLIC_HOST:-localhost}
-      Rtc__Topology: ${STELLARR_RTC_TOPOLOGY:-mesh}
       Rtc__MediaControlUrl: http://media:5200
       Rtc__MediaControlSecret: stellarr-media-development-secret
       Rtc__MediaPort: ${STELLARR_DEV_MEDIA_PORT:-49100}

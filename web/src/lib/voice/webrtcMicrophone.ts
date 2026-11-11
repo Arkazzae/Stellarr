@@ -15,12 +15,12 @@ export interface LocalMicrophoneEnv {
   readonly store: VoiceStateStore;
   /** Lights the speaking ring from the audio before the input gate. */
   readonly speech: SpeechDetector;
+  /** The stream the microphone is sent in, shared with the camera so the two play in sync. */
+  voiceStream(): MediaStream;
   /** The links the microphone is sent on. */
   links(): Iterable<Link>;
   /** Cap every microphone sender at the adaptive controller's ceiling. */
   applyEncoding(): Promise<void>;
-  /** Replace a link whose sender refused even to take the swap back. */
-  rebuildLink(link: Link): Promise<void>;
   /** The device ended underneath the call, e.g. a headset was unplugged. */
   onDeviceLost(): void;
 }
@@ -76,7 +76,7 @@ export class LocalMicrophone {
     const capture = this.active;
     if (!capture || link.micSender) return;
     try {
-      link.micSender = addSender(link, capture.track, capture.stream);
+      link.micSender = addSender(link, capture.track, this.env.voiceStream());
     } catch {
       // A connection that cannot take the track is about to be rebuilt.
     }
@@ -118,10 +118,10 @@ export class LocalMicrophone {
   }
 
   /**
-   * Reopen the microphone for `next` and move every link onto it.
+   * Reopen the microphone for `next` and move the sender onto it.
    *
    * Without `force`, only a capture-affecting change does anything. If the new
-   * device cannot be opened, or one link cannot take it, the old capture is
+   * device cannot be opened, or the sender cannot take it, the old capture is
    * still running, so the call goes on and the error is reported as
    * recoverable rather than fatal. `superseded` is asked after the slow part:
    * a newer request makes this result stale, and a stale capture is never
@@ -153,7 +153,7 @@ export class LocalMicrophone {
     // change swaps the track under a running call, and two graphs never meet
     // at the same sample or settle at the same loudness.
     capture.fadeIn();
-    if (!(await this.moveAllLinks(capture.track, previous.track))) {
+    if (!(await this.moveSenders(capture.track))) {
       capture.dispose();
       this.env.store.set({ error: micSwapFailedError(this.env.translate) });
       return false;
@@ -167,35 +167,21 @@ export class LocalMicrophone {
   }
 
   /**
-   * Swap the track on every sender, all or nothing.
-   *
-   * Successful swaps are rolled back when one fails. A sender that refuses
-   * even the rollback belongs to a broken connection, which is rebuilt while
-   * `active` still points at the old capture.
+   * Swap the track on the microphone sender of the connection to the media
+   * server. A sender that refuses keeps the track it had, so the call goes on
+   * with the previous capture.
    */
-  private async moveAllLinks(
-    track: MediaStreamTrack,
-    previousTrack: MediaStreamTrack,
-  ): Promise<boolean> {
-    const targets = [...this.env.links()].filter(
-      (link): link is Link & { micSender: RTCRtpSender } => link.micSender !== null,
-    );
-    const attempts = await Promise.allSettled(
-      targets.map((link) => link.micSender.replaceTrack(track)),
-    );
-    if (attempts.every((result) => result.status === "fulfilled")) {
-      await this.env.applyEncoding();
-      return true;
+  private async moveSenders(track: MediaStreamTrack): Promise<boolean> {
+    for (const link of this.env.links()) {
+      if (!link.micSender) continue;
+      try {
+        await link.micSender.replaceTrack(track);
+      } catch {
+        return false;
+      }
     }
-
-    const moved = targets.filter((_, index) => attempts[index]?.status === "fulfilled");
-    const rollbacks = await Promise.allSettled(
-      moved.map((link) => link.micSender.replaceTrack(previousTrack)),
-    );
-    for (const [index, link] of moved.entries()) {
-      if (rollbacks[index]?.status === "rejected") await this.env.rebuildLink(link);
-    }
-    return false;
+    await this.env.applyEncoding();
+    return true;
   }
 
   private applyMute(capture: MicCapture, muted: boolean): void {

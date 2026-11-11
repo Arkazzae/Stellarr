@@ -57,6 +57,11 @@ public sealed class StellarrWebApplicationFactory : WebApplicationFactory<Progra
                 ["Rtc:TurnsPort"] = "5350",
                 ["Rtc:TurnTcpEnabled"] = "true",
                 ["Rtc:TurnsEnabled"] = "true",
+                // The in-memory media server below answers every call. An
+                // address that never resolves keeps anything that slipped
+                // past it away from a real media server on this machine.
+                ["Rtc:MediaControlUrl"] = "http://media.invalid/",
+                ["Rtc:MediaControlSecret"] = FakeMediaServer.Secret,
                 ["Mail:Enabled"] = "true",
                 ["Mail:ResendApiKey"] = "re_test",
                 ["Mail:FromAddress"] = "onboarding@resend.dev",
@@ -77,6 +82,12 @@ public sealed class StellarrWebApplicationFactory : WebApplicationFactory<Progra
             {
                 services.AddHostedService<TestDataHostedService>();
             }
+            // Every instance follows its media server from the start, so every
+            // host gets one of its own, in memory. Its long poll waits as long
+            // as the API's does, which keeps an idle host quiet. A test that
+            // installs its own fake in configureServices registers it later,
+            // and the later registration wins.
+            new FakeMediaServer { EventWaitMs = 25_000 }.Install(services);
             _configureServices?.Invoke(services);
         });
     }

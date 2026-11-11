@@ -1,10 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { DEFAULT_PARTICIPANT_PREFERENCE } from "./participantPreferences";
 import { DEFAULT_SETTINGS, type VoiceSettings } from "./settings";
-import { createPeer, type PeerInit } from "./webrtcMesh";
-import { applyEncoding, Negotiator, type Link, type NegotiatorEnv } from "./webrtcPeer";
-import { RemoteMedia } from "./webrtcRemoteMedia";
+import {
+  addSender,
+  applyEncoding,
+  createLink,
+  Negotiator,
+  type Link,
+  type LinkRecovery,
+  type NegotiatorEnv,
+} from "./webrtcPeer";
 
 const SDP = [
   "v=0",
@@ -35,7 +40,6 @@ class FakeConnection {
   remoteDescription: RTCSessionDescriptionInit | null = null;
   signalingState: RTCSignalingState = "stable";
   transceivers: FakeTransceiver[] = [];
-  addedCandidates: Array<RTCIceCandidateInit | undefined> = [];
 
   constructor(readonly config: RTCConfiguration) {}
 
@@ -54,36 +58,35 @@ class FakeConnection {
     this.remoteDescription = description;
     this.signalingState = description.type === "offer" ? "have-remote-offer" : "stable";
   });
-  addIceCandidate = vi.fn(async (candidate?: RTCIceCandidateInit) => {
-    this.addedCandidates.push(candidate);
+  addTrack = vi.fn(() => {
+    throw new Error("a link to the media server publishes on transceivers of its own");
   });
+  addTransceiver = vi.fn(
+    (_track: MediaStreamTrack, _init: { direction: RTCRtpTransceiverDirection; streams: MediaStream[] }) => {
+      const transceiver = new FakeTransceiver(new FakeSender());
+      this.transceivers.push(transceiver);
+      return transceiver;
+    },
+  );
 }
 
 let created: FakeConnection[];
 let settings: VoiceSettings;
 let sent: Array<{ type: string; sdp: string }>;
 let env: NegotiatorEnv;
-let learned: Link[];
-/** What the people behind the link are known to send, fed by `remoteMediaLearned`. */
-let remoteMedia: RemoteMedia;
 
 beforeEach(() => {
   created = [];
   settings = { ...DEFAULT_SETTINGS };
   sent = [];
-  learned = [];
-  remoteMedia = new RemoteMedia();
   env = {
     settings: () => settings,
     bitrate: () => 96_000,
     send: async (_link, type, sdp) => {
       sent.push({ type, sdp });
     },
-    remoteMediaLearned: (link, sdp) => {
-      remoteMedia.learnFromSdp(sdp);
-      learned.push(link);
-    },
     screenAudioStereo: () => true,
+    audioUse: () => null,
   };
   vi.stubGlobal(
     "RTCPeerConnection",
@@ -108,35 +111,20 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function peerInit(overrides: Partial<PeerInit> = {}): PeerInit {
-  return {
-    user: { userId: "u-z", displayName: "Ola", muted: false },
-    selfUserId: "u-a",
-    iceServers: [{ urls: "stun:example.test" }],
-    preference: { ...DEFAULT_PARTICIPANT_PREFERENCE },
-    createVoice: () => ({
-      audio: document.createElement("audio"),
-      decoder: document.createElement("audio"),
-      processed: false,
-      streamId: null,
-    }),
-    recovery: { graceMs: 10, maxAttempts: 3, onEscalate: vi.fn(), onExhausted: vi.fn() },
-    ...overrides,
-  };
+function recovery(overrides: Partial<LinkRecovery> = {}): LinkRecovery {
+  return { graceMs: 10, maxAttempts: 1, onEscalate: vi.fn(), onExhausted: vi.fn(), ...overrides };
 }
 
-/** The connection to a mesh peer, which is what negotiation works on. */
-function newPeer(userId = "u-z", selfUserId = "u-a"): Link {
-  return createPeer(
-    peerInit({ user: { userId, displayName: "Ola", muted: false }, selfUserId }),
-  ).link;
+/** The connection to the media server, which is what negotiation works on. */
+function newPeer(): Link {
+  return createLink({ iceServers: [{ urls: "stun:example.test" }], recovery: recovery() });
 }
 
 function fake(peer: Link): FakeConnection {
   return peer.connection as unknown as FakeConnection;
 }
 
-describe("createPeer", () => {
+describe("createLink", () => {
   it("bundles all media on one transport using the servers it was given", () => {
     newPeer();
 
@@ -146,69 +134,37 @@ describe("createPeer", () => {
     });
   });
 
-  it("builds no sinks for a connection that cannot be created", () => {
-    vi.stubGlobal(
-      "RTCPeerConnection",
-      class {
-        constructor() {
-          throw new SyntaxError("invalid ICE server url");
-        }
-      },
-    );
-    const createVoice = vi.fn(peerInit().createVoice);
-
-    expect(() => createPeer(peerInit({ createVoice }))).toThrow("invalid ICE server url");
-    expect(createVoice).not.toHaveBeenCalled();
-  });
-
-  it("makes the lexicographically larger user id the polite side", () => {
-    expect(newPeer("u-z", "u-a").polite).toBe(false);
-    expect(newPeer("u-a", "u-z").polite).toBe(true);
-  });
-
-  it("starts from how this account last heard the person", () => {
-    const peer = createPeer(
-      peerInit({
-        user: { userId: "u-z", displayName: "Ola", muted: true },
-        preference: { volume: 40, gated: true, suppressed: true },
-      }),
-    );
-
-    expect(peer.person).toMatchObject({
-      displayName: "Ola",
-      muted: true,
-      playbackVolume: 40,
-      gated: true,
-      suppressed: true,
-    });
-  });
-
-  it("holds candidates back until the remote description is set", async () => {
-    const peer = newPeer();
-    await peer.candidates.add({ candidate: "candidate:a", sdpMid: "0" });
-    expect(fake(peer).addedCandidates).toEqual([]);
-
-    fake(peer).remoteDescription = { type: "answer", sdp: SDP };
-    await peer.candidates.flush();
-
-    expect(fake(peer).addedCandidates.map((candidate) => candidate?.candidate)).toEqual([
-      "candidate:a",
-    ]);
-  });
-
-  it("hands the recovery watchdog's decisions to its owner with the peer", () => {
+  it("hands the recovery watchdog's decisions to its owner with the link", () => {
     vi.useFakeTimers();
     const onEscalate = vi.fn();
-    const peer = createPeer(
-      peerInit({ recovery: { graceMs: 10, maxAttempts: 1, onEscalate, onExhausted: vi.fn() } }),
-    );
+    const link = createLink({
+      iceServers: [],
+      recovery: recovery({ onEscalate }),
+    });
 
-    peer.link.watchdog.arm();
+    link.watchdog.arm();
     vi.advanceTimersByTime(10);
 
-    expect(onEscalate).toHaveBeenCalledWith(peer.link);
-    peer.link.watchdog.dispose();
+    expect(onEscalate).toHaveBeenCalledWith(link);
+    link.watchdog.dispose();
     vi.useRealTimers();
+  });
+});
+
+describe("addSender", () => {
+  it("publishes on a send-only transceiver of its own, never with addTrack", () => {
+    const link = newPeer();
+    const track = { kind: "audio" } as MediaStreamTrack;
+    const stream = { id: "mic" } as MediaStream;
+
+    const sender = addSender(link, track, stream);
+
+    expect(fake(link).addTransceiver).toHaveBeenCalledWith(track, {
+      direction: "sendonly",
+      streams: [stream],
+    });
+    expect(fake(link).addTrack).not.toHaveBeenCalled();
+    expect(sender).toBe(fake(link).transceivers[0]?.sender);
   });
 });
 
@@ -313,8 +269,8 @@ describe("Negotiator.receive", () => {
   const offer: RTCSessionDescriptionInit = { type: "offer", sdp: SDP };
   const answer: RTCSessionDescriptionInit = { type: "answer", sdp: SDP };
 
-  it("answers an offer when nothing is in flight", async () => {
-    const peer = newPeer("u-a", "u-z");
+  it("answers an offer", async () => {
+    const peer = newPeer();
 
     await new Negotiator(env).receive(peer, offer);
 
@@ -332,88 +288,12 @@ describe("Negotiator.receive", () => {
     expect(sent).toHaveLength(0);
   });
 
-  it("drops a colliding offer on the impolite side", async () => {
-    const peer = newPeer("u-z", "u-a");
-    fake(peer).signalingState = "have-local-offer";
-
-    await new Negotiator(env).receive(peer, offer);
-
-    expect(fake(peer).setRemoteDescription).not.toHaveBeenCalled();
-    expect(sent).toHaveLength(0);
-  });
-
-  it("yields to a colliding offer on the polite side and answers it", async () => {
-    const peer = newPeer("u-a", "u-z");
-    fake(peer).signalingState = "have-local-offer";
-
-    await new Negotiator(env).receive(peer, offer);
-
-    expect(fake(peer).setRemoteDescription).toHaveBeenCalledWith(offer);
-    expect(sent.map((item) => item.type)).toEqual(["answer"]);
-  });
-
-  it("treats an offer made while we are offering as a collision", async () => {
-    const peer = newPeer("u-z", "u-a");
-    peer.makingOffer = true;
-
-    await new Negotiator(env).receive(peer, offer);
-
-    expect(fake(peer).setRemoteDescription).not.toHaveBeenCalled();
-  });
-
-  it("rolls back by hand when implicit rollback is unsupported", async () => {
-    const peer = newPeer("u-a", "u-z");
-    fake(peer).signalingState = "have-local-offer";
-    fake(peer).setRemoteDescription.mockRejectedValueOnce(new Error("InvalidStateError"));
-
-    await new Negotiator(env).receive(peer, offer);
-
-    expect(fake(peer).setLocalDescription).toHaveBeenCalledWith({ type: "rollback" });
-    expect(fake(peer).setRemoteDescription).toHaveBeenCalledTimes(2);
-  });
-
-  it("reports a failure that is not a collision", async () => {
+  it("rejects when the browser refuses the description, and answers nothing", async () => {
     const peer = newPeer();
-    fake(peer).signalingState = "have-local-offer";
     fake(peer).setRemoteDescription.mockRejectedValueOnce(new Error("bad sdp"));
 
-    await expect(new Negotiator(env).receive(peer, answer)).rejects.toThrow("bad sdp");
-    expect(peer.settingRemoteAnswerPending).toBe(false);
-  });
-
-  it("learns which streams carry video from the description, before it answers", async () => {
-    const peer = newPeer("u-a", "u-z");
-    const withVideo = [
-      "v=0",
-      "m=video 9 UDP/TLS/RTP/SAVPF 96",
-      "a=mid:1",
-      "a=msid:share-stream share-track",
-      "",
-    ].join("\r\n");
-    env.send = async () => {
-      expect(learned).toEqual([peer]);
-    };
-
-    await new Negotiator(env).receive(peer, { type: "offer", sdp: withVideo });
-
-    expect(remoteMedia.roleOf("share-stream")).toBe("screen");
-    expect(remoteMedia.roleOf("mic-stream")).toBe("microphone");
-  });
-
-  it("applies queued candidates in order once the description is in", async () => {
-    const peer = newPeer();
-    fake(peer).signalingState = "have-local-offer";
-    for (const name of ["a", "b"]) {
-      await peer.candidates.add({ candidate: `candidate:${name}`, sdpMid: "0" });
-    }
-    expect(fake(peer).addIceCandidate).not.toHaveBeenCalled();
-
-    await new Negotiator(env).receive(peer, answer);
-
-    expect(fake(peer).addedCandidates.map((candidate) => candidate?.candidate)).toEqual([
-      "candidate:a",
-      "candidate:b",
-    ]);
+    await expect(new Negotiator(env).receive(peer, offer)).rejects.toThrow("bad sdp");
+    expect(sent).toHaveLength(0);
   });
 });
 
@@ -433,7 +313,7 @@ describe("Negotiator.tuneMicSender", () => {
     expect(sender.parameters.encodings[0]?.maxBitrate).toBe(96_000);
   });
 
-  it("does nothing for a peer without a microphone", () => {
+  it("does nothing for a link without a microphone", () => {
     const peer = newPeer();
     expect(() => new Negotiator(env).tuneMicSender(peer)).not.toThrow();
   });

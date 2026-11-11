@@ -62,7 +62,6 @@ describe("runtime hydration", () => {
     runtimes.push(runtime);
     const rtc = {
       protocolVersion: 1,
-      topology: "mesh",
       signalingHub: "/hubs/voice",
     } as unknown as NonNullable<Bootstrap["rtc"]>;
 

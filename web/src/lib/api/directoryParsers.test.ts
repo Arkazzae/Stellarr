@@ -449,7 +449,6 @@ describe("parseBootstrap", () => {
   describe("rtc", () => {
     const rtc = {
       protocolVersion: 1,
-      topology: "mesh",
       capabilities: {
         audioCodecs: ["opus"],
         videoCodecs: ["vp8", 3],
@@ -466,7 +465,6 @@ describe("parseBootstrap", () => {
     it("keeps the contract the server issued", () => {
       expect(parseBootstrap({ ...bootstrap, rtc }).rtc).toStrictEqual({
         protocolVersion: 1,
-        topology: "mesh",
         capabilities: { ...rtc.capabilities, videoCodecs: ["vp8"] },
         signalingHub: "/hubs/rtc",
         mediaServer: "wss://sfu.example",
@@ -474,12 +472,11 @@ describe("parseBootstrap", () => {
       });
     });
 
-    it("does not disguise a missing contract as v1 mesh", () => {
+    it("does not disguise a missing contract as v1", () => {
       const parsed = parseBootstrap({ ...bootstrap, rtc: {} }).rtc;
 
       expect(parsed).toMatchObject({
         protocolVersion: 0,
-        topology: "unknown",
         signalingHub: "/hubs/app",
         mediaServer: "",
         iceServers: [],
@@ -492,20 +489,6 @@ describe("parseBootstrap", () => {
         screenShare: false,
         screenAudio: false,
       });
-    });
-
-    it("keeps an unrecognised topology as received, so it can be refused later", () => {
-      expect(parseBootstrap({ ...bootstrap, rtc: { ...rtc, topology: "quantum" } }).rtc?.topology).toBe(
-        "quantum",
-      );
-    });
-
-    it("reads the older name of the topology", () => {
-      const { topology: _topology, ...legacy } = rtc;
-
-      expect(parseBootstrap({ ...bootstrap, rtc: { ...legacy, mode: "sfu" } }).rtc?.topology).toBe(
-        "sfu",
-      );
     });
 
     it("treats a protocol version that is not a number as unknown", () => {

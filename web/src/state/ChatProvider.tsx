@@ -178,9 +178,14 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   const pendingIds: PendingIds = useRef(new Set<string>());
   const syncCursors: SyncCursors = useRef<Record<string, string>>({});
 
+  // Keyed by content, because a new list rejoins and replays every channel
+  // (`useReconnectSync`). The directory hands over new channel objects for
+  // changes that leave the ids alone, such as a rename or an edit to a voice
+  // channel.
+  const textChannelKey = textChannels.map((channel) => channel.id).join("\n");
   const textChannelIds = useMemo(
-    () => textChannels.map((channel) => channel.id),
-    [textChannels],
+    () => (textChannelKey === "" ? [] : textChannelKey.split("\n")),
+    [textChannelKey],
   );
   const messages =
     channelId === null ? NO_MESSAGES : (data.messages[channelId] ?? NO_MESSAGES);
