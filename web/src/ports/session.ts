@@ -81,6 +81,8 @@ export interface SessionPort {
   register(input: RegistrationInput): Promise<AuthResult>;
   requestPasswordReset(email: string): Promise<void>;
   resetPassword(token: string, newPassword: string): Promise<void>;
+  /** Spends the link sent to a new address: changed, invalid (used or expired) or taken meanwhile. */
+  confirmEmailChange(token: string): Promise<"changed" | "invalid" | "taken">;
   logout(): Promise<void>;
   /** Whether the server still knows this browser's session. */
   check(): Promise<boolean>;

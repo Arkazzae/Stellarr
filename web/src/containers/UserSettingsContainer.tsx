@@ -119,11 +119,10 @@ export function UserSettingsContainer() {
           joinSound,
         }}
         security={{
-          // A recovery address must not become authoritative before a
-          // confirmation-mail flow exists.
-          emailSupported: false,
+          // The new address proves it receives mail before it replaces the old.
+          emailSupported: true,
           twoStep: accountSecurity.sections,
-          onChangeEmail: (email) => account.update({ email }),
+          onChangeEmail: (email, password) => account.requestEmailChange(email, password),
           onChangePassword: account.changePassword,
           onConfirmSecondStep: accountSecurity.confirmSecondStep,
         }}

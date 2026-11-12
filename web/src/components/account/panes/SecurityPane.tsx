@@ -4,7 +4,7 @@ import { useId, useState, type ChangeEvent } from "react";
 
 import { Icon } from "@/components/icons/Icon";
 import type { Translator } from "@/i18n";
-import type { Account, PasswordChangeResult } from "@/ports";
+import type { Account, EmailChangeResult, PasswordChangeResult } from "@/ports";
 import { useLanguage } from "@/state/hooks";
 
 import {
@@ -21,7 +21,8 @@ export interface SecurityPaneProps {
   emailSupported: boolean;
   /** The second factor, trusted devices and history, when the container wires them. */
   twoStep?: AccountSecuritySectionsProps;
-  onChangeEmail(email: string): Promise<void> | void;
+  /** Mails a link to the new address; the address changes when it is opened. */
+  onChangeEmail(email: string, password: string): Promise<EmailChangeResult>;
   onChangePassword(current: string, next: string): Promise<PasswordChangeResult>;
   /**
    * Asks for a fresh second step; true once it is passed, false when the
@@ -30,9 +31,25 @@ export interface SecurityPaneProps {
   onConfirmSecondStep?(): Promise<boolean>;
 }
 
-/** What the last finished save said; a save in flight is tracked apart from it. */
-type EmailOutcome = "none" | "saved" | "failed";
+type EmailAnswer = EmailChangeResult | "failed";
 type PasswordAnswer = PasswordChangeResult | "failed";
+
+function emailAnswerText(t: Translator, answer: Exclude<EmailAnswer, "sent">): string {
+  switch (answer) {
+    case "wrong-password":
+      return t("account.passwordWrongCurrent");
+    case "second-step-required":
+      return t("account.emailSecondStep");
+    case "same":
+      return t("account.emailSame");
+    case "taken":
+      return t("account.emailTaken");
+    case "mail-unavailable":
+      return t("account.emailMailUnavailable");
+    case "failed":
+      return t("account.emailSaveFailed");
+  }
+}
 
 function passwordAnswerText(t: Translator, answer: PasswordAnswer): string {
   switch (answer) {
@@ -55,18 +72,22 @@ function EmailSection({
   savedEmail,
   supported,
   onChangeEmail,
+  onConfirmSecondStep,
 }: {
   savedEmail: string;
   supported: boolean;
   onChangeEmail: SecurityPaneProps["onChangeEmail"];
+  onConfirmSecondStep: SecurityPaneProps["onConfirmSecondStep"];
 }) {
   const { t } = useLanguage();
   const titleId = useId();
   const fieldId = useId();
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(savedEmail);
+  const [password, setPassword] = useState("");
   const [saving, setSaving] = useState(false);
-  const [outcome, setOutcome] = useState<EmailOutcome>("none");
+  const [answer, setAnswer] = useState<EmailAnswer | null>(null);
+  const [sentTo, setSentTo] = useState("");
 
   // The account store publishes an accepted address. Adopt it at once and
   // close the editor, so no stale draft outlives the value it was based on.
@@ -74,33 +95,43 @@ function EmailSection({
   if (seenEmail !== savedEmail) {
     setSeenEmail(savedEmail);
     setDraft(savedEmail);
+    setPassword("");
     setOpen(false);
   }
 
   const value = draft.trim();
-  const canSave = !saving && value.length > 0 && value !== savedEmail;
+  const canSave = !saving && value.length > 0 && value !== savedEmail && password.length > 0;
 
   const toggle = () => {
     setOpen((wasOpen) => !wasOpen);
-    setOutcome("none");
+    setAnswer(null);
   };
 
   const cancel = () => {
     setDraft(savedEmail);
+    setPassword("");
     setOpen(false);
-    setOutcome("none");
+    setAnswer(null);
   };
 
   const save = async () => {
     if (!canSave) return;
     setSaving(true);
-    setOutcome("none");
+    setAnswer(null);
     try {
-      await onChangeEmail(value);
-      setOutcome("saved");
-      setOpen(false);
+      let result = await onChangeEmail(value, password);
+      // The server wants a recent second step first: ask for it, then try again once.
+      if (result === "second-step-required" && onConfirmSecondStep !== undefined && (await onConfirmSecondStep())) {
+        result = await onChangeEmail(value, password);
+      }
+      setAnswer(result);
+      if (result === "sent") {
+        setSentTo(value);
+        setPassword("");
+        setOpen(false);
+      }
     } catch {
-      setOutcome("failed");
+      setAnswer("failed");
     } finally {
       setSaving(false);
     }
@@ -146,25 +177,35 @@ function EmailSection({
             required
             onChange={(event) => {
               setDraft(event.target.value);
-              setOutcome("none");
+              setAnswer(null);
             }}
           />
+          <PasswordField
+            label={t("account.currentPassword")}
+            autoComplete="current-password"
+            value={password}
+            invalid={answer === "wrong-password"}
+            onChange={(event) => {
+              setPassword(event.target.value);
+              setAnswer(null);
+            }}
+          />
+          <p className="set-note">{t("account.emailLinkNote")}</p>
           <div className="acc-credential-actions">
             <button type="button" className="btn-ghost" onClick={cancel}>
               {t("common.cancel")}
             </button>
             <button type="submit" className="btn-primary" disabled={!canSave}>
-              {saving ? t("common.saving") : t("account.saveEmail")}
+              {saving ? t("common.saving") : t("account.sendEmailLink")}
             </button>
           </div>
         </form>
       ) : null}
 
-      {outcome === "saved" ? (
-        <p className="acc-answer ok" role="status">{t("account.emailSaved")}</p>
-      ) : null}
-      {outcome === "failed" ? (
-        <p className="acc-answer bad" role="alert">{t("account.emailSaveFailed")}</p>
+      {answer === "sent" ? (
+        <p className="acc-answer ok" role="status">{t("account.emailLinkSent", { email: sentTo })}</p>
+      ) : answer !== null ? (
+        <p className="acc-answer bad" role="alert">{emailAnswerText(t, answer)}</p>
       ) : null}
     </section>
   );
@@ -372,6 +413,7 @@ export function SecurityPane({
             savedEmail={account.email ?? ""}
             supported={emailSupported}
             onChangeEmail={onChangeEmail}
+            onConfirmSecondStep={onConfirmSecondStep}
           />
           <PasswordSection onChangePassword={onChangePassword} onConfirmSecondStep={onConfirmSecondStep} />
         </div>

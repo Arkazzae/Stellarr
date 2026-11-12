@@ -42,6 +42,8 @@ import type {
   MessageReactionChanged,
   MessageSyncPage,
   NewServer,
+  EmailChangeAnswer,
+  EmailConfirmAnswer,
   PasswordChangeAnswer,
   RegisterInput,
   Section,
@@ -151,6 +153,8 @@ export interface ApiClient {
   revokeOtherSessions(): Promise<void>;
   requestPasswordReset(email: string, signal?: AbortSignal): Promise<void>;
   resetPassword(token: string, newPassword: string, signal?: AbortSignal): Promise<void>;
+  /** Spends the link from the new address; works signed out, on any device. */
+  confirmEmailChange(token: string, signal?: AbortSignal): Promise<EmailConfirmAnswer>;
   logout(): Promise<void>;
   /**
    * Resolves to null for an anonymous visitor.
@@ -280,6 +284,8 @@ export interface ApiClient {
     newPassword: string,
     signal?: AbortSignal,
   ): Promise<PasswordChangeAnswer>;
+  /** Mails a link to the new address; the address changes only when it is opened. */
+  requestEmailChange(email: string, password: string, signal?: AbortSignal): Promise<EmailChangeAnswer>;
   uploadAccountImage(
     kind: AccountImageKind,
     file: File,

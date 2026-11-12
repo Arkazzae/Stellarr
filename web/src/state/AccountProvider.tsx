@@ -13,6 +13,7 @@ import type {
   Account,
   AccountPatch,
   ImageKind,
+  EmailChangeResult,
   PasswordChangeResult,
   UserPreferences,
 } from "@/ports";
@@ -25,6 +26,7 @@ export interface AccountValue {
   update: (patch: AccountPatch) => Promise<void>;
   setPreferences: (patch: Partial<UserPreferences>) => Promise<void>;
   changePassword: (current: string, next: string) => Promise<PasswordChangeResult>;
+  requestEmailChange: (email: string, password: string) => Promise<EmailChangeResult>;
   /** Uploads the picture and puts the resulting URL on the account in one step. */
   setImage: (kind: ImageKind, file: File) => Promise<void>;
   removeImage: (kind: ImageKind) => Promise<void>;
@@ -68,6 +70,7 @@ export function AccountProvider({ children }: { children: ReactNode }) {
       update: (patch) => port.update(patch),
       setPreferences: (patch) => port.setPreferences(patch),
       changePassword: (current, next) => port.changePassword(current, next),
+      requestEmailChange: (email, password) => port.requestEmailChange(email, password),
       async setImage(kind, file) {
         const url = await port.uploadImage(kind, file);
         await port.update(kind === "avatar" ? { avatarUrl: url } : { bannerUrl: url });

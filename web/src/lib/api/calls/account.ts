@@ -1,6 +1,7 @@
 import type { ApiClient } from "../client";
 import {
   parseAccount,
+  parseEmailChangeAnswer,
   parseJoinSoundLibrary,
   parsePasswordAnswer,
   parsePreferences,
@@ -14,6 +15,7 @@ type AccountCalls = Pick<
   | "updatePreferences"
   | "getJoinSoundLibrary"
   | "changePassword"
+  | "requestEmailChange"
   | "uploadAccountImage"
   | "removeAccountImage"
 >;
@@ -38,6 +40,9 @@ export function accountCalls(): AccountCalls {
         parsePasswordAnswer,
         signal,
       ),
+
+    requestEmailChange: (email, password, signal) =>
+      sendJson("POST", "/api/me/email", { email, password }, parseEmailChangeAnswer, signal),
 
     uploadAccountImage: (kind, file, signal) =>
       postForm(route`/api/me/images/${kind}`, fileForm(file), parseAccount, signal),

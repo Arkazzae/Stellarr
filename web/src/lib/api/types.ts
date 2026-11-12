@@ -120,6 +120,18 @@ export type PasswordChangeAnswer =
   | "same-as-current"
   | "second-step-required";
 
+/** What asking for a new address can answer; only "sent" mailed a link. */
+export type EmailChangeAnswer =
+  | "sent"
+  | "wrong-password"
+  | "second-step-required"
+  | "same"
+  | "taken"
+  | "mail-unavailable";
+
+/** What opening the link in the mail can answer. */
+export type EmailConfirmAnswer = "changed" | "invalid" | "taken";
+
 export interface Server {
   id: string;
   name: string;

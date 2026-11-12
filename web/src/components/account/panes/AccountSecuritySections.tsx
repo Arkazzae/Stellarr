@@ -52,6 +52,7 @@ const EVENT_LABEL: Record<string, MessageKey> = {
   "policy-changed": "security.event.policyChanged",
   "identity-linked": "security.event.identityLinked",
   "identity-unlinked": "security.event.identityUnlinked",
+  "email-changed": "security.event.emailChanged",
   "desktop-approved": "security.event.desktopApproved",
 };
 

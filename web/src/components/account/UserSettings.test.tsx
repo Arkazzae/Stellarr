@@ -428,10 +428,12 @@ describe("UserSettings", () => {
     const field = screen.getByRole("textbox", { name: "Nowy adres e-mail" });
     await user.clear(field);
     await user.type(field, "nowy@example.com");
-    await user.click(screen.getByRole("button", { name: "Zapisz e-mail" }));
+    await user.type(screen.getByLabelText("Obecne hasło"), "haslo1234");
+    await user.click(screen.getByRole("button", { name: "Wyślij link" }));
 
     expect(props.security.onChangeEmail).toHaveBeenCalledExactlyOnceWith(
       "nowy@example.com",
+      "haslo1234",
     );
     expect(props.accountPane.onSave).not.toHaveBeenCalled();
   });

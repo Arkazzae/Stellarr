@@ -127,6 +127,8 @@ export function fakeApi(overrides: Partial<ApiClient> = {}): ApiClient {
     revokeOwnSession: vi.fn(async () => {}),
     revokeOtherSessions: vi.fn(async () => {}),
     startIdentityLink: vi.fn(async () => "/api/auth/oidc/link?ticket=t"),
+    requestEmailChange: vi.fn(async () => "sent" as const),
+    confirmEmailChange: vi.fn(async () => "changed" as const),
     removeIdentity: vi.fn(async () => {}),
     requestPasswordReset: vi.fn(async () => {}),
     resetPassword: vi.fn(async () => {}),

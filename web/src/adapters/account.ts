@@ -110,6 +110,7 @@ export function createAccountAdapter(api: ApiClient): AccountAdapter {
     },
 
     changePassword: (current, next) => api.changePassword(current, next),
+    requestEmailChange: (email, password) => api.requestEmailChange(email, password),
 
     async uploadImage(kind, file) {
       const details = await api.uploadAccountImage(kind, file);

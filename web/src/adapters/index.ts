@@ -169,6 +169,7 @@ export function createRuntime(options: RuntimeOptions = {}): Runtime {
       register: (input) => api.register(input),
       requestPasswordReset: (email) => api.requestPasswordReset(email),
       resetPassword: (token, newPassword) => api.resetPassword(token, newPassword),
+      confirmEmailChange: (token) => api.confirmEmailChange(token),
       logout: () => api.logout(),
       check: async () => (await api.session()) !== null,
       passkeysSupported: () => passkeysSupported(),

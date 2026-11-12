@@ -1,7 +1,7 @@
 import type { ApiClient } from "../client";
 import { ApiError, isUnauthorized } from "../errors";
 import { expectBoolean, expectRecord, unwrap } from "../expect";
-import { parseBootstrap, parseUser } from "../parsers";
+import { parseBootstrap, parseEmailConfirmAnswer, parseUser } from "../parsers";
 import { parseAuthResult } from "../securityParsers";
 import {
   forgetActiveServerId,
@@ -19,6 +19,7 @@ type SessionCalls = Pick<
   | "register"
   | "requestPasswordReset"
   | "resetPassword"
+  | "confirmEmailChange"
   | "logout"
   | "session"
   | "bootstrap"
@@ -70,6 +71,9 @@ export function sessionCalls(): SessionCalls {
 
     resetPassword: (token, newPassword, signal) =>
       sendVoid("POST", "/api/auth/password/reset", { token, newPassword }, signal),
+
+    confirmEmailChange: (token, signal) =>
+      sendJson("POST", "/api/auth/email/confirm", { token }, parseEmailConfirmAnswer, signal),
 
     async logout() {
       try {

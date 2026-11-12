@@ -2,7 +2,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import type { Account, PasswordChangeResult } from "@/ports";
+import type { Account, EmailChangeResult, PasswordChangeResult } from "@/ports";
 
 import { SecurityPane, type SecurityPaneProps } from "./SecurityPane";
 
@@ -21,7 +21,7 @@ function setup(overrides: Partial<SecurityPaneProps> = {}) {
   const props: SecurityPaneProps = {
     account,
     emailSupported: true,
-    onChangeEmail: vi.fn(),
+    onChangeEmail: vi.fn(async (): Promise<EmailChangeResult> => "sent"),
     onChangePassword: vi.fn(async (): Promise<PasswordChangeResult> => "changed"),
     ...overrides,
   };
@@ -44,47 +44,83 @@ async function fillPasswords(
 }
 
 describe("SecurityPane e-mail", () => {
-  it("shows the saved address and saves a new one apart from the profile", async () => {
+  async function askForAddress(user: ReturnType<typeof userEvent.setup>, email: string, password = "haslo1234") {
+    await user.click(screen.getByRole("button", { name: "Zmień e-mail" }));
+    const field = screen.getByRole("textbox", { name: "Nowy adres e-mail" });
+    await user.clear(field);
+    await user.type(field, email);
+    await user.type(screen.getByLabelText("Obecne hasło"), password);
+    await user.click(screen.getByRole("button", { name: "Wyślij link" }));
+  }
+
+  it("mails a link to the new address after the password and says where it went", async () => {
     const user = userEvent.setup();
     const { props } = setup();
 
     expect(screen.getByText("maja@example.com")).toBeVisible();
-    await user.click(screen.getByRole("button", { name: "Zmień e-mail" }));
-    const field = screen.getByRole("textbox", { name: "Nowy adres e-mail" });
-    expect(screen.getByRole("button", { name: "Zapisz e-mail" })).toBeDisabled();
+    await askForAddress(user, "  nowy@example.com ");
 
-    await user.clear(field);
-    await user.type(field, "  nowy@example.com ");
-    await user.click(screen.getByRole("button", { name: "Zapisz e-mail" }));
-
-    expect(props.onChangeEmail).toHaveBeenCalledExactlyOnceWith("nowy@example.com");
-    expect(await screen.findByRole("status")).toHaveTextContent("Adres e-mail został zmieniony.");
+    expect(props.onChangeEmail).toHaveBeenCalledExactlyOnceWith("nowy@example.com", "haslo1234");
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Wysłaliśmy link na nowy@example.com. Adres zmieni się, gdy go otworzysz.",
+    );
     expect(screen.queryByRole("textbox", { name: "Nowy adres e-mail" })).toBeNull();
+    // Nothing changes here until the link is opened.
+    expect(screen.getByText("maja@example.com")).toBeVisible();
   });
 
-  it("cannot be sent a second time while the first save is still pending", async () => {
+  it("sends nothing without the current password", async () => {
     const user = userEvent.setup();
-    let finish: () => void = () => undefined;
-    const pending = new Promise<void>((resolve) => { finish = resolve; });
-    const { props } = setup({ onChangeEmail: vi.fn(() => pending) });
+    const { props } = setup();
 
     await user.click(screen.getByRole("button", { name: "Zmień e-mail" }));
     const field = screen.getByRole("textbox", { name: "Nowy adres e-mail" });
     await user.clear(field);
     await user.type(field, "nowy@example.com");
-    await user.click(screen.getByRole("button", { name: "Zapisz e-mail" }));
-    expect(screen.getByRole("button", { name: "Zapisywanie…" })).toBeDisabled();
 
-    await user.type(field, "x");
-    expect(screen.getByRole("button", { name: "Zapisywanie…" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Wyślij link" })).toBeDisabled();
+    expect(props.onChangeEmail).not.toHaveBeenCalled();
+  });
 
-    await user.click(screen.getByRole("button", { name: "Zmień e-mail" }));
-    await user.click(screen.getByRole("button", { name: "Zmień e-mail" }));
+  it("asks for a fresh second step when the server wants one, then sends the link", async () => {
+    const user = userEvent.setup();
+    const onChangeEmail = vi
+      .fn<SecurityPaneProps["onChangeEmail"]>()
+      .mockResolvedValueOnce("second-step-required")
+      .mockResolvedValueOnce("sent");
+    const onConfirmSecondStep = vi.fn(async () => true);
+    setup({ onChangeEmail, onConfirmSecondStep });
+
+    await askForAddress(user, "nowy@example.com");
+
+    expect(await screen.findByRole("status")).toHaveTextContent("Wysłaliśmy link na nowy@example.com");
+    expect(onConfirmSecondStep).toHaveBeenCalledOnce();
+    expect(onChangeEmail).toHaveBeenCalledTimes(2);
+  });
+
+  it("says why an address was refused and keeps the editor open", async () => {
+    const user = userEvent.setup();
+    setup({ onChangeEmail: vi.fn(async (): Promise<EmailChangeResult> => "taken") });
+
+    await askForAddress(user, "zajety@example.com");
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Ten adres należy do innego konta.");
+    expect(screen.getByRole("textbox", { name: "Nowy adres e-mail" })).toBeVisible();
+  });
+
+  it("cannot be sent a second time while the first request is still pending", async () => {
+    const user = userEvent.setup();
+    let finish: (result: EmailChangeResult) => void = () => undefined;
+    const pending = new Promise<EmailChangeResult>((resolve) => { finish = resolve; });
+    const { props } = setup({ onChangeEmail: vi.fn(() => pending) });
+
+    await askForAddress(user, "nowy@example.com");
     expect(screen.getByRole("button", { name: "Zapisywanie…" })).toBeDisabled();
+    await user.click(screen.getByRole("button", { name: "Zapisywanie…" }));
     expect(props.onChangeEmail).toHaveBeenCalledOnce();
 
-    finish();
-    expect(await screen.findByRole("status")).toHaveTextContent("Adres e-mail został zmieniony.");
+    finish("sent");
+    expect(await screen.findByRole("status")).toHaveTextContent("Wysłaliśmy link");
   });
 
   it("offers to add an address when the account has none", () => {
@@ -92,20 +128,6 @@ describe("SecurityPane e-mail", () => {
 
     expect(screen.getByText("Nie ustawiono adresu e-mail")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Dodaj e-mail" })).toBeEnabled();
-  });
-
-  it("reports a refused address and keeps the editor open", async () => {
-    const user = userEvent.setup();
-    setup({ onChangeEmail: vi.fn(async () => { throw new Error("taken"); }) });
-
-    await user.click(screen.getByRole("button", { name: "Zmień e-mail" }));
-    const field = screen.getByRole("textbox", { name: "Nowy adres e-mail" });
-    await user.clear(field);
-    await user.type(field, "zajety@example.com");
-    await user.click(screen.getByRole("button", { name: "Zapisz e-mail" }));
-
-    expect(await screen.findByRole("alert")).toHaveTextContent("Nie udało się zmienić adresu e-mail");
-    expect(screen.getByRole("textbox", { name: "Nowy adres e-mail" })).toBeVisible();
   });
 
   it("drops a draft when the address is replaced from elsewhere", async () => {
@@ -125,7 +147,7 @@ describe("SecurityPane e-mail", () => {
     setup({ emailSupported: false });
 
     expect(screen.queryByRole("button", { name: "Zmień e-mail" })).toBeNull();
-    expect(screen.getByText(/zmiana adresu/i)).toBeInTheDocument();
+    expect(screen.getByText("Adresu nie można teraz zmienić.")).toBeInTheDocument();
   });
 });
 
