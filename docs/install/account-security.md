@@ -37,8 +37,9 @@ make 30 of these requests, the steps of a setup included, in 15 minutes.
 Sending an email code falls under the stricter limit shared with registration
 and password reset: five requests per 15 minutes.
 
-Signing in through the identity provider (OIDC) is followed by the same second
-step.
+Signing in through an identity provider (OIDC) is followed by the same second
+step, unless the operator trusts that provider's own second step (see
+[Single sign-on](configuration.md#single-sign-on-oidc)).
 
 ## Passkeys
 

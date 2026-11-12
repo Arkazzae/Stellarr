@@ -44,7 +44,8 @@ public static class DesktopBrowserLoginEndpoints
         ExternalOidcOptions oidc,
         CancellationToken cancellationToken)
     {
-        if (!oidc.IsConfigured)
+        var providers = oidc.ConfiguredProviders();
+        if (providers.Count == 0)
         {
             return Results.NotFound();
         }
@@ -69,7 +70,10 @@ public static class DesktopBrowserLoginEndpoints
         {
             requestId = login.Id.ToString(),
             secret,
-            verificationUrl = $"/api/auth/oidc/login?returnUrl={Uri.EscapeDataString(approvalPath)}",
+            // One provider: straight to it. Several: the sign-in page, which offers them all.
+            verificationUrl = providers.Count == 1
+                ? $"{providers[0].LoginPath}?returnUrl={Uri.EscapeDataString(approvalPath)}"
+                : $"/login?returnUrl={Uri.EscapeDataString(approvalPath)}",
             expiresAt = login.ExpiresAt,
         });
     }

@@ -32,6 +32,9 @@ public sealed record AuthStart(
 /// </summary>
 public static class AuthenticationFlow
 {
+    /// <summary>The evidence of a second step the identity provider asked for and the instance trusts.</summary>
+    public const string ProviderEvidence = "provider_mfa";
+
     public static async Task<AuthStart> StartAsync(
         AppDbContext db,
         HttpContext context,
@@ -41,12 +44,20 @@ public static class AuthenticationFlow
         Messages messages,
         CancellationToken cancellationToken,
         bool? requiredOverride = null,
-        bool shortLived = false)
+        bool shortLived = false,
+        bool secondStepAtProvider = false)
     {
         var methods = await ConfirmedMethodsAsync(db, user.Id, cancellationToken);
         if (user.SecurityRecoveryRequired)
         {
             return new AuthStart(null, null, RecoveryRequired: true);
+        }
+
+        if (secondStepAtProvider)
+        {
+            return new AuthStart(null, SessionAuthentication.CreateSession(
+                context, user.Id, messages, primarySource, DateTime.UtcNow, ProviderEvidence,
+                user.SessionVersion, shortLived: shortLived));
         }
 
         var required = requiredOverride ??

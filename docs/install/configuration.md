@@ -70,6 +70,40 @@ OpenID Connect login is optional; local username/password login remains availabl
 | `STELLARR_OIDC_CLIENT_SECRET` | string | empty | OIDC client secret (takes precedence over `STELLARR_OIDC_CLIENT_SECRET_FILE`). |
 | `STELLARR_OIDC_CLIENT_SECRET_FILE` | container path | empty | Path to a mounted file containing the OIDC client secret. |
 | `STELLARR_OIDC_DISPLAY_NAME` | string | `Main account` | Sign-in button label on the login screen. |
+| `STELLARR_OIDC_TRUST_PROVIDER_MFA` | `true` \| `false` | `false` | Counts a sign-in the provider confirmed with more than a password as the instance's second step (see below). |
+| `STELLARR_OIDC_PROVIDER_MFA_AMR` | comma-separated list | `mfa` | The `amr` values in the provider's ID token that mean it asked for more than a password. |
+
+### More than one provider
+
+Further providers are added in the `environment` of the `stellarr` service, each
+under an id of 1 to 32 lower-case letters, digits or hyphens (not `default`,
+`login` or `callback`). Each gets its own button and the callback
+`<public-url>/api/auth/oidc/<id>/callback`. The provider above keeps its
+callback and is offered first.
+
+```yaml
+      Oidc__Providers__work__DisplayName: Work account
+      Oidc__Providers__work__Authority: https://id.example.com/realms/work
+      Oidc__Providers__work__ClientId: stellarr
+      Oidc__Providers__work__ClientSecretFile: /run/secrets/oidc-work
+      # Optional, off by default:
+      Oidc__Providers__work__TrustProviderMfa: "true"
+      Oidc__Providers__work__ProviderMfaAmr: mfa,hwk
+```
+
+A provider is offered only when its issuer is HTTPS and it has a client ID and
+a secret; an id that breaks the rules stops the server at start. An identity
+is linked to an account per issuer: the same subject at two providers is two
+different people, and no account is ever matched by its email address.
+
+### The provider's own second step
+
+By default the provider only proves who someone is, and the instance asks for
+its own second step after it, as after a password (see
+[Account security](account-security.md)). With `TrustProviderMfa` on, a
+sign-in whose ID token lists one of the configured `amr` values counts as the
+second step, Cockpit included. Turn it on only for a provider that really
+requires a second factor and reports it in `amr`.
 
 ## Language
 

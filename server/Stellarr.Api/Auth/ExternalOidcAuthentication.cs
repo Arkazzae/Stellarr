@@ -25,22 +25,27 @@ public static class ExternalOidcAuthentication
         this AuthenticationBuilder authentication,
         ExternalOidcOptions settings)
     {
-        if (!settings.IsConfigured)
+        foreach (var provider in settings.ConfiguredProviders())
         {
-            return authentication;
+            AddProvider(authentication, provider);
         }
 
-        var clientSecret = settings.ResolveClientSecret();
-        return authentication.AddOpenIdConnect(
-            ExternalOidcOptions.AuthenticationScheme,
-            settings.DisplayName,
+        return authentication;
+    }
+
+    private static void AddProvider(AuthenticationBuilder authentication, ExternalOidcProvider provider)
+    {
+        var clientSecret = provider.ResolveClientSecret();
+        authentication.AddOpenIdConnect(
+            provider.Scheme,
+            provider.DisplayName,
             options =>
             {
                 options.SignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-                options.Authority = settings.Authority.TrimEnd('/');
-                options.ClientId = settings.ClientId;
+                options.Authority = provider.Authority.TrimEnd('/');
+                options.ClientId = provider.ClientId;
                 options.ClientSecret = clientSecret;
-                options.CallbackPath = settings.CallbackPath;
+                options.CallbackPath = provider.CallbackPath;
                 options.ResponseType = OpenIdConnectResponseType.Code;
                 options.UsePkce = true;
                 options.MapInboundClaims = false;
@@ -56,13 +61,13 @@ public static class ExternalOidcAuthentication
                 };
                 options.Events = new OpenIdConnectEvents
                 {
-                    OnTokenValidated = SignInLinkedAccountAsync,
+                    OnTokenValidated = context => SignInLinkedAccountAsync(context, provider),
                     OnRemoteFailure = RedirectToLoginAsync,
                 };
             });
     }
 
-    private static async Task SignInLinkedAccountAsync(TokenValidatedContext context)
+    private static async Task SignInLinkedAccountAsync(TokenValidatedContext context, ExternalOidcProvider provider)
     {
         var issuer = ExternalOidcOptions.CanonicalIssuer(context.SecurityToken.Issuer ?? "");
         var subject = context.Principal?.FindFirst("sub")?.Value?.Trim() ?? "";
@@ -94,8 +99,12 @@ public static class ExternalOidcAuthentication
         var messages = context.HttpContext.RequestServices.GetRequiredService<Messages>();
         var policy = await MfaPolicy.LoadAsync(db, cancellationToken);
         var shortLived = IsShortLived(context.Properties);
+        // Off unless the operator trusts this provider's own second step.
+        var secondStepAtProvider = provider.PassedSecondStep(
+            context.Principal?.FindAll("amr").Select(claim => claim.Value) ?? []);
         var start = await AuthenticationFlow.StartAsync(
-            db, context.HttpContext, user, "oidc", policy, messages, cancellationToken, shortLived: shortLived);
+            db, context.HttpContext, user, "oidc", policy, messages, cancellationToken,
+            shortLived: shortLived, secondStepAtProvider: secondStepAtProvider);
         if (start.RecoveryRequired)
         {
             // The recovery is finished on the sign-in page, which has to know

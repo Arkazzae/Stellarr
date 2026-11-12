@@ -22,6 +22,7 @@ public static class AuthEndpoints
         group.MapPost("/logout", LogoutAsync).RequireAuthorization();
         group.MapGet("/oidc", GetOidcStatus);
         group.MapGet("/oidc/login", ChallengeOidc).RequireRateLimiting(RateLimitPolicies.Login);
+        group.MapGet("/oidc/{id}/login", ChallengeNamedOidc).RequireRateLimiting(RateLimitPolicies.Login);
 
         return endpoints;
     }
@@ -88,19 +89,48 @@ public static class AuthEndpoints
         return Results.Ok(start.Challenge);
     }
 
-    /// <summary>Whether the sign-in page should offer the provider, and under what name.</summary>
-    private static IResult GetOidcStatus(ExternalOidcOptions options, Messages messages) =>
-        Results.Ok(new
-        {
-            enabled = options.IsConfigured,
-            displayName = string.IsNullOrWhiteSpace(options.DisplayName)
-                ? messages.Get(MessageKey.OidcDefaultName)
-                : options.DisplayName,
-        });
-
-    private static IResult ChallengeOidc(string? returnUrl, bool? keepSignedIn, ExternalOidcOptions options)
+    /// <summary>
+    /// The providers the sign-in page offers, each with its button's name and
+    /// address. <c>enabled</c> and <c>displayName</c> describe the first one,
+    /// as clients from before several providers read them.
+    /// </summary>
+    private static IResult GetOidcStatus(ExternalOidcOptions options, Messages messages)
     {
-        if (!options.IsConfigured)
+        var providers = options.ConfiguredProviders()
+            .Select(provider => new
+            {
+                id = provider.Id,
+                displayName = string.IsNullOrWhiteSpace(provider.DisplayName)
+                    ? messages.Get(MessageKey.OidcDefaultName)
+                    : provider.DisplayName,
+                loginUrl = provider.LoginPath,
+            })
+            .ToArray();
+        return Results.Ok(new
+        {
+            enabled = providers.Length > 0,
+            displayName = providers.FirstOrDefault()?.displayName ??
+                (string.IsNullOrWhiteSpace(options.DisplayName)
+                    ? messages.Get(MessageKey.OidcDefaultName)
+                    : options.DisplayName),
+            providers,
+        });
+    }
+
+    /// <summary>The original address: the provider configured first.</summary>
+    private static IResult ChallengeOidc(string? returnUrl, bool? keepSignedIn, ExternalOidcOptions options) =>
+        Challenge(options.ConfiguredProviders() is [var first, ..] ? first : null, returnUrl, keepSignedIn);
+
+    private static IResult ChallengeNamedOidc(
+        string id,
+        string? returnUrl,
+        bool? keepSignedIn,
+        ExternalOidcOptions options) =>
+        Challenge(options.Find(id), returnUrl, keepSignedIn);
+
+    private static IResult Challenge(ExternalOidcProvider? provider, string? returnUrl, bool? keepSignedIn)
+    {
+        if (provider is null)
         {
             return Results.NotFound();
         }
@@ -108,7 +138,7 @@ public static class AuthEndpoints
         var properties = new AuthenticationProperties { RedirectUri = ExternalOidcOptions.SafeReturnUrl(returnUrl) };
         // Kept in the protected state, so the choice comes back with the provider's answer.
         ExternalOidcAuthentication.RememberShortLived(properties, keepSignedIn == false);
-        return Results.Challenge(properties, [ExternalOidcOptions.AuthenticationScheme]);
+        return Results.Challenge(properties, [provider.Scheme]);
     }
 
     private static async Task<IResult> LogoutAsync(

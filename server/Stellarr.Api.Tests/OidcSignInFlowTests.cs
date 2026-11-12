@@ -107,6 +107,108 @@ public sealed class OidcSignInFlowTests(StellarrWebApplicationFactory factory)
     }
 
     [Fact]
+    public async Task NamedProviderSignsInThroughItsOwnRoutesBesideTheOriginal()
+    {
+        using var provider = new FakeProvider();
+        using var work = new FakeProvider("https://work-identity.test");
+        using var host = Host(provider, work);
+        using var client = BrowserClient(host);
+        var account = await CreateLinkedAccountAsync(work);
+
+        var status = await client.GetFromJsonAsync<JsonElement>("/api/auth/oidc");
+        var offered = status.GetProperty("providers").EnumerateArray()
+            .Select(x => (x.GetProperty("id").GetString(), x.GetProperty("displayName").GetString(), x.GetProperty("loginUrl").GetString()))
+            .ToArray();
+        Assert.Equal(
+            [("default", "Test IdP", "/api/auth/oidc/login"), ("work", "Work", "/api/auth/oidc/work/login")],
+            offered);
+
+        using var callback = await SignInThroughProviderAsync(client, work, "/", providerId: "work");
+
+        Assert.Equal(HttpStatusCode.Redirect, callback.StatusCode);
+        Assert.Equal("/", callback.Headers.Location!.OriginalString);
+        var session = await client.GetFromJsonAsync<JsonElement>("/api/session");
+        Assert.Equal(account.Id.ToString(), session.GetProperty("user").GetProperty("id").GetString());
+    }
+
+    [Fact]
+    public async Task IdentityLinkedAtOneProviderDoesNotSignInThroughAnother()
+    {
+        using var provider = new FakeProvider();
+        using var work = new FakeProvider("https://work-identity.test") { Subject = "shared-subject" };
+        provider.Subject = "shared-subject";
+        using var host = Host(provider, work);
+        using var client = BrowserClient(host);
+        await CreateLinkedAccountAsync(provider);
+
+        // The same subject at another issuer is another person.
+        using var callback = await SignInThroughProviderAsync(client, work, "/", providerId: "work");
+
+        Assert.Equal("/login?oidc_error=not_linked", callback.Headers.Location!.OriginalString);
+        var session = await client.GetFromJsonAsync<JsonElement>("/api/session");
+        Assert.Equal(JsonValueKind.Null, session.GetProperty("user").ValueKind);
+    }
+
+    [Fact]
+    public async Task ProvidersSecondStepCountsOnlyWhenTheInstanceTrustsIt()
+    {
+        await SetRequirementAsync(MfaRequirements.Everyone);
+        try
+        {
+            foreach (var trusted in new[] { false, true })
+            {
+                using var provider = new FakeProvider { Amr = ["pwd", "mfa"] };
+                using var host = Host(provider, trustProviderMfa: trusted);
+                using var client = BrowserClient(host);
+                var account = await CreateLinkedAccountAsync(provider);
+
+                using var callback = await SignInThroughProviderAsync(client, provider, "/");
+
+                var session = await client.GetFromJsonAsync<JsonElement>("/api/session");
+                if (!trusted)
+                {
+                    // Untrusted, the provider's own step changes nothing: a method is set up here.
+                    Assert.StartsWith("/login?mfa_enrollment=1", callback.Headers.Location!.OriginalString, StringComparison.Ordinal);
+                    Assert.Equal(JsonValueKind.Null, session.GetProperty("user").ValueKind);
+                    continue;
+                }
+
+                Assert.Equal("/", callback.Headers.Location!.OriginalString);
+                Assert.Equal(account.Id.ToString(), session.GetProperty("user").GetProperty("id").GetString());
+                await using var scope = factory.OpenScope(out var db);
+                var stored = await db.UserSessions.SingleAsync(x => x.UserId == account.Id);
+                Assert.Equal("provider_mfa", stored.MfaEvidence);
+                Assert.NotNull(stored.MfaCompletedAt);
+            }
+
+            // Trusted, a sign-in the provider did not confirm with more than a password still meets the instance's step.
+            using var plain = new FakeProvider { Amr = ["pwd"] };
+            using var plainHost = Host(plain, trustProviderMfa: true);
+            using var plainClient = BrowserClient(plainHost);
+            await CreateLinkedAccountAsync(plain);
+            using var plainCallback = await SignInThroughProviderAsync(plainClient, plain, "/");
+            Assert.StartsWith("/login?mfa_enrollment=1", plainCallback.Headers.Location!.OriginalString, StringComparison.Ordinal);
+        }
+        finally
+        {
+            await SetRequirementAsync(MfaRequirements.Optional);
+        }
+    }
+
+    [Fact]
+    public async Task DesktopSignInWithSeveralProvidersGoesToTheSignInPage()
+    {
+        using var provider = new FakeProvider();
+        using var work = new FakeProvider("https://work-identity.test");
+        using var host = Host(provider, work);
+        using var desktop = host.CreateClient();
+
+        var (_, _, verificationUrl) = await StartDesktopLoginAsync(desktop);
+
+        Assert.StartsWith("/login?returnUrl=%2Fapi%2Fauth%2Fdesktop%2Fbrowser%2Fverify%2F", verificationUrl, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task SignedInSessionCanBeRevokedLikeAnyOther()
     {
         using var provider = new FakeProvider();
@@ -397,8 +499,33 @@ public sealed class OidcSignInFlowTests(StellarrWebApplicationFactory factory)
     }
 
     /// <summary>The application with the provider configured and its endpoints pointed at <paramref name="provider"/>.</summary>
-    private WebApplicationFactory<Program> Host(FakeProvider provider) => factory.WithWebHostBuilder(builder =>
+    /// <summary>The original provider, plus one named "work" when given, each answering through its fake.</summary>
+    private WebApplicationFactory<Program> Host(
+        FakeProvider provider,
+        FakeProvider? work = null,
+        bool trustProviderMfa = false) => factory.WithWebHostBuilder(builder =>
     {
+        if (work is not null)
+        {
+            builder.UseSetting("Oidc:Providers:work:Authority", work.IssuerUrl);
+            builder.UseSetting("Oidc:Providers:work:ClientId", ClientId);
+            builder.UseSetting("Oidc:Providers:work:ClientSecret", "work-client-secret");
+            builder.UseSetting("Oidc:Providers:work:DisplayName", "Work");
+            builder.ConfigureServices(services => services.PostConfigure<OpenIdConnectOptions>(
+                $"{ExternalOidcOptions.AuthenticationScheme}-work",
+                options =>
+                {
+                    options.ConfigurationManager =
+                        new StaticConfigurationManager<OpenIdConnectConfiguration>(work.Configuration);
+                    options.Backchannel = new HttpClient(work, disposeHandler: false);
+                }));
+        }
+
+        if (trustProviderMfa)
+        {
+            builder.UseSetting("Oidc:TrustProviderMfa", "true");
+        }
+
         builder.UseSetting("Oidc:Enabled", "true");
         builder.UseSetting("Oidc:Authority", Issuer);
         builder.UseSetting("Oidc:ClientId", ClientId);
@@ -428,17 +555,20 @@ public sealed class OidcSignInFlowTests(StellarrWebApplicationFactory factory)
         HttpClient client,
         FakeProvider provider,
         string returnUrl,
-        bool? keepSignedIn = null)
+        bool? keepSignedIn = null,
+        string? providerId = null)
     {
         var keep = keepSignedIn is { } value ? $"&keepSignedIn={(value ? "true" : "false")}" : "";
+        var routes = providerId is null ? "/api/auth/oidc" : $"/api/auth/oidc/{providerId}";
         using var login = await client.GetAsync(
-            $"/api/auth/oidc/login?returnUrl={Uri.EscapeDataString(returnUrl)}{keep}");
+            $"{routes}/login?returnUrl={Uri.EscapeDataString(returnUrl)}{keep}");
         Assert.Equal(HttpStatusCode.Redirect, login.StatusCode);
+        Assert.StartsWith(provider.IssuerUrl, login.Headers.Location!.AbsoluteUri, StringComparison.Ordinal);
         var query = QueryHelpers.ParseQuery(login.Headers.Location!.Query);
         provider.Nonce = query["nonce"].ToString();
 
         return await client.GetAsync(
-            $"/api/auth/oidc/callback?code=the-code&state={Uri.EscapeDataString(query["state"].ToString())}");
+            $"{routes}/callback?code=the-code&state={Uri.EscapeDataString(query["state"].ToString())}");
     }
 
     private static async Task<(Guid RequestId, string Secret, string VerificationUrl)> StartDesktopLoginAsync(
@@ -462,7 +592,7 @@ public sealed class OidcSignInFlowTests(StellarrWebApplicationFactory factory)
         {
             Id = Guid.NewGuid(),
             UserId = user.Id,
-            Issuer = Issuer,
+            Issuer = provider.IssuerUrl,
             Subject = provider.Subject,
             CreatedAt = DateTime.UtcNow,
         });
@@ -489,19 +619,25 @@ public sealed class OidcSignInFlowTests(StellarrWebApplicationFactory factory)
         private readonly RSA _rsa = RSA.Create(2048);
         private readonly RsaSecurityKey _key;
 
-        public FakeProvider()
+        public FakeProvider(string issuer = Issuer)
         {
+            IssuerUrl = issuer;
             _key = new RsaSecurityKey(_rsa) { KeyId = "test-key" };
             Configuration = new OpenIdConnectConfiguration
             {
-                Issuer = Issuer,
-                AuthorizationEndpoint = $"{Issuer}/authorize",
-                TokenEndpoint = $"{Issuer}/token",
+                Issuer = issuer,
+                AuthorizationEndpoint = $"{issuer}/authorize",
+                TokenEndpoint = $"{issuer}/token",
             };
             Configuration.SigningKeys.Add(_key);
         }
 
         public OpenIdConnectConfiguration Configuration { get; }
+
+        public string IssuerUrl { get; }
+
+        /// <summary>How the provider says the person signed in, as the <c>amr</c> claim; none when null.</summary>
+        public string[]? Amr { get; set; }
 
         /// <summary>Who the identity token says is signing in. Unique per test, so linked accounts never collide.</summary>
         public string Subject { get; set; } = $"subject-{Guid.NewGuid():N}";
@@ -518,12 +654,18 @@ public sealed class OidcSignInFlowTests(StellarrWebApplicationFactory factory)
                 return Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
             }
 
+            var claims = new Dictionary<string, object> { ["sub"] = Subject, ["nonce"] = Nonce };
+            if (Amr is { } amr)
+            {
+                claims["amr"] = amr;
+            }
+
             var idToken = new JsonWebTokenHandler().CreateToken(new SecurityTokenDescriptor
             {
-                Issuer = Issuer,
+                Issuer = IssuerUrl,
                 Audience = ClientId,
                 Expires = DateTime.UtcNow.AddMinutes(5),
-                Claims = new Dictionary<string, object> { ["sub"] = Subject, ["nonce"] = Nonce },
+                Claims = claims,
                 SigningCredentials = new SigningCredentials(_key, SecurityAlgorithms.RsaSha256),
             });
             return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)

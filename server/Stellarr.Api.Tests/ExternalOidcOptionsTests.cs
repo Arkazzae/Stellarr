@@ -22,6 +22,51 @@ public sealed class ExternalOidcOptionsTests
         Assert.Equal(expected, ExternalOidcOptions.SafeReturnUrl(value));
     }
 
+    [Theory]
+    [InlineData("Work")]
+    [InlineData("work space")]
+    [InlineData("-work")]
+    [InlineData("default")]
+    [InlineData("login")]
+    [InlineData("callback")]
+    public void NamedProviderNeedsAShortLowerCaseIdThatNoRouteUses(string id)
+    {
+        var options = new ExternalOidcOptions
+        {
+            Providers = new Dictionary<string, ExternalOidcProvider>
+            {
+                [id] = new() { Authority = "https://work.example.test", ClientId = "stellarr", ClientSecret = "secret" },
+            },
+        };
+
+        Assert.Throws<InvalidOperationException>(() => options.ConfiguredProviders());
+    }
+
+    [Fact]
+    public void ProvidersAreListedOriginalFirstWithTheirOwnCallbacks()
+    {
+        var options = new ExternalOidcOptions
+        {
+            Enabled = true,
+            Authority = "https://auth.example.test",
+            ClientId = "stellarr",
+            ClientSecret = "secret",
+            Providers = new Dictionary<string, ExternalOidcProvider>
+            {
+                ["work"] = new() { Authority = "https://work.example.test", ClientId = "stellarr", ClientSecret = "secret" },
+                // Not over HTTPS: left out, like an unconfigured original.
+                ["lab"] = new() { Authority = "http://lab.example.test", ClientId = "stellarr", ClientSecret = "secret" },
+            },
+        };
+
+        var providers = options.ConfiguredProviders();
+
+        Assert.Equal(["default", "work"], providers.Select(x => x.Id));
+        Assert.Equal(["/api/auth/oidc/callback", "/api/auth/oidc/work/callback"], providers.Select(x => x.CallbackPath));
+        Assert.Equal(["external-oidc", "external-oidc-work"], providers.Select(x => x.Scheme));
+        Assert.False(providers[1].PassedSecondStep(["mfa"]));
+    }
+
     [Fact]
     public void OidcRequiresHttpsAndAllConfidentialClientSettings()
     {

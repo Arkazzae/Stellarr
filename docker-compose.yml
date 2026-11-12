@@ -69,6 +69,8 @@ services:
       Oidc__ClientSecretFile: ${STELLARR_OIDC_CLIENT_SECRET_FILE:-}
       Oidc__DisplayName: ${STELLARR_OIDC_DISPLAY_NAME:-Main account}
       Oidc__CallbackPath: /api/auth/oidc/callback
+      Oidc__TrustProviderMfa: ${STELLARR_OIDC_TRUST_PROVIDER_MFA:-false}
+      Oidc__ProviderMfaAmr: ${STELLARR_OIDC_PROVIDER_MFA_AMR:-mfa}
       Uploads__MaxStoredBytesPerUser: ${STELLARR_UPLOAD_USER_BYTES:-2147483648}
       Uploads__MaxStoredBytes: ${STELLARR_UPLOAD_TOTAL_BYTES:-21474836480}
       Uploads__MinimumFreeDataRootBytes: ${STELLARR_MIN_FREE_BYTES:-1073741824}
