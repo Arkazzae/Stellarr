@@ -19,8 +19,6 @@ const account: Account = {
 function pane(overrides: Partial<AccountPaneProps> = {}): AccountPaneProps {
   return {
     account,
-    profileSupported: true,
-    uploadsSupported: true,
     onSave: vi.fn(),
     onPickImage: vi.fn(),
     onRemoveImage: vi.fn(),
@@ -125,13 +123,5 @@ describe("AccountPane", () => {
       "Nie udało się przesłać obrazu",
     );
     expect(onPickImage).toHaveBeenCalledWith("avatar", file);
-  });
-
-  it("says so and locks the pictures when the backend cannot store them", () => {
-    render(<AccountPane {...pane({ uploadsSupported: false })} />);
-
-    expect(screen.getByText(/nie są jeszcze podpięte do backendu/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /Dodaj tło/ })).toBeDisabled();
-    expect(screen.getByRole("button", { name: /Dodaj awatar/ })).toBeDisabled();
   });
 });

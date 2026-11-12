@@ -60,7 +60,6 @@ const EVE = { id: "u-eve", username: "eve", displayName: "Eve", presence: "away"
 
 function fakeFriends(overrides: Record<string, unknown> = {}): FriendsValue {
   return {
-    supported: true,
     friends: [],
     requests: [],
     blocked: [],
@@ -169,7 +168,6 @@ describe("FriendsRoomContainer without a conversation", () => {
 
     expect(view()).toMatchObject({
       tab: "all",
-      supported: true,
       onTabChange: mocks.ui.setFriendsTab,
       onMessage: mocks.friends.messagePerson,
       onCall: mocks.friends.callPerson,

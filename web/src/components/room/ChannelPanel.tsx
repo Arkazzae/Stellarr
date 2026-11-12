@@ -55,7 +55,6 @@ export interface ChannelPanelProps {
   pinned: PinnedTabProps["pinned"];
   pinnedLoading?: boolean;
   pinError?: string | null;
-  pinsSupported: boolean;
   onOpenPin?: PinnedTabProps["onOpen"];
   onUnpin?: PinnedTabProps["onUnpin"];
   /** The same bag the transcript's tiles use, so a click lands in one viewer. */
@@ -114,7 +113,6 @@ export function ChannelPanel({
   pinned,
   pinnedLoading = false,
   pinError = null,
-  pinsSupported,
   onOpenPin,
   onUnpin,
   callbacks,
@@ -238,7 +236,6 @@ export function ChannelPanel({
               pinned={pinned}
               loading={pinnedLoading}
               error={pinError}
-              supported={pinsSupported}
               onOpen={onOpenPin}
               onUnpin={onUnpin}
             />

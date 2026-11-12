@@ -25,9 +25,9 @@ export interface SectionSettingsProps {
   onClose: () => void;
   /** Null while the dialog is closing and the rail has moved on. */
   section: SectionSettingsVM | null;
-  /** False keeps the form legible and read-only, as every unwired pane does. */
+  /** False when this member may not manage channels: the form stays legible and read-only. */
   supported: boolean;
-  /** False while the endpoint behind per-section overrides is unwired. */
+  /** False when this member may not manage roles, so overrides are read-only. */
   permissionsSupported: boolean;
   roles: readonly Role[];
   permissionOverrides: readonly PermissionOverride[];

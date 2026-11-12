@@ -21,7 +21,6 @@ function setup(overrides: Partial<SecurityPaneProps> = {}) {
   const props: SecurityPaneProps = {
     account,
     emailSupported: true,
-    passwordSupported: true,
     onChangeEmail: vi.fn(),
     onChangePassword: vi.fn(async (): Promise<PasswordChangeResult> => "changed"),
     ...overrides,
@@ -193,11 +192,5 @@ describe("SecurityPane password", () => {
     await user.click(screen.getByRole("button", { name: "Zmień hasło" }));
 
     expect(screen.getByLabelText(/Obecne hasło/)).toHaveValue("");
-  });
-
-  it("cannot be opened when the server has no password change", () => {
-    setup({ passwordSupported: false });
-
-    expect(screen.getByRole("button", { name: "Zmień hasło" })).toBeDisabled();
   });
 });

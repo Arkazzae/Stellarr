@@ -97,7 +97,6 @@ export function RoomContainer() {
   // do with a message is the same.
   const messageProps = {
     followOwnSend: chat.ownSendToken,
-    support: chat.support,
     translation,
     attachments: viewer.attachments,
     customEmoji,

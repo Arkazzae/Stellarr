@@ -112,7 +112,7 @@ function RoleRow({ role, override, open, disabled, onToggle }: RoleRowProps) {
 }
 
 export interface PermissionOverrideEditorProps {
-  /** False keeps the editor walkable and read-only, as every unwired pane does. */
+  /** False when this member may not manage roles: the editor stays walkable and read-only. */
   supported: boolean;
   roles: readonly Role[];
   overrides: readonly PermissionOverride[];

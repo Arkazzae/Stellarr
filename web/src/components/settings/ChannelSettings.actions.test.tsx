@@ -37,7 +37,6 @@ function props(overrides: Partial<ChannelSettingsProps> = {}): ChannelSettingsPr
     permissionsSupported: true,
     permissionOverrides: [],
     notificationMuted: false,
-    notificationSupported: true,
     onNotificationMutedChange: vi.fn(),
     onSave: vi.fn(() => Promise.resolve()),
     onSavePermissionOverride: vi.fn(() => Promise.resolve()),
@@ -111,16 +110,16 @@ describe("ChannelSettings editing", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
-  it("keeps the form read-only and says why when the channel is not wired", async () => {
+  it("keeps the form read-only and says why without permission to manage channels", async () => {
     const user = userEvent.setup();
     render(<ChannelSettings {...props({ supported: false })} />);
 
-    expect(screen.getByText(/nie są jeszcze podpięte do backendu/i)).toBeVisible();
+    expect(screen.getByText(/Nie masz uprawnienia do zarządzania kanałami/)).toBeVisible();
     expect(screen.getByRole("textbox", { name: /Nazwa/ })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Zapisz zmiany" })).toBeDisabled();
 
     await goTo(user, "Powiadomienia");
-    expect(screen.queryByText(/nie są jeszcze podpięte do backendu/i)).toBeNull();
+    expect(screen.queryByText(/Nie masz uprawnienia/)).toBeNull();
   });
 
   it("starts from the next channel instead of the one it was showing", async () => {
@@ -167,23 +166,6 @@ describe("ChannelSettings for members who cannot manage the channel", () => {
     expect(screen.getByRole("button", { name: "Głos i wideo" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Uprawnienia" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Powiadomienia" })).toBeNull();
-  });
-
-  it("disables the mute switch when notifications are not wired", () => {
-    render(
-      <ChannelSettings
-        {...props({
-          canManageChannel: false,
-          notificationSupported: false,
-          notificationMuted: true,
-        })}
-      />,
-    );
-
-    const mute = screen.getByRole("button", { name: "Wycisz powiadomienia kanału" });
-    expect(mute).toBeDisabled();
-    expect(mute).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByText(/nie są jeszcze podpięte do backendu/i)).toBeVisible();
   });
 });
 

@@ -13,12 +13,6 @@ describe("account adapter", () => {
 
     await adapter.hydrate(SELF);
     expect(adapter.getAccount()).toMatchObject({ id: SELF.id, displayName: "Maja" });
-    expect(adapter.supported).toEqual({
-      profile: true,
-      uploads: true,
-      password: true,
-      preferences: true,
-    });
 
     await adapter.update({
       displayName: "Maja K.",

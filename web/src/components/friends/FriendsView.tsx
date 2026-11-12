@@ -18,8 +18,6 @@ export interface FriendsViewProps extends FriendsListActions {
   friends: FriendVM[];
   requests: FriendRequestVM[];
   blocked: FriendVM[];
-  /** False adds the one line that says none of this reaches the server. */
-  supported: boolean;
   /** The burger, which only exists below 768 where the rail is a drawer. */
   railOpen: boolean;
   onToggleRail: () => void;
@@ -42,7 +40,6 @@ export function FriendsView({
   friends,
   requests,
   blocked,
-  supported,
   railOpen,
   onToggleRail,
   onAddFriend,
@@ -108,8 +105,6 @@ export function FriendsView({
         aria-labelledby={adding ? undefined : tabId(idBase, tab)}
       >
         <div className="fr-inner">
-          {supported ? null : <p className="fr-note">{t("friends.unsupported")}</p>}
-
           {adding ? (
             <AddFriendPanel form={form} />
           ) : (

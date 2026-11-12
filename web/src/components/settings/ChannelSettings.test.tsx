@@ -45,7 +45,6 @@ function props(overrides: Partial<ChannelSettingsProps> = {}): ChannelSettingsPr
     permissionsSupported: true,
     permissionOverrides: [],
     notificationMuted: false,
-    notificationSupported: true,
     onNotificationMutedChange: vi.fn(),
     onSave: vi.fn(),
     onSavePermissionOverride: vi.fn(),
@@ -138,7 +137,7 @@ describe("ChannelSettings", () => {
     expect(screen.queryByRole("button", { name: "Ogólne" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Uprawnienia" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Usuń kanał" })).toBeNull();
-    expect(screen.queryByText(/nie są jeszcze podpięte do backendu/i)).toBeNull();
+    expect(screen.queryByText(/Nie masz uprawnienia/)).toBeNull();
   });
 
   it("adds a dedicated voice and video pane for voice channels", async () => {

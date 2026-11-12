@@ -2,19 +2,9 @@ import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { MessageActionSupport } from "@/ports";
 import { answerConfirm, renderWithConfirm } from "@/test/confirm";
 
 import { MessageToolbar } from "./MessageToolbar";
-
-const everything: MessageActionSupport = {
-  reactions: true,
-  replies: true,
-  threads: true,
-  editing: true,
-  deletion: true,
-  pins: true,
-};
 
 const picker = () => screen.queryByRole("dialog", { name: "Wybierz reakcję" });
 const pickerTrigger = () => screen.getByRole("button", { name: "Wybierz reakcję" });
@@ -132,19 +122,6 @@ describe("MessageToolbar reaction picker", () => {
     expect(picker()).not.toHaveClass("up");
     expect(picker()).toHaveStyle({ top: "56px" });
   });
-
-  it("is unavailable when the server cannot store reactions", async () => {
-    const user = userEvent.setup();
-    renderWithConfirm(
-      <MessageToolbar support={{ ...everything, reactions: false }} onReact={vi.fn()} />,
-    );
-
-    expect(pickerTrigger()).toBeDisabled();
-    await user.click(screen.getByRole("button", { name: "Akcje wiadomości" }));
-    expect(
-      within(sheet() as HTMLElement).getByRole("button", { name: "Wybierz reakcję" }),
-    ).toBeDisabled();
-  });
 });
 
 describe("MessageToolbar actions", () => {
@@ -156,21 +133,6 @@ describe("MessageToolbar actions", () => {
     await user.click(screen.getByRole("button", { name: "Otwórz wątek" }));
 
     expect(onAction).toHaveBeenCalledExactlyOnceWith("thread");
-  });
-
-  it("disables what the server cannot do instead of hiding it", () => {
-    renderWithConfirm(
-      <MessageToolbar
-        own
-        support={{ ...everything, replies: false, editing: false, deletion: false }}
-        onAction={vi.fn()}
-      />,
-    );
-
-    expect(screen.getByRole("button", { name: "Odpowiedz" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Edytuj" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Usuń" })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Otwórz wątek" })).toBeEnabled();
   });
 
   it("does nothing on a press when no handler is given", async () => {

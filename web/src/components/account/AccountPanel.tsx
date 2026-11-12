@@ -27,9 +27,7 @@ const LEADING_EMOJI =
 
 export interface AccountPanelProps {
   presence: Presence;
-  presenceSupported: boolean;
   customStatus: string;
-  customStatusSupported: boolean;
   customEmoji?: readonly CustomEmoji[];
   onSetPresence: (presence: Presence) => void;
   onSaveCustomStatus: (customStatus: string) => void;
@@ -197,9 +195,7 @@ function StatusEditor({ customStatus, customEmoji, onSave }: StatusEditorProps) 
  */
 export function AccountPanel({
   presence,
-  presenceSupported,
   customStatus,
-  customStatusSupported,
   customEmoji = [],
   onSetPresence,
   onSaveCustomStatus,
@@ -207,7 +203,6 @@ export function AccountPanel({
   onLogout,
 }: AccountPanelProps) {
   const { t } = useLanguage();
-  const keptLocally = !presenceSupported || !customStatusSupported;
 
   return (
     <>
@@ -239,7 +234,6 @@ export function AccountPanel({
       </div>
 
       <div className="acc-foot">
-        {keptLocally ? <p className="acc-note">{t("account.localStatus")}</p> : null}
         <button
           type="button"
           className="icon-btn"

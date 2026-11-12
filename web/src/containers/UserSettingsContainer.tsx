@@ -107,8 +107,6 @@ export function UserSettingsContainer() {
       initialPane={ui.modal === "voice" ? "glos" : "konto"}
       account={account.account}
       accountPane={{
-        profileSupported: account.supported.profile,
-        uploadsSupported: account.supported.uploads,
         customEmoji,
         onSave: (patch) => account.update(patch),
         onPickImage: account.setImage,
@@ -119,13 +117,11 @@ export function UserSettingsContainer() {
         // A recovery address must not become authoritative before a
         // confirmation-mail flow exists.
         emailSupported: false,
-        passwordSupported: account.supported.password,
         onChangeEmail: (email) => account.update({ email }),
         onChangePassword: account.changePassword,
       }}
       preferences={{
         preferences: account.preferences,
-        supported: account.supported.preferences,
         onChange: persistPreferences,
       }}
       systemNotifications={{
@@ -147,9 +143,6 @@ export function UserSettingsContainer() {
           : undefined
       }
       appearance={{
-        // The theme lives on this device, so it is supported even where the
-        // panes around it are not.
-        supported: true,
         theme,
         resolvedScheme: resolved,
         onChange: updateTheme,

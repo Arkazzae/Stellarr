@@ -154,19 +154,16 @@ function setup(overrides: Partial<UserSettingsProps> = {}) {
     onClose: vi.fn(),
     account,
     accountPane: {
-      profileSupported: true,
-      uploadsSupported: true,
       onSave: vi.fn(),
       onPickImage: vi.fn(),
       onRemoveImage: vi.fn(),
     },
     security: {
       emailSupported: true,
-      passwordSupported: true,
       onChangeEmail: vi.fn(),
       onChangePassword: vi.fn(async () => "changed" as const),
     },
-    preferences: { preferences, supported: false, onChange: vi.fn() },
+    preferences: { preferences, onChange: vi.fn() },
     keybinds: {
       bindings: { ...DEFAULT_KEYBINDINGS },
       recording: null,
@@ -177,7 +174,6 @@ function setup(overrides: Partial<UserSettingsProps> = {}) {
       resetBindings: vi.fn(),
     },
     appearance: {
-      supported: true,
       theme: {
         palette: "midnight",
         accent: "#756cf7",
@@ -246,8 +242,6 @@ describe("UserSettings", () => {
     const preview = vi.fn();
     setup({
       accountPane: {
-        profileSupported: true,
-        uploadsSupported: true,
         onSave: vi.fn(),
         onPickImage: vi.fn(),
         onRemoveImage: vi.fn(),
@@ -274,8 +268,6 @@ describe("UserSettings", () => {
   it("keeps showing an arrival sound whose server was left", () => {
     setup({
       accountPane: {
-        profileSupported: true,
-        uploadsSupported: true,
         onSave: vi.fn(),
         onPickImage: vi.fn(),
         onRemoveImage: vi.fn(),
@@ -333,8 +325,6 @@ describe("UserSettings", () => {
     const user = userEvent.setup();
     setup({
       accountPane: {
-        profileSupported: true,
-        uploadsSupported: true,
         customEmoji: [
           {
             id: "emoji-party",
@@ -526,7 +516,7 @@ describe("UserSettings", () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
     setup({
-      preferences: { preferences, supported: true, onChange },
+      preferences: { preferences, onChange },
     });
 
     await user.click(screen.getByRole("button", { name: /Powiadomienia/ }));
@@ -791,17 +781,6 @@ describe("UserSettings", () => {
 
     await user.click(screen.getByRole("button", { name: "Tak, przywróć" }));
     expect(props.voice.onReset).toHaveBeenCalledOnce();
-  });
-
-  it("says so on every pane whose settings are not persisted", async () => {
-    const user = userEvent.setup();
-    setup();
-
-    await user.click(screen.getByRole("button", { name: /Prywatność/ }));
-
-    expect(
-      screen.getByText(/nie mają jeszcze swojej tabeli/),
-    ).toBeInTheDocument();
   });
 
   it("logs out from the nav", async () => {

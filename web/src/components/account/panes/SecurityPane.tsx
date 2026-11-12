@@ -14,7 +14,6 @@ const MAX_EMAIL_LENGTH = 320;
 export interface SecurityPaneProps {
   account: Account;
   emailSupported: boolean;
-  passwordSupported: boolean;
   onChangeEmail(email: string): Promise<void> | void;
   onChangePassword(current: string, next: string): Promise<PasswordChangeResult>;
 }
@@ -205,10 +204,8 @@ function PasswordField({
 const NO_PASSWORDS = { current: "", next: "", confirm: "" };
 
 function PasswordSection({
-  supported,
   onChangePassword,
 }: {
-  supported: boolean;
   onChangePassword: SecurityPaneProps["onChangePassword"];
 }) {
   const { t } = useLanguage();
@@ -220,7 +217,6 @@ function PasswordSection({
 
   const mismatch = fields.confirm.length > 0 && fields.next !== fields.confirm;
   const canChange =
-    supported &&
     !saving &&
     fields.current.length > 0 &&
     fields.next.length >= MIN_PASSWORD_LENGTH &&
@@ -274,14 +270,11 @@ function PasswordSection({
           type="button"
           className="btn-ghost sm"
           aria-expanded={open}
-          disabled={!supported}
           onClick={toggle}
         >
           {open ? t("account.cancelPasswordChange") : t("account.changePassword")}
         </button>
       </div>
-
-      {supported ? null : <p className="set-note">{t("account.passwordUnsupported")}</p>}
 
       {open ? (
         <form
@@ -339,7 +332,6 @@ function PasswordSection({
 export function SecurityPane({
   account,
   emailSupported,
-  passwordSupported,
   onChangeEmail,
   onChangePassword,
 }: SecurityPaneProps) {
@@ -358,7 +350,7 @@ export function SecurityPane({
           supported={emailSupported}
           onChangeEmail={onChangeEmail}
         />
-        <PasswordSection supported={passwordSupported} onChangePassword={onChangePassword} />
+        <PasswordSection onChangePassword={onChangePassword} />
       </div>
     </section>
   );

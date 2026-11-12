@@ -67,7 +67,6 @@ function view({ initialTab = "all", ...overrides }: Overrides = {}) {
     friends: [kasia, tomek, ada],
     requests: [],
     blocked: [],
-    supported: true,
     railOpen: false,
     onToggleRail: vi.fn(),
     onMessage: vi.fn(),
@@ -198,12 +197,6 @@ describe("FriendsView lists", () => {
     view({ initialTab: "online", friends: [tomek] });
 
     expect(screen.getByText("Nikogo teraz nie ma")).toBeTruthy();
-  });
-
-  it("says why the server keeps nothing when the feature is unsupported", () => {
-    view({ supported: false });
-
-    expect(screen.getByText(/serwer nie ma jeszcze tych funkcji/)).toBeTruthy();
   });
 
   it("offers the empty pending list a way to add somebody", async () => {

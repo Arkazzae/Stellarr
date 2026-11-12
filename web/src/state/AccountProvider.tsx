@@ -12,7 +12,6 @@ import {
 import type {
   Account,
   AccountPatch,
-  AccountSupport,
   ImageKind,
   PasswordChangeResult,
   UserPreferences,
@@ -23,9 +22,6 @@ import { usePorts } from "./PortsProvider";
 export interface AccountValue {
   account: Account;
   preferences: UserPreferences;
-  /** One flag per endpoint that has to exist; the panes read them per control. */
-  supported: AccountSupport;
-
   update: (patch: AccountPatch) => Promise<void>;
   setPreferences: (patch: Partial<UserPreferences>) => Promise<void>;
   changePassword: (current: string, next: string) => Promise<PasswordChangeResult>;
@@ -69,7 +65,6 @@ export function AccountProvider({ children }: { children: ReactNode }) {
     () => ({
       account,
       preferences,
-      supported: port.supported,
       update: (patch) => port.update(patch),
       setPreferences: (patch) => port.setPreferences(patch),
       changePassword: (current, next) => port.changePassword(current, next),

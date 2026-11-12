@@ -8,7 +8,6 @@ import { AppearancePane, type AppearancePaneProps } from "./AppearancePane";
 
 function props(overrides: Partial<AppearancePaneProps> = {}): AppearancePaneProps {
   return {
-    supported: true,
     theme: DEFAULT_THEME,
     resolvedScheme: "dark",
     onChange: vi.fn(),
@@ -31,19 +30,6 @@ describe("AppearancePane controls", () => {
 
     await user.click(within(screen.getByRole("radiogroup", { name: "Rozmiar tekstu" })).getByRole("radio", { name: /Większy/ }));
     expect(p.onChange).toHaveBeenLastCalledWith({ size: "lg" });
-  });
-
-  it("leaves every control inert when the theme cannot be changed", async () => {
-    const user = userEvent.setup();
-    const p = props({ supported: false });
-    render(<AppearancePane {...p} />);
-
-    expect(screen.getByRole("button", { name: "Przywróć domyślne" })).toBeDisabled();
-    expect(screen.getByLabelText("Kolor akcentu")).toBeDisabled();
-    expect(screen.getByRole("radio", { name: /Evergreen/ })).toBeDisabled();
-
-    await user.click(screen.getByRole("radio", { name: /Evergreen/ }));
-    expect(p.onChange).not.toHaveBeenCalled();
   });
 
   it("offers the preset colour back only while the accent differs from it", () => {

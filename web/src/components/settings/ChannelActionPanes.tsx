@@ -13,13 +13,12 @@ import type { PermissionOverride, Role } from "@/ports";
 
 export interface NotificationsPaneProps {
   muted: boolean;
-  supported: boolean;
   onMutedChange: (muted: boolean) => void;
   t: Translator;
 }
 
 /** This member's own mute for the channel; it saves as soon as it flips. */
-export function NotificationsPane({ muted, supported, onMutedChange, t }: NotificationsPaneProps) {
+export function NotificationsPane({ muted, onMutedChange, t }: NotificationsPaneProps) {
   return (
     <SettingsSection title={t("channel.notifications")} icon="bell">
       <div className="frm">
@@ -33,7 +32,6 @@ export function NotificationsPane({ muted, supported, onMutedChange, t }: Notifi
               checked={muted}
               onChange={onMutedChange}
               label={t("channel.muteNotifications")}
-              disabled={!supported}
             />
           </div>
         </div>

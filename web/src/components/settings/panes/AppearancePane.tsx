@@ -110,8 +110,6 @@ function MessagePreview() {
 }
 
 export interface AppearancePaneProps {
-  /** The theme lives on the device, so the container passes `true`. */
-  supported: boolean;
   theme: ThemePreference;
   /** Which of dark and light is actually in effect; the preset tiles follow it. */
   resolvedScheme: ResolvedScheme;
@@ -128,7 +126,6 @@ export interface AppearancePaneProps {
  * `data-scheme`, so an entry added to the registry paints its own preview.
  */
 export function AppearancePane({
-  supported,
   theme,
   resolvedScheme,
   onChange,
@@ -169,7 +166,7 @@ export function AppearancePane({
         <button
           type="button"
           className="btn-ghost sm ap-reset"
-          disabled={!supported || isDefault}
+          disabled={isDefault}
           onClick={onReset}
         >
           {t("common.resetDefaults")}
@@ -187,7 +184,6 @@ export function AppearancePane({
                 role="radio"
                 aria-checked={selected}
                 title={t(`theme.palette.${palette.id}`)}
-                disabled={!supported}
                 className={selected ? "ap-tile on" : "ap-tile"}
                 // The tile is a working instance of the theme it offers: these
                 // attributes are the contract `applyThemeAttributes` themes the
@@ -228,14 +224,13 @@ export function AppearancePane({
               type="color"
               value={theme.accent}
               aria-label={t("theme.accentColor")}
-              disabled={!supported}
               onChange={(event) => onChange({ accent: event.currentTarget.value })}
             />
             <output htmlFor="theme-accent">{theme.accent}</output>
             <button
               type="button"
               className="btn-ghost sm"
-              disabled={!supported || accentIsPreset}
+              disabled={accentIsPreset}
               onClick={() => onChange({ accent: preset.colors.accent })}
             >
               {t("theme.themeColor")}
@@ -249,7 +244,6 @@ export function AppearancePane({
             value={theme.scheme}
             onChange={(scheme) => onChange({ scheme })}
             label={t("theme.brightness")}
-            disabled={!supported}
             className="three"
           />
         </ChoiceRow>
@@ -260,7 +254,6 @@ export function AppearancePane({
             value={theme.contrast}
             onChange={(contrast) => onChange({ contrast })}
             label={t("theme.contrast")}
-            disabled={!supported}
           />
         </ChoiceRow>
       </Card>
@@ -274,7 +267,6 @@ export function AppearancePane({
             value={theme.size}
             onChange={(size) => onChange({ size })}
             label={t("theme.textSize")}
-            disabled={!supported}
             className="three"
           />
         </ChoiceRow>
@@ -285,7 +277,6 @@ export function AppearancePane({
             value={theme.density}
             onChange={(density) => onChange({ density })}
             label={t("theme.density")}
-            disabled={!supported}
           />
         </ChoiceRow>
       </Card>

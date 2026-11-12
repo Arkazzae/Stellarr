@@ -27,16 +27,15 @@ export interface ChannelSettingsProps {
   onClose: () => void;
   /** Null while the dialog is closing and the rail has moved on. */
   channel: ChannelSettingsVM | null;
-  /** False keeps the form legible and read-only, as every unwired pane does. */
+  /** False when this member may not manage channels: the form stays legible and read-only. */
   supported: boolean;
   /** Whether this member may see administrative channel panes. */
   canManageChannel: boolean;
   roles: readonly Role[];
-  /** False while the endpoint behind per-channel overrides is unwired. */
+  /** False when this member may not manage roles, so overrides are read-only. */
   permissionsSupported: boolean;
   permissionOverrides: readonly PermissionOverride[];
   notificationMuted: boolean;
-  notificationSupported: boolean;
   onNotificationMutedChange: (muted: boolean) => void;
   onSave: (patch: ChannelPatch) => Promise<void>;
   onSavePermissionOverride: (roleId: string, patch: PermissionOverridePatch) => Promise<void>;
@@ -60,7 +59,6 @@ export function ChannelSettings({
   permissionsSupported,
   permissionOverrides,
   notificationMuted,
-  notificationSupported,
   onNotificationMutedChange,
   onSave,
   onSavePermissionOverride,
@@ -171,7 +169,6 @@ export function ChannelSettings({
         return (
           <NotificationsPane
             muted={notificationMuted}
-            supported={notificationSupported}
             onMutedChange={onNotificationMutedChange}
             t={t}
           />
@@ -201,7 +198,9 @@ export function ChannelSettings({
     }
   };
 
-  const activeSupported = resolvedActive === "notifications" ? notificationSupported : supported;
+  // Notifications are this member's own setting, so only the administrative
+  // panes can be read-only.
+  const activeSupported = resolvedActive === "notifications" || supported;
 
   return (
     <Modal open={open} onClose={onClose} labelledBy={titleId} className="sv-wrap">

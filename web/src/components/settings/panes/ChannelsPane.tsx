@@ -23,7 +23,7 @@ export interface ChannelsPaneProps {
   channels: readonly SettingsChannelVM[];
   onAdd: () => void;
   onEdit: (channelId: string) => void;
-  /** False while the section endpoints are unwired. */
+  /** False when this member may not manage channels, so sections are read-only. */
   sectionsSupported: boolean;
   sections: readonly SettingsSectionVM[];
   onAddSection: () => void;

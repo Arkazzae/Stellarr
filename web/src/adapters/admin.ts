@@ -32,8 +32,6 @@ export function createServerAdminAdapter(
       return {
         server: manageServer,
         serverIcon: manageServer,
-        // Stored by the server, but message delivery does not read it yet.
-        notifications: false,
         channels: manageChannels,
         sections: manageChannels,
         roles: can("manageRoles"),

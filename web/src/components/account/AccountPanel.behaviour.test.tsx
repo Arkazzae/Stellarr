@@ -7,9 +7,7 @@ import { AccountPanel, type AccountPanelProps } from "./AccountPanel";
 function props(overrides: Partial<AccountPanelProps> = {}): AccountPanelProps {
   return {
     presence: "online",
-    presenceSupported: true,
     customStatus: "",
-    customStatusSupported: true,
     onSetPresence: vi.fn(),
     onSaveCustomStatus: vi.fn(),
     onOpenSettings: vi.fn(),
@@ -142,20 +140,5 @@ describe("AccountPanel actions", () => {
     await user.click(screen.getByRole("button", { name: /Zaraz wracam/ }));
 
     expect(panel.onSetPresence).toHaveBeenCalledWith("idle");
-  });
-
-  it.each([
-    ["presence", { presenceSupported: false }],
-    ["custom status", { customStatusSupported: false }],
-  ] as const)("says the status is kept on this device when %s is not stored", (_what, overrides) => {
-    render(<AccountPanel {...props(overrides)} />);
-
-    expect(screen.getByText("Status zostaje na tym urządzeniu.")).toBeVisible();
-  });
-
-  it("stays quiet about local storage when everything is stored", () => {
-    const { container } = render(<AccountPanel {...props()} />);
-
-    expect(container.querySelector(".acc-note")).toBeNull();
   });
 });

@@ -66,10 +66,10 @@ export function RailVoiceDock() {
 }
 
 export function RailAccount() {
-  const { user, presence, presenceSupported, setPresence, logout } = useSession();
+  const { user, presence, setPresence, logout } = useSession();
   const ui = useUi();
   const { emoji: customEmoji } = useEmoji();
-  const { account, supported, update } = useAccount();
+  const { account, update } = useAccount();
 
   // The presence is the status you chose, not the one the socket implies: this
   // row is where you read back what you set.
@@ -92,9 +92,7 @@ export function RailAccount() {
       onOpenSettings={openSettings}
       panel={{
         presence,
-        presenceSupported,
         customStatus: account.customStatus,
-        customStatusSupported: supported.profile,
         customEmoji,
         onSetPresence: setPresence,
         onSaveCustomStatus: (customStatus) => {

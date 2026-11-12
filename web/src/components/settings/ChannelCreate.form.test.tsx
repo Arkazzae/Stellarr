@@ -65,10 +65,10 @@ describe("ChannelCreate form", () => {
     expect(nameField()).toHaveValue("");
   });
 
-  it("is read-only and says why while channel creation is not wired", async () => {
+  it("is read-only and says why without permission to create channels", async () => {
     render(<Dialog supported={false} />);
 
-    expect(screen.getByText(/^Tworzenie kanałów nie jest jeszcze podpięte/)).toBeInTheDocument();
+    expect(screen.getByText("Nie masz uprawnienia do tworzenia kanałów.")).toBeInTheDocument();
     expect(nameField()).toBeDisabled();
     expect(screen.getByRole("radio", { name: "Głosowy" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Dodaj kanał" })).toBeDisabled();

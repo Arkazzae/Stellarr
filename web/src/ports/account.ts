@@ -84,16 +84,6 @@ export interface UserPreferences {
   joinSoundId: string | null;
 }
 
-/** Per capability, so an older backend can offer the parts it understands. */
-export interface AccountSupport {
-  /** Display name, custom status, bio and pronouns. */
-  profile: boolean;
-  /** Uploading an avatar or a banner. */
-  uploads: boolean;
-  password: boolean;
-  preferences: boolean;
-}
-
 export interface AccountPort {
   getAccount(): Account;
   getPreferences(): UserPreferences;
@@ -116,8 +106,6 @@ export interface AccountPort {
    * it can be long.
    */
   listJoinSounds(signal?: AbortSignal): Promise<JoinSoundLibrary>;
-
-  readonly supported: AccountSupport;
 }
 
 /** The largest image the server accepts for each kind. */

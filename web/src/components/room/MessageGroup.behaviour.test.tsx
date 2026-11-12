@@ -107,22 +107,6 @@ describe("MessageGroup bodies", () => {
 
     expect(document.querySelector(".msg-body")).not.toHaveClass("jumbo");
   });
-
-  it("disables the reaction chips when the server cannot store reactions", () => {
-    setup({
-      support: {
-        reactions: false,
-        replies: true,
-        threads: true,
-        editing: true,
-        deletion: true,
-        pins: true,
-      },
-      bodies: [{ ...text("m-1", "pierwsza"), reactions: [{ emoji: "🔥", count: 1, mine: false }] }],
-    });
-
-    expect(screen.getByRole("button", { name: "🔥 — 1 reakcji" })).toBeDisabled();
-  });
 });
 
 describe("MessageGroup context menu rules", () => {
@@ -168,29 +152,6 @@ describe("MessageGroup context menu rules", () => {
 
     expect(menuItem("Odepnij wiadomość")).not.toBeNull();
     expect(menuItem("Przypnij wiadomość")).toBeNull();
-  });
-
-  it("leaves out what the server cannot do", () => {
-    setup({
-      own: true,
-      canModerate: true,
-      onAction: vi.fn(),
-      support: {
-        reactions: true,
-        replies: false,
-        threads: false,
-        editing: false,
-        deletion: false,
-        pins: false,
-      },
-    });
-
-    fireEvent.contextMenu(screen.getByText("druga"));
-
-    for (const name of ["Odpowiedz", "Otwórz wątek", "Edytuj", "Przypnij wiadomość", "Usuń wiadomość"]) {
-      expect(menuItem(name)).toBeNull();
-    }
-    expect(menuItem("Kopiuj tekst")).not.toBeNull();
   });
 
   it("asks before deleting from the menu, and deletes only when told to", async () => {

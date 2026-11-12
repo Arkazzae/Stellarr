@@ -157,21 +157,10 @@ export interface MessageActionsPort {
     handler: (messageId: MessageId, reactions: Reaction[]) => void,
   ): Unsubscribe;
   getReactions(messageId: MessageId): Reaction[];
-  /** False disables the control instead of failing on click. */
-  readonly supported: MessageActionSupport;
   dispose?(): void;
 }
 
 export type Reaction = MessageReaction;
-
-export interface MessageActionSupport {
-  reactions: boolean;
-  replies: boolean;
-  threads: boolean;
-  editing: boolean;
-  deletion: boolean;
-  pins: boolean;
-}
 
 /** Who is typing where, as the composer reports it. */
 export interface TypingPort {

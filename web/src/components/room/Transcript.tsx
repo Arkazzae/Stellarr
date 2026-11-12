@@ -11,7 +11,7 @@ import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 
 import { Icon } from "@/components/icons/Icon";
 import type { OpenProfile } from "@/components/view-models";
-import type { CustomEmoji, MessageActionSupport } from "@/ports";
+import type { CustomEmoji } from "@/ports";
 
 import { useHistoryWindow } from "./historyWindow";
 import { MessageGroup } from "./MessageGroup";
@@ -60,7 +60,6 @@ export interface TranscriptProps {
   hideReplyReferences?: boolean;
   /** The first history page has not arrived yet. */
   loading?: boolean;
-  support?: MessageActionSupport;
   translation?: MessageTranslationOptions;
   onReact?(messageId: string, emoji: string): void;
   onAction?(messageId: string, action: MessageAction): void;
@@ -152,7 +151,6 @@ function ReadyTranscript({
   sections,
   label,
   hideReplyReferences = false,
-  support,
   translation,
   onReact,
   onAction,
@@ -266,7 +264,6 @@ function ReadyTranscript({
               fresh={row.id === freshId}
               highlight={row.id === flashId}
               onOpenReply={hideReplyReferences ? undefined : jumpTo}
-              support={support}
               translation={translation}
               attachments={attachments}
               customEmoji={customEmoji}

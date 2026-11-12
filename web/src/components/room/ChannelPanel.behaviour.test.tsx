@@ -19,7 +19,6 @@ function panel(overrides: Partial<ChannelPanelProps> = {}) {
       media={[]}
       links={[]}
       pinned={[]}
-      pinsSupported
       {...overrides}
     />
   );
@@ -390,16 +389,12 @@ describe("ChannelPanel empty states", () => {
     ).toBeInTheDocument();
   });
 
-  it("says nothing is pinned, that pins are loading, or that the server cannot pin", () => {
+  it("says nothing is pinned, or that pins are loading", () => {
     const { rerender } = render(panel());
     expect(screen.getByText(/^Nikt jeszcze nic tu nie przypiął/)).toBeInTheDocument();
 
     rerender(panel({ pinnedLoading: true }));
     expect(screen.getByText("Wczytywanie przypiętych wiadomości…")).toBeInTheDocument();
-
-    rerender(panel({ pinsSupported: false, pinnedLoading: true }));
-    expect(screen.getByText(/^Przypinanie nie jest jeszcze podpięte/)).toBeInTheDocument();
-    expect(screen.queryByText("Wczytywanie przypiętych wiadomości…")).not.toBeInTheDocument();
   });
 
   it("says the channel has no media, or that it is loading", () => {

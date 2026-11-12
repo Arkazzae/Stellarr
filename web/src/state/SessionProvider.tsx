@@ -38,8 +38,6 @@ export interface SessionValue {
    */
   presence: Presence;
   setPresence: (presence: Presence) => void;
-  /** Whether the active transport accepts and broadcasts a chosen status. */
-  presenceSupported: boolean;
   /** Retries the bootstrap. */
   reload: () => void;
   login: (username: string, password: string) => Promise<boolean>;
@@ -291,7 +289,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       connection,
       presence,
       setPresence,
-      presenceSupported: true,
       reload,
       login,
       loginPending,

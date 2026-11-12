@@ -7,9 +7,7 @@ import { AccountPanel, type AccountPanelProps } from "./AccountPanel";
 function setup(overrides: Partial<AccountPanelProps> = {}) {
   const props: AccountPanelProps = {
     presence: "online",
-    presenceSupported: true,
     customStatus: "",
-    customStatusSupported: true,
     onSetPresence: vi.fn(),
     onSaveCustomStatus: vi.fn(),
     onOpenSettings: vi.fn(),

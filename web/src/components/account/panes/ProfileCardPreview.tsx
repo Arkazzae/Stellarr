@@ -14,7 +14,6 @@ interface ProfileCardPreviewProps {
   /** The bio being edited, which the card shows before it is saved. */
   bio: string;
   customEmoji: readonly CustomEmoji[];
-  uploadsSupported: boolean;
   onPickImage: (kind: ImageKind, file: File) => void;
 }
 
@@ -27,7 +26,6 @@ export function ProfileCardPreview({
   account,
   bio,
   customEmoji,
-  uploadsSupported,
   onPickImage,
 }: ProfileCardPreviewProps) {
   const { t } = useLanguage();
@@ -45,7 +43,6 @@ export function ProfileCardPreview({
 
   const hasAvatar = typeof account.avatarUrl === "string";
   const hasBanner = typeof account.bannerUrl === "string";
-  const unavailable = uploadsSupported ? undefined : t("account.uploadUnavailable");
 
   return (
     <>
@@ -54,8 +51,6 @@ export function ProfileCardPreview({
           type="button"
           className="pf-shot pf-banner"
           style={{ "--mp-hue": hueFor(account.id) } as CSSProperties}
-          disabled={!uploadsSupported}
-          title={unavailable}
           onClick={() => openPicker(bannerInput.current)}
         >
           <img
@@ -74,8 +69,6 @@ export function ProfileCardPreview({
           <button
             type="button"
             className="pf-shot pf-shot-av"
-            disabled={!uploadsSupported}
-            title={unavailable}
             onClick={() => openPicker(avatarInput.current)}
           >
             <Avatar

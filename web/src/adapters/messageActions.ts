@@ -94,15 +94,6 @@ export function createMessageActionsAdapter(
   });
 
   return {
-    supported: {
-      reactions: true,
-      replies: true,
-      threads: true,
-      editing: true,
-      deletion: true,
-      pins: true,
-    },
-
     getReactions: (messageId) => store.get(messageId),
     onReactionsChanged: (handler) => store.subscribe(handler),
 

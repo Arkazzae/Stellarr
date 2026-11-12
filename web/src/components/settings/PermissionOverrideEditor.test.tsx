@@ -154,11 +154,13 @@ describe("PermissionOverrideEditor", () => {
     expect(screen.getByRole("button", { name: "Zapisz" })).toBeEnabled();
   });
 
-  it("stays read-only and says why when overrides are not supported", async () => {
+  it("stays read-only and says why without permission to manage roles", async () => {
     renderEditor({ supported: false });
 
     expect(
-      screen.getByText("Wyjątki uprawnień nie są jeszcze podpięte do backendu."),
+      screen.getByText(
+        "Nie masz uprawnienia do zarządzania rolami, więc wyjątki są tylko do odczytu.",
+      ),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Edytuj uprawnienia roli Moderator" }),

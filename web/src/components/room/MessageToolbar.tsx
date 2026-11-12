@@ -7,7 +7,7 @@ import { Icon, type IconName } from "@/components/icons/Icon";
 import { useConfirm } from "@/components/primitives/ConfirmDialog";
 import { type MessageKey, type Translator } from "@/i18n";
 import { translateForDocument } from "@/i18n/defaultLocale";
-import type { CustomEmoji, MessageActionSupport } from "@/ports";
+import type { CustomEmoji } from "@/ports";
 
 import { MessageActionSheet, type SheetItem } from "./MessageActionSheet";
 import {
@@ -32,8 +32,6 @@ interface ActionSpec {
   action: MessageAction;
   icon: IconName;
   label: MessageKey;
-  /** The port flag that says whether the server can do it at all. */
-  supports: keyof MessageActionSupport;
   /** Who is offered it. Absent means everyone; a refused action is left out, not greyed. */
   allowedFor?(viewer: Viewer): boolean;
   /** Leaves the compact desktop toolbar first; the phone sheet keeps it. */
@@ -42,19 +40,17 @@ interface ActionSpec {
 }
 
 const ACTIONS: readonly ActionSpec[] = [
-  { action: "reply", icon: "reply", label: "message.action.reply", supports: "replies" },
+  { action: "reply", icon: "reply", label: "message.action.reply" },
   {
     action: "thread",
     icon: "thread",
     label: "message.action.thread",
-    supports: "threads",
     secondary: true,
   },
   {
     action: "edit",
     icon: "edit",
     label: "message.action.edit",
-    supports: "editing",
     // Only your own. Rewriting somebody else's message leaves their name over
     // words they never wrote, which no amount of moderator is a reason for.
     allowedFor: ({ own }) => own,
@@ -63,7 +59,6 @@ const ACTIONS: readonly ActionSpec[] = [
     action: "pin",
     icon: "pin",
     label: "message.action.pin",
-    supports: "pins",
     // Anyone's message, and only a moderator's. A pin puts one message above
     // the conversation for everybody who opens the channel, so it is not a
     // bookmark you keep for yourself; the server says the same.
@@ -75,7 +70,6 @@ const ACTIONS: readonly ActionSpec[] = [
     action: "delete",
     icon: "trash",
     label: "message.action.delete",
-    supports: "deletion",
     allowedFor: ({ own, canModerate }) => own || canModerate,
     danger: true,
   },
@@ -84,11 +78,6 @@ const ACTIONS: readonly ActionSpec[] = [
 export interface MessageToolbarProps {
   onReact?(emoji: string): void;
   onAction?(action: MessageAction): void;
-  /**
-   * Missing means "everything works". A false flag disables the control rather
-   * than hiding it, so the surface stays honest about what the server owes us.
-   */
-  support?: MessageActionSupport;
   /** The server's own emoji, offered first in the picker. */
   customEmoji?: readonly CustomEmoji[];
   /** This message is yours: yours to edit, and yours to delete. */
@@ -108,7 +97,6 @@ interface OpenPicker {
 export function MessageToolbar({
   onReact,
   onAction,
-  support,
   customEmoji = [],
   own = false,
   canModerate = false,
@@ -124,9 +112,6 @@ export function MessageToolbar({
   // Whether the last press was a finger or a pen. The picker then opens without
   // focusing its search field, which would raise the on-screen keyboard over it.
   const touched = useRef(false);
-
-  const supported = (flag: keyof MessageActionSupport) =>
-    support === undefined || support[flag];
 
   const viewer: Viewer = { own, canModerate };
   const actions = ACTIONS.filter((spec) => spec.allowedFor?.(viewer) ?? true);
@@ -165,7 +150,6 @@ export function MessageToolbar({
       id: "react",
       label: t("message.action.chooseReaction"),
       icon: "smiley",
-      disabled: !supported("reactions"),
       onSelect: openPicker,
     },
     ...actions.map((spec) => ({
@@ -173,7 +157,6 @@ export function MessageToolbar({
       label: labelOf(spec),
       icon: spec.icon,
       danger: spec.danger,
-      disabled: !supported(spec.supports),
       pressed: spec.action === "pin" ? pinned : undefined,
       onSelect: () => run(spec),
     })),
@@ -201,7 +184,6 @@ export function MessageToolbar({
         aria-label={t("message.action.chooseReaction")}
         aria-haspopup="dialog"
         aria-expanded={picker !== null}
-        disabled={!supported("reactions")}
         onClick={() => (picker === null ? openPicker() : closePicker(false))}
       >
         <Icon name="smiley" size={15} />
@@ -225,7 +207,6 @@ export function MessageToolbar({
             aria-label={label}
             title={label}
             aria-pressed={isPin ? pinned : undefined}
-            disabled={!supported(spec.supports)}
             onClick={() => run(spec)}
           >
             {/* The same glyph pinned or not: `aria-pressed` and the tint say

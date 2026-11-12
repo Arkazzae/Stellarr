@@ -19,7 +19,6 @@ import { buildThreadTranscript, buildTranscript } from "@/lib/format";
 import { findFirstUnreadGroup } from "@/lib/unread";
 import type {
   Message,
-  MessageActionSupport,
   MessageReference,
   ThreadSummary,
 } from "@/ports";
@@ -97,7 +96,6 @@ export interface ChatValue {
   hasOlder: boolean;
   typingNames: string[];
   chips: ComposerChip[];
-  support: MessageActionSupport;
   /**
    * The open channel's pinned messages, newest pin first.
    *
@@ -361,7 +359,6 @@ export function ChatProvider({ children }: { children: ReactNode }) {
       hasOlder: channelId !== null && typeof data.nextCursor[channelId] === "string",
       typingNames: (channelId === null ? undefined : typing[channelId]) ?? NO_NAMES,
       chips: queue.chips,
-      support: ports.messageActions.supported,
       pinned: channelId === null ? NO_PINS : pinned,
       pinnedLoading: channelId !== null && data.pinsLoaded[channelId] !== true,
       pinError: actions.pinError,
