@@ -63,7 +63,7 @@ jobs:
           check server '^(server/|Stellarr\.slnx$|Directory\.Build\.props$|global\.json$|\.github/workflows/ci\.yml$)'
           # web and cockpit are workspaces of one npm project: a change to the
           # shared packages or to the root manifest or lockfile affects both.
-          check web '^(web/|packages/|package(-lock)?\.json$|\.github/workflows/ci\.yml$)'
+          check web '^(web/|packages/|package(-lock)?\.json$|branding/icons/|\.github/workflows/ci\.yml$)'
           check cockpit '^(cockpit/|packages/|package(-lock)?\.json$|\.github/workflows/ci\.yml$)'
           check media '^(media/|\.github/workflows/ci\.yml$)'
           check image '^(Dockerfile$|\.dockerignore$|infra/|server/.*\.csproj$|server/.*packages\.lock\.json$|packages/|package(-lock)?\.json$|\.npmrc$|(web|cockpit)/package\.json$|media/Cargo\.(toml|lock)$|global\.json$|Directory\.Build\.props$|\.github/workflows/ci\.yml$)'
