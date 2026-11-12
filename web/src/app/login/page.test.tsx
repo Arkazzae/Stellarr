@@ -4,7 +4,13 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { translateMessage, type MessageKey, type MessageValues } from "@/i18n";
 import { ApiError } from "@/lib/api/errors";
-import type { AuthResult, MfaChallenge, SignInChallengePort } from "@/ports";
+import type {
+  AccountSecurity,
+  AccountSecurityPort,
+  AuthResult,
+  MfaChallenge,
+  SignInChallengePort,
+} from "@/ports";
 import type { SessionPhase } from "@/state/hooks";
 
 import LoginPage from "./page";
@@ -18,6 +24,8 @@ const mocks = vi.hoisted(() => ({
     loginError: null as string | null,
   },
   challenge: {} as SignInChallengePort,
+  security: {} as AccountSecurityPort,
+  leaveFor: vi.fn(),
   router: { replace: vi.fn() },
   search: "",
 }));
@@ -26,9 +34,10 @@ vi.mock("next/navigation", () => ({
   useRouter: () => mocks.router,
   useSearchParams: () => new URLSearchParams(mocks.search),
 }));
+vi.mock("@/lib/leaveFor", () => ({ leaveFor: mocks.leaveFor }));
 vi.mock("@/state/hooks", () => ({
   useSession: () => mocks.session,
-  usePorts: () => ({ session: { challenge: mocks.challenge } }),
+  usePorts: () => ({ session: { challenge: mocks.challenge }, security: mocks.security }),
   useLanguage: () => ({
     t: (key: MessageKey, values?: MessageValues) => translateMessage("pl", key, values),
   }),
@@ -96,11 +105,37 @@ function fakeChallengePort(overrides: Partial<SignInChallengePort> = {}): SignIn
   };
 }
 
+const SECURE: AccountSecurity = {
+  requirement: "cockpit",
+  mfaRequired: false,
+  freshMfa: false,
+  methods: CHALLENGE.methods,
+  remainingRecoveryCodes: 10,
+  trustedDevices: [],
+  recentEvents: [],
+  trustedDeviceDays: 14,
+  emailCodeAvailable: true,
+};
+
+function fakeSecurityPort(overrides: Partial<AccountSecurityPort> = {}): AccountSecurityPort {
+  return {
+    get: vi.fn(async () => SECURE),
+    startEnrollment: vi.fn(async () => ({ ...CHALLENGE, enrollment: true, purpose: "enrollment" as const, methods: [] })),
+    startReverification: vi.fn(async () => ({ ...CHALLENGE, purpose: "reverify" as const })),
+    removeMethod: vi.fn(async () => {}),
+    regenerateRecoveryCodes: vi.fn(async () => []),
+    revokeTrustedDevice: vi.fn(async () => {}),
+    ...overrides,
+  };
+}
+
 beforeEach(() => {
   mocks.session.phase = "anonymous";
   mocks.session.login = vi.fn(async (): Promise<AuthResult> => ({ kind: "signed-in", user: MAJA }));
   mocks.session.reload = vi.fn();
   mocks.challenge = fakeChallengePort();
+  mocks.security = fakeSecurityPort();
+  mocks.leaveFor.mockReset();
   mocks.session.loginPending = false;
   mocks.session.loginError = null;
   mocks.search = "";
@@ -381,5 +416,57 @@ describe("LoginPage second factor", () => {
       "href",
       "/api/auth/oidc/login?returnUrl=%2Fcockpit%2F",
     );
+  });
+});
+
+describe("LoginPage confirming a signed-in session", () => {
+  beforeEach(() => {
+    mocks.session.phase = "ready";
+    mocks.search = "confirm=1&returnUrl=%2Fcockpit%2F";
+  });
+
+  it("goes back at once when the session already passed a real second step", async () => {
+    mocks.security = fakeSecurityPort({
+      get: vi.fn(async () => ({ ...SECURE, mfaEvidence: "totp", mfaCompletedAt: "2026-11-12T17:00:00Z" })),
+    });
+    render(<LoginPage />);
+
+    await waitFor(() => expect(mocks.leaveFor).toHaveBeenCalledExactlyOnceWith("/cockpit/"));
+    expect(mocks.security.startReverification).not.toHaveBeenCalled();
+  });
+
+  it("asks a trusted-device session for a fresh code, without offering trust, then goes back", async () => {
+    mocks.security = fakeSecurityPort({
+      get: vi.fn(async () => ({ ...SECURE, mfaEvidence: "trusted_device", mfaCompletedAt: "2026-11-12T17:00:00Z" })),
+    });
+    const user = userEvent.setup();
+    render(<LoginPage />);
+
+    expect(await screen.findByRole("heading", { name: t("auth.mfa.totpTitle") })).toBeVisible();
+    expect(mocks.leaveFor).not.toHaveBeenCalled();
+    expect(screen.queryByRole("checkbox")).toBeNull();
+    await user.type(screen.getByRole("textbox", { name: t("auth.mfa.code") }), "123456");
+    await user.click(screen.getByRole("button", { name: t("auth.mfa.submit") }));
+
+    await waitFor(() => expect(mocks.leaveFor).toHaveBeenCalledExactlyOnceWith("/cockpit/"));
+    expect(mocks.session.reload).not.toHaveBeenCalled();
+  });
+
+  it("asks for the password before setting up a first method", async () => {
+    mocks.security = fakeSecurityPort({
+      get: vi.fn(async () => ({ ...SECURE, methods: [] })),
+      startEnrollment: vi
+        .fn<AccountSecurityPort["startEnrollment"]>()
+        .mockRejectedValueOnce(new ApiError("forbidden", "403", 403))
+        .mockResolvedValue({ ...CHALLENGE, enrollment: true, purpose: "enrollment", methods: [] }),
+    });
+    const user = userEvent.setup();
+    render(<LoginPage />);
+
+    await user.type(await screen.findByLabelText("Hasło"), "haslo123");
+    await user.click(screen.getByRole("button", { name: t("security.password.submit") }));
+
+    expect(mocks.security.startEnrollment).toHaveBeenLastCalledWith("haslo123");
+    expect(await screen.findByText("JBSW Y3DP EHPK 3PXP")).toBeVisible();
   });
 });

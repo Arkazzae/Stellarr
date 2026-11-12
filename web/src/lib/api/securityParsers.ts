@@ -161,10 +161,14 @@ export function parseSecurityEvent(value: unknown, path: string): SecurityEvent 
 
 export function parseAccountSecurity(value: unknown, path: string): AccountSecurity {
   const record = expectRecord(value, path);
+  const mfaEvidence = optionalString(record, "mfaEvidence");
+  const mfaCompletedAt = optionalString(record, "mfaCompletedAt");
   return {
     requirement: expectString(record, "requirement", path),
     mfaRequired: expectBoolean(record, "mfaRequired", path),
     freshMfa: expectBoolean(record, "freshMfa", path),
+    ...(mfaEvidence === undefined ? {} : { mfaEvidence }),
+    ...(mfaCompletedAt === undefined ? {} : { mfaCompletedAt }),
     methods: expectArray(record["methods"], `${path}.methods`).map((item, index) =>
       parseMfaMethod(item, `${path}.methods[${index}]`),
     ),

@@ -1,11 +1,10 @@
 "use client";
 
-import { createContext, useContext, useId, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { createContext, useContext, useId, type ReactNode } from "react";
 
-import { AuthField } from "@/components/auth/AuthField";
-import { authStyles as styles } from "@/components/auth/AuthFrame";
 import { MfaChallengeStep } from "@/components/auth/MfaChallengeStep";
 import { MfaEnrollStep, type EnrollMode } from "@/components/auth/MfaEnrollStep";
+import { PasswordConfirmStep } from "@/components/auth/PasswordConfirmStep";
 import { QrCode } from "@/components/auth/QrCode";
 import { RecoveryCodesStep } from "@/components/auth/RecoveryCodesStep";
 import { Modal } from "@/components/primitives/Modal";
@@ -59,59 +58,6 @@ function DialogStepFrame({
   );
 }
 
-function PasswordStep({
-  t,
-  pending,
-  error,
-  onSubmit,
-}: {
-  t: Translator;
-  pending: boolean;
-  error: string | null;
-  onSubmit(password: string): void;
-}) {
-  const [password, setPassword] = useState("");
-  const fieldRef = useRef<HTMLInputElement>(null);
-  const errorId = useId();
-
-  const submit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    if (pending || !password) {
-      fieldRef.current?.focus();
-      return;
-    }
-    onSubmit(password);
-  };
-
-  return (
-    <DialogStepFrame title={t("security.password.title")} description={t("security.password.description")}>
-      <form className={styles.form} onSubmit={submit} noValidate>
-        <AuthField
-          ref={fieldRef}
-          label={t("auth.password")}
-          name="password"
-          type="password"
-          autoComplete="current-password"
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-          disabled={pending}
-          autoFocus
-          invalid={Boolean(error)}
-          errorId={error ? errorId : undefined}
-        />
-        {error ? (
-          <p className={styles.error} id={errorId} role="alert">
-            {error}
-          </p>
-        ) : null}
-        <button type="submit" className={styles.submit} disabled={pending}>
-          {pending ? t("auth.mfa.pending") : t("security.password.submit")}
-        </button>
-      </form>
-    </DialogStepFrame>
-  );
-}
-
 /**
  * The proof and setup steps a change to the account's security runs through:
  * the password before a first method, a fresh code before any other change,
@@ -138,7 +84,13 @@ export function SecurityStepDialog({
     <Modal open={step !== null} onClose={onClose} labelledBy={titleId} className="act-modal sec-dialog" exitMs={200}>
       <DialogContext.Provider value={{ titleId, onClose }}>
         {step?.kind === "password" ? (
-          <PasswordStep t={t} pending={pending} error={error} onSubmit={onPassword} />
+          <PasswordConfirmStep
+            t={t}
+            pending={pending}
+            error={error}
+            onSubmit={onPassword}
+            frame={DialogStepFrame}
+          />
         ) : step?.kind === "reverify" ? (
           <MfaChallengeStep
             challenge={step.challenge}

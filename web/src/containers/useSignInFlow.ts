@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ApiError } from "@/lib/api/errors";
+import { leaveFor } from "@/lib/leaveFor";
 import type { MessageKey } from "@/i18n";
 import type { AuthResult, MfaChallenge, MfaCompletion, MfaEnrollment } from "@/ports";
 import { useLanguage, usePorts, useSession } from "@/state/hooks";
@@ -17,7 +18,11 @@ export type SignInStep =
   | { kind: "challenge"; challenge: MfaChallenge }
   | { kind: "enroll"; challenge: MfaChallenge; mode: EnrollMode; enrollment: MfaEnrollment | null }
   | { kind: "codes"; codes: string[]; username: string }
-  | { kind: "redeem" };
+  | { kind: "redeem" }
+  /** The password, before a signed-in account sets up its first method to confirm with. */
+  | { kind: "confirm-password" }
+  /** A signed-in session is confirmed and may go back to where it came from. */
+  | { kind: "done" };
 
 export interface SignInFlow {
   step: SignInStep;
@@ -34,6 +39,7 @@ export interface SignInFlow {
   confirmEnrollment(input: { code: string; rememberDevice: boolean }): void;
   redeem(credential: string): void;
   finishCodes(): void;
+  confirmPassword(password: string): void;
   cancel(): void;
 }
 
@@ -53,7 +59,17 @@ const NAME_KEY: Record<EnrollMode, MessageKey> = {
  * of starting over. The secret half lives in an HttpOnly cookie; nothing here
  * keeps a code, a key or a credential beyond the screen showing it.
  */
-export function useSignInFlow({ recoveryRequired = false }: { recoveryRequired?: boolean } = {}): SignInFlow {
+export function useSignInFlow({
+  recoveryRequired = false,
+  confirm = false,
+}: {
+  recoveryRequired?: boolean;
+  /**
+   * A signed-in session must pass a real second step before it goes on, as
+   * Cockpit requires. One that already did goes on at once.
+   */
+  confirm?: boolean;
+} = {}): SignInFlow {
   const ports = usePorts();
   const { login, reload, phase } = useSession();
   const { t } = useLanguage();
@@ -64,6 +80,8 @@ export function useSignInFlow({ recoveryRequired = false }: { recoveryRequired?:
   const [emailWaitUntil, setEmailWaitUntil] = useState<number | null>(null);
   const [now, setNow] = useState(() => Date.now());
   const resumed = useRef(false);
+  const confirming = useRef(false);
+  const security = ports.security;
 
   const enter = useCallback((challenge: MfaChallenge) => {
     setError(null);
@@ -114,6 +132,36 @@ export function useSignInFlow({ recoveryRequired = false }: { recoveryRequired?:
     [challengePort, t],
   );
 
+  // A signed-in session asked to confirm: it goes on at once if it already
+  // passed a real second step, else it proves one now, or sets up the first
+  // method when the account has none.
+  useEffect(() => {
+    if (!confirm || phase !== "ready" || confirming.current) return;
+    confirming.current = true;
+    void (async () => {
+      try {
+        const state = await security.get();
+        if (state.mfaCompletedAt !== undefined && state.mfaEvidence !== "trusted_device") {
+          setStep({ kind: "done" });
+          return;
+        }
+        if (state.methods.some((method) => !method.pending)) {
+          enter(await security.startReverification());
+          return;
+        }
+        try {
+          enter(await security.startEnrollment());
+        } catch (cause) {
+          if (cause instanceof ApiError && cause.status === 403) setStep({ kind: "confirm-password" });
+          else throw cause;
+        }
+      } catch (cause) {
+        setStep({ kind: "password" });
+        setError(challengeErrorMessage(cause, t, t("auth.mfa.failed")));
+      }
+    })();
+  }, [confirm, enter, phase, security, t]);
+
   // A setup by authenticator app needs its key before anything can be typed.
   const enrollChallengeId =
     step.kind === "enroll" && step.mode === "totp" && step.enrollment === null
@@ -150,9 +198,10 @@ export function useSignInFlow({ recoveryRequired = false }: { recoveryRequired?:
         setStep({ kind: "codes", codes: completion.recoveryCodes, username: completion.user.username });
         return;
       }
-      reload();
+      if (confirm && phase === "ready") setStep({ kind: "done" });
+      else reload();
     },
-    [reload],
+    [confirm, phase, reload],
   );
 
   const run = useCallback(
@@ -301,10 +350,31 @@ export function useSignInFlow({ recoveryRequired = false }: { recoveryRequired?:
     },
 
     finishCodes() {
-      reload();
+      if (confirm && phase === "ready") setStep({ kind: "done" });
+      else reload();
+    },
+
+    confirmPassword(password) {
+      void run(async () => {
+        try {
+          enter(await security.startEnrollment(password));
+        } catch (cause) {
+          setError(
+            cause instanceof ApiError && cause.status === 403
+              ? t("security.password.wrong")
+              : challengeErrorMessage(cause, t, t("auth.mfa.failed")),
+          );
+        }
+      });
     },
 
     cancel() {
+      if (confirm && phase === "ready") {
+        // Signed in already: giving up the confirmation goes back to the app.
+        void challengePort.cancel().catch(() => undefined);
+        leaveFor("/");
+        return;
+      }
       setError(null);
       setStep({ kind: "password" });
       void challengePort.cancel().catch(() => undefined);

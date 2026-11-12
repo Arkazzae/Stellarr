@@ -643,6 +643,10 @@ export interface AccountSecurity {
   mfaRequired: boolean;
   /** This session proved a second factor recently enough to change security. */
   freshMfa: boolean;
+  /** How this session passed its second step, such as "totp" or "trusted_device". */
+  mfaEvidence?: string;
+  /** When this session passed its second step, if it did. */
+  mfaCompletedAt?: string;
   methods: MfaMethod[];
   remainingRecoveryCodes: number;
   trustedDevices: TrustedDevice[];

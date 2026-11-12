@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 import { takePendingInvite } from "@/lib/invites";
+import { leaveFor } from "@/lib/leaveFor";
 import type { SessionPhase } from "@/state/hooks";
 
 /**
@@ -24,7 +25,7 @@ export function useRedirectWhenSignedIn(phase: SessionPhase, returnPath: string 
       // Cockpit and the desktop confirmation live outside this app's router,
       // so the way back is a full navigation. The path was checked by
       // `safeReturnPath` and cannot leave the origin.
-      window.location.replace(returnPath);
+      leaveFor(returnPath);
       return;
     }
     const invite = takePendingInvite();

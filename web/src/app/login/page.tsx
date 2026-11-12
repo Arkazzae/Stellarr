@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 
 import { MfaChallengeStep } from "@/components/auth/MfaChallengeStep";
 import { MfaEnrollStep } from "@/components/auth/MfaEnrollStep";
+import { PasswordConfirmStep } from "@/components/auth/PasswordConfirmStep";
 import { QrCode } from "@/components/auth/QrCode";
 import { RecoveryCodesStep } from "@/components/auth/RecoveryCodesStep";
 import { RecoveryRedeemStep } from "@/components/auth/RecoveryRedeemStep";
@@ -34,9 +35,15 @@ export default function LoginPage() {
   const oidcError = params.get("oidc_error");
   const returnPath = safeReturnPath(params.get("returnUrl"));
   const [provider, setProvider] = useState<{ displayName: string } | null>(null);
-  const flow = useSignInFlow({ recoveryRequired: params.get("security_recovery_required") === "1" });
+  const confirm = params.get("confirm") === "1";
+  const flow = useSignInFlow({
+    recoveryRequired: params.get("security_recovery_required") === "1",
+    confirm,
+  });
 
-  useRedirectWhenSignedIn(phase, returnPath);
+  // A confirmation leaves only once the second step is done, not as soon as
+  // the session is found to be signed in.
+  useRedirectWhenSignedIn(confirm && flow.step.kind !== "done" ? "loading" : phase, returnPath);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -64,6 +71,19 @@ export default function LoginPage() {
         onUseTrustedDevice={flow.continueOnTrustedDevice}
         onSendEmailCode={flow.sendEmailCode}
         onCancel={flow.cancel}
+        // A trusted device cannot stand in for a fresh second step.
+        offerTrust={step.challenge.purpose !== "reverify"}
+      />
+    );
+  }
+  if (step.kind === "confirm-password") {
+    return (
+      <PasswordConfirmStep
+        t={t}
+        pending={flow.pending}
+        error={flow.error}
+        onSubmit={flow.confirmPassword}
+        onBack={flow.cancel}
       />
     );
   }
@@ -115,7 +135,12 @@ export default function LoginPage() {
       onSubmit={(username, password) => void flow.submitPassword(username, password)}
       pending={loginPending}
       error={flow.error ?? loginError}
-      checking={phase === "loading" || step.kind === "resuming"}
+      checking={
+        phase === "loading" ||
+        step.kind === "resuming" ||
+        step.kind === "done" ||
+        (confirm && phase === "ready" && flow.error === null)
+      }
       externalLogin={
         provider === null
           ? undefined
