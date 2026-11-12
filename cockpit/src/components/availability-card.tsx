@@ -1,11 +1,12 @@
-import { CardTitleRow } from "@/components/card-title-row";
 import { ServiceUptime, UptimeAxis } from "@/components/service-uptime";
+import { TileFigure, TileHeader } from "@/components/stat-tile";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { t } from "@/i18n";
+import { formatDateTime } from "@/i18n/format";
 import type { CockpitRuntime } from "@/lib/api";
 import type { HealthCheckState } from "@/lib/health";
-import { minuteSlots, slotStates } from "@/lib/uptime";
+import { formatUptime, minuteSlots, slotStates } from "@/lib/uptime";
 import { cn } from "@/lib/utils";
 
 function CurrentState({ state }: { state: HealthCheckState }) {
@@ -25,9 +26,9 @@ interface AvailabilityCardProps {
 }
 
 /**
- * How available the API and the database have been over the last hour, a bar
- * per minute in the style of a status page, with their state now from the
- * health probes. Its bars grow with the height it is given.
+ * How long the API has run, and how available it and the database have been
+ * over the last hour, a segment per minute in the style of a status page,
+ * with their state now from the health probes.
  */
 export function AvailabilityCard({ runtime, error, health, className }: AvailabilityCardProps) {
   const { end, slots } = minuteSlots(runtime?.history ?? []);
@@ -35,15 +36,19 @@ export function AvailabilityCard({ runtime, error, health, className }: Availabi
   const allUp = health.api === "healthy" && health.database === "healthy";
 
   return (
-    <Card className={cn("gap-0 py-0", className)}>
-      <CardTitleRow icon="wifi" title={t("dashboard.uptime.title")}>
+    <Card className={cn("gap-0 px-5 py-4", className)}>
+      <TileHeader icon="clock" title={t("dashboard.uptime.title")}>
         {checking ? null : (
-          <Badge variant={allUp ? "success" : "destructive"}>
+          <Badge variant={allUp ? "success" : "destructive"} className="rounded-full">
             {allUp ? t("dashboard.uptime.allUp") : t("dashboard.uptime.someDown")}
           </Badge>
         )}
-      </CardTitleRow>
-      <div className="flex min-h-0 flex-1 flex-col gap-4 px-5 py-4">
+      </TileHeader>
+      <TileFigure value={runtime ? formatUptime(runtime.uptimeSeconds) : "…"} className="mt-2" />
+      <p className="mt-1.5 truncate text-xs text-muted-foreground">
+        {runtime ? t("dashboard.uptime.started", { date: formatDateTime(runtime.startedAt) }) : " "}
+      </p>
+      <div className="mt-2.5 flex min-h-0 flex-1 flex-col gap-1.5">
         {error ? (
           <p role="alert" className="text-sm text-danger">
             {error}
@@ -51,14 +56,12 @@ export function AvailabilityCard({ runtime, error, health, className }: Availabi
         ) : null}
         <ServiceUptime
           name="API"
-          detail={t("dashboard.uptime.apiDetail")}
           states={slotStates(slots, () => true)}
           end={end}
           badge={<CurrentState state={health.api} />}
         />
         <ServiceUptime
           name={t("dashboard.uptime.database")}
-          detail={t("dashboard.uptime.databaseDetail")}
           states={slotStates(slots, (sample) => sample.databaseUp)}
           end={end}
           badge={<CurrentState state={health.database} />}

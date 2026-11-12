@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -157,6 +157,18 @@ describe("DashboardPage counters", () => {
     expect(counter("Magazyn").textContent).toContain(expected);
   });
 
+  it("compares each tile's last week with the week before once the activity is in", async () => {
+    answerProbes(200, 200);
+    const week = (value: number) => Array.from({ length: 7 }, () => value);
+    activityMock.mockResolvedValue(activity({ messages: [...week(10), ...week(20)], uploads: [...week(4), ...week(3)] }));
+    renderDashboard();
+
+    expect(await within(counter("Wiadomości")).findByText(/^\+100%/)).toBeTruthy();
+    expect(within(counter("Magazyn")).getByText(/^-25%/)).toBeTruthy();
+    // Nobody wrote in the week before, so there is nothing to compare against.
+    expect(counter("Użytkownicy").textContent).not.toContain("%");
+  });
+
   it("renders nothing until the session has a bootstrap", () => {
     answerProbes(200, 200);
     const { container } = renderDashboard(cockpitValue({ phase: "loading", bootstrap: null }));
@@ -199,38 +211,6 @@ describe("DashboardPage health", () => {
     expect(signals).toHaveLength(2);
     expect(signals.every((signal) => signal?.aborted)).toBe(true);
   });
-
-  it("reads everything again when asked, keeping the last state on screen meanwhile", async () => {
-    const user = userEvent.setup();
-    answerProbes(200, 200);
-    const value = cockpitValue();
-    renderDashboard(value);
-    await waitFor(() => expect(screen.getAllByText("Działa")).toHaveLength(2));
-
-    let answerRecheck!: (response: Response) => void;
-    fetchMock.mockReset();
-    fetchMock.mockReturnValue(new Promise<Response>((resolve) => (answerRecheck = resolve)));
-    await user.click(screen.getByRole("button", { name: "Odśwież teraz" }));
-
-    expect(value.reload).toHaveBeenCalledOnce();
-    expect(activityMock).toHaveBeenCalledTimes(2);
-    expect(runtimeMock).toHaveBeenCalledTimes(2);
-    expect(fetchMock.mock.calls.map(([input]) => String(input))).toEqual(["/health/live", "/health/ready"]);
-    expect(screen.getAllByText("Działa")).toHaveLength(2);
-    expect((screen.getByRole("button", { name: "Odśwież teraz" }) as HTMLButtonElement).disabled).toBe(true);
-
-    answerRecheck(new Response(null, { status: 503 }));
-
-    await waitFor(() => expect(screen.getAllByText("Niedostępne")).toHaveLength(2));
-    expect((screen.getByRole("button", { name: "Odśwież teraz" }) as HTMLButtonElement).disabled).toBe(false);
-  });
-
-  it("says when the state on screen was read", async () => {
-    answerProbes(200, 200);
-    renderDashboard();
-
-    expect(await screen.findByText(/^Stan z \d{2}:\d{2}:\d{2}$/)).toBeTruthy();
-  });
 });
 
 describe("DashboardPage refreshing", () => {
@@ -241,6 +221,32 @@ describe("DashboardPage refreshing", () => {
   afterEach(() => {
     vi.useRealTimers();
     Reflect.deleteProperty(document, "visibilityState");
+  });
+
+  it("keeps the last state on screen while the next one loads", async () => {
+    answerProbes(200, 200);
+    renderDashboard();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(0);
+    });
+    expect(screen.getAllByText("Działa")).toHaveLength(2);
+
+    let answerRecheck!: (response: Response) => void;
+    fetchMock.mockReset();
+    fetchMock.mockReturnValue(new Promise<Response>((resolve) => (answerRecheck = resolve)));
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(30_000);
+    });
+
+    expect(fetchMock.mock.calls.map(([input]) => String(input))).toEqual(["/health/live", "/health/ready"]);
+    expect(screen.getAllByText("Działa")).toHaveLength(2);
+
+    await act(async () => {
+      answerRecheck(new Response(null, { status: 503 }));
+      await vi.advanceTimersByTimeAsync(0);
+    });
+
+    expect(screen.getAllByText("Niedostępne")).toHaveLength(2);
   });
 
   it("reads the state again every 30 seconds and the activity every 5 minutes", async () => {
@@ -381,6 +387,40 @@ describe("DashboardPage availability", () => {
     renderDashboard();
 
     expect(await screen.findByText("Coś nie działa")).toBeTruthy();
+  });
+
+  it("totals the last hour of requests with the server errors among them", async () => {
+    answerProbes(200, 200);
+    const base = runtime();
+    runtimeMock.mockResolvedValue({
+      ...base,
+      realtimeConnections: 6,
+      voiceRooms: 2,
+      history: base.history.map((sample, index) => ({ ...sample, requests: 40 + index, serverErrors: index })),
+    });
+    renderDashboard();
+
+    expect(await screen.findByText("błędy serwera: 3")).toBeTruthy();
+    expect(screen.getByText((123).toLocaleString("pl-PL"))).toBeTruthy();
+    expect(screen.getByRole("img", { name: "Żądania do API" })).toBeTruthy();
+    expect(screen.getByText("realtime, pokoje głosowe: 2")).toBeTruthy();
+  });
+
+  it("lists the services the availability card leaves out, with their state now", async () => {
+    answerProbes(200, 200);
+    runtimeMock.mockResolvedValue({
+      ...runtime(),
+      services: [
+        { id: "api", name: "API", state: "healthy", detail: "" },
+        { id: "database", name: "SQLite", state: "healthy", detail: "" },
+        { id: "realtime", name: "Realtime", state: "healthy", detail: "4 połączenia" },
+        { id: "storage", name: "Magazyn obiektów", state: "warning", detail: "wolno" },
+      ],
+    });
+    renderDashboard();
+
+    const rows = within(await screen.findByRole("list")).getAllByRole("listitem");
+    expect(rows.map((row) => row.textContent)).toEqual(["Realtime4 połączeniaDziała", "Magazyn obiektówwolnoWymaga uwagi"]);
   });
 
   it("says there is no data before the first sample", async () => {

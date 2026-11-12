@@ -2,7 +2,7 @@
 
 Stellarr Cockpit is the instance operator panel (`cockpit/`), built as a standalone React + Vite single-page application. It provides:
 
-- **Overview**: headline counts, 30-day activity in six series, and the last hour of the API's and the database's availability. It refreshes itself every 30 s.
+- **Overview**: headline counts with their trend and the change on the week before, 30-day activity in six series, the API's uptime and the last hour of its and the database's availability, the last hour of requests and connections, and the state of the other services. It refreshes itself every 30 s.
 - **Users**: account management, active sessions, and built-in roles.
 - **Servers**: list of servers on the instance with ownership transfer and deletion.
 - **Runtime**: the last hour of the process (requests, errors, CPU, memory, connections, database latency) and of every service's availability, a bar per minute.

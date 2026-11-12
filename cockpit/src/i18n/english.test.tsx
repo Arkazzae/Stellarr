@@ -170,7 +170,7 @@ describe("the overview", () => {
     renderWithSession(<DashboardPage />, cockpitValue());
 
     expect(screen.getByText("Availability")).toBeTruthy();
-    expect(screen.getByRole("group", { name: "SQLite" }).textContent).toContain("the database, checked every 30 s");
+    expect(screen.getByRole("group", { name: "SQLite" }).textContent).toContain("no data");
     expect(await screen.findByText("All systems up")).toBeTruthy();
   });
 });
