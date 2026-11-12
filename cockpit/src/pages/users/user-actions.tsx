@@ -13,6 +13,7 @@ import {
 import { t } from "@/i18n";
 import { cockpitApi, type CockpitRole, type CockpitUser } from "@/lib/api";
 import type { Perform } from "@/pages/users/use-access-actions";
+import { UserSecuritySheet } from "@/pages/users/user-security-sheet";
 
 interface UserActionsProps {
   user: CockpitUser;
@@ -22,6 +23,7 @@ interface UserActionsProps {
 
 export function UserActions({ user, roles, perform }: UserActionsProps) {
   const [pending, setPending] = useState(false);
+  const [securityOpen, setSecurityOpen] = useState(false);
   // The server decides by the owner flag of the role, not by what the role is called.
   const isOwner = roles.some((role) => role.id === user.roleId && role.isOwner);
   const assignableRoles = roles.filter((role) => !role.isOwner && role.id !== user.roleId);
@@ -34,6 +36,7 @@ export function UserActions({ user, roles, perform }: UserActionsProps) {
 
   const { email } = user;
   return (
+    <>
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
@@ -47,6 +50,7 @@ export function UserActions({ user, roles, perform }: UserActionsProps) {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuLabel>{user.displayName}</DropdownMenuLabel>
+        <DropdownMenuItem onSelect={() => setSecurityOpen(true)}>{t("accountActions.security")}</DropdownMenuItem>
         <DropdownMenuItem
           disabled={!email}
           onSelect={() => {
@@ -96,5 +100,7 @@ export function UserActions({ user, roles, perform }: UserActionsProps) {
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
+    <UserSecuritySheet user={user} open={securityOpen} onOpenChange={setSecurityOpen} />
+    </>
   );
 }

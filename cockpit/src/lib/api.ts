@@ -243,6 +243,27 @@ export interface CockpitBackups {
 
 export type CockpitBackupChoice = Record<CockpitBackupPart, boolean>;
 
+/** An account's security as the owner sees it in Cockpit: metadata only, never a secret. */
+export interface CockpitUserSecurity {
+  userId: string;
+  /** An operator's recovery is waiting for the account to set up a new method. */
+  recoveryRequired: boolean;
+  methods: { id: string; type: string; name: string; confirmed: boolean; createdAt: string; lastUsedAt: string | null }[];
+  remainingRecoveryCodes: number;
+  trustedDevices: number;
+  identities: { id: string; name: string; issuer: string; createdAt: string }[];
+  events: { kind: string; ipAddress: string; createdAt: string }[];
+}
+
+/** What a recovery ended, and the credential to pass on once. */
+export interface CockpitRecovery {
+  credential: string;
+  expiresAt: string;
+  methodsRevoked: number;
+  trustedDevicesRevoked: number;
+  sessionsRevoked: number;
+}
+
 export type CockpitSecretName = "mail.resend-api-key" | "mail.smtp-password" | "giphy.api-key";
 
 /**
@@ -469,6 +490,20 @@ export const cockpitApi = {
     request<void>(`/api/cockpit/users/${segment(userId)}/role`, { method: "PATCH", body: { roleId } }, signal),
   setUserDisabled: (userId: string, disabled: boolean, signal?: AbortSignal) =>
     request<void>(`/api/cockpit/users/${segment(userId)}/status`, { method: "PATCH", body: { disabled } }, signal),
+  userSecurity: (userId: string, signal?: AbortSignal) =>
+    request<CockpitUserSecurity>(`/api/cockpit/users/${segment(userId)}/security`, {}, signal),
+  recoverUser: (userId: string, reason: string, signal?: AbortSignal) =>
+    request<CockpitRecovery>(
+      `/api/cockpit/users/${segment(userId)}/security/recover`,
+      { method: "POST", body: { reason } },
+      signal,
+    ),
+  unlinkUserIdentity: (userId: string, identityId: string, signal?: AbortSignal) =>
+    request<void>(
+      `/api/cockpit/users/${segment(userId)}/identities/${segment(identityId)}/remove`,
+      { method: "POST" },
+      signal,
+    ),
 
   createRole: (input: { name: string; color: string; permissions: string[] }, signal?: AbortSignal) =>
     request<CockpitRole>("/api/cockpit/roles", { method: "POST", body: input }, signal),
