@@ -156,6 +156,14 @@ sets up a new method, and receives new recovery codes. See
 [Account security and MFA recovery](cli.md#account-security-and-mfa-recovery)
 for the command's options and output.
 
+The same recovery is in Cockpit: **Users → (account) → Account security**
+shows the account's methods, recovery codes left, trusted devices, provider
+links and recent security events, without any secret. **Recover access** asks
+for a reason and shows the one-time code once, and a provider link can be
+removed there too. Both need a fresh second step on the owner's account, and
+the owner's own account is recovered only from the CLI, since a recovery ends
+every session of the account.
+
 ## Backups
 
 Authenticator app keys are stored encrypted with the instance's

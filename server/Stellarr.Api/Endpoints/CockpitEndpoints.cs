@@ -29,6 +29,10 @@ public static partial class CockpitEndpoints
         cockpit.MapPost("/users", CreateUserAsync).AddEndpointFilter<FreshSecondStepFilter>();
         cockpit.MapPatch("/users/{userId:guid}/role", SetUserRoleAsync).AddEndpointFilter<FreshSecondStepFilter>();
         cockpit.MapPatch("/users/{userId:guid}/status", SetUserStatusAsync).AddEndpointFilter<FreshSecondStepFilter>();
+        cockpit.MapGet("/users/{userId:guid}/security", GetUserSecurityAsync);
+        cockpit.MapPost("/users/{userId:guid}/security/recover", RecoverUserAsync).AddEndpointFilter<FreshSecondStepFilter>();
+        cockpit.MapPost("/users/{userId:guid}/identities/{identityId:guid}/remove", UnlinkUserIdentityAsync)
+            .AddEndpointFilter<FreshSecondStepFilter>();
         cockpit.MapPost("/roles", CreateRoleAsync).AddEndpointFilter<FreshSecondStepFilter>();
         cockpit.MapGet("/servers", GetServersAsync);
         cockpit.MapGet("/servers/{serverId:guid}/members", GetServerMembersAsync);
