@@ -23,6 +23,11 @@ public static partial class RegistrationEndpoints
 
     public static IEndpointRouteBuilder MapRegistrationEndpoints(this IEndpointRouteBuilder endpoints)
     {
+        endpoints.MapGet("/api/auth/registration", async (AppDbContext db, HttpContext http, CancellationToken ct) =>
+        {
+            http.Response.Headers.CacheControl = "no-store";
+            return Results.Ok(new { needsServerSetup = !await db.Servers.AnyAsync(ct) });
+        });
         endpoints.MapPost("/api/auth/register", RegisterAsync).RequireRateLimiting(RateLimitPolicies.AuthWrite);
         return endpoints;
     }
@@ -85,10 +90,11 @@ public static partial class RegistrationEndpoints
         ServerRole role;
         if (server is null)
         {
-            var starter = new ServerDirectoryEndpoints.StarterServer(
-                "Stellarr",
-                messages.Get(MessageKey.DefaultTextChannelName),
-                messages.Get(MessageKey.DefaultVoiceChannelName));
+            var configuration = request.InitialServer ?? new CreateServerRequest("Stellarr", null);
+            if (ServerDirectoryEndpoints.PrepareStarter(configuration, messages, out var starter) is { } problem)
+            {
+                return problem;
+            }
             (server, role) = ServerDirectoryEndpoints.AddServer(db, starter, messages, now);
         }
         else if (await ServerAccess.FindMemberRoleAsync(db, server.Id, cancellationToken) is { } memberRole)

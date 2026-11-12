@@ -75,6 +75,7 @@ const ACCOUNT = {
 
 export function fakeApi(overrides: Partial<ApiClient> = {}): ApiClient {
   return {
+    needsServerSetup: vi.fn(async () => false),
     login: vi.fn(async () => SELF),
     register: vi.fn(async () => SELF),
     requestPasswordReset: vi.fn(async () => {}),

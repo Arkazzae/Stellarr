@@ -490,6 +490,12 @@ export interface RegisterInput {
   email: string;
   password: string;
   inviteCode?: string;
+  initialServer?: {
+    name: string;
+    description: string;
+    textChannelName: string;
+    voiceChannelName: string;
+  };
 }
 
 export interface SendMessageInput {

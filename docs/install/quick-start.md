@@ -41,10 +41,11 @@ On first start, the container generates a 365-day self-signed TLS certificate fo
 ## 4. Create the owner account
 
 1. Select **Create account**.
-2. Enter a display name, username (3–32 characters: letters, digits, `.`, `-`, `_`), email, and password (at least 8 characters).
-3. Submit the form.
+2. In the server setup step, choose a server name, an optional description, and the first text channel. Keep the voice channel enabled if you want to test voice next; you can also rename it or leave it out.
+3. Continue to the owner account step. Enter a display name, username (3–32 characters: letters, digits, `.`, `-`, `_`), email, and password (at least 8 characters).
+4. Select **Create account and server**.
 
-The first account registered on an empty instance becomes the instance owner and is placed in the default `Stellarr` server with `#general` and `voice` channels. Subsequent accounts require an invite link.
+The account and its private server are created together. This first account becomes the instance owner. You can return to the server step before submitting, and change the server settings later. Subsequent accounts require an invite link and skip server setup.
 
 ## 5. Invite a second user
 
@@ -63,7 +64,7 @@ The first account registered on an empty instance becomes the instance owner and
 ## 6. Join and test voice
 
 1. Open the invite link in a second browser profile or private window, accept the certificate warning, and register a second account.
-2. In both browser windows, join the `voice` channel and grant microphone access.
+2. In both browser windows, join the voice channel you configured during setup and grant microphone access.
 3. Verify two-way audio and check the connection indicator (`Connected`) in the bottom-left status bar.
 
 This test needs no further setup because both browsers run on the Docker host. Voice for a browser on any other device, including one in your local network, requires `PUBLIC_IP` and UDP port `49000` (`STELLARR_MEDIA_PORT`) forwarded to the host on the same external port. See [Requirements](requirements.md#behind-nat).

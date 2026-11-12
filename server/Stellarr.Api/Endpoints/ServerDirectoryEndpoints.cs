@@ -146,14 +146,10 @@ public static class ServerDirectoryEndpoints
         return Results.Ok(servers.Select(x => x.ToDto()));
     }
 
-    private static async Task<IResult> CreateAsync(
-        CreateServerRequest request,
-        HttpContext http,
-        AppDbContext db,
-        IHubContext<AppHub> hub,
-        Messages messages,
-        CancellationToken cancellationToken)
+    /// <summary>Uses the same validation for registration and additional servers.</summary>
+    internal static IResult? PrepareStarter(CreateServerRequest request, Messages messages, out StarterServer starter)
     {
+        starter = null!;
         var name = request.Name?.Trim() ?? "";
         var description = request.Description?.Trim() ?? "";
         if (name.Length is < 1 or > MaxNameLength || description.Length > MaxDescriptionLength)
@@ -177,19 +173,32 @@ public static class ServerDirectoryEndpoints
             return Invalid("channels", messages.Get(MessageKey.StarterChannelNamesCollide));
         }
 
+        starter = new StarterServer(
+            name,
+            textChannelName,
+            wantsVoice ? voiceChannelName : null,
+            description,
+            request.IsPublic,
+            request.MentionsOnly ?? true,
+            request.VoiceJoinSound ?? true);
+        return null;
+    }
+
+    private static async Task<IResult> CreateAsync(
+        CreateServerRequest request,
+        HttpContext http,
+        AppDbContext db,
+        IHubContext<AppHub> hub,
+        Messages messages,
+        CancellationToken cancellationToken)
+    {
+        if (PrepareStarter(request, messages, out var starter) is { } problem)
+        {
+            return problem;
+        }
+
         var now = DateTime.UtcNow;
-        var (server, ownerRole) = AddServer(
-            db,
-            new StarterServer(
-                name,
-                textChannelName,
-                wantsVoice ? voiceChannelName : null,
-                description,
-                request.IsPublic,
-                request.MentionsOnly ?? true,
-                request.VoiceJoinSound ?? true),
-            messages,
-            now);
+        var (server, ownerRole) = AddServer(db, starter, messages, now);
         var ownerId = http.User.RequireUserId();
         db.ServerMembers.Add(new ServerMember
         {
