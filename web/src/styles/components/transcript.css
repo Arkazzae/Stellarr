@@ -36,7 +36,7 @@
     display:inline-flex;align-items:center;gap:7px;
     height:30px;padding:0 8px 0 14px;border-radius:999px;
     background:var(--accent);color:var(--on-accent);
-    font-size:12.5px;font-weight:600;white-space:nowrap;
+    font-size:var(--text-13);font-weight:600;white-space:nowrap;
     box-shadow:var(--elev-drawer);
     animation:jumpIn var(--dur-base) var(--ease-standard);
     transform:translateX(-50%);
@@ -69,7 +69,7 @@
    * a long transcript into a scrollbar that lies.
    */
   .day-sep{
-    display:flex;align-items:center;gap:12px;color:var(--text-faint);font-size:12px;
+    display:flex;align-items:center;gap:12px;color:var(--text-faint);font-size:var(--text-12);
     margin-inline:20px;padding:18px 0 12px;
   }
   .day-sep::before,.day-sep::after{content:"";flex:1;height:1px;background:var(--line-subtle)}
@@ -77,7 +77,7 @@
      to jedyne miejsce w transkrypcji, które mówi „stąd czytasz dalej". */
   .unread-sep{
     display:flex;align-items:center;gap:10px;color:var(--accent-text);
-    font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em;
+    font-size:var(--text-11);font-weight:600;text-transform:uppercase;letter-spacing:0.06em;
     margin-inline:20px;padding:10px 0 6px;
   }
   .unread-sep::before,.unread-sep::after{content:"";height:1px;background:var(--accent-quiet)}
@@ -118,7 +118,7 @@
   }
   .reply-ref{
     display:flex;align-items:center;gap:6px;min-width:0;
-    font-size:13px;color:var(--text-faint);text-align:left;
+    font-size:var(--text-13);color:var(--text-faint);text-align:left;
     padding:1px 4px;border-radius:var(--radius-sm);
     transition:color var(--dur-fast) var(--ease-standard), background var(--dur-fast) var(--ease-standard);
   }
@@ -140,7 +140,7 @@
 
   .msg-translation-foot{
     display:flex;align-items:center;flex-wrap:wrap;gap:4px 10px;margin-top:3px;
-    font-size:11px;line-height:1.45;color:var(--text-faint);
+    font-size:var(--text-11);line-height:1.45;color:var(--text-faint);
   }
   .msg-translation-state,.msg-translation-toggle{
     display:inline-flex;align-items:center;gap:5px;
@@ -155,13 +155,13 @@
   .msg-translation-toggle:active{background:var(--surface-field)}
   .msg-translation-error{color:var(--danger-text)}
   .msg-head{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
-  .msg-head b{font-size:15px;font-weight:600}
-  .msg-head time{font-size:12px;color:var(--text-faint);font-variant-numeric:tabular-nums}
+  .msg-head b{font-size:var(--text-15);font-weight:600}
+  .msg-head time{font-size:var(--text-12);color:var(--text-faint);font-variant-numeric:tabular-nums}
   /* A pin belongs to one entry even when several messages share an author
      header, so the quiet marker sits directly above that message's content. */
   .msg-pinned{
     display:inline-flex;align-items:center;gap:4px;
-    font-size:11px;color:var(--accent-text);
+    font-size:var(--text-11);color:var(--accent-text);
   }
   .msg-pinned > svg{flex:none}
   .msg-body{
@@ -192,7 +192,7 @@
   }
   .msg-long-toggle{
     display:block;width:max-content;margin-top:3px;padding:1px 0;
-    color:var(--accent-text);font-size:12px;font-weight:600;
+    color:var(--accent-text);font-size:var(--text-12);font-weight:600;
     -webkit-user-select:none;user-select:none;
   }
   .msg-long-toggle:hover{text-decoration:underline}
@@ -201,12 +201,12 @@
     border-radius:var(--radius-sm);
   }
   .msg-body .hover-time{
-    position:absolute;left:-2px;top:4px;font-size:10px;color:var(--text-faint);
+    position:absolute;left:-2px;top:4px;font-size:var(--text-10);color:var(--text-faint);
     font-variant-numeric:tabular-nums;opacity:0;transition:opacity var(--dur-fast) var(--ease-standard);
   }
   .msg-body:hover .hover-time{opacity:1}
   .msg-body code{
-    font-family:var(--font-mono);font-size:13px;background:var(--surface-raised);
+    font-family:var(--font-mono);font-size:var(--text-13);background:var(--surface-raised);
     border:1px solid var(--line-subtle);border-radius:var(--radius-sm);padding:1px 5px;
   }
 
@@ -234,7 +234,7 @@
   .att-giphy{display:block}
   .att-giphy-media{display:block;width:100%;text-align:left;border-radius:var(--radius-md)}
   .att-giphy-media picture{display:block}
-  .att-giphy figcaption{margin-top:4px;font-size:11px;color:var(--text-faint)}
+  .att-giphy figcaption{margin-top:4px;font-size:var(--text-11);color:var(--text-faint)}
   .att-giphy figcaption a{color:inherit}
   .att-giphy figcaption a:hover{color:var(--text);text-decoration:underline}
   .att-giphy-loading{
@@ -245,7 +245,7 @@
     display:flex;align-items:center;justify-content:space-between;gap:12px;
     width:min(var(--att-w),100%);padding:12px;
     border:1px solid var(--line-subtle);border-radius:var(--radius-md);
-    color:var(--text-muted);font-size:13px;
+    color:var(--text-muted);font-size:var(--text-13);
   }
   .att-giphy-fallback a{flex:none;color:var(--accent-text);font-weight:550}
   .att-giphy-fallback a:hover{text-decoration:underline}
@@ -261,13 +261,13 @@
     width:38px;height:44px;border-radius:var(--radius-sm);flex:none;
     background:var(--surface-overlay);border:1px solid var(--line-subtle);
     display:flex;align-items:center;justify-content:center;
-    font-family:var(--font-mono);font-size:10px;font-weight:600;color:var(--accent-text);
+    font-family:var(--font-mono);font-size:var(--text-10);font-weight:600;color:var(--accent-text);
     position:relative;overflow:hidden;
   }
   .att-file .ext::before{content:"";position:absolute;top:0;right:0;border:5px solid var(--surface-raised);border-left-color:transparent;border-bottom-color:transparent}
   .att-file .fmeta{min-width:0;flex:1}
-  .att-file .fmeta b{display:block;font-size:13px;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .att-file .fmeta span{font-size:12px;color:var(--text-faint);font-variant-numeric:tabular-nums}
+  .att-file .fmeta b{display:block;font-size:var(--text-13);font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .att-file .fmeta span{font-size:var(--text-12);color:var(--text-faint);font-variant-numeric:tabular-nums}
 
   .att-window{
     width:min(560px,100%);max-width:min(560px,100%);overflow:hidden;
@@ -298,7 +298,7 @@
   .au-foot{display:flex;align-items:center;gap:10px}
   .au-meta{
     min-width:0;flex:1;display:flex;align-items:baseline;gap:7px;
-    font-size:11.5px;color:var(--text-faint);
+    font-size:var(--text-12);color:var(--text-faint);
   }
   .au-meta > svg{flex:none;color:var(--text-faint)}
   .au-meta b{
@@ -349,10 +349,10 @@
   /* Tabular figures and a floor on the width, so the row cannot reflow while
      the pointer is on the waveform beside it. */
   .att-audio .dur{
-    font-size:12px;color:var(--text-faint);font-variant-numeric:tabular-nums;
+    font-size:var(--text-12);color:var(--text-faint);font-variant-numeric:tabular-nums;
     flex:none;min-width:10ch;text-align:right;
   }
-  .att-audio .audio-error{font-size:11px;color:var(--danger-text);flex:none}
+  .att-audio .audio-error{font-size:var(--text-11);color:var(--danger-text);flex:none}
 
   .att-video{position:relative;width:min(var(--att-w),100%);aspect-ratio:16/9;border-radius:var(--radius-md);overflow:hidden;border:1px solid var(--line-subtle);background:var(--surface-raised);cursor:pointer}
   .att-video img,.att-video video,.att-video .video-placeholder{display:block;width:100%;height:100%;object-fit:cover;border:none;border-radius:0}
@@ -369,7 +369,7 @@
   }
   .att-video:hover .overlay-play span{transform:scale(1.1);background:var(--accent);color:var(--on-accent)}
   .att-video .vdur{
-    position:absolute;right:8px;bottom:8px;font-size:11px;font-weight:500;
+    position:absolute;right:8px;bottom:8px;font-size:var(--text-11);font-weight:500;
     background:oklch(0.145 0 0 / 0.8);border-radius:var(--radius-sm);
     padding:1px 6px;font-variant-numeric:tabular-nums;
   }
@@ -410,18 +410,18 @@
     display:flex;flex-direction:column;gap:3px;justify-content:center;
   }
   .att-embed .dom{
-    font-size:10.5px;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;
+    font-size:var(--text-11);font-weight:600;letter-spacing:0.04em;text-transform:uppercase;
     color:var(--text-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   }
   .att-embed b{
-    font-size:13.5px;font-weight:600;line-height:1.35;color:var(--text);
+    font-size:var(--text-14);font-weight:600;line-height:1.35;color:var(--text);
     transition:color var(--dur-fast) var(--ease-standard);
   }
   .att-embed:hover b{color:var(--accent-text)}
   /* Clamped so a chatty description cannot make one card three times the height
      of its neighbour; the whole page is a list, and a list wants a rhythm. */
   .att-embed p{
-    font-size:12px;color:var(--text-muted);line-height:1.5;
+    font-size:var(--text-12);color:var(--text-muted);line-height:1.5;
     display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;
   }
 
@@ -473,19 +473,19 @@
   }
   .att-vembed .ve-stage:hover .overlay-play span{transform:scale(1.08);background:var(--accent);color:var(--on-accent)}
   .att-vembed .ve-badge{
-    position:absolute;left:8px;top:8px;font-size:10.5px;font-weight:600;
+    position:absolute;left:8px;top:8px;font-size:var(--text-11);font-weight:600;
     letter-spacing:0.04em;text-transform:uppercase;
     background:oklch(0.145 0 0 / 0.8);border-radius:var(--radius-sm);padding:2px 6px;
   }
   .att-vembed .ve-meta{padding:10px 12px}
-  .att-vembed .ve-meta .dom{font-size:11px;color:var(--text-faint)}
-  .att-vembed .ve-meta b{display:block;font-size:13px;font-weight:550;color:var(--text);margin:2px 0}
-  .att-vembed .ve-meta p{font-size:12px;color:var(--text-muted);line-height:1.5}
+  .att-vembed .ve-meta .dom{font-size:var(--text-11);color:var(--text-faint)}
+  .att-vembed .ve-meta b{display:block;font-size:var(--text-13);font-weight:550;color:var(--text);margin:2px 0}
+  .att-vembed .ve-meta p{font-size:var(--text-12);color:var(--text-muted);line-height:1.5}
   .att-vembed.compact{max-width:min(var(--att-w),100%)}
   .att-vembed .ve-play-inline{
     display:flex;align-items:center;gap:7px;margin-top:9px;padding:6px 9px;
     border-radius:var(--radius-sm);background:var(--accent);color:var(--on-accent);
-    font-size:12px;font-weight:600;
+    font-size:var(--text-12);font-weight:600;
   }
   .att-vembed .ve-play-inline:hover{background:var(--accent-hover)}
 
@@ -496,7 +496,7 @@
     display:flex;align-items:center;justify-content:space-between;gap:10px;
     padding:6px 12px;background:var(--surface-raised);
     border-bottom:1px solid var(--line-subtle);
-    font-size:11px;color:var(--text-faint);font-family:var(--font-mono);
+    font-size:var(--text-11);color:var(--text-faint);font-family:var(--font-mono);
     -webkit-user-select:none;user-select:none;
   }
   .att-code .code-meta,.att-code .code-actions{
@@ -523,7 +523,7 @@
     outline:2px solid var(--accent-quiet);outline-offset:2px;
   }
   .att-code pre{
-    padding:12px;font-family:var(--font-mono);font-size:12.5px;line-height:1.55;
+    padding:12px;font-family:var(--font-mono);font-size:var(--text-13);line-height:1.55;
     overflow:auto;color:var(--text-muted);tab-size:2;
     white-space:pre;overflow-wrap:normal;
     scrollbar-gutter:stable;
@@ -563,7 +563,7 @@
     .att-code select{width:100%;max-width:16ch}
     .att-code .code-actions{gap:2px}
     .att-code .code-actions > span{display:none}
-    .att-code pre{padding:10px;font-size:12px}
+    .att-code pre{padding:10px;font-size:var(--text-12)}
   }
 
   /* These controls sit inside prose and compact attachment chrome on desktop,
@@ -586,7 +586,7 @@
 
   /* ---------- TYPING ---------- */
   .typing{
-    height:22px;padding:0 22px;font-size:12px;color:var(--text-faint);
+    height:22px;padding:0 22px;font-size:var(--text-12);color:var(--text-faint);
     display:flex;align-items:center;gap:6px;
     opacity:0;transition:opacity var(--dur-base) var(--ease-standard);
   }
@@ -615,7 +615,7 @@
   .tb{
     width:28px;height:28px;border-radius:50%;
     display:inline-flex;align-items:center;justify-content:center;
-    color:var(--text-muted);font-size:15px;line-height:1;
+    color:var(--text-muted);font-size:var(--text-15);line-height:1;
     transition:background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard), transform var(--dur-fast) var(--ease-standard);
   }
   .tb:hover{background:var(--surface-raised);color:var(--text)}
@@ -648,7 +648,7 @@
     min-height:44px;display:flex;align-items:center;gap:8px;padding-left:10px;
   }
   .msg-action-head h2{
-    flex:1;min-width:0;font-size:13px;font-weight:650;color:var(--text-muted);
+    flex:1;min-width:0;font-size:var(--text-13);font-weight:650;color:var(--text-muted);
   }
   .msg-action-close{
     width:44px;height:44px;flex:none;display:inline-flex;align-items:center;justify-content:center;
@@ -661,7 +661,7 @@
   .msg-action-item{
     width:100%;min-height:48px;display:flex;align-items:center;gap:12px;
     padding:0 12px;border-radius:var(--radius-sm);color:var(--text-muted);
-    font-size:14px;text-align:left;
+    font-size:var(--text-14);text-align:left;
   }
   .msg-action-item svg{flex:none;color:var(--text-faint)}
   .msg-action-item:hover,.msg-action-item:active{
@@ -684,7 +684,7 @@
     display:inline-flex;align-items:center;gap:5px;
     height:24px;padding:0 8px;border-radius:12px;
     background:var(--surface-raised);border:1px solid var(--line-subtle);
-    font-size:12px;font-variant-numeric:tabular-nums;color:var(--text-muted);
+    font-size:var(--text-12);font-variant-numeric:tabular-nums;color:var(--text-muted);
     transition:border-color var(--dur-fast) var(--ease-standard), background var(--dur-fast) var(--ease-standard), transform var(--dur-fast) var(--ease-standard);
   }
   .react-chip:hover{border-color:var(--line-strong);transform:translateY(-1px)}

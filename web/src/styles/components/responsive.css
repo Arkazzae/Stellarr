@@ -212,7 +212,7 @@
        The composer is the most frequently focused control in the app, so a
        15px desktop reading size must become 16px on phones. */
     .composer textarea {
-      font-size: 16px;
+      font-size: var(--text-16);
     }
 
     /* iOS otherwise zooms the entire application when any settings/search
@@ -221,7 +221,7 @@
     input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
     select,
     textarea {
-      font-size: 16px;
+      font-size: var(--text-16);
     }
 
     .typing {

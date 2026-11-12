@@ -24,7 +24,7 @@
   /* ---------- REDESIGN: kapitaliki, pille ---------- */
   /* The round face used to be forced from here with `!important` over four
      class names; it is one declaration in `avatar.css` now. */
-  .group-caption{text-transform:uppercase;letter-spacing:0.08em;font-size:11px;font-weight:600}
+  .group-caption{text-transform:uppercase;letter-spacing:0.08em;font-size:var(--text-11);font-weight:600}
   .pill-bar{
     display:flex;align-items:center;gap:2px;flex:none;
     background:var(--surface-pop);

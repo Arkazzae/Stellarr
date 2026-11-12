@@ -260,7 +260,7 @@
   }
 
   .field input {
-    font-size: 16px;
+    font-size: var(--text-16);
   }
 }
 
@@ -269,7 +269,7 @@
      Landscape phones can be wider than the narrow-phone rule above, so input
      method belongs in this condition alongside viewport width. */
   .field input {
-    font-size: 16px;
+    font-size: var(--text-16);
   }
 
   .textLink {
