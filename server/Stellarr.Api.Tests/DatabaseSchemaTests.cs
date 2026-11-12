@@ -37,6 +37,36 @@ public sealed class DatabaseSchemaTests
     }
 
     [Fact]
+    public async Task UpgradeAddsOperatorAuditForTheLocalCli()
+    {
+        using var factory = new StellarrWebApplicationFactory();
+        using var client = factory.CreateClient();
+        _ = await client.GetAsync("/health/ready");
+
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        await db.Database.ExecuteSqlRawAsync("DROP TABLE \"OperatorAuditEntries\";");
+
+        await DatabaseSchema.UpgradeAsync(db, default);
+
+        var tables = await db.Database.SqlQueryRaw<string>(
+                "SELECT name AS Value FROM sqlite_master WHERE type = 'table'")
+            .ToArrayAsync();
+        Assert.Contains("OperatorAuditEntries", tables);
+        var columns = await db.Database.SqlQueryRaw<string>(
+                "SELECT name AS Value FROM pragma_table_info('OperatorAuditEntries')")
+            .ToArrayAsync();
+        Assert.Contains("Actor", columns);
+        Assert.Contains("Operation", columns);
+        Assert.Contains("Target", columns);
+        Assert.Contains("CreatedAt", columns);
+        var indexes = await db.Database.SqlQueryRaw<string>(
+                "SELECT name AS Value FROM sqlite_master WHERE type = 'index' AND tbl_name = 'OperatorAuditEntries'")
+            .ToArrayAsync();
+        Assert.Contains("IX_OperatorAuditEntries_CreatedAt", indexes);
+    }
+
+    [Fact]
     public async Task UpgradeCollapsesOppositeLegacyFriendRequestsBeforeAddingPairKey()
     {
         using var factory = new StellarrWebApplicationFactory();
