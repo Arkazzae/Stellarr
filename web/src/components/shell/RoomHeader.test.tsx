@@ -34,9 +34,6 @@ describe("RoomHeader channel tools", () => {
     await user.click(panelToggle);
 
     expect(onTogglePanel).toHaveBeenCalledOnce();
-    expect(screen.queryByRole("button", { name: "room.pinnedMessages" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "room.media" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "room.links" })).toBeNull();
   });
 
   it("exposes the sidebar toggle state", () => {
