@@ -125,6 +125,8 @@ const SECURE: AccountSecurity = {
   recentEvents: [],
   trustedDeviceDays: 14,
   passkeyAvailable: false,
+  identities: [],
+  identityProviders: [],
   emailCodeAvailable: true,
 };
 
@@ -139,6 +141,8 @@ function fakeSecurityPort(overrides: Partial<AccountSecurityPort> = {}): Account
     listSessions: vi.fn(async () => []),
     revokeSession: vi.fn(async () => {}),
     revokeOtherSessions: vi.fn(async () => {}),
+    startIdentityLink: vi.fn(async () => "/api/auth/oidc/link?ticket=t"),
+    removeIdentity: vi.fn(async () => {}),
     ...overrides,
   };
 }

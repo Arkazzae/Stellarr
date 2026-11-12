@@ -665,6 +665,25 @@ export interface AccountSecurity {
   emailCodeAvailable: boolean;
   /** The server can register and check passkeys: it has a public HTTPS address. */
   passkeyAvailable: boolean;
+  /** Identities at providers this account signs in with. */
+  identities: LinkedIdentity[];
+  /** The providers the account can link itself to. */
+  identityProviders: IdentityProvider[];
+}
+
+/** An identity at a provider the account signs in with. */
+export interface LinkedIdentity {
+  id: string;
+  /** The configured provider it was linked through; absent for older links. */
+  providerId?: string;
+  /** The provider's name, or its host when it is no longer configured. */
+  name: string;
+  createdAt: string;
+}
+
+export interface IdentityProvider {
+  id: string;
+  displayName: string;
 }
 
 /** One of the account's signed-in devices. */

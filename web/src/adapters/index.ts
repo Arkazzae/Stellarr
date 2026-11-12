@@ -221,6 +221,8 @@ export function createRuntime(options: RuntimeOptions = {}): Runtime {
       listSessions: () => api.listOwnSessions(),
       revokeSession: (sessionId) => api.revokeOwnSession(sessionId),
       revokeOtherSessions: () => api.revokeOtherSessions(),
+      startIdentityLink: (providerId, password) => api.startIdentityLink(providerId, password),
+      removeIdentity: (identityId, password) => api.removeIdentity(identityId, password),
     },
     chat,
     messageActions,

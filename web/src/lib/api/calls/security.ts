@@ -6,6 +6,8 @@ import {
   parseRecoveryCodes,
   parseSecurityEvent,
 } from "../securityParsers";
+import { ApiError } from "../errors";
+import { expectRecord, expectString } from "../expect";
 import { deleteResource, getJson, parseList, route, sendJson, sendVoid } from "./http";
 
 type SecurityCalls = Pick<
@@ -20,7 +22,18 @@ type SecurityCalls = Pick<
   | "listOwnSessions"
   | "revokeOwnSession"
   | "revokeOtherSessions"
+  | "startIdentityLink"
+  | "removeIdentity"
 >;
+
+/** Only the server's own link routes are followed. */
+const LINK_ADDRESS = /^\/api\/auth\/oidc\/([a-z0-9-]+\/)?link\?ticket=[^\s]+$/;
+
+function parseLinkAddress(value: unknown, path: string): string {
+  const url = expectString(expectRecord(value, path), "url", path);
+  if (!LINK_ADDRESS.test(url)) throw new ApiError("malformed", `${path}: not a link address`);
+  return url;
+}
 
 const withPassword = (password?: string) => (password === undefined ? {} : { password });
 
@@ -66,5 +79,16 @@ export function securityCalls(): SecurityCalls {
     revokeOwnSession: (sessionId) => deleteResource(route`/api/me/security/sessions/${sessionId}`),
 
     revokeOtherSessions: () => sendVoid("POST", "/api/me/security/sessions/revoke-others"),
+
+    startIdentityLink: (providerId, password) =>
+      sendJson(
+        "POST",
+        route`/api/me/security/identities/${providerId}/link`,
+        withPassword(password),
+        parseLinkAddress,
+      ),
+
+    removeIdentity: (identityId, password) =>
+      sendVoid("POST", route`/api/me/security/identities/${identityId}/remove`, withPassword(password)),
   };
 }

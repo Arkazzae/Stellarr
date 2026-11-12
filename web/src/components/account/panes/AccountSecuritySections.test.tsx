@@ -34,6 +34,8 @@ const SECURITY: AccountSecurity = {
   ],
   trustedDeviceDays: 14,
   passkeyAvailable: false,
+  identities: [],
+  identityProviders: [],
   emailCodeAvailable: false,
 };
 
@@ -46,6 +48,8 @@ function setup(overrides: Partial<AccountSecuritySectionsProps> = {}) {
     onAddMethod: vi.fn(),
     onRemoveMethod: vi.fn(),
     onRegenerateCodes: vi.fn(),
+    onLinkIdentity: vi.fn(),
+    onUnlinkIdentity: vi.fn(),
     onRevokeDevice: vi.fn(),
     sessions: [
       { id: "s-here", device: CHROME_MAC, ipAddress: "127.0.0.1", createdAt: "2026-11-12T17:00:00Z", lastSeenAt: "2026-11-12T17:10:00Z", expiresAt: "2026-12-12T17:00:00Z", current: true },
@@ -77,6 +81,37 @@ describe("AccountSecuritySections", () => {
     await answerConfirm(user, "Usuń");
 
     expect(props.onRemoveMethod).toHaveBeenCalledExactlyOnceWith(SECURITY.methods[0]);
+  });
+
+  it("lists linked provider accounts and offers only the providers not linked yet", async () => {
+    const user = userEvent.setup();
+    const linked = { id: "i-1", providerId: "work", name: "Work", createdAt: "2026-11-12T17:00:00Z" };
+    const props = setup({
+      security: {
+        ...SECURITY,
+        identities: [linked],
+        identityProviders: [
+          { id: "default", displayName: "Keycloak" },
+          { id: "work", displayName: "Work" },
+        ],
+      },
+    });
+
+    expect(screen.getByText("Work")).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Połącz z Work" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Połącz z Keycloak" }));
+    expect(props.onLinkIdentity).toHaveBeenCalledExactlyOnceWith({ id: "default", displayName: "Keycloak" });
+
+    await user.click(screen.getByRole("button", { name: "Odłącz" }));
+    expect(props.onUnlinkIdentity).not.toHaveBeenCalled();
+    await answerConfirm(user, "Odłącz");
+    expect(props.onUnlinkIdentity).toHaveBeenCalledExactlyOnceWith(linked);
+  });
+
+  it("shows no provider section on an instance without identity providers", () => {
+    setup();
+
+    expect(screen.queryByText("Logowanie przez dostawcę")).toBeNull();
   });
 
   it("offers to turn the second step on when there is no method", async () => {

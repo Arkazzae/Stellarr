@@ -6,9 +6,12 @@ import type { EnrollMode } from "@/components/auth/MfaEnrollStep";
 import type { SecurityDialogStep } from "@/components/account/panes/SecurityStepDialog";
 import type { MessageKey } from "@/i18n";
 import { ApiError } from "@/lib/api/errors";
+import { leaveFor } from "@/lib/leaveFor";
 import { PasskeyCancelledError } from "@/lib/webauthn";
 import type {
   AccountSecurity,
+  IdentityProvider,
+  LinkedIdentity,
   MfaChallenge,
   MfaCompletion,
   MfaMethod,
@@ -23,7 +26,10 @@ import { challengeErrorMessage } from "./challengeErrors";
 type Change =
   | { kind: "enroll" }
   | { kind: "remove"; methodId: string }
-  | { kind: "regenerate" };
+  | { kind: "regenerate" }
+  /** Linking ends on the provider's page, after a full page load. */
+  | { kind: "link"; providerId: string }
+  | { kind: "unlink"; identityId: string };
 
 const NAME_KEY: Record<EnrollMode, MessageKey> = {
   totp: "auth.enroll.totpName",
@@ -152,6 +158,18 @@ export function useAccountSecurity(open: boolean) {
           await finish();
           return;
         }
+        if (next.kind === "link") {
+          const address = await security.startIdentityLink(next.providerId, password);
+          change.current = null;
+          setStep(null);
+          leaveFor(address);
+          return;
+        }
+        if (next.kind === "unlink") {
+          await security.removeIdentity(next.identityId, password);
+          await finish();
+          return;
+        }
         await finish(await security.regenerateRecoveryCodes(password));
       } catch (cause) {
         if (isForbidden(cause)) {
@@ -231,6 +249,8 @@ export function useAccountSecurity(open: boolean) {
       onAddMethod: () => start({ kind: "enroll" }),
       onRemoveMethod: (method: MfaMethod) => start({ kind: "remove", methodId: method.id }),
       onRegenerateCodes: () => start({ kind: "regenerate" }),
+      onLinkIdentity: (provider: IdentityProvider) => start({ kind: "link", providerId: provider.id }),
+      onUnlinkIdentity: (identity: LinkedIdentity) => start({ kind: "unlink", identityId: identity.id }),
       sessions,
       onRevokeSession: (session: OwnSession) => {
         setBusy(true);

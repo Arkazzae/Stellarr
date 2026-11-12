@@ -142,6 +142,9 @@ export interface ApiClient {
   removeMfaMethod(methodId: string, password?: string): Promise<void>;
   regenerateRecoveryCodes(password?: string, signal?: AbortSignal): Promise<string[]>;
   revokeTrustedDevice(deviceId: string): Promise<void>;
+  /** After the proof, the address the browser goes to, to link the account to the provider. */
+  startIdentityLink(providerId: string, password?: string): Promise<string>;
+  removeIdentity(identityId: string, password?: string): Promise<void>;
   listOwnSessions(signal?: AbortSignal): Promise<OwnSession[]>;
   /** Refused with 409 for the current session, which ends through logout. */
   revokeOwnSession(sessionId: string): Promise<void>;

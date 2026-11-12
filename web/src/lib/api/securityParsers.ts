@@ -184,6 +184,26 @@ export function parseAccountSecurity(value: unknown, path: string): AccountSecur
     trustedDeviceDays: expectSafeInteger(record, "trustedDeviceDays", path),
     emailCodeAvailable: expectBoolean(record, "emailCodeAvailable", path),
     passkeyAvailable: record["passkeyAvailable"] === true,
+    // Absent on a server from before identity links: none linked, none offered.
+    identities: (Array.isArray(record["identities"]) ? record["identities"] : []).map((item, index) => {
+      const identity = expectRecord(item, `${path}.identities[${index}]`);
+      const providerId = optionalString(identity, "providerId");
+      return {
+        id: expectString(identity, "id", path),
+        ...(providerId === undefined ? {} : { providerId }),
+        name: expectString(identity, "name", path),
+        createdAt: expectString(identity, "createdAt", path),
+      };
+    }),
+    identityProviders: (Array.isArray(record["identityProviders"]) ? record["identityProviders"] : []).map(
+      (item, index) => {
+        const provider = expectRecord(item, `${path}.identityProviders[${index}]`);
+        return {
+          id: expectString(provider, "id", path),
+          displayName: expectString(provider, "displayName", path),
+        };
+      },
+    ),
   };
 }
 

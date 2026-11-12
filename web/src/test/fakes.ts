@@ -110,6 +110,8 @@ export function fakeApi(overrides: Partial<ApiClient> = {}): ApiClient {
       trustedDeviceDays: 14,
       emailCodeAvailable: false,
       passkeyAvailable: false,
+      identities: [],
+      identityProviders: [],
     })),
     listSecurityEvents: vi.fn(async () => []),
     startMfaEnrollment: vi.fn(async () => {
@@ -124,6 +126,8 @@ export function fakeApi(overrides: Partial<ApiClient> = {}): ApiClient {
     listOwnSessions: vi.fn(async () => []),
     revokeOwnSession: vi.fn(async () => {}),
     revokeOtherSessions: vi.fn(async () => {}),
+    startIdentityLink: vi.fn(async () => "/api/auth/oidc/link?ticket=t"),
+    removeIdentity: vi.fn(async () => {}),
     requestPasswordReset: vi.fn(async () => {}),
     resetPassword: vi.fn(async () => {}),
     logout: vi.fn(async () => {}),

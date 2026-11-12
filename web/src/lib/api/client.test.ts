@@ -135,6 +135,17 @@ describe("http api client", () => {
     expect(init?.body).toBe(JSON.stringify({ username: "patryk", password: "x" }));
   });
 
+  it("follows only the server's own link address when an account links a provider", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ url: "/api/auth/oidc/work/link?ticket=CfDJ8abc" }));
+    fetchMock.mockResolvedValueOnce(jsonResponse({ url: "https://evil.example/api/auth/oidc/link?ticket=x" }));
+
+    await expect(api.startIdentityLink("work", "haslo")).resolves.toBe("/api/auth/oidc/work/link?ticket=CfDJ8abc");
+    await expect(api.startIdentityLink("work")).rejects.toMatchObject({ kind: "malformed" });
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/me/security/identities/work/link");
+    expect(fetchMock.mock.calls[0]?.[1]?.body).toBe(JSON.stringify({ password: "haslo" }));
+  });
+
   it("sends a short-lived sign-in choice to the password login and the recovery", async () => {
     fetchMock.mockResolvedValueOnce(
       jsonResponse({ id: "u-1", username: "patryk", displayName: "Patryk", presence: "online" }),

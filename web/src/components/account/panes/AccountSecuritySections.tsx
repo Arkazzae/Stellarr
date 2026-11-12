@@ -5,7 +5,15 @@ import { useConfirm } from "@/components/primitives/ConfirmDialog";
 import { formatShortDate } from "@/components/settings/panes/paneFormat";
 import type { MessageKey } from "@/i18n";
 import { describeUserAgent } from "@/lib/userAgent";
-import type { AccountSecurity, MfaMethod, OwnSession, SecurityEvent, TrustedDevice } from "@/ports";
+import type {
+  AccountSecurity,
+  IdentityProvider,
+  LinkedIdentity,
+  MfaMethod,
+  OwnSession,
+  SecurityEvent,
+  TrustedDevice,
+} from "@/ports";
 import { useLanguage } from "@/state/hooks";
 
 export interface AccountSecuritySectionsProps {
@@ -22,6 +30,9 @@ export interface AccountSecuritySectionsProps {
   sessions: OwnSession[] | null;
   onRevokeSession(session: OwnSession): void;
   onRevokeOtherSessions(): void;
+  /** Leaves for the provider, after a fresh proof, to link the account to it. */
+  onLinkIdentity(provider: IdentityProvider): void;
+  onUnlinkIdentity(identity: LinkedIdentity): void;
 }
 
 const EVENT_LABEL: Record<string, MessageKey> = {
@@ -39,6 +50,8 @@ const EVENT_LABEL: Record<string, MessageKey> = {
   "password-changed": "security.event.passwordChanged",
   "cli-recovery": "security.event.cliRecovery",
   "policy-changed": "security.event.policyChanged",
+  "identity-linked": "security.event.identityLinked",
+  "identity-unlinked": "security.event.identityUnlinked",
   "desktop-approved": "security.event.desktopApproved",
 };
 
@@ -59,6 +72,8 @@ export function AccountSecuritySections({
   sessions,
   onRevokeSession,
   onRevokeOtherSessions,
+  onLinkIdentity,
+  onUnlinkIdentity,
 }: AccountSecuritySectionsProps) {
   const { t, locale } = useLanguage();
   const confirm = useConfirm();
@@ -86,6 +101,17 @@ export function AccountSecuritySections({
       icon: "trash",
     });
     if (confirmed) onRemoveMethod(method);
+  };
+
+  const unlinkIdentity = async (identity: LinkedIdentity) => {
+    const confirmed = await confirm({
+      title: t("security.identities.unlinkTitle", { name: identity.name }),
+      description: t("security.identities.unlinkDetail"),
+      confirmLabel: t("security.identities.unlink"),
+      danger: true,
+      icon: "link",
+    });
+    if (confirmed) onUnlinkIdentity(identity);
   };
 
   const regenerate = async () => {
@@ -207,6 +233,55 @@ export function AccountSecuritySections({
           )}
         </div>
       </section>
+
+      {security !== null && (security.identityProviders.length > 0 || security.identities.length > 0) ? (
+        <section className="sc acc-security">
+          <header className="sc-h">
+            <span className="sc-ico" aria-hidden="true">
+              <Icon name="link" size={17} />
+            </span>
+            {t("security.identities.title")}
+          </header>
+          <div className="sc-b acc-security-list">
+            {security.identities.length === 0 ? (
+              <p className="acc-security-item acc-security-empty">{t("security.identities.empty")}</p>
+            ) : (
+              security.identities.map((identity) => (
+                <div className="acc-security-item" key={identity.id}>
+                  <div className="acc-security-summary">
+                    <span className="acc-security-copy">
+                      <b>{identity.name}</b>
+                      <small>{t("security.identities.linked", { date: date(identity.createdAt) })}</small>
+                    </span>
+                    <button
+                      type="button"
+                      className="btn-ghost sm"
+                      onClick={() => void unlinkIdentity(identity)}
+                      disabled={busy}
+                    >
+                      {t("security.identities.unlink")}
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+            {security.identityProviders
+              .filter((provider) => !security.identities.some((identity) => identity.providerId === provider.id))
+              .map((provider) => (
+                <div className="acc-security-item" key={provider.id}>
+                  <button
+                    type="button"
+                    className="btn-ghost sm"
+                    onClick={() => onLinkIdentity(provider)}
+                    disabled={busy}
+                  >
+                    {t("security.identities.link", { provider: provider.displayName })}
+                  </button>
+                </div>
+              ))}
+          </div>
+        </section>
+      ) : null}
 
       {security !== null && (security.trustedDevices.length > 0 || methods.length > 0) ? (
         <section className="sc acc-security">

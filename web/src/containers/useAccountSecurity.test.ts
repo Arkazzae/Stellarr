@@ -11,7 +11,10 @@ import { useAccountSecurity } from "./useAccountSecurity";
 const mocks = vi.hoisted(() => ({
   security: {} as AccountSecurityPort,
   challenge: {} as SignInChallengePort,
+  leaveFor: vi.fn(),
 }));
+
+vi.mock("@/lib/leaveFor", () => ({ leaveFor: mocks.leaveFor }));
 
 vi.mock("@/state/hooks", () => ({
   usePorts: () => ({
@@ -46,6 +49,8 @@ const state = (overrides: Partial<AccountSecurity> = {}): AccountSecurity => ({
   recentEvents: [],
   trustedDeviceDays: 14,
   passkeyAvailable: false,
+  identities: [],
+  identityProviders: [],
   emailCodeAvailable: false,
   ...overrides,
 });
@@ -73,6 +78,8 @@ beforeEach(() => {
     listSessions: vi.fn(async () => []),
     revokeSession: vi.fn(async () => {}),
     revokeOtherSessions: vi.fn(async () => {}),
+    startIdentityLink: vi.fn(async () => "/api/auth/oidc/link?ticket=t"),
+    removeIdentity: vi.fn(async () => {}),
   };
   mocks.challenge = {
     pending: vi.fn(async () => null),
@@ -141,6 +148,36 @@ describe("useAccountSecurity", () => {
 
     await waitFor(() => expect(result.current.dialog.error).toBe(t("auth.passkey.cancelled")));
     expect(result.current.dialog.step?.kind).toBe("reverify");
+  });
+
+  it("links a provider only after a fresh proof, then leaves for it", async () => {
+    mocks.leaveFor.mockReset();
+    vi.mocked(mocks.security.startIdentityLink)
+      .mockRejectedValueOnce(forbidden())
+      .mockResolvedValueOnce("/api/auth/oidc/work/link?ticket=abc");
+    const { result } = await mounted();
+
+    act(() => result.current.sections.onLinkIdentity({ id: "work", displayName: "Work" }));
+    await waitFor(() => expect(result.current.dialog.step?.kind).toBe("reverify"));
+    expect(mocks.leaveFor).not.toHaveBeenCalled();
+    act(() => result.current.dialog.onVerify({ methodId: "m-app", code: "123456", rememberDevice: false }));
+
+    await waitFor(() => expect(mocks.leaveFor).toHaveBeenCalledExactlyOnceWith("/api/auth/oidc/work/link?ticket=abc"));
+    expect(mocks.security.startIdentityLink).toHaveBeenLastCalledWith("work", undefined);
+    expect(result.current.dialog.step).toBeNull();
+  });
+
+  it("unlinks a provider account and shows the state after it", async () => {
+    const { result } = await mounted();
+
+    act(() =>
+      result.current.sections.onUnlinkIdentity({ id: "i-1", name: "Work", createdAt: "2026-11-12T17:00:00Z" }),
+    );
+
+    await waitFor(() => expect(mocks.security.removeIdentity).toHaveBeenCalledExactlyOnceWith("i-1", undefined));
+    await waitFor(() => expect(result.current.sections.busy).toBe(false));
+    expect(result.current.sections.actionError).toBeNull();
+    expect(result.current.dialog.step).toBeNull();
   });
 
   it("asks for the password before the first method, and says so when it is wrong", async () => {

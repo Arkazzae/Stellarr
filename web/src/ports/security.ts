@@ -1,6 +1,13 @@
 import type { AccountSecurity, MfaChallenge, OwnSession } from "@/lib/api/types";
 
-export type { AccountSecurity, OwnSession, SecurityEvent, TrustedDevice } from "@/lib/api/types";
+export type {
+  AccountSecurity,
+  IdentityProvider,
+  LinkedIdentity,
+  OwnSession,
+  SecurityEvent,
+  TrustedDevice,
+} from "@/lib/api/types";
 
 /**
  * The signed-in account's second factor. A change to it needs proof: a recent
@@ -23,4 +30,11 @@ export interface AccountSecurityPort {
   /** Signs another device out at once, live connections included. */
   revokeSession(sessionId: string): Promise<void>;
   revokeOtherSessions(): Promise<void>;
+  /**
+   * The address that links the account to an identity provider. The browser
+   * goes there with a full page load; it comes back to /link-account.
+   */
+  startIdentityLink(providerId: string, password?: string): Promise<string>;
+  /** Stops an identity from signing in to this account. */
+  removeIdentity(identityId: string, password?: string): Promise<void>;
 }
