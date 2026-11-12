@@ -34,6 +34,8 @@ export interface LoginScreenProps {
    * identity provider's link carries it too.
    */
   keepSignedIn?: { checked: boolean; onChange: (checked: boolean) => void };
+  /** The identity providers of the web sign-in page, as links, one per provider. */
+  externalLogins?: { href: string; label: string }[];
   /** Signing in with a passkey alone, shown when given; the desktop app passes none. */
   passkeyLogin?: { label: string; onClick: () => void; pending?: boolean };
 }
@@ -51,6 +53,7 @@ export function LoginScreen({
   externalError = null,
   keepSignedIn,
   passkeyLogin,
+  externalLogins = [],
 }: LoginScreenProps) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -98,7 +101,7 @@ export function LoginScreen({
         </p>
       ) : (
         <>
-          {externalLogin || passkeyLogin ? (
+          {externalLogin || passkeyLogin || externalLogins.length > 0 ? (
             <div className={styles.externalBlock}>
               {passkeyLogin ? (
                 <button
@@ -124,6 +127,11 @@ export function LoginScreen({
                   {externalLogin.label}
                 </a>
               )}
+              {externalLogins.map((login) => (
+                <a key={login.href} className={styles.externalLogin} href={login.href}>
+                  {login.label}
+                </a>
+              ))}
               <div className={styles.separator} aria-hidden="true">
                 <span>{t("auth.login.orPassword")}</span>
               </div>

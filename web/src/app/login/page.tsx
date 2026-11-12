@@ -18,14 +18,40 @@ import { useLanguage, usePorts, useSession } from "@/state/hooks";
 interface OidcConfiguration {
   enabled?: boolean;
   displayName?: string;
+  providers?: { displayName?: unknown; loginUrl?: unknown }[];
 }
 
-/** The external identity provider the instance offers, or null when sign-in is by password only. */
-async function fetchExternalProvider(signal: AbortSignal): Promise<{ displayName: string } | null> {
+interface ExternalProvider {
+  displayName: string;
+  loginUrl: string;
+}
+
+const ORIGINAL_LOGIN = "/api/auth/oidc/login";
+
+/**
+ * The identity providers the instance offers, none when sign-in is by
+ * password only. A server from before several providers names one, which
+ * signs in at the original address. Only addresses of this server's own
+ * sign-in routes are followed.
+ */
+async function fetchExternalProviders(signal: AbortSignal): Promise<ExternalProvider[]> {
   const response = await fetch("/api/auth/oidc", { credentials: "include", signal });
-  if (!response.ok) return null;
+  if (!response.ok) return [];
   const configuration = (await response.json()) as OidcConfiguration;
-  return configuration.enabled ? { displayName: configuration.displayName?.trim() ?? "" } : null;
+  if (!configuration.enabled) return [];
+  const listed = (Array.isArray(configuration.providers) ? configuration.providers : []).flatMap((provider) =>
+    typeof provider.loginUrl === "string" && /^\/api\/auth\/oidc\/([a-z0-9-]+\/)?login$/.test(provider.loginUrl)
+      ? [
+          {
+            displayName: typeof provider.displayName === "string" ? provider.displayName.trim() : "",
+            loginUrl: provider.loginUrl,
+          },
+        ]
+      : [],
+  );
+  return listed.length > 0
+    ? listed
+    : [{ displayName: configuration.displayName?.trim() ?? "", loginUrl: ORIGINAL_LOGIN }];
 }
 
 export default function LoginPage() {
@@ -34,7 +60,7 @@ export default function LoginPage() {
   const params = useSearchParams();
   const oidcError = params.get("oidc_error");
   const returnPath = safeReturnPath(params.get("returnUrl"));
-  const [provider, setProvider] = useState<{ displayName: string } | null>(null);
+  const [providers, setProviders] = useState<ExternalProvider[]>([]);
   const ports = usePorts();
   const [passkeyOffered, setPasskeyOffered] = useState(false);
   const confirm = params.get("confirm") === "1";
@@ -53,7 +79,7 @@ export default function LoginPage() {
   useEffect(() => {
     const controller = new AbortController();
     // The password form still works when the provider cannot be reached.
-    fetchExternalProvider(controller.signal).then(setProvider, () => undefined);
+    fetchExternalProviders(controller.signal).then(setProviders, () => undefined);
     return () => controller.abort();
   }, []);
 
@@ -173,18 +199,14 @@ export default function LoginPage() {
         step.kind === "done" ||
         (confirm && phase === "ready" && flow.error === null)
       }
-      externalLogin={
-        provider === null
-          ? undefined
-          : {
-              href: `/api/auth/oidc/login?returnUrl=${encodeURIComponent(returnPath ?? "/")}${
-                keepSignedIn ? "" : "&keepSignedIn=false"
-              }`,
-              label: t("auth.login.oidc", {
-                provider: provider.displayName || t("auth.login.oidcProvider"),
-              }),
-            }
-      }
+      externalLogins={providers.map((provider) => ({
+        href: `${provider.loginUrl}?returnUrl=${encodeURIComponent(returnPath ?? "/")}${
+          keepSignedIn ? "" : "&keepSignedIn=false"
+        }`,
+        label: t("auth.login.oidc", {
+          provider: provider.displayName || t("auth.login.oidcProvider"),
+        }),
+      }))}
       externalError={externalError}
     />
   );

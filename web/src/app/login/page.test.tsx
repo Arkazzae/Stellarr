@@ -264,6 +264,33 @@ describe("LoginPage", () => {
     );
   });
 
+  it("offers every provider the instance lists, each at its own address", async () => {
+    answerOidc(
+      configuration({
+        enabled: true,
+        displayName: "Keycloak",
+        providers: [
+          { id: "default", displayName: "Keycloak", loginUrl: "/api/auth/oidc/login" },
+          { id: "work", displayName: "Work", loginUrl: "/api/auth/oidc/work/login" },
+          // Not one of this server's routes: never offered.
+          { id: "evil", displayName: "Evil", loginUrl: "https://evil.example/login" },
+        ],
+      }),
+    );
+
+    render(<LoginPage />);
+
+    expect(await screen.findByRole("link", { name: "Zaloguj przez Work" })).toHaveAttribute(
+      "href",
+      "/api/auth/oidc/work/login?returnUrl=%2F",
+    );
+    expect(screen.getByRole("link", { name: "Zaloguj przez Keycloak" })).toHaveAttribute(
+      "href",
+      "/api/auth/oidc/login?returnUrl=%2F",
+    );
+    expect(screen.queryByRole("link", { name: "Zaloguj przez Evil" })).toBeNull();
+  });
+
   it("falls back to a generic provider name when the instance gives none", async () => {
     answerOidc(configuration({ enabled: true, displayName: "  " }));
 
