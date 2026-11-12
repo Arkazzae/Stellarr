@@ -23,7 +23,7 @@ import type {
   TrustedDevice,
 } from "./types";
 
-const METHOD_TYPES: readonly MfaMethodType[] = ["totp", "email"];
+const METHOD_TYPES: readonly MfaMethodType[] = ["totp", "email", "passkey"];
 const PURPOSES: readonly MfaPurpose[] = ["mfa", "enrollment", "recovery", "reverify"];
 
 function oneOf<T extends string>(
@@ -72,6 +72,7 @@ export function parseMfaChallenge(value: unknown, path: string): MfaChallenge {
     trustedDeviceAvailable: expectBoolean(record, "trustedDeviceAvailable", path),
     emailCodeAvailable: expectBoolean(record, "emailCodeAvailable", path),
     trustedDeviceDays: expectSafeInteger(record, "trustedDeviceDays", path),
+    passkeyAvailable: record["passkeyAvailable"] === true,
   };
 }
 
@@ -182,6 +183,7 @@ export function parseAccountSecurity(value: unknown, path: string): AccountSecur
     ),
     trustedDeviceDays: expectSafeInteger(record, "trustedDeviceDays", path),
     emailCodeAvailable: expectBoolean(record, "emailCodeAvailable", path),
+    passkeyAvailable: record["passkeyAvailable"] === true,
   };
 }
 

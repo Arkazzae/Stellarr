@@ -33,6 +33,7 @@ const SECURITY: AccountSecurity = {
     { id: "e-2", kind: "something-new", detail: "", ipAddress: "127.0.0.1", device: "curl/8.7.1", createdAt: "2026-11-12T17:01:00Z" },
   ],
   trustedDeviceDays: 14,
+  passkeyAvailable: false,
   emailCodeAvailable: false,
 };
 

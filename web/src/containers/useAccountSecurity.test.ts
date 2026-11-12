@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { translateMessage, type MessageKey, type MessageValues } from "@/i18n";
 import { ApiError } from "@/lib/api/errors";
+import { PasskeyCancelledError } from "@/lib/webauthn";
 import type { AccountSecurity, AccountSecurityPort, MfaChallenge, SignInChallengePort } from "@/ports";
 
 import { useAccountSecurity } from "./useAccountSecurity";
@@ -13,7 +14,10 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/state/hooks", () => ({
-  usePorts: () => ({ security: mocks.security, session: { challenge: mocks.challenge } }),
+  usePorts: () => ({
+    security: mocks.security,
+    session: { challenge: mocks.challenge, passkeysSupported: () => false },
+  }),
   useLanguage: () => ({
     t: (key: MessageKey, values?: MessageValues) => translateMessage("pl", key, values),
   }),
@@ -41,6 +45,7 @@ const state = (overrides: Partial<AccountSecurity> = {}): AccountSecurity => ({
   trustedDevices: [],
   recentEvents: [],
   trustedDeviceDays: 14,
+  passkeyAvailable: false,
   emailCodeAvailable: false,
   ...overrides,
 });
@@ -54,6 +59,7 @@ const challenge = (purpose: MfaChallenge["purpose"]): MfaChallenge => ({
   trustedDeviceAvailable: false,
   emailCodeAvailable: false,
   trustedDeviceDays: 14,
+  passkeyAvailable: false,
 });
 
 beforeEach(() => {
@@ -78,6 +84,8 @@ beforeEach(() => {
     startEmail: vi.fn(async () => ({ retryAfterSeconds: 45 })),
     confirmEmail: vi.fn(async () => ({ user: MAJA })),
     redeemRecovery: vi.fn(async () => challenge("recovery")),
+    answerWithPasskey: vi.fn(async () => ({ user: MAJA })),
+    createPasskey: vi.fn(async () => ({ user: MAJA })),
   };
 });
 
@@ -107,6 +115,32 @@ describe("useAccountSecurity", () => {
     });
     expect(mocks.security.startEnrollment).toHaveBeenCalledTimes(2);
     await waitFor(() => expect(mocks.challenge.startTotp).toHaveBeenCalledWith("c-enrollment", expect.any(String)));
+  });
+
+  it("takes a passkey as the fresh proof, without trusting the device, then opens the setup", async () => {
+    vi.mocked(mocks.security.startEnrollment).mockRejectedValueOnce(forbidden());
+    const { result } = await mounted();
+
+    act(() => result.current.sections.onAddMethod());
+    await waitFor(() => expect(result.current.dialog.step?.kind).toBe("reverify"));
+    act(() => result.current.dialog.onAnswerWithPasskey());
+
+    await waitFor(() => expect(result.current.dialog.step?.kind).toBe("enroll"));
+    expect(mocks.challenge.answerWithPasskey).toHaveBeenCalledExactlyOnceWith({ challengeId: "c-reverify" });
+    expect(mocks.security.startEnrollment).toHaveBeenCalledTimes(2);
+  });
+
+  it("says a closed passkey prompt was not used and keeps the proof step open", async () => {
+    vi.mocked(mocks.security.startEnrollment).mockRejectedValueOnce(forbidden());
+    vi.mocked(mocks.challenge.answerWithPasskey).mockRejectedValueOnce(new PasskeyCancelledError());
+    const { result } = await mounted();
+
+    act(() => result.current.sections.onAddMethod());
+    await waitFor(() => expect(result.current.dialog.step?.kind).toBe("reverify"));
+    act(() => result.current.dialog.onAnswerWithPasskey());
+
+    await waitFor(() => expect(result.current.dialog.error).toBe(t("auth.passkey.cancelled")));
+    expect(result.current.dialog.step?.kind).toBe("reverify");
   });
 
   it("asks for the password before the first method, and says so when it is wrong", async () => {

@@ -16,6 +16,7 @@ import {
 import { isUnauthorized } from "@/lib/api/errors";
 import type { Bootstrap, RtcConfig } from "@/lib/api/types";
 import { iceServers } from "@/lib/env";
+import { createPasskey, getPasskey, passkeysSupported } from "@/lib/webauthn";
 import { SignalRRealtimeClient } from "@/lib/realtime/signalr";
 import type { RealtimeClient } from "@/lib/realtime/types";
 import { RuntimeIceProvider } from "@/lib/voice/iceSession";
@@ -170,6 +171,12 @@ export function createRuntime(options: RuntimeOptions = {}): Runtime {
       resetPassword: (token, newPassword) => api.resetPassword(token, newPassword),
       logout: () => api.logout(),
       check: async () => (await api.session()) !== null,
+      passkeysSupported: () => passkeysSupported(),
+      passkeySignInAvailable: () => api.passkeySignInAvailable(),
+      signInWithPasskey: async ({ keepSignedIn }) => {
+        const response = await getPasskey(await api.passkeySignInOptions());
+        return api.signInWithPasskey({ response, ...(keepSignedIn === false ? { keepSignedIn } : {}) });
+      },
       challenge: {
         async pending() {
           try {
@@ -188,6 +195,19 @@ export function createRuntime(options: RuntimeOptions = {}): Runtime {
         startEmail: (challengeId, name) => api.startEmailEnrollment(challengeId, name),
         confirmEmail: (input) => api.confirmEmailEnrollment(input),
         redeemRecovery: (credential, keepSignedIn) => api.redeemRecoveryCredential(credential, keepSignedIn),
+        answerWithPasskey: async ({ challengeId, rememberDevice }) => {
+          const response = await getPasskey(await api.passkeyChallengeOptions(challengeId));
+          return api.verifyPasskey({ challengeId, response, ...(rememberDevice ? { rememberDevice } : {}) });
+        },
+        createPasskey: async ({ challengeId, name, rememberDevice }) => {
+          const response = await createPasskey(await api.startPasskeyEnrollment(challengeId));
+          return api.confirmPasskeyEnrollment({
+            challengeId,
+            name,
+            response,
+            ...(rememberDevice ? { rememberDevice } : {}),
+          });
+        },
       },
     },
     account,

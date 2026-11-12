@@ -1,11 +1,12 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import type { EnrollMode } from "@/components/auth/MfaEnrollStep";
 import type { SecurityDialogStep } from "@/components/account/panes/SecurityStepDialog";
 import type { MessageKey } from "@/i18n";
 import { ApiError } from "@/lib/api/errors";
+import { PasskeyCancelledError } from "@/lib/webauthn";
 import type {
   AccountSecurity,
   MfaChallenge,
@@ -27,7 +28,10 @@ type Change =
 const NAME_KEY: Record<EnrollMode, MessageKey> = {
   totp: "auth.enroll.totpName",
   email: "auth.enroll.emailName",
+  passkey: "auth.enroll.passkeyName",
 };
+
+const noSubscription = () => () => undefined;
 
 const isForbidden = (cause: unknown) => cause instanceof ApiError && cause.status === 403;
 
@@ -52,6 +56,11 @@ export function useAccountSecurity(open: boolean) {
   const [error, setError] = useState<string | null>(null);
   const [emailWait, setEmailWait] = useState<number | null>(null);
   const change = useRef<Change | null>(null);
+  const passkeysSupported = useSyncExternalStore(
+    noSubscription,
+    () => ports.session.passkeysSupported(),
+    () => false,
+  );
 
   const refresh = useCallback(async () => {
     try {
@@ -193,6 +202,16 @@ export function useAccountSecurity(open: boolean) {
     }
   };
 
+  /** A closed prompt is not a wrong key; a refusal by the server is. */
+  const passkeyMessage = (cause: unknown) =>
+    cause instanceof PasskeyCancelledError
+      ? t("auth.passkey.cancelled")
+      : cause instanceof ApiError && cause.status === 401
+        ? t("auth.passkey.rejected")
+        : cause instanceof ApiError && cause.status === 409
+          ? t("auth.passkey.unavailable")
+          : challengeErrorMessage(cause, t, t("security.actionFailed"));
+
   const completed = async (completion: MfaCompletion, afterProof: boolean) => {
     if (afterProof) {
       // The proof is fresh now; the change it was for goes through.
@@ -321,6 +340,37 @@ export function useAccountSecurity(open: boolean) {
                 ? t("auth.mfa.codeInvalid")
                 : challengeErrorMessage(cause, t, t("security.actionFailed")),
             );
+          }
+        });
+      },
+      passkeysSupported,
+      onAnswerWithPasskey: () => {
+        if (step?.kind !== "reverify") return;
+        const { challengeId } = step.challenge;
+        void runStep(async () => {
+          try {
+            // A proof before a change never trusts the device.
+            await completed(await challenges.answerWithPasskey({ challengeId }), true);
+          } catch (cause) {
+            setError(passkeyMessage(cause));
+          }
+        });
+      },
+      onCreatePasskey: ({ rememberDevice, name }: { rememberDevice: boolean; name?: string }) => {
+        if (step?.kind !== "enroll") return;
+        const { challengeId } = step.challenge;
+        void runStep(async () => {
+          try {
+            await completed(
+              await challenges.createPasskey({
+                challengeId,
+                name: name ?? t(NAME_KEY.passkey),
+                rememberDevice,
+              }),
+              false,
+            );
+          } catch (cause) {
+            setError(passkeyMessage(cause));
           }
         });
       },

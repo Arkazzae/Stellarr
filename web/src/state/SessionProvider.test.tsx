@@ -218,6 +218,7 @@ describe("SessionProvider login", () => {
           trustedDeviceAvailable: false,
           emailCodeAvailable: false,
           trustedDeviceDays: 14,
+          passkeyAvailable: false,
         },
       })),
     });

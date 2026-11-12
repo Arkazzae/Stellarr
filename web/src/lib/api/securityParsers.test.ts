@@ -42,7 +42,8 @@ const SIGN_IN_CHALLENGE = {
   ],
   "trustedDeviceAvailable": false,
   "emailCodeAvailable": false,
-  "trustedDeviceDays": 14
+  "trustedDeviceDays": 14,
+  "passkeyAvailable": true
 };
 
 const ENROLLMENT = {
@@ -182,6 +183,7 @@ describe("parseAuthResult", () => {
         trustedDeviceAvailable: false,
         emailCodeAvailable: false,
         trustedDeviceDays: 14,
+        passkeyAvailable: true,
       },
     });
   });

@@ -13,7 +13,7 @@ import { LoginScreen } from "@/components/login/LoginScreen";
 import { useSignInFlow } from "@/containers/useSignInFlow";
 import { useRedirectWhenSignedIn } from "@/hooks/useRedirectWhenSignedIn";
 import { safeReturnPath } from "@/lib/returnPath";
-import { useLanguage, useSession } from "@/state/hooks";
+import { useLanguage, usePorts, useSession } from "@/state/hooks";
 
 interface OidcConfiguration {
   enabled?: boolean;
@@ -35,6 +35,8 @@ export default function LoginPage() {
   const oidcError = params.get("oidc_error");
   const returnPath = safeReturnPath(params.get("returnUrl"));
   const [provider, setProvider] = useState<{ displayName: string } | null>(null);
+  const ports = usePorts();
+  const [passkeyOffered, setPasskeyOffered] = useState(false);
   const confirm = params.get("confirm") === "1";
   // A recovery after the identity provider says which choice it left with.
   const [keepSignedIn, setKeepSignedIn] = useState(params.get("keep_signed_in") !== "0");
@@ -54,6 +56,19 @@ export default function LoginPage() {
     fetchExternalProvider(controller.signal).then(setProvider, () => undefined);
     return () => controller.abort();
   }, []);
+
+  useEffect(() => {
+    if (!flow.passkeysSupported) return;
+    let active = true;
+    // Offered only when the server can check passkeys; the password form stays either way.
+    ports.session.passkeySignInAvailable().then(
+      (available) => active && setPasskeyOffered(available),
+      () => undefined,
+    );
+    return () => {
+      active = false;
+    };
+  }, [flow.passkeysSupported, ports]);
 
   const externalError =
     oidcError === "not_linked"
@@ -76,6 +91,8 @@ export default function LoginPage() {
         onCancel={flow.cancel}
         // A trusted device cannot stand in for a fresh second step.
         offerTrust={step.challenge.purpose !== "reverify"}
+        passkeysSupported={flow.passkeysSupported}
+        onUsePasskey={flow.answerWithPasskey}
       />
     );
   }
@@ -109,6 +126,8 @@ export default function LoginPage() {
         onSendEmailCode={flow.sendEnrollEmailCode}
         onConfirm={flow.confirmEnrollment}
         onCancel={flow.cancel}
+        passkeysSupported={flow.passkeysSupported}
+        onCreatePasskey={flow.createPasskey}
       />
     );
   }
@@ -137,6 +156,15 @@ export default function LoginPage() {
       // on this page.
       onSubmit={(username, password) => void flow.submitPassword(username, password, keepSignedIn)}
       keepSignedIn={{ checked: keepSignedIn, onChange: setKeepSignedIn }}
+      passkeyLogin={
+        passkeyOffered
+          ? {
+              label: t("auth.login.passkey"),
+              onClick: () => flow.signInWithPasskey(keepSignedIn),
+              pending: flow.pending,
+            }
+          : undefined
+      }
       pending={loginPending}
       error={flow.error ?? loginError}
       checking={

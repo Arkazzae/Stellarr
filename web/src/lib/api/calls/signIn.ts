@@ -1,11 +1,13 @@
 import type { ApiClient } from "../client";
 import { ApiError, statusToKind } from "../errors";
 import {
+  parseAuthResult,
   parseEmailCodeSent,
   parseMfaChallenge,
   parseMfaCompletion,
   parseMfaEnrollment,
 } from "../securityParsers";
+import { expectRecord } from "../expect";
 import { JSON_HEADERS, readJson, request } from "../transport";
 import { getJson, sendJson, sendVoid } from "./http";
 
@@ -43,7 +45,17 @@ type SignInCalls = Pick<
   | "startEmailEnrollment"
   | "confirmEmailEnrollment"
   | "redeemRecoveryCredential"
+  | "passkeyChallengeOptions"
+  | "verifyPasskey"
+  | "startPasskeyEnrollment"
+  | "confirmPasskeyEnrollment"
+  | "passkeySignInAvailable"
+  | "passkeySignInOptions"
+  | "signInWithPasskey"
 >;
+
+/** Options go to the browser as they came; only the browser reads them. */
+const passkeyOptions = (value: unknown, path: string) => expectRecord(value, path);
 
 /**
  * The second half of a sign-in. Each call names the challenge by id; the
@@ -90,6 +102,33 @@ export function signInCalls(): SignInCalls {
         "/api/auth/recovery/redeem",
         { credential, ...(keepSignedIn === false ? { keepSignedIn: false } : {}) },
         parseMfaChallenge,
+        signal,
+      ),
+
+    passkeyChallengeOptions: (challengeId, signal) =>
+      sendJson("POST", "/api/auth/mfa/passkey/options", { challengeId }, passkeyOptions, signal),
+
+    verifyPasskey: (input, signal) =>
+      sendJson("POST", "/api/auth/mfa/passkey/verify", input, parseMfaCompletion, signal),
+
+    startPasskeyEnrollment: (challengeId, signal) =>
+      sendJson("POST", "/api/auth/mfa/enroll/passkey/start", { challengeId }, passkeyOptions, signal),
+
+    confirmPasskeyEnrollment: (input, signal) =>
+      sendJson("POST", "/api/auth/mfa/enroll/passkey/confirm", input, parseMfaCompletion, signal),
+
+    passkeySignInAvailable: async (signal) =>
+      (await getJson("/api/auth/passkey", passkeyOptions, signal))["available"] === true,
+
+    passkeySignInOptions: (signal) =>
+      sendJson("POST", "/api/auth/passkey/options", {}, passkeyOptions, signal),
+
+    signInWithPasskey: (input, signal) =>
+      sendJson(
+        "POST",
+        "/api/auth/passkey/login",
+        { response: input.response, ...(input.keepSignedIn === false ? { keepSignedIn: false } : {}) },
+        parseAuthResult,
         signal,
       ),
   };

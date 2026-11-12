@@ -92,6 +92,13 @@ export function fakeApi(overrides: Partial<ApiClient> = {}): ApiClient {
     redeemRecoveryCredential: vi.fn(async () => {
       throw new ApiError("unauthorized", "The credential is not valid.", 401);
     }),
+    passkeyChallengeOptions: vi.fn(async () => ({})),
+    verifyPasskey: vi.fn(async () => ({ user: SELF })),
+    startPasskeyEnrollment: vi.fn(async () => ({})),
+    confirmPasskeyEnrollment: vi.fn(async () => ({ user: SELF })),
+    passkeySignInAvailable: vi.fn(async () => false),
+    passkeySignInOptions: vi.fn(async () => ({})),
+    signInWithPasskey: vi.fn(async () => ({ kind: "signed-in" as const, user: SELF })),
     getAccountSecurity: vi.fn(async () => ({
       requirement: "optional",
       mfaRequired: false,
@@ -102,6 +109,7 @@ export function fakeApi(overrides: Partial<ApiClient> = {}): ApiClient {
       recentEvents: [],
       trustedDeviceDays: 14,
       emailCodeAvailable: false,
+      passkeyAvailable: false,
     })),
     listSecurityEvents: vi.fn(async () => []),
     startMfaEnrollment: vi.fn(async () => {

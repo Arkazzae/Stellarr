@@ -9,7 +9,7 @@ import type { MfaChallenge, MfaEnrollment } from "@/ports";
 
 import steps from "./SignInSteps.module.css";
 
-export type EnrollMode = "totp" | "email";
+export type EnrollMode = "totp" | "email" | "passkey";
 
 export interface MfaEnrollStepProps {
   challenge: MfaChallenge;
@@ -32,6 +32,12 @@ export interface MfaEnrollStepProps {
   /** Added by choice from the account settings rather than required at sign-in. */
   voluntary?: boolean;
   cancelLabel?: string;
+  /**
+   * Creates a passkey; the browser asks where to keep it. Offered only when
+   * this browser can use passkeys and the server can check them.
+   */
+  onCreatePasskey?(input: { rememberDevice: boolean; name?: string }): void;
+  passkeysSupported?: boolean;
 }
 
 /** "ABCD EFGH IJKL", which is easier to copy by eye than one long run. */
@@ -57,6 +63,8 @@ export function MfaEnrollStep({
   frame: Frame = AuthFrame,
   voluntary = false,
   cancelLabel,
+  onCreatePasskey,
+  passkeysSupported = false,
 }: MfaEnrollStepProps) {
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
@@ -68,6 +76,7 @@ export function MfaEnrollStep({
   const message = localError ?? error;
   const recovery = challenge.purpose === "recovery";
   const secret = enrollment?.type === "totp" ? enrollment.secret : undefined;
+  const passkey = onCreatePasskey !== undefined && passkeysSupported && challenge.passkeyAvailable;
 
   useEffect(() => {
     if (error) codeRef.current?.focus();
@@ -86,6 +95,14 @@ export function MfaEnrollStep({
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (pending) return;
+    if (mode === "passkey") {
+      setLocalError(null);
+      onCreatePasskey?.({
+        rememberDevice: remember,
+        ...(name.trim() === "" ? {} : { name: name.trim() }),
+      });
+      return;
+    }
     const typed = code.replace(/\s+/g, "");
     if (!typed) {
       setLocalError(t("auth.mfa.codeMissing"));
@@ -108,7 +125,8 @@ export function MfaEnrollStep({
   };
 
   const fieldState = { invalid: Boolean(message), errorId: message ? errorId : undefined };
-  const ready = mode === "email" ? emailRetryAfter !== null : secret !== undefined;
+  const ready =
+    mode === "passkey" || (mode === "email" ? emailRetryAfter !== null : secret !== undefined);
 
   return (
     <Frame
@@ -152,6 +170,8 @@ export function MfaEnrollStep({
               </div>
             </>
           )
+        ) : mode === "passkey" ? (
+          <p className={steps.note}>{t("auth.enroll.passkeyDescription")}</p>
         ) : (
           <>
             <p className={steps.note}>{t("auth.enroll.emailDescription")}</p>
@@ -185,21 +205,23 @@ export function MfaEnrollStep({
                 disabled={pending}
               />
             ) : null}
-            <AuthField
-              ref={codeRef}
-              label={t("auth.mfa.code")}
-              hint={mode === "totp" ? t("auth.enroll.codeHint") : t("auth.mfa.emailSent")}
-              name="code"
-              type="text"
-              inputMode="numeric"
-              autoComplete="one-time-code"
-              spellCheck={false}
-              maxLength={8}
-              value={code}
-              onChange={(event) => setCode(event.target.value)}
-              disabled={pending}
-              {...fieldState}
-            />
+            {mode === "passkey" ? null : (
+              <AuthField
+                ref={codeRef}
+                label={t("auth.mfa.code")}
+                hint={mode === "totp" ? t("auth.enroll.codeHint") : t("auth.mfa.emailSent")}
+                name="code"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                spellCheck={false}
+                maxLength={8}
+                value={code}
+                onChange={(event) => setCode(event.target.value)}
+                disabled={pending}
+                {...fieldState}
+              />
+            )}
 
             <label className={styles.check}>
               <input
@@ -221,21 +243,31 @@ export function MfaEnrollStep({
 
         {ready ? (
           <button type="submit" className={styles.submit} disabled={pending}>
-            {pending ? t("auth.mfa.pending") : t("auth.enroll.confirm")}
+            {pending
+              ? t("auth.mfa.pending")
+              : mode === "passkey"
+                ? t("auth.enroll.createPasskey")
+                : t("auth.enroll.confirm")}
           </button>
         ) : null}
       </form>
 
       <nav className={styles.links} aria-label={t("auth.mfa.otherWays")}>
-        {mode === "totp" ? (
-          <button type="button" className={styles.textLink} onClick={() => switchTo("email")}>
-            {t("auth.enroll.useEmail")}
+        {mode !== "passkey" && passkey ? (
+          <button type="button" className={styles.textLink} onClick={() => switchTo("passkey")}>
+            {t("auth.enroll.usePasskey")}
           </button>
-        ) : (
+        ) : null}
+        {mode !== "totp" ? (
           <button type="button" className={styles.textLink} onClick={() => switchTo("totp")}>
             {t("auth.enroll.useTotp")}
           </button>
-        )}
+        ) : null}
+        {mode !== "email" ? (
+          <button type="button" className={styles.textLink} onClick={() => switchTo("email")}>
+            {t("auth.enroll.useEmail")}
+          </button>
+        ) : null}
         <button type="button" className={styles.textLink} onClick={onCancel}>
           {cancelLabel ?? t("auth.mfa.cancel")}
         </button>

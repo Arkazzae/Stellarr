@@ -111,6 +111,25 @@ export interface ApiClient {
   ): Promise<MfaCompletion>;
   /** Trades an operator's one-time recovery credential for a replacement-enrollment challenge. */
   redeemRecoveryCredential(credential: string, keepSignedIn?: boolean, signal?: AbortSignal): Promise<MfaChallenge>;
+  /** The server's options for answering a pending second step with a passkey. */
+  passkeyChallengeOptions(challengeId: string, signal?: AbortSignal): Promise<Record<string, unknown>>;
+  verifyPasskey(
+    input: { challengeId: string; response: Record<string, unknown>; rememberDevice?: boolean },
+    signal?: AbortSignal,
+  ): Promise<MfaCompletion>;
+  /** The server's options for creating a passkey during a setup. */
+  startPasskeyEnrollment(challengeId: string, signal?: AbortSignal): Promise<Record<string, unknown>>;
+  confirmPasskeyEnrollment(
+    input: { challengeId: string; name: string; response: Record<string, unknown>; rememberDevice?: boolean },
+    signal?: AbortSignal,
+  ): Promise<MfaCompletion>;
+  /** Whether the server offers signing in with a passkey alone. */
+  passkeySignInAvailable(signal?: AbortSignal): Promise<boolean>;
+  passkeySignInOptions(signal?: AbortSignal): Promise<Record<string, unknown>>;
+  signInWithPasskey(
+    input: { response: Record<string, unknown>; keepSignedIn?: boolean },
+    signal?: AbortSignal,
+  ): Promise<AuthResult>;
   getAccountSecurity(signal?: AbortSignal): Promise<AccountSecurity>;
   listSecurityEvents(signal?: AbortSignal): Promise<SecurityEvent[]>;
   /**

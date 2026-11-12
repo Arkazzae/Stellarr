@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { translateMessage, type MessageKey, type MessageValues } from "@/i18n";
 import { ApiError } from "@/lib/api/errors";
+import { PasskeyCancelledError } from "@/lib/webauthn";
 import type {
   AccountSecurity,
   AccountSecurityPort,
@@ -25,6 +26,12 @@ const mocks = vi.hoisted(() => ({
   },
   challenge: {} as SignInChallengePort,
   security: {} as AccountSecurityPort,
+  passkeys: {
+    supported: false,
+    available: vi.fn<() => Promise<boolean>>(),
+    signIn: vi.fn<(input: { keepSignedIn?: boolean }) => Promise<AuthResult>>(),
+  },
+  ports: {} as object,
   leaveFor: vi.fn(),
   router: { replace: vi.fn() },
   search: "",
@@ -37,7 +44,7 @@ vi.mock("next/navigation", () => ({
 vi.mock("@/lib/leaveFor", () => ({ leaveFor: mocks.leaveFor }));
 vi.mock("@/state/hooks", () => ({
   useSession: () => mocks.session,
-  usePorts: () => ({ session: { challenge: mocks.challenge }, security: mocks.security }),
+  usePorts: () => mocks.ports,
   useLanguage: () => ({
     t: (key: MessageKey, values?: MessageValues) => translateMessage("pl", key, values),
   }),
@@ -79,6 +86,7 @@ const CHALLENGE: MfaChallenge = {
   trustedDeviceAvailable: false,
   emailCodeAvailable: true,
   trustedDeviceDays: 14,
+  passkeyAvailable: false,
 };
 
 const MAJA = { id: "u-1", username: "maja", displayName: "Maja", presence: "online" as const };
@@ -101,6 +109,8 @@ function fakeChallengePort(overrides: Partial<SignInChallengePort> = {}): SignIn
     startEmail: vi.fn(async () => ({ retryAfterSeconds: 45 })),
     confirmEmail: vi.fn(async () => ({ user: MAJA })),
     redeemRecovery: vi.fn(async () => ({ ...CHALLENGE, enrollment: true, purpose: "recovery" as const, methods: [] })),
+    answerWithPasskey: vi.fn(async () => ({ user: MAJA })),
+    createPasskey: vi.fn(async () => ({ user: MAJA, recoveryCodes: ["AAAA-BBBB"] })),
     ...overrides,
   };
 }
@@ -114,6 +124,7 @@ const SECURE: AccountSecurity = {
   trustedDevices: [],
   recentEvents: [],
   trustedDeviceDays: 14,
+  passkeyAvailable: false,
   emailCodeAvailable: true,
 };
 
@@ -133,6 +144,24 @@ function fakeSecurityPort(overrides: Partial<AccountSecurityPort> = {}): Account
 }
 
 beforeEach(() => {
+  mocks.passkeys.supported = false;
+  mocks.passkeys.available = vi.fn(async () => false);
+  mocks.passkeys.signIn = vi.fn(async (): Promise<AuthResult> => ({ kind: "signed-in", user: MAJA }));
+  // One object for the whole render, as the app's runtime gives; tests swap
+  // the challenge and security ports, so those are read when used.
+  mocks.ports = {
+    session: {
+      get challenge() {
+        return mocks.challenge;
+      },
+      passkeysSupported: () => mocks.passkeys.supported,
+      passkeySignInAvailable: () => mocks.passkeys.available(),
+      signInWithPasskey: (input: { keepSignedIn?: boolean }) => mocks.passkeys.signIn(input),
+    },
+    get security() {
+      return mocks.security;
+    },
+  };
   mocks.session.phase = "anonymous";
   mocks.session.login = vi.fn(async (): Promise<AuthResult> => ({ kind: "signed-in", user: MAJA }));
   mocks.session.reload = vi.fn();
@@ -531,5 +560,141 @@ describe("LoginPage confirming a signed-in session", () => {
 
     expect(mocks.security.startEnrollment).toHaveBeenLastCalledWith("haslo123");
     expect(await screen.findByText("JBSW Y3DP EHPK 3PXP")).toBeVisible();
+  });
+
+});
+
+describe("LoginPage with passkeys", () => {
+  async function signInTo(result: AuthResult) {
+    const user = userEvent.setup();
+    mocks.session.login = vi.fn(async () => result);
+    render(<LoginPage />);
+    await user.type(await screen.findByRole("textbox", { name: "Login lub e-mail" }), "maja");
+    await user.type(screen.getByLabelText("Hasło"), "haslo123");
+    await user.click(screen.getByRole("button", { name: "Zaloguj się" }));
+    return user;
+  }
+
+  const PASSKEY = {
+    id: "m-key",
+    type: "passkey" as const,
+    name: "Laptop",
+    createdAt: "2026-11-12T17:07:30Z",
+    pending: false,
+  };
+
+  it("signs in with a passkey alone and keeps the session unless told not to", async () => {
+    mocks.passkeys.supported = true;
+    mocks.passkeys.available = vi.fn(async () => true);
+    const user = userEvent.setup();
+    render(<LoginPage />);
+
+    await user.click(await screen.findByRole("checkbox", { name: t("auth.login.keepSignedIn") }));
+    await user.click(await screen.findByRole("button", { name: t("auth.login.passkey") }));
+
+    expect(mocks.passkeys.signIn).toHaveBeenCalledExactlyOnceWith({ keepSignedIn: false });
+    await waitFor(() => expect(mocks.session.reload).toHaveBeenCalledOnce());
+    expect(mocks.session.login).not.toHaveBeenCalled();
+  });
+
+  it("offers no passkey sign-in in a browser without passkeys or on a server without them", async () => {
+    mocks.passkeys.available = vi.fn(async () => true);
+    const { unmount } = render(<LoginPage />);
+    await screen.findByRole("textbox", { name: "Login lub e-mail" });
+    expect(screen.queryByRole("button", { name: t("auth.login.passkey") })).toBeNull();
+    expect(mocks.passkeys.available).not.toHaveBeenCalled();
+    unmount();
+
+    mocks.passkeys.supported = true;
+    mocks.passkeys.available = vi.fn(async () => false);
+    render(<LoginPage />);
+    await waitFor(() => expect(mocks.passkeys.available).toHaveBeenCalled());
+    expect(screen.queryByRole("button", { name: t("auth.login.passkey") })).toBeNull();
+  });
+
+  it("says a closed passkey prompt was not used, not that it was wrong", async () => {
+    mocks.passkeys.supported = true;
+    mocks.passkeys.available = vi.fn(async () => true);
+    mocks.passkeys.signIn = vi.fn(async () => {
+      throw new PasskeyCancelledError();
+    });
+    const user = userEvent.setup();
+    render(<LoginPage />);
+
+    await user.click(await screen.findByRole("button", { name: t("auth.login.passkey") }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(t("auth.passkey.cancelled"));
+    expect(mocks.session.reload).not.toHaveBeenCalled();
+  });
+
+  it("opens the second step on the passkey and answers with it", async () => {
+    mocks.passkeys.supported = true;
+    const withKey = { ...CHALLENGE, methods: [...CHALLENGE.methods, PASSKEY] };
+    const user = await signInTo({ kind: "challenge", challenge: withKey });
+
+    expect(await screen.findByRole("heading", { name: t("auth.mfa.passkeyTitle") })).toBeVisible();
+    expect(screen.queryByRole("textbox", { name: t("auth.mfa.code") })).toBeNull();
+    await user.click(screen.getByRole("button", { name: t("auth.mfa.usePasskey") }));
+
+    expect(mocks.challenge.answerWithPasskey).toHaveBeenCalledExactlyOnceWith({
+      challengeId: CHALLENGE.challengeId,
+      rememberDevice: false,
+    });
+    await waitFor(() => expect(mocks.session.reload).toHaveBeenCalledOnce());
+  });
+
+  it("opens the second step on the app code when this browser has no passkeys", async () => {
+    const withKey = { ...CHALLENGE, methods: [...CHALLENGE.methods, PASSKEY] };
+    await signInTo({ kind: "challenge", challenge: withKey });
+
+    expect(await screen.findByRole("heading", { name: t("auth.mfa.totpTitle") })).toBeVisible();
+    expect(screen.queryByRole("button", { name: t("auth.mfa.usePasskey") })).toBeNull();
+  });
+
+  it("says a refused passkey was not accepted and stays on the step", async () => {
+    mocks.passkeys.supported = true;
+    mocks.challenge = fakeChallengePort({
+      answerWithPasskey: vi.fn(async () => {
+        throw new ApiError("unauthorized", "401", 401);
+      }),
+      pending: vi
+        .fn<SignInChallengePort["pending"]>()
+        .mockResolvedValueOnce(null)
+        .mockResolvedValue(CHALLENGE),
+    });
+    const withKey = { ...CHALLENGE, methods: [PASSKEY] };
+    const user = await signInTo({ kind: "challenge", challenge: withKey });
+
+    await user.click(await screen.findByRole("button", { name: t("auth.mfa.usePasskey") }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(t("auth.passkey.rejected"));
+    expect(screen.getByRole("heading", { name: t("auth.mfa.passkeyTitle") })).toBeVisible();
+  });
+
+  it("sets up a passkey as the first method when the server can check one", async () => {
+    mocks.passkeys.supported = true;
+    const enrollment = { ...CHALLENGE, enrollment: true, purpose: "enrollment" as const, methods: [], passkeyAvailable: true };
+    const user = await signInTo({ kind: "challenge", challenge: enrollment });
+
+    await user.click(await screen.findByRole("button", { name: t("auth.enroll.usePasskey") }));
+    expect(screen.getByText(t("auth.enroll.passkeyDescription"))).toBeVisible();
+    await user.click(screen.getByRole("button", { name: t("auth.enroll.createPasskey") }));
+
+    expect(mocks.challenge.createPasskey).toHaveBeenCalledExactlyOnceWith({
+      challengeId: CHALLENGE.challengeId,
+      name: t("auth.enroll.passkeyName"),
+      rememberDevice: false,
+    });
+    // The first method brings recovery codes, shown before the app loads.
+    expect(await screen.findByText("AAAA-BBBB")).toBeVisible();
+  });
+
+  it("does not offer a passkey setup when the server cannot check one", async () => {
+    mocks.passkeys.supported = true;
+    const enrollment = { ...CHALLENGE, enrollment: true, purpose: "enrollment" as const, methods: [] };
+    await signInTo({ kind: "challenge", challenge: enrollment });
+
+    await screen.findByText("JBSW Y3DP EHPK 3PXP");
+    expect(screen.queryByRole("button", { name: t("auth.enroll.usePasskey") })).toBeNull();
   });
 });

@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 
 import { ApiError } from "@/lib/api/errors";
 import { leaveFor } from "@/lib/leaveFor";
+import { PasskeyCancelledError } from "@/lib/webauthn";
 import type { MessageKey } from "@/i18n";
 import type { AuthResult, MfaChallenge, MfaCompletion, MfaEnrollment } from "@/ports";
 import { useLanguage, usePorts, useSession } from "@/state/hooks";
@@ -42,12 +43,23 @@ export interface SignInFlow {
   finishCodes(): void;
   confirmPassword(password: string): void;
   cancel(): void;
+  /** This browser can use passkeys; false until the page runs in one. */
+  passkeysSupported: boolean;
+  /** Answers the second step with a passkey. */
+  answerWithPasskey(rememberDevice: boolean): void;
+  /** Sets up a passkey as the method being added. */
+  createPasskey(input: { rememberDevice: boolean; name?: string }): void;
+  /** Signs in with a passkey alone, no password. */
+  signInWithPasskey(keepSignedIn: boolean): void;
 }
 
 const NAME_KEY: Record<EnrollMode, MessageKey> = {
   totp: "auth.enroll.totpName",
   email: "auth.enroll.emailName",
+  passkey: "auth.enroll.passkeyName",
 };
+
+const noSubscription = () => () => undefined;
 
 /**
  * Drives a sign-in from the password to a full session. Nothing boots until
@@ -88,6 +100,12 @@ export function useSignInFlow({
   const [now, setNow] = useState(() => Date.now());
   const resumed = useRef(false);
   const confirming = useRef(false);
+  // Known only in a browser; the server render says no and the page catches up.
+  const passkeysSupported = useSyncExternalStore(
+    noSubscription,
+    () => ports.session.passkeysSupported(),
+    () => false,
+  );
   const keep = useRef(keepSignedIn);
   const security = ports.security;
 
@@ -246,6 +264,22 @@ export function useSignInFlow({
 
   const currentChallenge = step.kind === "challenge" || step.kind === "enroll" ? step.challenge : null;
 
+  /** A closed prompt is not a wrong key; a refusal by the server is. */
+  const passkeyFailed = useCallback(
+    async (cause: unknown) => {
+      if (cause instanceof PasskeyCancelledError) {
+        setError(t("auth.passkey.cancelled"));
+        return;
+      }
+      if (cause instanceof ApiError && cause.status === 409) {
+        setError(t("auth.passkey.unavailable"));
+        return;
+      }
+      await fail(cause, "auth.passkey.rejected");
+    },
+    [fail, t],
+  );
+
   return {
     step,
     pending,
@@ -384,6 +418,53 @@ export function useSignInFlow({
               ? t("security.password.wrong")
               : challengeErrorMessage(cause, t, t("auth.mfa.failed")),
           );
+        }
+      });
+    },
+
+    passkeysSupported,
+
+    answerWithPasskey(rememberDevice) {
+      if (currentChallenge === null) return;
+      const { challengeId } = currentChallenge;
+      void run(async () => {
+        try {
+          complete(await challengePort.answerWithPasskey({ challengeId, rememberDevice }));
+        } catch (cause) {
+          await passkeyFailed(cause);
+        }
+      });
+    },
+
+    createPasskey({ rememberDevice, name }) {
+      if (step.kind !== "enroll") return;
+      const { challengeId } = step.challenge;
+      void run(async () => {
+        try {
+          complete(
+            await challengePort.createPasskey({
+              challengeId,
+              name: name ?? t(NAME_KEY.passkey),
+              rememberDevice,
+            }),
+          );
+        } catch (cause) {
+          await passkeyFailed(cause);
+        }
+      });
+    },
+
+    signInWithPasskey(keepSignedIn) {
+      void run(async () => {
+        try {
+          const result = await ports.session.signInWithPasskey(keepSignedIn ? {} : { keepSignedIn: false });
+          if (result.kind === "signed-in") reload();
+          else follow(result);
+        } catch (cause) {
+          if (cause instanceof PasskeyCancelledError) setError(t("auth.passkey.cancelled"));
+          else if (cause instanceof ApiError && cause.status === 401) setError(t("auth.passkey.rejected"));
+          else if (cause instanceof ApiError && cause.status === 409) setError(t("auth.passkey.unavailable"));
+          else setError(challengeErrorMessage(cause, t, t("auth.mfa.failed")));
         }
       });
     },

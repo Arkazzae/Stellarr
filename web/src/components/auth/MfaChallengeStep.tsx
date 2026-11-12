@@ -9,7 +9,7 @@ import type { MfaChallenge, MfaMethod } from "@/ports";
 
 import steps from "./SignInSteps.module.css";
 
-type Mode = "totp" | "email" | "recovery";
+type Mode = "passkey" | "totp" | "email" | "recovery";
 
 export interface MfaChallengeStepProps {
   challenge: MfaChallenge;
@@ -29,15 +29,22 @@ export interface MfaChallengeStepProps {
    */
   offerTrust?: boolean;
   cancelLabel?: string;
+  /**
+   * Answers with a passkey; the browser asks for it. Offered only when this
+   * browser can use passkeys and the account has one.
+   */
+  onUsePasskey?(rememberDevice: boolean): void;
+  passkeysSupported?: boolean;
 }
 
 const confirmed = (methods: readonly MfaMethod[], type: MfaMethod["type"]) =>
   methods.filter((method) => method.type === type && !method.pending);
 
 /**
- * The second step of a sign-in. It opens on the authenticator app when the
- * account has one, since that needs no round trip, and offers the email code
- * and a recovery code as the other ways in.
+ * The second step of a sign-in. It opens on a passkey when the account has
+ * one and the browser can use it, else on the authenticator app, which needs
+ * no round trip, and offers the email code and a recovery code as the other
+ * ways in.
  */
 export function MfaChallengeStep({
   challenge,
@@ -51,11 +58,17 @@ export function MfaChallengeStep({
   frame: Frame = AuthFrame,
   offerTrust = true,
   cancelLabel,
+  onUsePasskey,
+  passkeysSupported = false,
 }: MfaChallengeStepProps) {
   const apps = confirmed(challenge.methods, "totp");
   const emails = confirmed(challenge.methods, "email");
   const email = emails[0];
-  const [mode, setMode] = useState<Mode>(apps.length > 0 ? "totp" : email ? "email" : "recovery");
+  const passkey =
+    onUsePasskey !== undefined && passkeysSupported && confirmed(challenge.methods, "passkey").length > 0;
+  const [mode, setMode] = useState<Mode>(
+    passkey ? "passkey" : apps.length > 0 ? "totp" : email ? "email" : "recovery",
+  );
   const [appId, setAppId] = useState(apps[0]?.id);
   const [code, setCode] = useState("");
   const [remember, setRemember] = useState(false);
@@ -95,6 +108,11 @@ export function MfaChallengeStep({
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (pending) return;
+    if (mode === "passkey") {
+      setLocalError(null);
+      onUsePasskey?.(offerTrust && remember);
+      return;
+    }
     const typed = code.trim();
     if (!typed) {
       setLocalError(t("auth.mfa.codeMissing"));
@@ -109,18 +127,18 @@ export function MfaChallengeStep({
     });
   };
 
-  const title =
-    mode === "totp"
-      ? t("auth.mfa.totpTitle")
-      : mode === "email"
-        ? t("auth.mfa.emailTitle")
-        : t("auth.mfa.recoveryTitle");
-  const description =
-    mode === "totp"
-      ? t("auth.mfa.totpDescription")
-      : mode === "email"
-        ? t("auth.mfa.emailDescription", { address: email?.emailAddress ?? "" })
-        : t("auth.mfa.recoveryDescription");
+  const title = {
+    passkey: t("auth.mfa.passkeyTitle"),
+    totp: t("auth.mfa.totpTitle"),
+    email: t("auth.mfa.emailTitle"),
+    recovery: t("auth.mfa.recoveryTitle"),
+  }[mode];
+  const description = {
+    passkey: t("auth.mfa.passkeyDescription"),
+    totp: t("auth.mfa.totpDescription"),
+    email: t("auth.mfa.emailDescription", { address: email?.emailAddress ?? "" }),
+    recovery: t("auth.mfa.recoveryDescription"),
+  }[mode];
   const fieldState = { invalid: Boolean(message), errorId: message ? errorId : undefined };
 
   return (
@@ -176,23 +194,25 @@ export function MfaChallengeStep({
           </button>
         ) : null}
 
-        <AuthField
-          ref={codeRef}
-          label={mode === "recovery" ? t("auth.mfa.recoveryCode") : t("auth.mfa.code")}
-          hint={mode === "email" && sent ? t("auth.mfa.emailSent") : undefined}
-          name="code"
-          type="text"
-          inputMode={mode === "recovery" ? "text" : "numeric"}
-          autoComplete={mode === "recovery" ? "off" : "one-time-code"}
-          autoCapitalize={mode === "recovery" ? "characters" : "none"}
-          spellCheck={false}
-          maxLength={mode === "recovery" ? 64 : 8}
-          value={code}
-          onChange={(event) => setCode(event.target.value)}
-          disabled={pending}
-          autoFocus={mode !== "email"}
-          {...fieldState}
-        />
+        {mode === "passkey" ? null : (
+          <AuthField
+            ref={codeRef}
+            label={mode === "recovery" ? t("auth.mfa.recoveryCode") : t("auth.mfa.code")}
+            hint={mode === "email" && sent ? t("auth.mfa.emailSent") : undefined}
+            name="code"
+            type="text"
+            inputMode={mode === "recovery" ? "text" : "numeric"}
+            autoComplete={mode === "recovery" ? "off" : "one-time-code"}
+            autoCapitalize={mode === "recovery" ? "characters" : "none"}
+            spellCheck={false}
+            maxLength={mode === "recovery" ? 64 : 8}
+            value={code}
+            onChange={(event) => setCode(event.target.value)}
+            disabled={pending}
+            autoFocus={mode !== "email"}
+            {...fieldState}
+          />
+        )}
 
         {offerTrust ? (
           <label className={styles.check}>
@@ -213,11 +233,20 @@ export function MfaChallengeStep({
         ) : null}
 
         <button type="submit" className={styles.submit} disabled={pending}>
-          {pending ? t("auth.mfa.pending") : t("auth.mfa.submit")}
+          {pending
+            ? t("auth.mfa.pending")
+            : mode === "passkey"
+              ? t("auth.mfa.usePasskey")
+              : t("auth.mfa.submit")}
         </button>
       </form>
 
       <nav className={styles.links} aria-label={t("auth.mfa.otherWays")}>
+        {mode !== "passkey" && passkey ? (
+          <button type="button" className={styles.textLink} onClick={() => switchTo("passkey")}>
+            {t("auth.mfa.usePasskey")}
+          </button>
+        ) : null}
         {mode !== "totp" && apps.length > 0 ? (
           <button type="button" className={styles.textLink} onClick={() => switchTo("totp")}>
             {t("auth.mfa.useTotp")}

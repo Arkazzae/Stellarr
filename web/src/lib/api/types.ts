@@ -548,7 +548,7 @@ export type FriendRequestAnswer =
 // ---- Sign-in with a second factor -----------------------------------------
 
 /** How a second-factor method proves who is signing in. */
-export type MfaMethodType = "totp" | "email";
+export type MfaMethodType = "totp" | "email" | "passkey";
 
 export interface MfaMethod {
   id: string;
@@ -587,6 +587,8 @@ export interface MfaChallenge {
   emailCodeAvailable: boolean;
   /** How long "remember this device" lasts, as the instance sets it. */
   trustedDeviceDays: number;
+  /** The server can register and check passkeys: it has a public HTTPS address. */
+  passkeyAvailable: boolean;
 }
 
 /** What the first step of a sign-in or a registration led to. */
@@ -661,6 +663,8 @@ export interface AccountSecurity {
   recentEvents: SecurityEvent[];
   trustedDeviceDays: number;
   emailCodeAvailable: boolean;
+  /** The server can register and check passkeys: it has a public HTTPS address. */
+  passkeyAvailable: boolean;
 }
 
 /** One of the account's signed-in devices. */

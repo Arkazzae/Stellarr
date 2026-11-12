@@ -75,7 +75,7 @@ export function AccountSecuritySections({
   const methodName = (method: MfaMethod) =>
     method.type === "email"
       ? t("security.method.email", { address: method.emailAddress ?? "" })
-      : method.name || t("security.method.totp");
+      : method.name || t(method.type === "passkey" ? "security.method.passkey" : "security.method.totp");
 
   const removeMethod = async (method: MfaMethod) => {
     const confirmed = await confirm({

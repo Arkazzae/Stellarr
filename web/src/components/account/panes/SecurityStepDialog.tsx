@@ -32,6 +32,10 @@ export interface SecurityStepDialogProps {
   onSendEnrollEmailCode(): void;
   onConfirmEnrollment(input: { code: string; rememberDevice: boolean; name?: string }): void;
   onClose(): void;
+  /** This browser can use passkeys. */
+  passkeysSupported?: boolean;
+  onAnswerWithPasskey?(): void;
+  onCreatePasskey?(input: { rememberDevice: boolean; name?: string }): void;
 }
 
 const DialogContext = createContext<{ titleId: string; onClose: () => void }>({
@@ -77,6 +81,9 @@ export function SecurityStepDialog({
   onSendEnrollEmailCode,
   onConfirmEnrollment,
   onClose,
+  passkeysSupported = false,
+  onAnswerWithPasskey,
+  onCreatePasskey,
 }: SecurityStepDialogProps) {
   const titleId = useId();
 
@@ -104,6 +111,8 @@ export function SecurityStepDialog({
             frame={DialogStepFrame}
             offerTrust={false}
             cancelLabel={t("common.cancel")}
+            passkeysSupported={passkeysSupported}
+            {...(onAnswerWithPasskey === undefined ? {} : { onUsePasskey: () => onAnswerWithPasskey() })}
           />
         ) : step?.kind === "enroll" ? (
           <MfaEnrollStep
@@ -126,6 +135,8 @@ export function SecurityStepDialog({
             frame={DialogStepFrame}
             voluntary
             cancelLabel={t("common.cancel")}
+            passkeysSupported={passkeysSupported}
+            {...(onCreatePasskey === undefined ? {} : { onCreatePasskey })}
           />
         ) : step?.kind === "codes" ? (
           <RecoveryCodesStep

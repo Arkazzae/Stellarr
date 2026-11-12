@@ -61,9 +61,16 @@ export interface SignInChallengePort {
     name: string;
     rememberDevice?: boolean;
   }): Promise<MfaCompletion>;
-  /** Trades an operator's recovery credential for the challenge that sets up new security. */
-  /** `keepSignedIn` is the choice made on the sign-in form this recovery continues. */
+  /**
+   * Trades an operator's recovery credential for the challenge that sets up
+   * new security. `keepSignedIn` is the choice made on the sign-in form this
+   * recovery continues.
+   */
   redeemRecovery(credential: string, keepSignedIn?: boolean): Promise<MfaChallenge>;
+  /** Answers the second step with a passkey: the browser asks for one, the server checks it. */
+  answerWithPasskey(input: { challengeId: string; rememberDevice?: boolean }): Promise<MfaCompletion>;
+  /** Creates a passkey, on this device, a phone or a security key, and keeps it as a method. */
+  createPasskey(input: { challengeId: string; name: string; rememberDevice?: boolean }): Promise<MfaCompletion>;
 }
 
 /** Signing in and out, and the one payload the app boots from. */
@@ -77,5 +84,11 @@ export interface SessionPort {
   logout(): Promise<void>;
   /** Whether the server still knows this browser's session. */
   check(): Promise<boolean>;
+  /** Whether this browser can use passkeys at all. */
+  passkeysSupported(): boolean;
+  /** Whether the server offers signing in with a passkey alone. */
+  passkeySignInAvailable(): Promise<boolean>;
+  /** Signs in with a passkey alone; the browser asks which one. */
+  signInWithPasskey(input: { keepSignedIn?: boolean }): Promise<AuthResult>;
   challenge: SignInChallengePort;
 }

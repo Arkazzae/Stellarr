@@ -1,9 +1,9 @@
 # Account security
 
 Stellarr can ask for a second step after the password: a code from an
-authenticator app or a code sent by email. This page covers what people see,
-the policy an operator sets, and how to get someone back in when they lose
-their second step.
+authenticator app, a code sent by email, or a passkey. This page covers what
+people see, the policy an operator sets, and how to get someone back in when
+they lose their second step.
 
 ## What people set up
 
@@ -16,6 +16,10 @@ Each person manages their own second step in the web client, under
   own name.
 - **Email code.** A 6-digit code sent to the account's email address. It needs
   mail delivery to be configured (see [Configuration](configuration.md)).
+- **Passkey or security key.** Kept on the device, in a phone or password
+  manager, or on a USB or NFC security key, and confirmed with a fingerprint,
+  face, PIN or a touch of the key. The browser asks where to keep it. A passkey
+  also signs in on its own, without the password (see below).
 - **Recovery codes.** Ten one-time codes, issued with the first method and
   shown once. Each lets the person in once when their second step is not at
   hand. They can be replaced from the same pane, which ends the old ones.
@@ -35,6 +39,25 @@ and password reset: five requests per 15 minutes.
 
 Signing in through the identity provider (OIDC) is followed by the same second
 step.
+
+## Passkeys
+
+Passkeys work only when the instance has a public address with a host name
+over HTTPS: `STELLARR_PUBLIC_URL`, or `STELLARR_DOMAIN` set to a name rather
+than an IP address (see [Configuration](configuration.md)). Browsers refuse
+passkeys on an IP address or over plain HTTP, except `http://localhost` during
+development. Without such an address the web client does not offer them.
+
+A passkey belongs to the host name it was created on. **Changing the domain
+makes every passkey stop working**; people then sign in with the password and
+another method, or a recovery code, and add a new passkey.
+
+With a passkey the sign-in page offers **Continue with a passkey**: the browser
+asks which passkey to use and for the fingerprint, face or PIN that unlocks it.
+That one step counts as the password and the second step together, so under any
+policy the session is treated as having passed a second step, Cockpit
+included. A security key that does not keep the account on the key works as a
+second step after the password, but not on its own.
 
 ## Trusted devices
 

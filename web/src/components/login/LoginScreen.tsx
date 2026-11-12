@@ -34,6 +34,8 @@ export interface LoginScreenProps {
    * identity provider's link carries it too.
    */
   keepSignedIn?: { checked: boolean; onChange: (checked: boolean) => void };
+  /** Signing in with a passkey alone, shown when given; the desktop app passes none. */
+  passkeyLogin?: { label: string; onClick: () => void; pending?: boolean };
 }
 
 export function LoginScreen({
@@ -48,6 +50,7 @@ export function LoginScreen({
   externalLogin,
   externalError = null,
   keepSignedIn,
+  passkeyLogin,
 }: LoginScreenProps) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -95,9 +98,19 @@ export function LoginScreen({
         </p>
       ) : (
         <>
-          {externalLogin ? (
+          {externalLogin || passkeyLogin ? (
             <div className={styles.externalBlock}>
-              {externalLogin.onClick ? (
+              {passkeyLogin ? (
+                <button
+                  className={styles.externalLogin}
+                  type="button"
+                  onClick={passkeyLogin.onClick}
+                  disabled={pending || passkeyLogin.pending}
+                >
+                  {passkeyLogin.label}
+                </button>
+              ) : null}
+              {externalLogin === undefined ? null : externalLogin.onClick ? (
                 <button
                   className={styles.externalLogin}
                   type="button"
