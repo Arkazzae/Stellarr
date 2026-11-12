@@ -25,7 +25,7 @@ namespace Stellarr.Api.Tests;
 /// in this class: it publishes fixed endpoints and signs the identity token
 /// it hands back for whoever the test says is signing in.
 /// </summary>
-public sealed class OidcSignInFlowTests(StellarrWebApplicationFactory factory)
+public sealed partial class OidcSignInFlowTests(StellarrWebApplicationFactory factory)
     : IClassFixture<StellarrWebApplicationFactory>
 {
     private const string Issuer = "https://identity.test";

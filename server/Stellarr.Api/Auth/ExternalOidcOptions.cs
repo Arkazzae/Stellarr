@@ -15,7 +15,7 @@ public sealed class ExternalOidcOptions
     public const string DefaultProviderId = "default";
 
     /// <summary>Ids a named provider cannot take: the original one, and the words of the routes.</summary>
-    private static readonly string[] ReservedIds = [DefaultProviderId, "login", "callback"];
+    private static readonly string[] ReservedIds = [DefaultProviderId, "login", "callback", "link"];
 
     public bool Enabled { get; init; }
     public string Authority { get; init; } = "";
@@ -179,6 +179,11 @@ public sealed class ExternalOidcProvider
     public string LoginPath => Id == ExternalOidcOptions.DefaultProviderId
         ? "/api/auth/oidc/login"
         : $"/api/auth/oidc/{Id}/login";
+
+    /// <summary>Where a signed-in account goes to link itself to this provider, with a ticket.</summary>
+    public string LinkPath => Id == ExternalOidcOptions.DefaultProviderId
+        ? "/api/auth/oidc/link"
+        : $"/api/auth/oidc/{Id}/link";
 
     public bool IsConfigured =>
         Enabled &&

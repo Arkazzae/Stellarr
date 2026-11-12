@@ -92,9 +92,12 @@ callback and is offered first.
 ```
 
 A provider is offered only when its issuer is HTTPS and it has a client ID and
-a secret; an id that breaks the rules stops the server at start. An identity
-is linked to an account per issuer: the same subject at two providers is two
-different people, and no account is ever matched by its email address.
+a secret; an id that breaks the rules stops the server at start. People link
+their accounts to a provider from their settings (see
+[Account security](account-security.md#signing-in-through-an-identity-provider)),
+which uses the same callback. An identity is linked to an account per issuer:
+the same subject at two providers is two different people, and no account is
+ever matched by its email address.
 
 ### The provider's own second step
 

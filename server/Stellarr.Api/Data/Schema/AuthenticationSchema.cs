@@ -178,7 +178,8 @@ internal static class AuthenticationSchema
         }
     }
 
-    private static async Task EnsureExternalIdentitiesAsync(AppDbContext db, CancellationToken cancellationToken) =>
+    private static async Task EnsureExternalIdentitiesAsync(AppDbContext db, CancellationToken cancellationToken)
+    {
         await db.Database.ExecuteSqlRawAsync(
             """
             CREATE TABLE IF NOT EXISTS "ExternalIdentities" (
@@ -196,4 +197,12 @@ internal static class AuthenticationSchema
                 ON "ExternalIdentities" ("UserId", "Issuer");
             """,
             cancellationToken);
+
+        if (!await SqliteSchema.HasColumnAsync(db, "ExternalIdentities", "ProviderId", cancellationToken))
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                """ALTER TABLE "ExternalIdentities" ADD COLUMN "ProviderId" TEXT NULL;""",
+                cancellationToken);
+        }
+    }
 }

@@ -181,6 +181,37 @@ public sealed class DatabaseSchemaTests
     }
 
     [Fact]
+    public async Task IdentityLinksFromBeforeProvidersKeepTheirRows()
+    {
+        using var factory = new StellarrWebApplicationFactory();
+        using var client = factory.CreateClient();
+        _ = await client.GetAsync("/health/ready");
+
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var user = await db.Users.OrderBy(x => x.CreatedAt).FirstAsync();
+        var identityId = Guid.NewGuid();
+        db.ExternalIdentities.Add(new ExternalIdentity
+        {
+            Id = identityId,
+            UserId = user.Id,
+            Issuer = "https://id.example.test",
+            Subject = "older-link",
+            CreatedAt = DateTime.UtcNow,
+        });
+        await db.SaveChangesAsync();
+        await db.Database.ExecuteSqlRawAsync("""ALTER TABLE "ExternalIdentities" DROP COLUMN "ProviderId";""");
+
+        await DatabaseSchema.UpgradeAsync(db, default);
+        await DatabaseSchema.UpgradeAsync(db, default);
+        db.ChangeTracker.Clear();
+
+        var identity = await db.ExternalIdentities.SingleAsync(x => x.Id == identityId);
+        Assert.Equal("older-link", identity.Subject);
+        Assert.Null(identity.ProviderId);
+    }
+
+    [Fact]
     public async Task UpgradeAddsOperatorAuditForTheLocalCli()
     {
         using var factory = new StellarrWebApplicationFactory();

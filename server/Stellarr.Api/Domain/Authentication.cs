@@ -17,9 +17,10 @@ public sealed class PasswordResetToken
 }
 
 /// <summary>
-/// A manually approved link between a local account and an OpenID Connect
-/// subject. Issuer and subject are the only stable identity key; the email
-/// address is neither stored nor used to link accounts automatically.
+/// A link between a local account and an OpenID Connect subject, made by
+/// the account itself after a fresh proof, or by an operator. Issuer and
+/// subject are the only stable identity key; the email address is neither
+/// stored nor used to link accounts automatically.
 /// </summary>
 public sealed class ExternalIdentity
 {
@@ -27,6 +28,10 @@ public sealed class ExternalIdentity
     public Guid UserId { get; set; }
     public required string Issuer { get; set; }
     public required string Subject { get; set; }
+
+    /// <summary>The configured provider the link was made through, for its name; null for older links.</summary>
+    public string? ProviderId { get; set; }
+
     public DateTime CreatedAt { get; set; }
 
     public User User { get; set; } = null!;

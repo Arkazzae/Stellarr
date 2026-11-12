@@ -25,6 +25,8 @@ public static class SecurityEvents
         SecurityEventKinds.CliRecovery,
         SecurityEventKinds.PolicyChanged,
         SecurityEventKinds.DesktopApproved,
+        SecurityEventKinds.IdentityLinked,
+        SecurityEventKinds.IdentityUnlinked,
     ];
 
     /// <summary>

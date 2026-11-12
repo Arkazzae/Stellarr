@@ -12,10 +12,11 @@ using Stellarr.Api.Localization;
 namespace Stellarr.Api.Auth;
 
 /// <summary>
-/// Lets a person sign in through the configured OpenID Connect provider. The
-/// provider only proves who they are: an account is signed in when a
-/// maintainer has linked that identity to it, never by matching an e-mail
-/// address. The result is the same revocable session a password sign-in gets.
+/// Lets a person sign in through the configured OpenID Connect providers. A
+/// provider only proves who they are: an account is signed in when that
+/// identity was linked to it, by the account itself after a fresh proof or by
+/// an operator, never by matching an e-mail address. The result is the same
+/// revocable session a password sign-in gets.
 /// </summary>
 public static class ExternalOidcAuthentication
 {
@@ -71,6 +72,17 @@ public static class ExternalOidcAuthentication
     {
         var issuer = ExternalOidcOptions.CanonicalIssuer(context.SecurityToken.Issuer ?? "");
         var subject = context.Principal?.FindFirst("sub")?.Value?.Trim() ?? "";
+        // A link started from the settings never signs anyone in.
+        if (IdentityLinks.Recall(context.Properties) is { } link)
+        {
+            var result = issuer.Length is 0 or > 512 || subject.Length is 0 or > 255
+                ? "failed"
+                : await LinkIdentityAsync(context.HttpContext, provider, link, issuer, subject);
+            context.Response.Redirect($"/link-account?result={result}");
+            context.HandleResponse();
+            return;
+        }
+
         if (issuer.Length is 0 or > 512 || subject.Length is 0 or > 255)
         {
             context.Fail("external_identity_invalid");
@@ -157,9 +169,90 @@ public static class ExternalOidcAuthentication
     private static bool IsShortLived(AuthenticationProperties? properties) =>
         properties?.Items.TryGetValue(ShortLivedItem, out var value) == true && value == "true";
 
+    /// <summary>
+    /// Links the identity to the account the link was started for. The
+    /// provider's answer is a cross-site POST without the session cookie, so
+    /// the session named in the protected state is checked here instead:
+    /// still active, on the account's current security version, and the
+    /// account neither disabled nor waiting for an operator's recovery.
+    /// </summary>
+    private static async Task<string> LinkIdentityAsync(
+        HttpContext context,
+        ExternalOidcProvider provider,
+        IdentityLinkRequest link,
+        string issuer,
+        string subject)
+    {
+        var db = context.RequestServices.GetRequiredService<AppDbContext>();
+        var cancellationToken = context.RequestAborted;
+        var now = DateTime.UtcNow;
+        var legacyCutoff = now - SessionAuthentication.Lifetime;
+        var user = await db.Users.SingleOrDefaultAsync(x => x.Id == link.UserId, cancellationToken);
+        var sessionActive = user is not null && await db.UserSessions.AsNoTracking().AnyAsync(
+            x => x.Id == link.SessionId &&
+                x.UserId == link.UserId &&
+                x.RevokedAt == null &&
+                x.ExpiresAt > now &&
+                (x.AbsoluteExpiresAt > now || (x.AbsoluteExpiresAt == null && x.CreatedAt > legacyCutoff)) &&
+                x.SecurityVersion == link.SecurityVersion,
+            cancellationToken);
+        if (user is null || !sessionActive || user.IsDisabled || user.SecurityRecoveryRequired ||
+            user.SessionVersion != link.SecurityVersion || link.ProviderId != provider.Id)
+        {
+            return "failed";
+        }
+
+        var existing = await db.ExternalIdentities.AsNoTracking()
+            .Where(x => (x.Issuer == issuer && x.Subject == subject) || (x.UserId == user.Id && x.Issuer == issuer))
+            .ToListAsync(cancellationToken);
+        if (existing.Any(x => x.Issuer == issuer && x.Subject == subject && x.UserId == user.Id))
+        {
+            return "linked";
+        }
+
+        if (existing.Count > 0)
+        {
+            // Someone else's identity, or another one at this provider already on this account.
+            return existing.Any(x => x.UserId != user.Id) ? "taken" : "other";
+        }
+
+        db.ExternalIdentities.Add(new ExternalIdentity
+        {
+            Id = Guid.NewGuid(),
+            UserId = user.Id,
+            Issuer = issuer,
+            Subject = subject,
+            ProviderId = provider.Id,
+            CreatedAt = now,
+        });
+        SecurityEvents.Record(
+            db, user.Id, SecurityEventKinds.IdentityLinked, context,
+            string.IsNullOrWhiteSpace(provider.DisplayName) ? provider.Id : provider.DisplayName,
+            await SecurityEvents.VerifiedEmailAsync(db, user.Id, cancellationToken));
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException exception) when (DatabaseErrors.IsUniqueConstraint(exception))
+        {
+            // Linked by a request that won the race.
+            return "taken";
+        }
+
+        return "linked";
+    }
+
     /// <summary>Sends a failed or cancelled sign-in back to the login page, saying roughly why.</summary>
     private static Task RedirectToLoginAsync(RemoteFailureContext context)
     {
+        if (IdentityLinks.Recall(context.Properties) is not null)
+        {
+            var outcome = context.Request.Query["error"] == "access_denied" ? "cancelled" : "failed";
+            context.Response.Redirect($"/link-account?result={outcome}");
+            context.HandleResponse();
+            return Task.CompletedTask;
+        }
+
         var error = context.Failure?.Message.Contains(NotLinked, StringComparison.Ordinal) == true
             ? "not_linked"
             : context.Request.Query["error"] == "access_denied"

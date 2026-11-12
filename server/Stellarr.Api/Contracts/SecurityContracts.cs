@@ -114,7 +114,17 @@ public sealed record AccountSecurityDto(
     bool EmailCodeAvailable = false,
     int EmailResendCooldownSeconds = 45,
     bool SecurityRecoveryRequired = false,
-    bool PasskeyAvailable = false);
+    bool PasskeyAvailable = false,
+    IReadOnlyList<LinkedIdentityDto>? Identities = null,
+    IReadOnlyList<IdentityProviderDto>? IdentityProviders = null);
+
+/// <summary>An identity at a provider this account signs in with.</summary>
+public sealed record LinkedIdentityDto(string Id, string? ProviderId, string Name, DateTime CreatedAt);
+
+/// <summary>A provider the account can link itself to.</summary>
+public sealed record IdentityProviderDto(string Id, string DisplayName);
+
+public sealed record IdentityChangeRequest(string? Password);
 
 /// <summary>One of the account's signed-in devices, as its owner sees it.</summary>
 public sealed record OwnSessionDto(

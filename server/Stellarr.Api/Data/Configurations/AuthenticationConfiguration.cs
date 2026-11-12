@@ -26,6 +26,7 @@ internal sealed class ExternalIdentityConfiguration : IEntityTypeConfiguration<E
         entity.HasIndex(x => new { x.UserId, x.Issuer }).IsUnique();
         entity.Property(x => x.Issuer).HasMaxLength(512);
         entity.Property(x => x.Subject).HasMaxLength(255);
+        entity.Property(x => x.ProviderId).HasMaxLength(32);
         entity.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId)
             .OnDelete(DeleteBehavior.Cascade);
     }

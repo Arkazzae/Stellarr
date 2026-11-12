@@ -10,7 +10,7 @@ using Stellarr.Api.Realtime;
 namespace Stellarr.Api.Endpoints;
 
 /// <summary>The signed-in account's own security state, methods and history.</summary>
-public static class AccountSecurityEndpoints
+public static partial class AccountSecurityEndpoints
 {
     public static IEndpointRouteBuilder MapAccountSecurityEndpoints(this IEndpointRouteBuilder endpoints)
     {
@@ -26,12 +26,17 @@ public static class AccountSecurityEndpoints
         group.MapGet("/sessions", ListSessionsAsync);
         group.MapDelete("/sessions/{sessionId:guid}", RevokeSessionAsync);
         group.MapPost("/sessions/revoke-others", RevokeOtherSessionsAsync);
+        group.MapPost("/identities/{providerId}/link", StartIdentityLinkAsync)
+            .RequireRateLimiting(RateLimitPolicies.SecurityWrite);
+        group.MapPost("/identities/{identityId:guid}/remove", RemoveIdentityAsync)
+            .RequireRateLimiting(RateLimitPolicies.SecurityWrite);
         return endpoints;
     }
 
     private static async Task<IResult> GetAsync(
         HttpContext context,
         AppDbContext db,
+        ExternalOidcOptions oidc,
         Messages messages,
         CancellationToken cancellationToken)
     {
@@ -76,7 +81,11 @@ public static class AccountSecurityEndpoints
             methods.Any(x => x.Type == MfaMethodTypes.Email),
             policy.EmailCodeCooldownSeconds,
             user.SecurityRecoveryRequired,
-            context.RequestServices.GetRequiredService<PasskeyRelyingParty>().Available));
+            context.RequestServices.GetRequiredService<PasskeyRelyingParty>().Available,
+            await IdentitiesAsync(db, oidc, messages, userId, cancellationToken),
+            oidc.ConfiguredProviders()
+                .Select(provider => new IdentityProviderDto(provider.Id, ProviderName(provider, messages)))
+                .ToArray()));
     }
 
     private static async Task<IResult> GetEventsAsync(

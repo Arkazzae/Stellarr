@@ -41,6 +41,23 @@ Signing in through an identity provider (OIDC) is followed by the same second
 step, unless the operator trusts that provider's own second step (see
 [Single sign-on](configuration.md#single-sign-on-oidc)).
 
+## Signing in through an identity provider
+
+When the instance has identity providers (see
+[Single sign-on](configuration.md#single-sign-on-oidc)), a person links their
+account to one under **Settings → Login and security → Sign-in providers**. The
+pane asks for the same fresh proof as adding a method, then sends the browser
+to the provider and back to a page that says whether the link worked. From then
+on that provider account signs in to this Stellarr account. An identity already
+linked to another account is refused, and so is a second identity at the same
+provider. Unlinking needs the proof too. Each link and unlink is recorded in the
+security history.
+
+An operator sees the links with `stellarr security show` and removes one with
+`stellarr security unlink` (see
+[the CLI guide](cli.md#account-security-and-mfa-recovery)). An operator's
+recovery keeps the links.
+
 ## Passkeys
 
 Passkeys work only when the instance has a public address with a host name

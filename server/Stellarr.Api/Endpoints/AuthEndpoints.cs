@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
@@ -23,6 +24,10 @@ public static class AuthEndpoints
         group.MapGet("/oidc", GetOidcStatus);
         group.MapGet("/oidc/login", ChallengeOidc).RequireRateLimiting(RateLimitPolicies.Login);
         group.MapGet("/oidc/{id}/login", ChallengeNamedOidc).RequireRateLimiting(RateLimitPolicies.Login);
+        group.MapGet("/oidc/link", (string? ticket, HttpContext context, ExternalOidcOptions options, IDataProtectionProvider protection) =>
+            ChallengeLink(ExternalOidcOptions.DefaultProviderId, ticket, context, options, protection))
+            .RequireRateLimiting(RateLimitPolicies.Login);
+        group.MapGet("/oidc/{id}/link", ChallengeLink).RequireRateLimiting(RateLimitPolicies.Login);
 
         return endpoints;
     }
@@ -127,6 +132,38 @@ public static class AuthEndpoints
         bool? keepSignedIn,
         ExternalOidcOptions options) =>
         Challenge(options.Find(id), returnUrl, keepSignedIn);
+
+    /// <summary>
+    /// Sends a signed-in account to the provider to link itself. The ticket
+    /// must name this provider and this very session; the provider's answer
+    /// then links instead of signing in.
+    /// </summary>
+    private static IResult ChallengeLink(
+        string id,
+        string? ticket,
+        HttpContext context,
+        ExternalOidcOptions options,
+        IDataProtectionProvider protection)
+    {
+        if (options.Find(id) is not { } provider)
+        {
+            return Results.NotFound();
+        }
+
+        var request = IdentityLinks.ReadTicket(protection, ticket);
+        if (request is null ||
+            request.ProviderId != provider.Id ||
+            context.User.Identity?.IsAuthenticated != true ||
+            context.User.RequireUserId() != request.UserId ||
+            context.User.FindSessionId() != request.SessionId)
+        {
+            return Results.Redirect("/link-account?result=failed");
+        }
+
+        var properties = new AuthenticationProperties { RedirectUri = "/link-account?result=linked" };
+        IdentityLinks.Remember(properties, request);
+        return Results.Challenge(properties, [provider.Scheme]);
+    }
 
     private static IResult Challenge(ExternalOidcProvider? provider, string? returnUrl, bool? keepSignedIn)
     {
