@@ -27,7 +27,19 @@ export default defineConfig({
   // The documentation map is the home page; the file stays README.md for GitHub.
   rewrites: { 'README.md': 'index.md' },
   head: [['link', { rel: 'icon', type: 'image/svg+xml', href: drawing('tile') }]],
-  markdown: { config: rewriteLinks(repository) },
+  markdown: {
+    config(md) {
+      rewriteLinks(repository)(md)
+      const defaultFence = md.renderer.rules.fence!
+      md.renderer.rules.fence = (tokens, idx, options, env, self) => {
+        const token = tokens[idx]
+        if (token.info.trim() === 'mermaid') {
+          return `<MermaidDiagram code="${encodeURIComponent(token.content)}" />`
+        }
+        return defaultFence(tokens, idx, options, env, self)
+      }
+    },
+  },
   // The default theme preloads its own typeface, Inter, which no page uses.
   // Outfit is preloaded in its place.
   transformHead({ assets }) {

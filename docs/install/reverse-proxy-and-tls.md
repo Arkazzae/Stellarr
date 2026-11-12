@@ -40,7 +40,7 @@ CA-signed certificates are never overwritten by the container. Self-signed certi
 If the certificate is unreadable or does not match `privkey.pem`, the container logs an error and exits with status `1`. If a mounted CA-signed certificate expires within 7 days, the container logs a warning on startup.
 
 > [!WARNING]
-> Mount the directory (`./certs:/data/stellarr/tls:ro`), not individual files. Single-file bind mounts retain the original inode across atomic file replacements on the host, preventing renewals from propagating into the container. Also ensure the directory contains regular files rather than symlinks pointing outside the mount (such as Certbot `live/` symlinks—copy them with `cp -L`).
+> Mount the directory (`./certs:/data/stellarr/tls:ro`), not individual files. Single-file bind mounts retain the original inode across atomic file replacements on the host, preventing renewals from propagating into the container. Also ensure the directory contains regular files rather than symlinks pointing outside the mount (such as Certbot `live/` symlinks; copy them with `cp -L`).
 
 ### Reloading after certificate renewal
 
@@ -51,7 +51,8 @@ docker compose exec stellarr nginx -s reload
 docker compose exec stellarr supervisorctl -c /etc/supervisor/supervisord.conf restart turn
 ```
 
-Restarting `turn` drops active TURN relay allocations.
+> [!NOTE]
+> Restarting `turn` drops any active TURN relay allocations, causing relayed voice participants to briefly reconnect.
 
 ### TURN over TLS (`turns:`)
 
@@ -128,4 +129,5 @@ An HTTP reverse proxy only handles HTTP and WebSocket traffic. WebRTC STUN, TURN
 | `3478` | TCP | TURN over TCP (`STELLARR_TURN_TCP_ENABLED=true`) |
 | `5349` | TCP, UDP | TURN over TLS/DTLS (`STELLARR_TURNS_ENABLED=true`) |
 
-Publish these ports on the host and forward them on the router. `STELLARR_DOMAIN` and `PUBLIC_IP` must resolve to the host reachable on these ports, not an HTTP-only CDN or tunnel. See [Requirements](requirements.md) and [RTC and ports](../RTC_AND_PORTS.md).
+> [!IMPORTANT]
+> Publish these UDP/TURN ports on the Docker host and forward them on your router. `STELLARR_DOMAIN` and `PUBLIC_IP` must resolve to the host reachable on these ports, not an HTTP-only CDN or tunnel. See [Requirements](requirements.md) and [RTC and ports](../rtc-and-ports.md).

@@ -1,6 +1,6 @@
 # RTC and ports
 
-Protocol semantics and versioning rules are defined in [`RTC_STANDARD.md`](./RTC_STANDARD.md), and Stellarr Media, the media server every call goes through, in [`STELLARR_MEDIA.md`](./STELLARR_MEDIA.md). This document covers port mappings, NAT/TURN configuration, the client audio/video pipeline, and operational diagnostics.
+Protocol messages and client state are described in [Voice and RTC protocol](./rtc-protocol.md), and the Rust SFU media server in [Stellarr Media](./stellarr-media.md). This page covers host and container ports, NAT/TURN setup, the client audio/video pipeline, and call troubleshooting.
 
 ## Published host ports
 
@@ -13,16 +13,18 @@ Protocol semantics and versioning rules are defined in [`RTC_STANDARD.md`](./RTC
 | `49000` | UDP | `stellarr-media` | Media server port (`STELLARR_MEDIA_PORT`); carries every call |
 | `49160-49200` | UDP | `coturn` | TURN relay port range (`STELLARR_TURN_RELAY_RANGE`) |
 
-- `STELLARR_HTTPS_PORT` is also used in HTTP-to-HTTPS redirects (omitted when set to `443`). Requests forwarded by an upstream TLS proxy with `X-Forwarded-Proto: https` are not redirected.
-- `STELLARR_TURN_PORT`, `STELLARR_TURNS_PORT`, and `STELLARR_MEDIA_PORT` set both the published host port and the port advertised to browsers. The router must forward the same external UDP port to `STELLARR_MEDIA_PORT`.
-- `STELLARR_TURNS_ENABLED` defaults to `false` (`Rtc:TurnsEnabled=false`) because browsers reject self-signed certificates on `turns:` URLs. Enable it only after mounting a CA-signed certificate in `/data/stellarr/tls/`.
-- `STELLARR_TURN_TCP_ENABLED` defaults to `false`. Disabled transports are closed in `/etc/turnserver.conf` (`no-tcp`, `no-tls`, `no-dtls`) as well as omitted from `/api/bootstrap`.
+- `STELLARR_HTTPS_PORT` is included in HTTP-to-HTTPS redirects (omitted when set to `443`). Requests forwarded by an upstream TLS proxy with `X-Forwarded-Proto: https` are not redirected.
+- `STELLARR_TURN_PORT`, `STELLARR_TURNS_PORT`, and `STELLARR_MEDIA_PORT` set both the published host port and the port advertised to browsers. Your router must forward the same external UDP port to `STELLARR_MEDIA_PORT`.
+- `STELLARR_TURN_TCP_ENABLED` defaults to `false`. Disabled transports are turned off in `/etc/turnserver.conf` (`no-tcp`, `no-tls`, `no-dtls`) and omitted from `/api/bootstrap`.
+
+> [!NOTE]
+> `STELLARR_TURNS_ENABLED` defaults to `false` (`Rtc:TurnsEnabled=false`) because browsers reject self-signed certificates on `turns:` URLs. Enable it only after mounting a CA-signed certificate in `/data/stellarr/tls/`.
 
 ### Relay port sizing
 
-The default relay range (`49160-49200/udp`) provides 41 UDP ports. Each browser establishes a single peer connection to `stellarr-media`, requiring at most 1 TURN allocation per participant (~5 for 5 users), relayed internally to the container's local UDP socket.
+The default relay range (`49160-49200/udp`) provides 41 UDP ports. Each browser opens a single peer connection to `stellarr-media`, requiring at most 1 TURN allocation per participant (~5 ports for a 5-person call), relayed internally to the container's local UDP socket.
 
-To expand the relay range for larger rooms or TURN/TCP, update `min-port`/`max-port` in `infra/turnserver.conf.template`, `ports` in `docker-compose.yml`, `EXPOSE` in `Dockerfile`, and your host/router firewall rules.
+To expand the relay range for larger instances or TURN/TCP, update `min-port`/`max-port` in `infra/turnserver.conf.template`, `ports` in `docker-compose.yml`, `EXPOSE` in `Dockerfile`, and your host/router firewall rules.
 
 ## Container-internal ports
 
@@ -37,7 +39,7 @@ Nginx routes `/api/`, `/assets/`, `/health`, `/hubs/`, and `/.well-known/stellar
 
 ## NAT and firewall configuration
 
-Nginx only proxies HTTP and WebSocket traffic; WebRTC STUN, TURN, and SFU UDP traffic bypasses HTTP proxies and must be reachable on the host.
+Nginx only proxies HTTP and WebSocket traffic; WebRTC STUN, TURN, and SFU UDP packets bypass HTTP proxies and must reach the Docker host directly.
 
 Forward on your router to the Docker host:
 
@@ -55,9 +57,12 @@ PUBLIC_IP=auto          # or a static public IPv4 address
 STELLARR_MEDIA_PORT=49000
 ```
 
-- `PUBLIC_IP` sets `external-ip` in `coturn` and the public host candidate in `stellarr-media`. `PUBLIC_IP=auto` resolves the IPv4 `A` record of `STELLARR_DOMAIN` at container startup and aborts startup if resolution fails.
-- `stellarr-media` advertises `PUBLIC_IP:STELLARR_MEDIA_PORT` followed by the container's local IPv4 address on port `49000` (used when `coturn` relays a TURN client inside the container). If `PUBLIC_IP` is unset, the media server advertises only the container's own address, so a browser that is not on the Docker host can connect only through TURN; the container logs a warning at startup.
+- `PUBLIC_IP` sets `external-ip` in `coturn` and the public host candidate in `stellarr-media`. `PUBLIC_IP=auto` resolves the IPv4 `A` record of `STELLARR_DOMAIN` at container startup and exits if resolution fails.
+- `stellarr-media` advertises `PUBLIC_IP:STELLARR_MEDIA_PORT` followed by the container's local IPv4 address on port `49000` (used when `coturn` relays a TURN client inside the container).
 - The API issues short-lived (1-hour) HMAC-derived TURN credentials to authenticated users; the static shared secret never leaves the container.
+
+> [!WARNING]
+> If `PUBLIC_IP` is unset, `stellarr-media` advertises only the container's internal IPv4 address. Any browser outside the Docker host can then connect only through TURN (`coturn`), and the container logs a startup warning.
 
 ## Audio and video pipeline
 
@@ -76,9 +81,28 @@ WebRTC handles fast congestion control; the client adjusts the Opus bitrate ceil
 
 ### Capture, processing, and playback chain
 
+```mermaid
+flowchart LR
+    subgraph Send["Send Chain (Browser)"]
+        Mic["Mic Capture (48 kHz mono)"] --> Gain["Input Pre-gain (-12 to +24 dB)"]
+        Gain --> Denoise["Noise Suppression (RNNoise / GTCRN / Speex / Browser)"]
+        Denoise --> Gate["VAD, 80 ms Gate & Auto Leveler"]
+        Gate --> Opus["Opus Encoder (20 ms, in-band FEC)"]
+    end
+
+    SFU["Stellarr Media SFU (:49000/udp)"]
+
+    subgraph Receive["Receive Chain (Browser)"]
+        Vol["Per-user Volume (0-200%)"] --> EQ["4-band Voice EQ & Compressor"]
+        EQ --> Out["Audio Output"]
+    end
+
+    Opus -->|"SRTP"| SFU -->|"SRTP"| Vol
+```
+
 1. **Capture**: `getUserMedia` at 48 kHz mono.
 2. **Input gain**: Fixed pre-gain (`-12 dB` to `+24 dB`).
-3. **Noise suppression**: Five selectable modes—`rnnoise` (default), `gtcrn`, `speex` (all running locally as WASM in an `AudioWorklet` from bundled assets in `web/public/audio/`), `browser` (native WebRTC processing), or `off`. If a WASM worklet fails to initialize, the pipeline falls back to native browser processing and surfaces a degraded indicator.
+3. **Noise suppression**: Five selectable modes: `rnnoise` (default), `gtcrn`, `speex` (all running locally as WASM in an `AudioWorklet` from `web/public/audio/`), `browser` (native WebRTC processing), or `off`. If a WASM worklet fails to initialize, the pipeline falls back to native browser processing and shows a degraded indicator.
 4. **Speech detection (VAD), input gate, and leveler**:
    - The audio-thread detector analyzes 10 ms frames using noise-floor estimation, hysteresis, hangover, and transient/click rejection (peak-to-RMS ratio and pitch check between 60–400 Hz).
    - The **input gate** (enabled by default) uses an 80 ms lookahead buffer so word onsets are not clipped, attenuating inter-sentence noise to silence after a 600 ms hold without stopping the RTP stream.
@@ -92,7 +116,7 @@ Four profiles are defined in `web/src/lib/voice/screenShare.ts`, from `720p15` (
 
 ## Diagnostics
 
-When voice fails to connect, verify in order:
+When voice fails to connect, check in order:
 
 1. The page is loaded over `https://` (or `http://localhost`).
 2. Microphone permissions are granted in the browser.

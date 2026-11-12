@@ -2,20 +2,21 @@
 
 Stellarr Cockpit is the instance operator panel (`cockpit/`), built as a standalone React + Vite single-page application. It provides:
 
-- **Overview**: headline counts with their trend and the change on the week before, 30-day activity in six series, the API's uptime and the last hour of its and the database's availability, the last hour of requests and connections, and the state of the other services. It refreshes itself every 30 s.
+- **Overview**: headline metrics with 7-day trends and week-over-week change, 30-day activity across six series, API uptime, the last hour of API and database availability, request and connection charts, and service health status (auto-refreshed every 30 s).
 - **Users**: account management, active sessions, and built-in roles.
 - **Servers**: list of servers on the instance with ownership transfer and deletion.
-- **Runtime**: the last hour of the process (requests, errors, CPU, memory, connections, database latency) and of every service's availability, a bar per minute.
+- **Runtime**: 60-minute process telemetry (requests, errors, CPU, memory, connections, database latency) and per-minute availability across all container services.
 - **Logs**: paged, searchable, and filterable 10,000-line in-memory log stream with TSV export.
-- **Backups**: database snapshots, or full archives with the stored files, the keys and the instance files, made in the background; verification and retention.
-- **Integrations**: Resend for mail, and GIPHY for the web client's GIF search, with their keys.
-- **Settings**: instance name, time zone, retention, the SMTP server and its password, and the panel's language.
+- **Backups**: background database snapshots or full `.zip` archives (database, object store, data-protection keys, and instance files) with manifest verification and retention pruning.
+- **Integrations**: Resend mail delivery and GIPHY GIF search configuration and key checks.
+- **Settings**: instance name, time zone, retention windows, SMTP server configuration, and panel language.
 
-Secrets set in Cockpit (the SMTP password, the Resend and GIPHY keys) are stored encrypted and never shown again. The panel opens in English; its language is chosen in **Settings** and kept in the browser. On a desktop it keeps the same proportions at any zoom-out level.
+> [!NOTE]
+> Secrets saved in Cockpit (the SMTP password, Resend API key, and GIPHY API key) are encrypted with the instance's data-protection keys, take precedence over environment variables, and are never returned to the browser.
 
 ## Development
 
-Cockpit is an npm workspace of the repository root, which holds the one `package-lock.json` and installs web, Cockpit and the shared `packages/stellarr-ui`:
+Cockpit is an npm workspace of the repository root, which shares one `package-lock.json` across `web/`, `cockpit/`, and `packages/stellarr-ui`:
 
 ```bash
 # from the repository root
@@ -31,11 +32,11 @@ In the production container image, Nginx serves the static build under `/cockpit
 
 Cockpit supports English (`en`, default) and Polish (`pl`). The active locale is resolved in the browser on startup in this order:
 
-1. `stellarr_locale` cookie (set by the main web client).
+1. `stellarr_locale` cookie (also used by the main web client).
 2. First matching language (`pl` or `en`) in `navigator.languages`.
 3. `en`.
 
-Catalogs live in `src/i18n/en.ts` and `src/i18n/pl.ts` and must define identical keys. Components format messages via `t("some.key", { name: value })`.
+Catalogs live in `src/i18n/en.ts` and `src/i18n/pl.ts` and define identical key sets. Components format messages via `t("some.key", { name: value })`.
 
 ## Verification
 

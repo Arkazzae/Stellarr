@@ -15,7 +15,7 @@ export const RTC_SIGNAL_KINDS = ["state"] as const;
 export type RtcSignalKind = (typeof RTC_SIGNAL_KINDS)[number];
 
 /**
- * The kinds of the `MediaSignal` envelope (docs/STELLARR_MEDIA.md, "Hub leg"). A browser sends `offer`, `answer` and
+ * The kinds of the `MediaSignal` envelope (docs/stellarr-media.md, "Hub leg"). A browser sends `offer`, `answer` and
  * `candidate`; the media server sends `offer`, `answer` and `tracks`, and never
  * trickles a candidate.
  */
@@ -175,7 +175,7 @@ export function decodeRtcState(payload: string): RtcStatePayload | null {
 }
 
 // The payloads of the `MediaSignal` envelope, one encoder and one decoder per
-// row of the table in docs/STELLARR_MEDIA.md. Both directions are here: the
+// row of the table in docs/stellarr-media.md. Both directions are here: the
 // browser needs its own half, and fakes of the media server need the other.
 // A decoder takes the whole payload or nothing; a directory with one bad entry
 // would file somebody's track under the wrong person.

@@ -22,30 +22,30 @@ function render(markdown: string, relativePath: string) {
 }
 
 test('a link to the map goes to the home page, which is served as index', () => {
-  assert.deepEqual(render('[map](README.md#understand)', 'ARCHITECTURE.md').hrefs, ['/Stellarr/#understand'])
+  assert.deepEqual(render('[map](README.md#reference)', 'architecture.md').hrefs, ['/Stellarr/#reference'])
   assert.deepEqual(render('[map](../README.md)', 'install/quick-start.md').hrefs, ['/Stellarr/'])
   // VitePress looks a README link up as a page named README, which the site does not have.
   assert.deepEqual(render('[map](../README.md)', 'install/quick-start.md').links, ['/'])
 })
 
 test('a link to a file outside docs goes to that file on GitHub', () => {
-  assert.deepEqual(render('[panel](../cockpit/README.md#language)', 'ARCHITECTURE.md').hrefs, [
-    `${repository}/blob/main/cockpit/README.md#language`,
+  assert.deepEqual(render('[panel](../cockpit/README.md#localization)', 'architecture.md').hrefs, [
+    `${repository}/blob/main/cockpit/README.md#localization`,
   ])
   assert.deepEqual(render('[compose](../../docker-compose.yml)', 'install/quick-start.md').hrefs, [
     `${repository}/blob/main/docker-compose.yml`,
   ])
-  assert.deepEqual(render('[folder](../branding/)', 'ARCHITECTURE.md').hrefs, [
+  assert.deepEqual(render('[folder](../branding/)', 'architecture.md').hrefs, [
     `${repository}/blob/main/branding/`,
   ])
 })
 
 test('links to other pages, anchors and external addresses are left to VitePress', () => {
   const { hrefs, links } = render(
-    '[page](../ARCHITECTURE.md), [section](#top), [site](https://example.org/a), [root](/other)',
+    '[page](../architecture.md), [section](#top), [site](https://example.org/a), [root](/other)',
     'install/quick-start.md',
   )
 
-  assert.deepEqual(hrefs, ['./../ARCHITECTURE', '#top', 'https://example.org/a', '/Stellarr/other'])
-  assert.deepEqual(links, ['./../ARCHITECTURE', '/other'])
+  assert.deepEqual(hrefs, ['./../architecture', '#top', 'https://example.org/a', '/Stellarr/other'])
+  assert.deepEqual(links, ['./../architecture', '/other'])
 })

@@ -1,6 +1,6 @@
 # Localization
 
-Stellarr supports English (`en`, default) and Polish (`pl`) across the web client, the Cockpit operator panel, and the ASP.NET Core API, plus optional client-side message translation powered by Bergamot WASM.
+Stellarr supports English (`en`, default) and Polish (`pl`) across the web client, the Cockpit operator panel, and the ASP.NET Core API, plus optional in-browser message translation powered by Bergamot WASM.
 
 ## Locale resolution and `STELLARR_LANGUAGE`
 
@@ -19,14 +19,17 @@ Setting `STELLARR_LANGUAGE=pl` (or `en`) configures the instance default:
    1. `stellarr_locale` cookie.
    2. First match in `navigator.languages` (`pl` or `en`).
    3. `en`.
-3. **API (`server/Stellarr.Api/`)**: Reads `Stellarr:Language` (`STELLARR_LANGUAGE`) at startup (`LanguageOptions`). Used for API problem details, validation errors, system join notices, initial role/channel names on new servers, audit log entries, and password-reset/test emails. Records already persisted in SQLite keep the language in which they were written.
+3. **API (`server/Stellarr.Api/`)**: Reads `Stellarr:Language` (`STELLARR_LANGUAGE`) at startup (`LanguageOptions`). Used for API problem details, validation errors, system join notices, initial role/channel names on new servers, audit log entries, and password-reset/test emails.
+
+> [!NOTE]
+> Changing `STELLARR_LANGUAGE` affects server responses, emails, and database records created from that point forward. Records already persisted in SQLite keep the language in which they were originally written.
 
 ## Message catalogs
 
 ### Web client (`web/src/i18n/`)
 
-- [web/src/i18n/messages/pl.ts](../web/src/i18n/messages/pl.ts) defines the canonical `MessageKey` union.
-- [web/src/i18n/messages/en.ts](../web/src/i18n/messages/en.ts) is typed with `satisfies Record<keyof typeof pl, string>`, ensuring missing or extra keys fail `npm run typecheck`.
+- [web/src/i18n/messages/pl.ts](../web/src/i18n/messages/pl.ts) defines the `MessageKey` union.
+- [web/src/i18n/messages/en.ts](../web/src/i18n/messages/en.ts) is typed with `satisfies Record<keyof typeof pl, string>`, so missing or extra keys fail `npm run typecheck`.
 - Components format strings via `t(key, values)`. `{name}` placeholders are interpolated as plain text without HTML parsing; unprovided placeholders remain literal (`{name}`).
 - `LanguageProvider` persists:
   - `stellarr_locale` cookie so SSR and client hydration render the same `<html lang>`.
@@ -34,7 +37,7 @@ Setting `STELLARR_LANGUAGE=pl` (or `en`) configures the instance default:
 
 ### Cockpit (`cockpit/src/i18n/`)
 
-- Catalogs live in `cockpit/src/i18n/en.ts` and `cockpit/src/i18n/pl.ts` with identical key sets and `{name}` placeholder interpolation via `t(key, values)`.
+- Catalogs live in `cockpit/src/i18n/en.ts` and `cockpit/src/i18n/pl.ts` with matching key sets and `{name}` placeholder interpolation via `t(key, values)`.
 
 ### Backend API (`server/Stellarr.Api/Localization/`)
 
@@ -42,6 +45,9 @@ Setting `STELLARR_LANGUAGE=pl` (or `en`) configures the instance default:
 - `Messages.en.cs` and `Messages.pl.cs` implement exhaustive switch expressions over `MessageKey`, and `Messages.Get(key, ...)` interpolates `{name}` placeholders.
 
 ## Client-side chat translation
+
+> [!TIP]
+> Chat translation runs locally inside the user's browser using WebAssembly and a Web Worker. Message text is never sent to an external translation service, and downloaded models remain cached in IndexedDB across sessions.
 
 1. Enabling chat translation checks the three model files (`model`, `lex`, `vocab`) for the language pair (`plen` or `enpl`) listed in `web/public/bergamot-models/registry.json`.
 2. Missing model files are fetched from `/bergamot-models/` first and then `/bergamot-models-gcs/`, which rewrites to the Bergamot GCS bucket in `web/next.config.ts` (development) and `infra/nginx.conf` (production).
@@ -64,7 +70,7 @@ Setting `STELLARR_LANGUAGE=pl` (or `en`) configures the instance default:
 
 ## Verification
 
-Install the dependencies once from the repository root with `npm ci`; `web/` and `cockpit/` are workspaces that share its lockfile.
+Install dependencies once from the repository root with `npm ci`; `web/` and `cockpit/` are workspaces sharing the root lockfile.
 
 ```bash
 # Web client

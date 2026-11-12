@@ -1,8 +1,9 @@
 # Configuration
 
-`docker-compose.yml` configures the container through environment variables read from `.env` (copy `.env.example` to `.env` to start). Apply changes by running `docker compose up -d`. Settings stored in the database can also be inspected and changed with the [operator CLI](cli.md).
+`docker-compose.yml` configures the container through environment variables read from `.env` (copy `.env.example` to `.env` to start). Apply changes by running `docker compose up -d`.
 
-Variables marked **seed** initialize settings that the instance owner can later change in Cockpit (`/cockpit/`). Once saved in Cockpit, the database value takes precedence over the environment variable.
+> [!TIP]
+> Variables marked **seed** initialize settings that the instance owner can later change in Cockpit (`/cockpit/`) or via the [operator CLI](cli.md). Once saved in Cockpit or the CLI, the database value takes precedence over `.env`.
 
 ## Address and TLS
 
@@ -26,10 +27,10 @@ If `/data/stellarr/tls/fullchain.pem` or `privkey.pem` is missing, the container
 | `STELLARR_TURNS_PORT` | port (`1–65535`) | `5349` | Published host port and advertised port for TURN over TLS (`STELLARR_TURNS_ENABLED=true`). |
 | `STELLARR_TURN_TCP_ENABLED` | `true` \| `false` | `false` | Enables the TURN/TCP listener in `coturn` and advertises `?transport=tcp` ICE URLs. |
 | `STELLARR_TURNS_ENABLED` | `true` \| `false` | `false` | Enables TURN over TLS/DTLS in `coturn` and advertises `turns:` ICE URLs. Requires a browser-trusted TLS certificate. |
-| `STELLARR_MEDIA_PORT` | port (`1–65535`) | `49000` | Published host UDP port for [Stellarr Media](../STELLARR_MEDIA.md) (`49000/udp`), which carries every call. Advertised in ICE candidates and `/api/bootstrap`; must match the external router port. |
+| `STELLARR_MEDIA_PORT` | port (`1–65535`) | `49000` | Published host UDP port for [Stellarr Media](../stellarr-media.md) (`49000/udp`), which carries every call. Advertised in ICE candidates and `/api/bootstrap`; must match the external router port. |
 | `STELLARR_TURN_RELAY_RANGE` | port range | `49160-49200` | Host UDP ports mapped to container ports `49160-49200/udp` for TURN allocations. |
 
-See [RTC and ports](../RTC_AND_PORTS.md) for port sizing and NAT rules.
+See [RTC and ports](../rtc-and-ports.md) for port sizing and NAT rules.
 
 ## Uploads and quotas
 
@@ -46,16 +47,17 @@ Per-file limits by media type: images 10 MiB, audio 25 MiB, documents/other 25 M
 
 ## Mail
 
-Password-reset, invitation and test emails go through an SMTP server by default. Its host, port, encryption (STARTTLS, TLS or none) and login are set in Cockpit under **Settings**. Resend's HTTPS API can replace SMTP: turn it on under **Integrations**. An installation that never chose keeps sending through Resend while it has a Resend key and no SMTP host, as it did before SMTP existed.
+Password-reset, invitation, and test emails are sent over SMTP by default. Configure the SMTP host, port, encryption (`STARTTLS`, `TLS`, or `none`), and username in Cockpit under **Settings**. To send via Resend's HTTPS API instead, enable Resend under **Integrations** (existing installations with a Resend API key and no SMTP host continue using Resend automatically).
 
-The SMTP password and the Resend key can be set in Cockpit or in the environment. A value set in Cockpit is stored encrypted with the instance's data-protection keys and takes precedence; removing it there falls back to the environment's. Cockpit never shows a secret again, only whether it is set and where from.
+> [!NOTE]
+> The SMTP password and Resend API key can be configured either in Cockpit or via environment variables. Secrets saved in Cockpit are encrypted with the instance's data-protection keys, override the environment variables, and are never returned to the browser. Clearing a secret in Cockpit falls back to the environment variable.
 
 | Variable | Type | Default | Description |
 | --- | --- | --- | --- |
 | `STELLARR_MAIL_ENABLED` | `true` \| `false` | `true` | **Seed** for the mailing toggle in Cockpit settings. |
-| `STELLARR_SMTP_PASSWORD` | string | empty | SMTP password, used when Cockpit holds none. |
-| `STELLARR_RESEND_API_KEY` | string | empty | Resend API key, used when Cockpit holds none. |
-| `STELLARR_MAIL_FROM` | email | empty | **Seed** for the sender address. `onboarding@resend.dev` works only through Resend, for testing. |
+| `STELLARR_SMTP_PASSWORD` | string | empty | SMTP password fallback when none is stored in Cockpit. |
+| `STELLARR_RESEND_API_KEY` | string | empty | Resend API key fallback when none is stored in Cockpit. |
+| `STELLARR_MAIL_FROM` | email | empty | **Seed** for the sender address. `onboarding@resend.dev` works only through Resend for testing. |
 | `STELLARR_MAIL_FROM_NAME` | string | `Stellarr` | Sender display name. |
 
 ## Single sign-on (OIDC)
@@ -77,7 +79,7 @@ OpenID Connect login is optional; local username/password login remains availabl
 | --- | --- | --- | --- |
 | `STELLARR_LANGUAGE` | `en` \| `pl` | `en` | Default interface locale for users without a saved preference, and the language used by the API for error messages, system messages, default server/role/channel names, audit entries, and emails. Stored records keep the language in which they were created. Unknown values abort API startup. |
 
-See [Localization](../LOCALIZATION.md).
+See [Localization](../localization.md).
 
 ## Instance identity and desktop handshake
 
@@ -93,7 +95,7 @@ See [Localization](../LOCALIZATION.md).
 
 | Variable | Type | Default | Description |
 | --- | --- | --- | --- |
-| `GIPHY_API_KEY` | string | empty | GIPHY web-integration key for the GIF search, handed to signed-in browser clients. It can also be set in Cockpit under **Integrations**, which takes precedence, checks the key against GIPHY and turns GIFs on or off. Changes reach open tabs when they reload; no restart is needed. When building from source, the same value is passed as a build argument and is used only while the API cannot be asked. |
+| `GIPHY_API_KEY` | string | empty | GIPHY web-integration key for GIF search, provided to signed-in browser clients. Can also be configured and verified in Cockpit under **Integrations** (which takes precedence and takes effect on tab reload without a container restart). When building from source, it is also passed as a build-time fallback used only if the API is unreachable. |
 | `STELLARR_EF_COMMAND_LOG_LEVEL` | .NET log level | `Warning` | Log level for `Microsoft.EntityFrameworkCore.Database.Command` (`Information` logs SQL queries). |
 
 ## Container resource limits
@@ -121,7 +123,8 @@ The container entrypoint and TLS maintenance scripts read the following variable
 | `RUSTFS_ACCESS_KEY` | `stellarr` | S3 access key for RustFS. |
 | `RUSTFS_BUCKET` | `stellarr-images` | S3 bucket name in RustFS. |
 
-On first start, generated secrets are written to `/data/stellarr/secrets/` and must be backed up with the data volume.
+> [!IMPORTANT]
+> On first start, generated secrets are written to `/data/stellarr/secrets/` and must be backed up as part of the `/data/stellarr` volume.
 
 ## Development stack (`docker-compose.dev.yml`)
 

@@ -2,7 +2,7 @@
 //
 // The script starts the release binary on spare loopback ports, plays the
 // hub between it and headless Chromium pages, and runs one scenario per
-// behaviour of docs/STELLARR_MEDIA.md that a str0m client cannot show. Every
+// behaviour of docs/stellarr-media.md that a str0m client cannot show. Every
 // claim about media is read from getStats() or from the decoded media itself,
 // never from a connection state.
 //

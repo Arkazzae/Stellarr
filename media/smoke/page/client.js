@@ -1,5 +1,5 @@
 // The smallest client of Stellarr Media that keeps the "Negotiation rules" of
-// docs/STELLARR_MEDIA.md: one RTCPeerConnection with max-bundle, the browser
+// docs/stellarr-media.md: one RTCPeerConnection with max-bundle, the browser
 // offers what it publishes and answers what the media server offers, it is
 // the impolite side of a collision, and every arriving track is filed under
 // the person the directory names.
@@ -20,7 +20,7 @@ const OPUS_TUNING = {
   minptime: "10",
 };
 
-/** The screen audio profile of docs/RTC_AND_PORTS.md: 160 kb/s in stereo. */
+/** The screen audio profile of docs/rtc-and-ports.md: 160 kb/s in stereo. */
 const SCREEN_AUDIO_TUNING = {
   ...OPUS_TUNING,
   maxaveragebitrate: "160000",

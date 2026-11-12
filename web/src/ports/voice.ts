@@ -8,7 +8,7 @@ import type { Unsubscribe } from "./chat";
 /**
  * The RTC port.
  *
- * `VoiceClient` already is the versioned contract from `docs/RTC_STANDARD.md`,
+ * `VoiceClient` is the public client interface described in `docs/rtc-protocol.md`,
  * so it is the port; this only re-exports it so components import every port
  * from one place.
  */

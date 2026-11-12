@@ -12,13 +12,14 @@ Full documentation lives in [`docs/`](docs/README.md):
 - [Requirements](docs/install/requirements.md)
 - [Quick start](docs/install/quick-start.md)
 - [Configuration](docs/install/configuration.md)
+- [Operator CLI](docs/install/cli.md)
 - [Reverse proxy and TLS](docs/install/reverse-proxy-and-tls.md)
 - [Upgrading](docs/install/upgrading.md)
-- [Architecture](docs/ARCHITECTURE.md)
-- [RTC and ports](docs/RTC_AND_PORTS.md)
-- [Stellarr RTC v1](docs/RTC_STANDARD.md)
-- [Stellarr Media (SFU)](docs/STELLARR_MEDIA.md)
-- [Localization](docs/LOCALIZATION.md)
+- [Architecture](docs/architecture.md)
+- [RTC and ports](docs/rtc-and-ports.md)
+- [Voice and RTC protocol](docs/rtc-protocol.md)
+- [Stellarr Media (SFU)](docs/stellarr-media.md)
+- [Localization](docs/localization.md)
 
 ## Repository layout
 
@@ -26,8 +27,8 @@ Full documentation lives in [`docs/`](docs/README.md):
 | --- | --- |
 | `web/` | Next.js web client |
 | `cockpit/` | [Stellarr Cockpit](cockpit/README.md), the instance operator panel (`/cockpit/`) |
-| `packages/` | Code shared by `web/` and `cockpit/` ([`@stellarr/ui`](packages/stellarr-ui/README.md)); the root `package.json` makes `web/`, `cockpit/` and `packages/*` one npm workspace with one `package-lock.json` |
-| `server/` | ASP.NET Core control plane, SignalR hub, operator CLI, and tests |
+| `packages/` | Shared UI packages ([`@stellarr/ui`](packages/stellarr-ui/README.md)) used by `web/` and `cockpit/` in one npm workspace |
+| `server/` | ASP.NET Core API, SignalR hub, operator CLI, and integration tests |
 | `media/` | [Stellarr Media](media/README.md), the Rust WebRTC SFU (`stellarr-media`) |
 | `infra/` | Container entrypoint, Nginx, coturn, supervisord, and TLS scripts |
 | `docs/` | VitePress documentation site |
@@ -35,4 +36,4 @@ Full documentation lives in [`docs/`](docs/README.md):
 
 ## License
 
-Code is licensed under the [MIT License](LICENSE). See [`branding/README.md`](branding/README.md#name-and-logo) for use of the Stellarr name, logo, and mascot.
+Code is licensed under the [MIT License](LICENSE). See [`branding/README.md`](branding/README.md#name-and-logo-policy) for use of the Stellarr name, logo, and mascot.

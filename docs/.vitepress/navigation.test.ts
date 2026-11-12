@@ -18,23 +18,23 @@ function docsWith(t: TestContext, files: Record<string, string>): string {
 test('sections follow the documentation map and appear once they have a page', (t) => {
   const docs = docsWith(t, {
     'README.md': '# Documentation\n',
-    'ARCHITECTURE.md': '# Architecture\n',
+    'architecture.md': '# Architecture\n',
     'development/setup.md': '# Set up\n',
     'install/quick-start.md': '# Quick start\n',
   })
   const { nav, sidebar } = buildNavigation(docs)
 
   assert.deepEqual(sidebar, [
-    { text: 'Install', items: [{ text: 'Quick start', link: '/install/quick-start' }] },
-    { text: 'Understand', items: [{ text: 'Architecture', link: '/ARCHITECTURE' }] },
-    { text: 'Develop', items: [{ text: 'Set up', link: '/development/setup' }] },
+    { text: 'Self-hosting', items: [{ text: 'Quick start', link: '/install/quick-start' }] },
+    { text: 'Reference', items: [{ text: 'Architecture', link: '/architecture' }] },
+    { text: 'Development', items: [{ text: 'Set up', link: '/development/setup' }] },
   ])
   assert.deepEqual(
     nav.map(({ text, link }) => [text, link]),
     [
-      ['Install', '/install/quick-start'],
-      ['Understand', '/ARCHITECTURE'],
-      ['Develop', '/development/setup'],
+      ['Self-hosting', '/install/quick-start'],
+      ['Reference', '/architecture'],
+      ['Development', '/development/setup'],
     ],
   )
 })
@@ -91,15 +91,15 @@ test('a page without a first-level heading stops the build', (t) => {
 test('a navigation item is active on every page of its section only', (t) => {
   const docs = docsWith(t, {
     'README.md': '# Documentation\n',
-    'ARCHITECTURE.md': '# Architecture\n',
+    'architecture.md': '# Architecture\n',
     'install/quick-start.md': '# Quick start\n',
     'install/v1.2.md': '# Version 1.2\n',
   })
-  const [install, understand] = buildNavigation(docs).nav.map((item) => new RegExp(item.activeMatch!))
+  const [selfHosting, reference] = buildNavigation(docs).nav.map((item) => new RegExp(item.activeMatch!))
 
-  assert.ok(install.test('/install/quick-start'))
-  assert.ok(install.test('/install/v1.2'))
-  assert.ok(!install.test('/install/v1x2'))
-  assert.ok(!install.test('/ARCHITECTURE'))
-  assert.ok(understand.test('/ARCHITECTURE'))
+  assert.ok(selfHosting.test('/install/quick-start'))
+  assert.ok(selfHosting.test('/install/v1.2'))
+  assert.ok(!selfHosting.test('/install/v1x2'))
+  assert.ok(!selfHosting.test('/architecture'))
+  assert.ok(reference.test('/architecture'))
 })
