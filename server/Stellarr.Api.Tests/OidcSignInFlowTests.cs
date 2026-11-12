@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.JsonWebTokens;
 using Microsoft.IdentityModel.Protocols;
@@ -15,6 +16,7 @@ using Microsoft.IdentityModel.Tokens;
 using Stellarr.Api.Auth;
 using Stellarr.Api.Data;
 using Stellarr.Api.Domain;
+using Stellarr.Api.Operations;
 
 namespace Stellarr.Api.Tests;
 
@@ -130,6 +132,54 @@ public sealed class OidcSignInFlowTests(StellarrWebApplicationFactory factory)
         Assert.False(await db.UserSessions.AnyAsync(x => x.UserId == account.Id));
     }
 
+    [Fact]
+    public async Task RequiredPolicySendsLinkedAccountToEnrollmentWithoutASession()
+    {
+        using var provider = new FakeProvider();
+        using var host = Host(provider);
+        using var client = BrowserClient(host);
+        var account = await CreateLinkedAccountAsync(provider);
+        await SetRequirementAsync(MfaRequirements.Everyone);
+        try
+        {
+            using var callback = await SignInThroughProviderAsync(client, provider, "/");
+
+            Assert.Equal(HttpStatusCode.Redirect, callback.StatusCode);
+            Assert.StartsWith("/login?mfa_enrollment=1", callback.Headers.Location!.OriginalString, StringComparison.Ordinal);
+            var session = await client.GetFromJsonAsync<JsonElement>("/api/session");
+            Assert.Equal(JsonValueKind.Null, session.GetProperty("user").ValueKind);
+            await using var scope = factory.OpenScope(out var db);
+            Assert.False(await db.UserSessions.AnyAsync(x => x.UserId == account.Id));
+        }
+        finally
+        {
+            await SetRequirementAsync(MfaRequirements.Optional);
+        }
+    }
+
+    [Fact]
+    public async Task RecoveryRequiredBlocksTheOidcPrimaryFlow()
+    {
+        using var provider = new FakeProvider();
+        using var host = Host(provider);
+        using var client = BrowserClient(host);
+        var account = await CreateLinkedAccountAsync(provider);
+        await using (var scope = factory.OpenScope(out var db))
+        {
+            await db.Users.Where(x => x.Id == account.Id).ExecuteUpdateAsync(
+                setters => setters.SetProperty(x => x.SecurityRecoveryRequired, true));
+        }
+
+        using var callback = await SignInThroughProviderAsync(client, provider, "/");
+
+        Assert.Equal(HttpStatusCode.Redirect, callback.StatusCode);
+        Assert.Equal("/login?security_recovery_required=1", callback.Headers.Location!.OriginalString);
+        var session = await client.GetFromJsonAsync<JsonElement>("/api/session");
+        Assert.Equal(JsonValueKind.Null, session.GetProperty("user").ValueKind);
+        await using var check = factory.OpenScope(out var checkDb);
+        Assert.False(await checkDb.UserSessions.AnyAsync(x => x.UserId == account.Id));
+    }
+
     [Theory]
     [InlineData("access_denied", "cancelled")]
     [InlineData("server_error", "failed")]
@@ -243,7 +293,11 @@ public sealed class OidcSignInFlowTests(StellarrWebApplicationFactory factory)
         using var first = BrowserClient(host);
         await CreateLinkedAccountAsync(provider);
         (await SignInThroughProviderAsync(first, provider, "/")).Dispose();
-        using var approved = await first.GetAsync(approvalUrl);
+        using var form = await first.GetAsync(approvalUrl);
+        var token = DesktopBrowserLoginFlowTests.ApprovalToken(await form.Content.ReadAsStringAsync());
+        using var approved = await first.PostAsync(
+            approvalUrl,
+            new FormUrlEncodedContent([new KeyValuePair<string, string>("token", token)]));
         approved.EnsureSuccessStatusCode();
 
         using var second = BrowserClient(host);
@@ -265,7 +319,14 @@ public sealed class OidcSignInFlowTests(StellarrWebApplicationFactory factory)
         var account = await CreateLinkedAccountAsync(provider);
         (await SignInThroughProviderAsync(browser, provider, "/")).Dispose();
         var handle = await StartDesktopLoginAsync(desktop);
-        (await browser.GetAsync($"/api/auth/desktop/browser/verify/{handle.RequestId}")).Dispose();
+        using var form = await browser.GetAsync($"/api/auth/desktop/browser/verify/{handle.RequestId}");
+        var token = DesktopBrowserLoginFlowTests.ApprovalToken(await form.Content.ReadAsStringAsync());
+        using (var approved = await browser.PostAsync(
+                   $"/api/auth/desktop/browser/verify/{handle.RequestId}",
+                   new FormUrlEncodedContent([new KeyValuePair<string, string>("token", token)])))
+        {
+            approved.EnsureSuccessStatusCode();
+        }
         await using (var scope = factory.OpenScope(out var db))
         {
             await db.Users.Where(x => x.Id == account.Id)
@@ -377,6 +438,20 @@ public sealed class OidcSignInFlowTests(StellarrWebApplicationFactory factory)
         });
         await db.SaveChangesAsync();
         return user;
+    }
+
+    private async Task SetRequirementAsync(string requirement)
+    {
+        await using var scope = factory.OpenScope(out var db);
+        var server = await db.Servers.OrderBy(x => x.CreatedAt).FirstAsync();
+        var settings = await InstanceSettingsService.LoadAsync(
+            db,
+            server,
+            scope.ServiceProvider.GetRequiredService<IConfiguration>(),
+            CancellationToken.None);
+        settings.MfaRequirement = requirement;
+        settings.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync();
     }
 
     private sealed class FakeProvider : HttpMessageHandler
