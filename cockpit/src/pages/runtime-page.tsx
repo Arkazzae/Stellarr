@@ -63,7 +63,7 @@ function MetricTiles({ data }: { data: CockpitRuntime }) {
   return (
     <>
       <StatTile
-        icon="signal"
+        icon="pulse"
         title={t("runtime.metric.requests")}
         value={formatNumber(requests)}
         caption={t("runtime.lastHour")}
@@ -94,7 +94,7 @@ function MetricTiles({ data }: { data: CockpitRuntime }) {
         }
       />
       <StatTile
-        icon="sliders"
+        icon="memory"
         title={t("runtime.metric.memory")}
         value={value ?? ""}
         unit={unit}
@@ -112,7 +112,7 @@ function MetricTiles({ data }: { data: CockpitRuntime }) {
         trend={<Trend history={history} pick={(sample) => sample.realtimeConnections} combine="last" format={count} />}
       />
       <StatTile
-        icon="clipboard"
+        icon="database"
         title={t("runtime.metric.latency")}
         value={formatNumber(data.databaseLatencyMs, { maximumFractionDigits: 2 })}
         unit="ms"
@@ -136,7 +136,7 @@ function RequestsChart({ data, className }: { data: CockpitRuntime; className?: 
   const scale = remPx / 16;
   return (
     <Card className={cn("gap-0 py-0", className)}>
-      <CardTitleRow icon="signal" title={t("runtime.chart.requests")}>
+      <CardTitleRow icon="chart" title={t("runtime.chart.requests")}>
         <span className="text-sm text-muted-foreground">{t("runtime.chart.perInterval", { seconds: data.sampleSeconds })}</span>
       </CardTitleRow>
       <div className="flex min-h-0 flex-1 flex-col px-5 pt-3 pb-3">
