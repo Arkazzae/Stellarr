@@ -1,6 +1,6 @@
 # Configuration
 
-`docker-compose.yml` configures the container through environment variables read from `.env` (copy `.env.example` to `.env` to start). Apply changes by running `docker compose up -d`.
+`docker-compose.yml` configures the container through environment variables read from `.env` (copy `.env.example` to `.env` to start). Apply changes by running `docker compose up -d`. Settings stored in the database can also be inspected and changed with the [operator CLI](cli.md).
 
 Variables marked **seed** initialize settings that the instance owner can later change in Cockpit (`/cockpit/`). Once saved in Cockpit, the database value takes precedence over the environment variable.
 

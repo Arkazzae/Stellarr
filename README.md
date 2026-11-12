@@ -26,7 +26,7 @@ Full documentation lives in [`docs/`](docs/README.md):
 | --- | --- |
 | `web/` | Next.js web client |
 | `cockpit/` | [Stellarr Cockpit](cockpit/README.md), the instance operator panel (`/cockpit/`) |
-| `server/` | ASP.NET Core control plane, SignalR hub, and tests |
+| `server/` | ASP.NET Core control plane, SignalR hub, operator CLI, and tests |
 | `media/` | [Stellarr Media](media/README.md), the Rust WebRTC SFU (`stellarr-media`) |
 | `infra/` | Container entrypoint, Nginx, coturn, supervisord, and TLS scripts |
 | `docs/` | VitePress documentation site |
