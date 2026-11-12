@@ -2,7 +2,7 @@
 
 import { useState, useSyncExternalStore } from "react";
 
-import { Icon } from "@/components/icons/Icon";
+import { Icon } from "@stellarr/ui/icons";
 import type { PopoverTriggerProps } from "@/components/primitives/Popover";
 import type { Sound, VoiceSettings } from "@/ports";
 import { useLanguage } from "@/state/LanguageProvider";

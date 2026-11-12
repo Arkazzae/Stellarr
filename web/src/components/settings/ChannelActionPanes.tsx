@@ -1,6 +1,6 @@
 "use client";
 
-import { Icon } from "@/components/icons/Icon";
+import { Icon } from "@stellarr/ui/icons";
 import { Switch } from "@/components/primitives/Switch";
 import {
   PermissionOverrideEditor,

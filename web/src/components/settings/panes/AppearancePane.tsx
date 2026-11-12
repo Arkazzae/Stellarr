@@ -2,7 +2,7 @@
 
 import type { CSSProperties, ReactNode } from "react";
 
-import { Icon, type IconName } from "@/components/icons/Icon";
+import { Icon, type IconName } from "@stellarr/ui/icons";
 import { Avatar } from "@/components/primitives/Avatar";
 import { Segmented, type SegmentedOption } from "@/components/primitives/Segmented";
 import {

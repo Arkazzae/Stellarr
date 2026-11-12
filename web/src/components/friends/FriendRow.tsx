@@ -3,7 +3,7 @@
 import { useState } from "react";
 
 import { blockPerson, removeFriend } from "@/components/confirmations";
-import { Icon } from "@/components/icons/Icon";
+import { Icon } from "@stellarr/ui/icons";
 import { AnchoredCard } from "@/components/primitives/AnchoredCard";
 import { useConfirm, type ConfirmRequest } from "@/components/primitives/ConfirmDialog";
 import type { PersonVM } from "@/components/view-models";

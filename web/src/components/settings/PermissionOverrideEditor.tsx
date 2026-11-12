@@ -2,7 +2,7 @@
 
 import { type CSSProperties, useState } from "react";
 
-import { Icon } from "@/components/icons/Icon";
+import { Icon } from "@stellarr/ui/icons";
 import { Segmented } from "@/components/primitives/Segmented";
 import type { MessageKey } from "@/i18n";
 import { SERVER_PERMISSION_VALUES } from "@/ports";

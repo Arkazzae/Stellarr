@@ -1,9 +1,9 @@
 /** Export the application's icon geometry as standalone branding assets. */
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 
-import { ICON_PATHS } from "../src/components/icons/paths.ts";
+import { ICON_PATHS } from "../src/icons/paths.ts";
 
-const output = new URL("../../branding/icons/", import.meta.url);
+const output = new URL("../../../branding/icons/", import.meta.url);
 const check = process.argv.includes("--check");
 const mismatches = [];
 

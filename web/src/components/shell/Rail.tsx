@@ -2,7 +2,7 @@
 
 import { useId, useState, type MouseEvent, type ReactNode } from "react";
 
-import { Icon } from "@/components/icons/Icon";
+import { Icon } from "@stellarr/ui/icons";
 import { useContextMenu } from "@/components/primitives/ContextMenu";
 import { UserMenu, type UserMenuActions } from "@/components/roster/UserMenu";
 import {

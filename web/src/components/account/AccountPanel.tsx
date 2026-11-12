@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import { Icon } from "@/components/icons/Icon";
+import { Icon } from "@stellarr/ui/icons";
 import { AnchoredCard } from "@/components/primitives/AnchoredCard";
 import { PresenceDot } from "@/components/primitives/Avatar";
 import { EmojiPicker } from "@/components/room/EmojiPicker";

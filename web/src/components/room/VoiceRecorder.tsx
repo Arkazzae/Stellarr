@@ -2,7 +2,7 @@
 
 import { useEffect, useEffectEvent, useRef, useState } from "react";
 
-import { Icon } from "@/components/icons/Icon";
+import { Icon } from "@stellarr/ui/icons";
 import type { OpenVoiceMessageCapture } from "@/ports";
 import { useLanguage } from "@/state/hooks";
 

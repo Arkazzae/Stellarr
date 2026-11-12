@@ -27,7 +27,7 @@ import {
   type SecurityPaneProps,
 } from "@/components/account/panes/SecurityPane";
 import { VoicePane, type VoicePaneProps } from "@/components/account/panes/VoicePane";
-import { Icon } from "@/components/icons/Icon";
+import { Icon } from "@stellarr/ui/icons";
 import { Avatar } from "@/components/primitives/Avatar";
 import { Modal } from "@/components/primitives/Modal";
 import {

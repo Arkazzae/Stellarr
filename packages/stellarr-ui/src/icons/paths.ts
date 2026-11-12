@@ -3,7 +3,8 @@
  *
  * Every glyph uses a 24×24 canvas, a 1.5px round stroke and optical padding.
  * Soft contours and deliberate breaks are shared across the family; state
- * variants retain the same silhouette. Keep app-specific glyphs here too,
+ * variants retain the same silhouette. This is the one registry for the web
+ * client, Cockpit and branding/icons/. Keep app-specific glyphs here too,
  * rather than introducing image masks, Unicode symbols or another icon pack.
  */
 export type IconPath = string;

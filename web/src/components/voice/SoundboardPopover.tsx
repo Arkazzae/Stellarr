@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useState, type ReactNode } from "react";
 
-import { Icon } from "@/components/icons/Icon";
+import { Icon } from "@stellarr/ui/icons";
 import { Popover, type PopoverTriggerProps } from "@/components/primitives/Popover";
 import type { Sound } from "@/ports";
 import { useLanguage } from "@/state/LanguageProvider";
