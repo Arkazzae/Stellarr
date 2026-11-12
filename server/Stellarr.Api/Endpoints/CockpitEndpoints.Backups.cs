@@ -6,6 +6,7 @@ using Stellarr.Api.Backups;
 using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
 using Stellarr.Api.Localization;
+using Stellarr.Api.Operations;
 
 namespace Stellarr.Api.Endpoints;
 
@@ -13,7 +14,6 @@ namespace Stellarr.Api.Endpoints;
 // as plain SQLite files, and archives that add the stored files and the keys.
 public static partial class CockpitEndpoints
 {
-    private const int DefaultBackupRetentionDays = 14;
     private const string BackupPrefix = "backup-";
     private const string BackupExtension = ".db";
     private const string VerifiedMarkerExtension = ".verified";
@@ -34,7 +34,7 @@ public static partial class CockpitEndpoints
         var failure = jobs.LastFailure;
         return Results.Ok(new CockpitBackupsDto(
             await ReadBackupsAsync(BackupDirectory(configuration), cancellationToken),
-            retentionDays ?? DefaultBackupRetentionDays,
+            retentionDays ?? InstanceSettingsService.DefaultBackupRetentionDays,
             running is null ? null : ToJobDto(running),
             failure is null ? null : new CockpitBackupFailureDto(failure.Id, failure.Message, failure.At)));
     }

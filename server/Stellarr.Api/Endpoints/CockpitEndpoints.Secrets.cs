@@ -32,7 +32,7 @@ public static partial class CockpitEndpoints
         }
 
         var value = request.Value ?? "";
-        if (string.IsNullOrWhiteSpace(value) || value.Length > SecretNames.MaxLength)
+        if (!SecretNames.IsValidValue(value))
         {
             return Results.ValidationProblem(new Dictionary<string, string[]>
             {
