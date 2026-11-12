@@ -20,6 +20,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<RecoveryCode> RecoveryCodes => Set<RecoveryCode>();
     public DbSet<TrustedDevice> TrustedDevices => Set<TrustedDevice>();
     public DbSet<AuthChallenge> AuthChallenges => Set<AuthChallenge>();
+    public DbSet<WebAuthnCredential> WebAuthnCredentials => Set<WebAuthnCredential>();
+    public DbSet<PasskeySignIn> PasskeySignIns => Set<PasskeySignIn>();
     public DbSet<EmailOtpCode> EmailOtpCodes => Set<EmailOtpCode>();
     public DbSet<CliRecoveryCredential> CliRecoveryCredentials => Set<CliRecoveryCredential>();
     public DbSet<SecurityEvent> SecurityEvents => Set<SecurityEvent>();

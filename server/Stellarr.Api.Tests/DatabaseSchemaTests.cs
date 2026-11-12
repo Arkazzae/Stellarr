@@ -48,6 +48,8 @@ public sealed class DatabaseSchemaTests
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         await db.Database.ExecuteSqlRawAsync(
             """
+            DROP TABLE "PasskeySignIns";
+            DROP TABLE "WebAuthnCredentials";
             DROP TABLE "SecurityNotifications";
             DROP TABLE "SecurityEvents";
             DROP TABLE "CliRecoveryCredentials";
@@ -74,6 +76,7 @@ public sealed class DatabaseSchemaTests
                  {
                      "MfaMethods", "RecoveryCodes", "TrustedDevices", "AuthChallenges",
                      "EmailOtpCodes", "CliRecoveryCredentials", "SecurityEvents", "SecurityNotifications",
+                     "WebAuthnCredentials", "PasskeySignIns",
                  })
         {
             Assert.Contains(table, tables);
@@ -174,6 +177,7 @@ public sealed class DatabaseSchemaTests
                 "SELECT name AS Value FROM pragma_table_info('AuthChallenges')")
             .ToArrayAsync();
         Assert.Contains("ShortLived", columns);
+        Assert.Contains("WebAuthnOptions", columns);
     }
 
     [Fact]

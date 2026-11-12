@@ -178,6 +178,54 @@ internal static class SecuritySchema
                 cancellationToken);
         }
 
+        if (!await SqliteSchema.HasColumnAsync(db, "AuthChallenges", "WebAuthnOptions", cancellationToken))
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                """ALTER TABLE "AuthChallenges" ADD COLUMN "WebAuthnOptions" TEXT NULL;""",
+                cancellationToken);
+        }
+
+        await db.Database.ExecuteSqlRawAsync(
+            """
+            CREATE TABLE IF NOT EXISTS "WebAuthnCredentials" (
+                "Id" TEXT NOT NULL CONSTRAINT "PK_WebAuthnCredentials" PRIMARY KEY,
+                "MethodId" TEXT NOT NULL,
+                "UserId" TEXT NOT NULL,
+                "CredentialId" BLOB NOT NULL,
+                "PublicKey" BLOB NOT NULL,
+                "UserHandle" BLOB NOT NULL,
+                "SignCount" INTEGER NOT NULL,
+                "BackupEligible" INTEGER NOT NULL,
+                "BackedUp" INTEGER NOT NULL,
+                "AaGuid" TEXT NOT NULL,
+                "Transports" TEXT NOT NULL,
+                "CreatedAt" TEXT NOT NULL,
+                "LastUsedAt" TEXT NULL,
+                CONSTRAINT "FK_WebAuthnCredentials_MfaMethods_MethodId"
+                    FOREIGN KEY ("MethodId") REFERENCES "MfaMethods" ("Id") ON DELETE CASCADE,
+                CONSTRAINT "FK_WebAuthnCredentials_Users_UserId"
+                    FOREIGN KEY ("UserId") REFERENCES "Users" ("Id") ON DELETE CASCADE
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS "IX_WebAuthnCredentials_CredentialId"
+                ON "WebAuthnCredentials" ("CredentialId");
+            CREATE INDEX IF NOT EXISTS "IX_WebAuthnCredentials_MethodId"
+                ON "WebAuthnCredentials" ("MethodId");
+            CREATE INDEX IF NOT EXISTS "IX_WebAuthnCredentials_UserId"
+                ON "WebAuthnCredentials" ("UserId");
+
+            CREATE TABLE IF NOT EXISTS "PasskeySignIns" (
+                "Id" TEXT NOT NULL CONSTRAINT "PK_PasskeySignIns" PRIMARY KEY,
+                "SecretHash" TEXT NOT NULL,
+                "Options" TEXT NOT NULL,
+                "CreatedAt" TEXT NOT NULL,
+                "ExpiresAt" TEXT NOT NULL,
+                "ConsumedAt" TEXT NULL
+            );
+            CREATE INDEX IF NOT EXISTS "IX_PasskeySignIns_ExpiresAt"
+                ON "PasskeySignIns" ("ExpiresAt");
+            """,
+            cancellationToken);
+
         if (!await SqliteSchema.HasColumnAsync(db, "AuthChallenges", "ShortLived", cancellationToken))
         {
             await db.Database.ExecuteSqlRawAsync(

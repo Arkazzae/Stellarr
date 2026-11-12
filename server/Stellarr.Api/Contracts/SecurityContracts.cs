@@ -1,3 +1,4 @@
+using Fido2NetLib;
 using Stellarr.Api.Domain;
 
 namespace Stellarr.Api.Contracts;
@@ -19,7 +20,8 @@ public sealed record MfaChallengeDto(
     IReadOnlyList<MfaMethodDto> Methods,
     bool TrustedDeviceAvailable,
     bool EmailCodeAvailable,
-    int TrustedDeviceDays = 14);
+    int TrustedDeviceDays = 14,
+    bool PasskeyAvailable = false);
 
 public sealed record MfaVerifyRequest(
     string ChallengeId,
@@ -42,6 +44,25 @@ public sealed record MfaTotpConfirmRequest(
     bool RememberDevice = false);
 
 public sealed record MfaEmailStartRequest(string ChallengeId, string? Name);
+
+/// <summary>Asks for the options of a passkey ceremony on a pending challenge.</summary>
+public sealed record PasskeyOptionsRequest(string ChallengeId);
+
+/// <param name="Response">What <c>navigator.credentials.get</c> returned, as JSON.</param>
+public sealed record PasskeyVerifyRequest(
+    string ChallengeId,
+    AuthenticatorAssertionRawResponse? Response,
+    bool RememberDevice = false);
+
+/// <param name="Response">What <c>navigator.credentials.create</c> returned, as JSON.</param>
+public sealed record PasskeyEnrollConfirmRequest(
+    string ChallengeId,
+    string? Name,
+    AuthenticatorAttestationRawResponse? Response,
+    bool RememberDevice = false);
+
+/// <param name="KeepSignedIn">False asks for a short-lived session; left out, the session is kept.</param>
+public sealed record PasskeySignInRequest(AuthenticatorAssertionRawResponse? Response, bool? KeepSignedIn = null);
 
 public sealed record MfaEmailConfirmRequest(
     string ChallengeId,
@@ -92,7 +113,8 @@ public sealed record AccountSecurityDto(
     int TrustedDeviceDays = 14,
     bool EmailCodeAvailable = false,
     int EmailResendCooldownSeconds = 45,
-    bool SecurityRecoveryRequired = false);
+    bool SecurityRecoveryRequired = false,
+    bool PasskeyAvailable = false);
 
 /// <summary>One of the account's signed-in devices, as its owner sees it.</summary>
 public sealed record OwnSessionDto(

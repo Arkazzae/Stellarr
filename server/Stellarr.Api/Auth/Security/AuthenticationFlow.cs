@@ -127,7 +127,8 @@ public static class AuthenticationFlow
             methods.Select(x => x.ToDto()).ToArray(),
             trusted,
             methods.Any(x => x.Type == MfaMethodTypes.Email),
-            (int)policy.TrustedDeviceLifetime.TotalDays);
+            (int)policy.TrustedDeviceLifetime.TotalDays,
+            context.RequestServices.GetRequiredService<PasskeyRelyingParty>().Available);
     }
 
     public static async Task<ChallengeCheck> ValidateAsync(

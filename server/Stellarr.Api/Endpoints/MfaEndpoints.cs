@@ -16,7 +16,7 @@ namespace Stellarr.Api.Endpoints;
 /// The short-lived second half of a sign-in. Every route works only with the
 /// browser-bound pre-authentication cookie issued by the primary proof.
 /// </summary>
-public static class MfaEndpoints
+public static partial class MfaEndpoints
 {
     public static IEndpointRouteBuilder MapMfaEndpoints(this IEndpointRouteBuilder endpoints)
     {
@@ -30,6 +30,10 @@ public static class MfaEndpoints
         group.MapPost("/enroll/totp/confirm", ConfirmTotpAsync).RequireRateLimiting(RateLimitPolicies.Login);
         group.MapPost("/enroll/email/start", StartEmailAsync).RequireRateLimiting(RateLimitPolicies.AuthWrite);
         group.MapPost("/enroll/email/confirm", ConfirmEmailAsync).RequireRateLimiting(RateLimitPolicies.Login);
+        group.MapPost("/passkey/options", PasskeyOptionsAsync).RequireRateLimiting(RateLimitPolicies.SecurityWrite);
+        group.MapPost("/passkey/verify", VerifyPasskeyAsync).RequireRateLimiting(RateLimitPolicies.Login);
+        group.MapPost("/enroll/passkey/start", StartPasskeyAsync).RequireRateLimiting(RateLimitPolicies.SecurityWrite);
+        group.MapPost("/enroll/passkey/confirm", ConfirmPasskeyAsync).RequireRateLimiting(RateLimitPolicies.Login);
         return endpoints;
     }
 

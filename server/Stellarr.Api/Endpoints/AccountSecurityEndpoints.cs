@@ -75,7 +75,8 @@ public static class AccountSecurityEndpoints
             (int)policy.TrustedDeviceLifetime.TotalDays,
             methods.Any(x => x.Type == MfaMethodTypes.Email),
             policy.EmailCodeCooldownSeconds,
-            user.SecurityRecoveryRequired));
+            user.SecurityRecoveryRequired,
+            context.RequestServices.GetRequiredService<PasskeyRelyingParty>().Available));
     }
 
     private static async Task<IResult> GetEventsAsync(

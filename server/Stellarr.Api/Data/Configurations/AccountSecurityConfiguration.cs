@@ -120,3 +120,33 @@ internal sealed class SecurityNotificationConfiguration : IEntityTypeConfigurati
             .OnDelete(DeleteBehavior.NoAction);
     }
 }
+
+internal sealed class WebAuthnCredentialConfiguration : IEntityTypeConfiguration<WebAuthnCredential>
+{
+    public void Configure(EntityTypeBuilder<WebAuthnCredential> entity)
+    {
+        entity.HasKey(x => x.Id);
+        entity.HasIndex(x => x.CredentialId).IsUnique();
+        entity.HasIndex(x => x.MethodId);
+        entity.HasIndex(x => x.UserId);
+        entity.Property(x => x.CredentialId).HasMaxLength(1023);
+        entity.Property(x => x.PublicKey).HasMaxLength(2048);
+        entity.Property(x => x.UserHandle).HasMaxLength(64);
+        entity.Property(x => x.Transports).HasMaxLength(128);
+        entity.HasOne(x => x.Method).WithMany().HasForeignKey(x => x.MethodId)
+            .OnDelete(DeleteBehavior.Cascade);
+        entity.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
+internal sealed class PasskeySignInConfiguration : IEntityTypeConfiguration<PasskeySignIn>
+{
+    public void Configure(EntityTypeBuilder<PasskeySignIn> entity)
+    {
+        entity.HasKey(x => x.Id);
+        entity.HasIndex(x => x.ExpiresAt);
+        entity.Property(x => x.SecretHash).HasMaxLength(64);
+        entity.Property(x => x.Options).HasMaxLength(8192);
+    }
+}

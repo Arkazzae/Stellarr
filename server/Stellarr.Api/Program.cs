@@ -65,6 +65,7 @@ builder.Services.AddDataProtection()
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("Database")));
 builder.Services.AddSingleton<PasswordService>();
+builder.Services.AddSingleton<PasskeyRelyingParty>();
 builder.Services.AddSingleton<RegistrationGate>();
 builder.Services.AddSingleton<ServerMutationGate>();
 builder.Services.AddSingleton<PresenceTracker>();

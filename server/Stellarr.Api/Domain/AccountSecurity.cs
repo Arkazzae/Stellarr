@@ -22,7 +22,10 @@ public static class MfaMethodTypes
     public const string Totp = "totp";
     public const string Email = "email";
 
-    public static readonly string[] All = [Totp, Email];
+    /// <summary>A passkey or a security key, verified with WebAuthn.</summary>
+    public const string Passkey = "passkey";
+
+    public static readonly string[] All = [Totp, Email, Passkey];
 }
 
 public static class AuthChallengePurposes
@@ -153,6 +156,13 @@ public sealed class AuthChallenge
     /// <summary>The session this challenge ends in is short-lived, as the sign-in asked.</summary>
     public bool ShortLived { get; set; }
 
+    /// <summary>
+    /// The options of the passkey ceremony this challenge started, exactly as
+    /// the server generated them. The answer is checked against these, never
+    /// against options sent back by the browser, and they are cleared on use.
+    /// </summary>
+    public string? WebAuthnOptions { get; set; }
+
     public int Attempts { get; set; }
     public int MaxAttempts { get; set; } = 5;
     public DateTime CreatedAt { get; set; }
@@ -242,4 +252,57 @@ public sealed class SecurityNotification
 
     public SecurityEvent SecurityEvent { get; set; } = null!;
     public User User { get; set; } = null!;
+}
+
+/// <summary>
+/// The public half of a passkey or a security key. The private key never
+/// leaves the authenticator. The method row it belongs to decides whether it
+/// still counts: removing the method or an operator's recovery ends it.
+/// </summary>
+public sealed class WebAuthnCredential
+{
+    public Guid Id { get; set; }
+    public Guid MethodId { get; set; }
+    public Guid UserId { get; set; }
+
+    /// <summary>The authenticator's id for the credential, unique across the instance.</summary>
+    public required byte[] CredentialId { get; set; }
+
+    /// <summary>The COSE public key the signatures are checked with.</summary>
+    public required byte[] PublicKey { get; set; }
+
+    /// <summary>The user handle given at registration; a passkey returns it at sign-in.</summary>
+    public required byte[] UserHandle { get; set; }
+
+    public long SignCount { get; set; }
+    public bool BackupEligible { get; set; }
+    public bool BackedUp { get; set; }
+    public Guid AaGuid { get; set; }
+
+    /// <summary>How the browser can reach the authenticator, comma-separated, as hints only.</summary>
+    public string Transports { get; set; } = "";
+
+    public DateTime CreatedAt { get; set; }
+    public DateTime? LastUsedAt { get; set; }
+
+    public MfaMethod Method { get; set; } = null!;
+    public User User { get; set; } = null!;
+}
+
+/// <summary>
+/// A sign-in with a passkey and no password, between the options and the
+/// answer. It names no account: the passkey does. The browser holds the
+/// secret in a cookie, and only its digest is stored.
+/// </summary>
+public sealed class PasskeySignIn
+{
+    public Guid Id { get; set; }
+    public required string SecretHash { get; set; }
+
+    /// <summary>The options as the server generated them.</summary>
+    public required string Options { get; set; }
+
+    public DateTime CreatedAt { get; set; }
+    public DateTime ExpiresAt { get; set; }
+    public DateTime? ConsumedAt { get; set; }
 }
