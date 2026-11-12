@@ -340,6 +340,56 @@ public sealed class AccountSecurityFlowTests
     }
 
     [Fact]
+    public async Task OwnSessionsCanBeListedAndSignedOutExceptTheCurrentOne()
+    {
+        using var factory = new StellarrWebApplicationFactory();
+        var account = await CreateAccountAsync(factory);
+        using var laptop = Client(factory);
+        using var phone = Client(factory);
+        await LoginAsync(laptop, account.Username);
+        await LoginAsync(phone, account.Username);
+
+        var listed = await laptop.GetFromJsonAsync<JsonElement>("/api/me/security/sessions");
+        Assert.Equal(2, listed.GetArrayLength());
+        var current = listed.EnumerateArray().Single(x => x.GetProperty("current").GetBoolean());
+        var other = listed.EnumerateArray().Single(x => !x.GetProperty("current").GetBoolean());
+        Assert.EndsWith("Z", other.GetProperty("lastSeenAt").GetString());
+
+        Assert.Equal(
+            HttpStatusCode.Conflict,
+            (await laptop.DeleteAsync($"/api/me/security/sessions/{current.GetProperty("id").GetString()}")).StatusCode);
+        Assert.Equal(
+            HttpStatusCode.NoContent,
+            (await laptop.DeleteAsync($"/api/me/security/sessions/{other.GetProperty("id").GetString()}")).StatusCode);
+        Assert.Equal(JsonValueKind.Null,
+            (await phone.GetFromJsonAsync<JsonElement>("/api/session")).GetProperty("user").ValueKind);
+        Assert.Equal(JsonValueKind.Object,
+            (await laptop.GetFromJsonAsync<JsonElement>("/api/session")).GetProperty("user").ValueKind);
+
+        // Somebody else's session is not this account's to end.
+        var stranger = await CreateAccountAsync(factory);
+        using var strangerClient = Client(factory);
+        await LoginAsync(strangerClient, stranger.Username);
+        var strangerSession = (await strangerClient.GetFromJsonAsync<JsonElement>("/api/me/security/sessions"))[0]
+            .GetProperty("id").GetString();
+        Assert.Equal(
+            HttpStatusCode.NotFound,
+            (await laptop.DeleteAsync($"/api/me/security/sessions/{strangerSession}")).StatusCode);
+
+        using var tablet = Client(factory);
+        await LoginAsync(tablet, account.Username);
+        Assert.Equal(
+            HttpStatusCode.NoContent,
+            (await laptop.PostAsync("/api/me/security/sessions/revoke-others", null)).StatusCode);
+        Assert.Equal(JsonValueKind.Null,
+            (await tablet.GetFromJsonAsync<JsonElement>("/api/session")).GetProperty("user").ValueKind);
+        Assert.Equal(1, (await laptop.GetFromJsonAsync<JsonElement>("/api/me/security/sessions")).GetArrayLength());
+        Assert.Contains(
+            (await laptop.GetFromJsonAsync<JsonElement>("/api/me/security")).GetProperty("recentEvents").EnumerateArray(),
+            x => x.GetProperty("kind").GetString() == "session-revoked");
+    }
+
+    [Fact]
     public async Task RevocationWatcherAbortsAConnectionRevokedByAnotherProcess()
     {
         using var factory = new StellarrWebApplicationFactory();

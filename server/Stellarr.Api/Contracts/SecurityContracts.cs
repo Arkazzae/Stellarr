@@ -94,6 +94,18 @@ public sealed record AccountSecurityDto(
     int EmailResendCooldownSeconds = 45,
     bool SecurityRecoveryRequired = false);
 
+/// <summary>One of the account's signed-in devices, as its owner sees it.</summary>
+public sealed record OwnSessionDto(
+    string Id,
+    string Device,
+    string IpAddress,
+    DateTime CreatedAt,
+    DateTime LastSeenAt,
+    DateTime ExpiresAt,
+    string PrimarySource,
+    string? MfaEvidence,
+    bool Current);
+
 public sealed record RegenerateRecoveryCodesRequest(string? Password);
 
 public sealed record RemoveMfaMethodRequest(string? Password);
@@ -118,6 +130,17 @@ public static class SecurityContractMappings
         device.CreatedAt.AsUtc(),
         device.ExpiresAt.AsUtc(),
         device.LastUsedAt.AsUtc());
+
+    public static OwnSessionDto ToOwnDto(this UserSession session, bool current) => new(
+        session.Id.ToString(),
+        session.Device,
+        session.IpAddress,
+        session.CreatedAt.AsUtc(),
+        session.LastSeenAt.AsUtc(),
+        session.ExpiresAt.AsUtc(),
+        session.PrimarySource,
+        session.MfaEvidence,
+        current);
 
     public static SecurityEventDto ToDto(this SecurityEvent securityEvent) => new(
         securityEvent.Id.ToString(),

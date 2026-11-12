@@ -23,6 +23,9 @@ public static class AccountSecurityEndpoints
         group.MapPost("/mfa/{methodId:guid}/remove", RemoveMethodAsync).RequireRateLimiting(RateLimitPolicies.AuthWrite);
         group.MapPost("/recovery/regenerate", RegenerateRecoveryAsync).RequireRateLimiting(RateLimitPolicies.AuthWrite);
         group.MapDelete("/trusted/{deviceId:guid}", RevokeTrustedDeviceAsync);
+        group.MapGet("/sessions", ListSessionsAsync);
+        group.MapDelete("/sessions/{sessionId:guid}", RevokeSessionAsync);
+        group.MapPost("/sessions/revoke-others", RevokeOtherSessionsAsync);
         return endpoints;
     }
 
@@ -349,6 +352,87 @@ public static class AccountSecurityEndpoints
             db, userId, SecurityEventKinds.TrustedDeviceRemoved, context, "",
             await SecurityEvents.VerifiedEmailAsync(db, userId, cancellationToken));
         await db.SaveChangesAsync(cancellationToken);
+        return Results.NoContent();
+    }
+
+    /// <summary>The account's signed-in devices, the current one marked.</summary>
+    private static async Task<IResult> ListSessionsAsync(
+        HttpContext context,
+        AppDbContext db,
+        CancellationToken cancellationToken)
+    {
+        var userId = context.User.RequireUserId();
+        var currentId = context.User.FindSessionId();
+        var now = DateTime.UtcNow;
+        var sessions = await db.UserSessions.AsNoTracking()
+            .Where(x => x.UserId == userId && x.RevokedAt == null && x.ExpiresAt > now)
+            .OrderByDescending(x => x.LastSeenAt)
+            .Take(100)
+            .ToArrayAsync(cancellationToken);
+        return Results.Ok(sessions.Select(session => session.ToOwnDto(session.Id == currentId)));
+    }
+
+    /// <summary>
+    /// Signs one of the account's other devices out. The current session ends
+    /// through logout instead, so this cannot strand the caller.
+    /// </summary>
+    private static async Task<IResult> RevokeSessionAsync(
+        Guid sessionId,
+        HttpContext context,
+        AppDbContext db,
+        HubConnectionRegistry connections,
+        CancellationToken cancellationToken)
+    {
+        if (context.User.FindSessionId() == sessionId)
+        {
+            return Results.Conflict();
+        }
+
+        var userId = context.User.RequireUserId();
+        var now = DateTime.UtcNow;
+        var changed = await db.UserSessions
+            .Where(x => x.Id == sessionId && x.UserId == userId && x.RevokedAt == null)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.RevokedAt, now), cancellationToken);
+        if (changed == 0)
+        {
+            return Results.NotFound();
+        }
+
+        SecurityEvents.Record(db, userId, SecurityEventKinds.SessionRevoked, context, "device");
+        await db.SaveChangesAsync(cancellationToken);
+        connections.AbortSession(sessionId);
+        return Results.NoContent();
+    }
+
+    /// <summary>Signs out every device of the account except the one asking.</summary>
+    private static async Task<IResult> RevokeOtherSessionsAsync(
+        HttpContext context,
+        AppDbContext db,
+        HubConnectionRegistry connections,
+        CancellationToken cancellationToken)
+    {
+        var userId = context.User.RequireUserId();
+        var currentId = context.User.FindSessionId();
+        var now = DateTime.UtcNow;
+        var others = await db.UserSessions
+            .Where(x => x.UserId == userId && x.RevokedAt == null && x.Id != currentId)
+            .Select(x => x.Id)
+            .ToArrayAsync(cancellationToken);
+        if (others.Length == 0)
+        {
+            return Results.NoContent();
+        }
+
+        await db.UserSessions
+            .Where(x => others.Contains(x.Id) && x.RevokedAt == null)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.RevokedAt, now), cancellationToken);
+        SecurityEvents.Record(db, userId, SecurityEventKinds.SessionRevoked, context, "others");
+        await db.SaveChangesAsync(cancellationToken);
+        foreach (var id in others)
+        {
+            connections.AbortSession(id);
+        }
+
         return Results.NoContent();
     }
 
