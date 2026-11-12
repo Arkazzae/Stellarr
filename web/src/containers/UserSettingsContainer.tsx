@@ -21,6 +21,9 @@ import { useCameraTest } from "./useCameraTest";
 import { useJoinSound } from "./useJoinSound";
 import { useMicTest } from "./useMicTest";
 import { useOutputTest } from "./useOutputTest";
+import { SecurityStepDialog } from "@/components/account/panes/SecurityStepDialog";
+
+import { useAccountSecurity } from "./useAccountSecurity";
 
 /**
  * The user settings dialog, assembled.
@@ -97,93 +100,95 @@ export function UserSettingsContainer() {
   const output = useOutputTest(voiceSettings);
   const camera = useCameraTest(voiceSettings);
   const joinSound = useJoinSound(open);
+  const accountSecurity = useAccountSecurity(open);
 
   return (
-    <UserSettings
-      open={open}
-      onClose={ui.closeModal}
-      // Only the voice bar lands on a different pane: the profile is the
-      // account pane.
-      initialPane={ui.modal === "voice" ? "glos" : "konto"}
-      account={account.account}
-      accountPane={{
-        profileSupported: account.supported.profile,
-        uploadsSupported: account.supported.uploads,
-        customEmoji,
-        onSave: (patch) => account.update(patch),
-        onPickImage: account.setImage,
-        onRemoveImage: account.removeImage,
-        joinSound,
-      }}
-      security={{
-        // A recovery address must not become authoritative before a
-        // confirmation-mail flow exists.
-        emailSupported: false,
-        passwordSupported: account.supported.password,
-        onChangeEmail: (email) => account.update({ email }),
-        onChangePassword: account.changePassword,
-      }}
-      preferences={{
-        preferences: account.preferences,
-        supported: account.supported.preferences,
-        onChange: persistPreferences,
-      }}
-      systemNotifications={{
-        supported: browserNotifications.supported,
-        permission: browserNotifications.permission,
-        pending: browserNotifications.pending,
-        error: browserNotifications.error,
-        onChange: changeSystemNotifications,
-      }}
-      keybinds={keybinds}
-      startup={
-        autostart.available
-          ? {
-              enabled: autostart.enabled,
-              pending: autostart.pending,
-              error: autostart.error,
-              onChange: setAutostartEnabled,
-            }
-          : undefined
-      }
-      appearance={{
-        // The theme lives on this device, so it is supported even where the
-        // panes around it are not.
-        supported: true,
-        theme,
-        resolvedScheme: resolved,
-        onChange: updateTheme,
-        onReset: resetTheme,
-      }}
-      voice={{
-        settings: voiceSettings,
-        onChange: (patch) => ports.voiceSettings.update(patch),
-        onVadCommit: (vadSensitivity) => {
-          if (requestedVad.current !== vadSensitivity) persistVad(vadSensitivity);
-        },
-        onReset: () => {
-          ports.voiceSettings.reset();
-          persistVad(ports.voiceSettings.getSnapshot().vadSensitivity);
-        },
-        mic,
-        output,
-        camera,
-      }}
-      language={{
-        locale: language.locale,
-        chatTranslationEnabled: language.chatTranslationEnabled,
-        chatAutoTranslateEnabled: language.chatAutoTranslateEnabled,
-        chatTranslationTargetLanguage: language.chatTranslationTargetLanguage,
-        update: language.update,
-        t: language.t,
-      }}
-      t={language.t}
-      onLogout={() => {
-        // Closed first: the dialog belongs to a signed-in session, and leaving
-        // it over the sign-in screen would trap focus in a dead tree.
-        ui.closeModal();
-        void session.logout();
-      }}
-    />
+    <>
+      <UserSettings
+        open={open}
+        onClose={ui.closeModal}
+        // Only the voice bar lands on a different pane: the profile is the
+        // account pane.
+        initialPane={ui.modal === "voice" ? "glos" : "konto"}
+        account={account.account}
+        accountPane={{
+          customEmoji,
+          onSave: (patch) => account.update(patch),
+          onPickImage: account.setImage,
+          onRemoveImage: account.removeImage,
+          joinSound,
+        }}
+        security={{
+          // The new address proves it receives mail before it replaces the old.
+          emailSupported: true,
+          twoStep: accountSecurity.sections,
+          onChangeEmail: (email, password) => account.requestEmailChange(email, password),
+          onChangePassword: account.changePassword,
+          onConfirmSecondStep: accountSecurity.confirmSecondStep,
+        }}
+        preferences={{
+          preferences: account.preferences,
+          onChange: persistPreferences,
+        }}
+        systemNotifications={{
+          supported: browserNotifications.supported,
+          permission: browserNotifications.permission,
+          pending: browserNotifications.pending,
+          error: browserNotifications.error,
+          onChange: changeSystemNotifications,
+        }}
+        keybinds={keybinds}
+        startup={
+          autostart.available
+            ? {
+                enabled: autostart.enabled,
+                pending: autostart.pending,
+                error: autostart.error,
+                onChange: setAutostartEnabled,
+              }
+            : undefined
+        }
+        appearance={{
+          theme,
+          resolvedScheme: resolved,
+          onChange: updateTheme,
+          onReset: resetTheme,
+        }}
+        voice={{
+          settings: voiceSettings,
+          onChange: (patch) => ports.voiceSettings.update(patch),
+          onVadCommit: (vadSensitivity) => {
+            if (requestedVad.current !== vadSensitivity) persistVad(vadSensitivity);
+          },
+          onReset: () => {
+            ports.voiceSettings.reset();
+            persistVad(ports.voiceSettings.getSnapshot().vadSensitivity);
+          },
+          mic,
+          output,
+          camera,
+        }}
+        language={{
+          locale: language.locale,
+          chatTranslationEnabled: language.chatTranslationEnabled,
+          chatAutoTranslateEnabled: language.chatAutoTranslateEnabled,
+          chatTranslationTargetLanguage: language.chatTranslationTargetLanguage,
+          update: language.update,
+          t: language.t,
+        }}
+        t={language.t}
+        onLogout={() => {
+          // Closed first: the dialog belongs to a signed-in session, and leaving
+          // it over the sign-in screen would trap focus in a dead tree.
+          ui.closeModal();
+          void session.logout();
+        }}
+      />
+      <SecurityStepDialog
+        {...accountSecurity.dialog}
+        username={account.account.username}
+        t={language.t}
+      />
+    </>
   );
 }

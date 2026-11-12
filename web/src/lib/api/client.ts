@@ -8,10 +8,14 @@ import { memberCalls } from "./calls/members";
 import { messageCalls } from "./calls/messages";
 import { notificationCalls } from "./calls/notifications";
 import { serverCalls } from "./calls/server";
+import { securityCalls } from "./calls/security";
 import { sessionCalls } from "./calls/session";
+import { signInCalls } from "./calls/signIn";
 import { socialCalls } from "./calls/social";
 import type {
   AccountDetails,
+  AccountSecurity,
+  AuthResult,
   AccountImageKind,
   AccountPreferences,
   AccountUpdateInput,
@@ -26,6 +30,11 @@ import type {
   JoinSoundLibrary,
   LoginInput,
   Message,
+  MfaChallenge,
+  MfaCompletion,
+  MfaEnrollment,
+  MfaVerifyInput,
+  OwnSession,
   MessageHistoryPage,
   MessageId,
   MessageIndexKind,
@@ -33,9 +42,12 @@ import type {
   MessageReactionChanged,
   MessageSyncPage,
   NewServer,
+  EmailChangeAnswer,
+  EmailConfirmAnswer,
   PasswordChangeAnswer,
   RegisterInput,
   Section,
+  SecurityEvent,
   SendMessageInput,
   Server,
   ServerBan,
@@ -74,10 +86,75 @@ export {
  */
 export interface ApiClient {
   needsServerSetup(signal?: AbortSignal): Promise<boolean>;
-  login(input: LoginInput, signal?: AbortSignal): Promise<User>;
-  register(input: RegisterInput, signal?: AbortSignal): Promise<User>;
+  login(input: LoginInput, signal?: AbortSignal): Promise<AuthResult>;
+  register(input: RegisterInput, signal?: AbortSignal): Promise<AuthResult>;
+  /** The challenge this browser left unfinished, after a reload or an OIDC redirect. */
+  pendingChallenge(signal?: AbortSignal): Promise<MfaChallenge>;
+  cancelChallenge(): Promise<void>;
+  verifyChallenge(input: MfaVerifyInput, signal?: AbortSignal): Promise<MfaCompletion>;
+  sendChallengeEmailCode(
+    challengeId: string,
+    methodId?: string,
+    signal?: AbortSignal,
+  ): Promise<{ retryAfterSeconds: number }>;
+  startTotpEnrollment(challengeId: string, name: string, signal?: AbortSignal): Promise<MfaEnrollment>;
+  confirmTotpEnrollment(
+    input: { challengeId: string; methodId: string; code: string; name: string; rememberDevice?: boolean },
+    signal?: AbortSignal,
+  ): Promise<MfaCompletion>;
+  startEmailEnrollment(
+    challengeId: string,
+    name: string,
+    signal?: AbortSignal,
+  ): Promise<{ retryAfterSeconds: number }>;
+  confirmEmailEnrollment(
+    input: { challengeId: string; code: string; name: string; rememberDevice?: boolean },
+    signal?: AbortSignal,
+  ): Promise<MfaCompletion>;
+  /** Trades an operator's one-time recovery credential for a replacement-enrollment challenge. */
+  redeemRecoveryCredential(credential: string, keepSignedIn?: boolean, signal?: AbortSignal): Promise<MfaChallenge>;
+  /** The server's options for answering a pending second step with a passkey. */
+  passkeyChallengeOptions(challengeId: string, signal?: AbortSignal): Promise<Record<string, unknown>>;
+  verifyPasskey(
+    input: { challengeId: string; response: Record<string, unknown>; rememberDevice?: boolean },
+    signal?: AbortSignal,
+  ): Promise<MfaCompletion>;
+  /** The server's options for creating a passkey during a setup. */
+  startPasskeyEnrollment(challengeId: string, signal?: AbortSignal): Promise<Record<string, unknown>>;
+  confirmPasskeyEnrollment(
+    input: { challengeId: string; name: string; response: Record<string, unknown>; rememberDevice?: boolean },
+    signal?: AbortSignal,
+  ): Promise<MfaCompletion>;
+  /** Whether the server offers signing in with a passkey alone. */
+  passkeySignInAvailable(signal?: AbortSignal): Promise<boolean>;
+  passkeySignInOptions(signal?: AbortSignal): Promise<Record<string, unknown>>;
+  signInWithPasskey(
+    input: { response: Record<string, unknown>; keepSignedIn?: boolean },
+    signal?: AbortSignal,
+  ): Promise<AuthResult>;
+  getAccountSecurity(signal?: AbortSignal): Promise<AccountSecurity>;
+  listSecurityEvents(signal?: AbortSignal): Promise<SecurityEvent[]>;
+  /**
+   * Opens the setup of another method. Refused with 403 unless the session
+   * proved a second factor recently, or, for a first method, the password.
+   */
+  startMfaEnrollment(password?: string, signal?: AbortSignal): Promise<MfaChallenge>;
+  /** A fresh second-factor proof for a change to the account's security. */
+  startMfaReverification(signal?: AbortSignal): Promise<MfaChallenge>;
+  removeMfaMethod(methodId: string, password?: string): Promise<void>;
+  regenerateRecoveryCodes(password?: string, signal?: AbortSignal): Promise<string[]>;
+  revokeTrustedDevice(deviceId: string): Promise<void>;
+  /** After the proof, the address the browser goes to, to link the account to the provider. */
+  startIdentityLink(providerId: string, password?: string): Promise<string>;
+  removeIdentity(identityId: string, password?: string): Promise<void>;
+  listOwnSessions(signal?: AbortSignal): Promise<OwnSession[]>;
+  /** Refused with 409 for the current session, which ends through logout. */
+  revokeOwnSession(sessionId: string): Promise<void>;
+  revokeOtherSessions(): Promise<void>;
   requestPasswordReset(email: string, signal?: AbortSignal): Promise<void>;
   resetPassword(token: string, newPassword: string, signal?: AbortSignal): Promise<void>;
+  /** Spends the link from the new address; works signed out, on any device. */
+  confirmEmailChange(token: string, signal?: AbortSignal): Promise<EmailConfirmAnswer>;
   logout(): Promise<void>;
   /**
    * Resolves to null for an anonymous visitor.
@@ -207,6 +284,8 @@ export interface ApiClient {
     newPassword: string,
     signal?: AbortSignal,
   ): Promise<PasswordChangeAnswer>;
+  /** Mails a link to the new address; the address changes only when it is opened. */
+  requestEmailChange(email: string, password: string, signal?: AbortSignal): Promise<EmailChangeAnswer>;
   uploadAccountImage(
     kind: AccountImageKind,
     file: File,
@@ -411,6 +490,8 @@ export interface ApiNotificationSettings {
 export function createHttpApiClient(): ApiClient & SocialApiClient & AdminApiClient {
   return {
     ...sessionCalls(),
+    ...signInCalls(),
+    ...securityCalls(),
     ...serverCalls(),
     ...memberCalls(),
     ...channelCalls(),

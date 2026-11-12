@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import type { CustomEmoji, Reaction } from "@/ports";
+import { useLanguage } from "@/state/hooks";
 
 /** Matches the `reactPop` animation in transcript.css. */
 const POP_MS = 240;
@@ -13,7 +14,6 @@ export interface ReactionsProps {
   reactions: Reaction[];
   /** Toggles this user's reaction. Without it the chips are inert. */
   onToggle?(emoji: string): void;
-  disabled?: boolean;
   /** Resolves a reaction stored as `:shortcode:` to its image. */
   customEmoji?: readonly CustomEmoji[];
 }
@@ -22,9 +22,9 @@ export interface ReactionsProps {
 export function Reactions({
   reactions,
   onToggle,
-  disabled,
   customEmoji = [],
 }: ReactionsProps) {
+  const { t } = useLanguage();
   const [popping, setPopping] = useState<ReadonlySet<string>>(new Set());
   const counts = useRef<Map<string, number> | null>(null);
 
@@ -59,8 +59,7 @@ export function Reactions({
             className={classes.filter(Boolean).join(" ")}
             data-emo={emoji}
             aria-pressed={mine}
-            aria-label={`${emoji} — ${count} reakcji`}
-            disabled={disabled}
+            aria-label={t("message.reactionCount", { emoji, count })}
             onClick={onToggle && (() => onToggle(emoji))}
           >
             <span className="emo">

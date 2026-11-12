@@ -117,7 +117,7 @@ export function Roster({
             const inCall = voiceUserIds.has(person.id);
             // There is no name in this column, so the face is the control and
             // carries the name and state itself.
-            const description = `${person.displayName} — ${personState(person, inCall, t)}`;
+            const description = `${person.displayName}, ${personState(person, inCall, t)}`;
             return (
               <Avatar
                 key={person.id}

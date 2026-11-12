@@ -62,7 +62,7 @@ describe("RegistrationPage", () => {
   });
 
   it("registers the account and asks the session to start over", async () => {
-    mocks.ports.session.register.mockResolvedValue({});
+    mocks.ports.session.register.mockResolvedValue({ kind: "signed-in", user: { id: "u-1", username: "maja", displayName: "Maja", presence: "online" } });
     render(<RegistrationPage />);
 
     await fillAndSubmit();
@@ -77,7 +77,7 @@ describe("RegistrationPage", () => {
   });
 
   it("registers with the invite the visitor arrived with and keeps it for the redirect", async () => {
-    mocks.ports.session.register.mockResolvedValue({});
+    mocks.ports.session.register.mockResolvedValue({ kind: "signed-in", user: { id: "u-1", username: "maja", displayName: "Maja", presence: "online" } });
     rememberPendingInvite("abc123");
     render(<RegistrationPage />);
 
@@ -87,6 +87,19 @@ describe("RegistrationPage", () => {
       expect.objectContaining({ inviteCode: "abc123" }),
     );
     expect(window.sessionStorage.getItem("stellarr.pending-invite")).toBe("abc123");
+  });
+
+  it("leaves a required second-step setup to the sign-in page, without starting the app", async () => {
+    mocks.ports.session.register.mockResolvedValue({
+      kind: "challenge",
+      challenge: { enrollment: true, challengeId: "c-1", purpose: "enrollment", methods: [] },
+    });
+    render(<RegistrationPage />);
+
+    await fillAndSubmit();
+
+    expect(mocks.router.replace).toHaveBeenCalledExactlyOnceWith("/login");
+    expect(mocks.session.reload).not.toHaveBeenCalled();
   });
 
   it("says the account could not be created when the server refuses", async () => {

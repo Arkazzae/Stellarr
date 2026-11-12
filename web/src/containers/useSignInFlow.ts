@@ -1,0 +1,494 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
+
+import { ApiError } from "@/lib/api/errors";
+import { leaveFor } from "@/lib/leaveFor";
+import { PasskeyCancelledError } from "@/lib/webauthn";
+import type { MessageKey } from "@/i18n";
+import type { AuthResult, MfaChallenge, MfaCompletion, MfaEnrollment } from "@/ports";
+import { useLanguage, usePorts, useSession } from "@/state/hooks";
+
+import type { EnrollMode } from "@/components/auth/MfaEnrollStep";
+
+import { challengeErrorMessage } from "./challengeErrors";
+
+export type SignInStep =
+  | { kind: "password" }
+  | { kind: "resuming" }
+  | { kind: "challenge"; challenge: MfaChallenge }
+  | { kind: "enroll"; challenge: MfaChallenge; mode: EnrollMode; enrollment: MfaEnrollment | null }
+  | { kind: "codes"; codes: string[]; username: string }
+  | { kind: "redeem" }
+  /** The password, before a signed-in account sets up its first method to confirm with. */
+  | { kind: "confirm-password" }
+  /** A signed-in session is confirmed and may go back to where it came from. */
+  | { kind: "done" };
+
+export interface SignInFlow {
+  step: SignInStep;
+  pending: boolean;
+  error: string | null;
+  /** Seconds left before another email code during enrollment; null before the first one. */
+  enrollEmailWait: number | null;
+  /** `keepSignedIn` false asks for a session that ends with the browser. */
+  submitPassword(username: string, password: string, keepSignedIn?: boolean): Promise<void>;
+  verify(input: { methodId?: string; code: string; rememberDevice: boolean }): void;
+  continueOnTrustedDevice(): void;
+  sendEmailCode(methodId: string): Promise<number | null>;
+  setEnrollMode(mode: EnrollMode): void;
+  sendEnrollEmailCode(): void;
+  confirmEnrollment(input: { code: string; rememberDevice: boolean }): void;
+  redeem(credential: string): void;
+  finishCodes(): void;
+  confirmPassword(password: string): void;
+  cancel(): void;
+  /** This browser can use passkeys; false until the page runs in one. */
+  passkeysSupported: boolean;
+  /** Answers the second step with a passkey. */
+  answerWithPasskey(rememberDevice: boolean): void;
+  /** Sets up a passkey as the method being added. */
+  createPasskey(input: { rememberDevice: boolean; name?: string }): void;
+  /** Signs in with a passkey alone, no password. */
+  signInWithPasskey(keepSignedIn: boolean): void;
+}
+
+const NAME_KEY: Record<EnrollMode, MessageKey> = {
+  totp: "auth.enroll.totpName",
+  email: "auth.enroll.emailName",
+  passkey: "auth.enroll.passkeyName",
+};
+
+const noSubscription = () => () => undefined;
+
+/**
+ * Drives a sign-in from the password to a full session. Nothing boots until
+ * the server has issued that session: a challenge, a first-method setup or an
+ * operator recovery each stay on this page, and only `reload` at the very end
+ * lets the app load, open the hub or join voice.
+ *
+ * On arrival it asks the server for a challenge this browser left unfinished,
+ * so a reload or the return from an identity provider resumes the step instead
+ * of starting over. The secret half lives in an HttpOnly cookie; nothing here
+ * keeps a code, a key or a credential beyond the screen showing it.
+ */
+export function useSignInFlow({
+  recoveryRequired = false,
+  confirm = false,
+  fresh = false,
+  keepSignedIn = true,
+}: {
+  recoveryRequired?: boolean;
+  /**
+   * With `confirm`: the step must be from the last few minutes, as a
+   * sensitive change in Cockpit asks, not merely passed by this session.
+   */
+  fresh?: boolean;
+  /**
+   * The choice of the sign-in a recovery continues, when it started before
+   * this page (at the identity provider). A password sign-in brings its own.
+   */
+  keepSignedIn?: boolean;
+  /**
+   * A signed-in session must pass a real second step before it goes on, as
+   * Cockpit requires. One that already did goes on at once.
+   */
+  confirm?: boolean;
+} = {}): SignInFlow {
+  const ports = usePorts();
+  const { login, reload, phase } = useSession();
+  const { t } = useLanguage();
+  const challengePort = ports.session.challenge;
+  const [step, setStep] = useState<SignInStep>(recoveryRequired ? { kind: "redeem" } : { kind: "resuming" });
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [emailWaitUntil, setEmailWaitUntil] = useState<number | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+  const resumed = useRef(false);
+  const confirming = useRef(false);
+  // Known only in a browser; the server render says no and the page catches up.
+  const passkeysSupported = useSyncExternalStore(
+    noSubscription,
+    () => ports.session.passkeysSupported(),
+    () => false,
+  );
+  const keep = useRef(keepSignedIn);
+  const security = ports.security;
+
+  const enter = useCallback((challenge: MfaChallenge) => {
+    setError(null);
+    setEmailWaitUntil(null);
+    setStep(
+      challenge.enrollment
+        ? { kind: "enroll", challenge, mode: "totp", enrollment: null }
+        : { kind: "challenge", challenge },
+    );
+  }, []);
+
+  useEffect(() => {
+    if (resumed.current || recoveryRequired || phase === "loading" || phase === "ready") return;
+    let active = true;
+    // Marked only once an answer is applied: if this effect is replaced first,
+    // for instance by new ports after a sign-out, the next run asks again
+    // instead of leaving the page waiting for an answer it threw away.
+    challengePort.pending().then(
+      (challenge) => {
+        if (!active) return;
+        resumed.current = true;
+        if (challenge === null) setStep({ kind: "password" });
+        else enter(challenge);
+      },
+      () => {
+        if (!active) return;
+        resumed.current = true;
+        setStep({ kind: "password" });
+      },
+    );
+    return () => {
+      active = false;
+    };
+  }, [challengePort, enter, phase, recoveryRequired]);
+
+  /**
+   * Says what went wrong in the reader's language. A 401 can mean a wrong code
+   * or a challenge that ran out; the server's pending state tells them apart,
+   * and an expired one sends the visitor back to the password.
+   */
+  const fail = useCallback(
+    async (cause: unknown, unauthorized: MessageKey = "auth.mfa.codeInvalid") => {
+      if (cause instanceof ApiError && cause.status === 401) {
+        const still = await challengePort.pending().catch(() => null);
+        if (still === null) {
+          setStep({ kind: "password" });
+          setError(t("auth.mfa.expired"));
+          return;
+        }
+        setError(t(unauthorized));
+        return;
+      }
+      setError(challengeErrorMessage(cause, t, t("auth.mfa.failed")));
+    },
+    [challengePort, t],
+  );
+
+  // A signed-in session asked to confirm: it goes on at once if it already
+  // passed a real second step, else it proves one now, or sets up the first
+  // method when the account has none.
+  useEffect(() => {
+    if (!confirm || phase !== "ready" || confirming.current) return;
+    confirming.current = true;
+    void (async () => {
+      try {
+        const state = await security.get();
+        const hasMethod = state.methods.some((method) => !method.pending);
+        const passed = fresh
+          ? state.freshMfa || !hasMethod
+          : state.mfaCompletedAt !== undefined && state.mfaEvidence !== "trusted_device";
+        if (passed) {
+          setStep({ kind: "done" });
+          return;
+        }
+        if (hasMethod) {
+          enter(await security.startReverification());
+          return;
+        }
+        try {
+          enter(await security.startEnrollment());
+        } catch (cause) {
+          if (cause instanceof ApiError && cause.status === 403) setStep({ kind: "confirm-password" });
+          else throw cause;
+        }
+      } catch (cause) {
+        setStep({ kind: "password" });
+        setError(challengeErrorMessage(cause, t, t("auth.mfa.failed")));
+      }
+    })();
+  }, [confirm, enter, fresh, phase, security, t]);
+
+  // A setup by authenticator app needs its key before anything can be typed.
+  const enrollChallengeId =
+    step.kind === "enroll" && step.mode === "totp" && step.enrollment === null
+      ? step.challenge.challengeId
+      : null;
+  useEffect(() => {
+    if (enrollChallengeId === null) return;
+    let active = true;
+    challengePort.startTotp(enrollChallengeId, t(NAME_KEY.totp)).then(
+      (enrollment) => {
+        if (!active) return;
+        setStep((current) =>
+          current.kind === "enroll" && current.challenge.challengeId === enrollChallengeId
+            ? { ...current, enrollment }
+            : current,
+        );
+      },
+      (cause: unknown) => active && void fail(cause),
+    );
+    return () => {
+      active = false;
+    };
+  }, [challengePort, enrollChallengeId, fail, t]);
+
+  useEffect(() => {
+    if (emailWaitUntil === null || emailWaitUntil <= Date.now()) return;
+    const timer = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [emailWaitUntil]);
+
+  const complete = useCallback(
+    (completion: MfaCompletion) => {
+      if (completion.recoveryCodes !== undefined && completion.recoveryCodes.length > 0) {
+        setStep({ kind: "codes", codes: completion.recoveryCodes, username: completion.user.username });
+        return;
+      }
+      if (confirm && phase === "ready") setStep({ kind: "done" });
+      else reload();
+    },
+    [confirm, phase, reload],
+  );
+
+  const run = useCallback(
+    async (action: () => Promise<void>) => {
+      setPending(true);
+      setError(null);
+      try {
+        await action();
+      } finally {
+        setPending(false);
+      }
+    },
+    [],
+  );
+
+  const follow = useCallback(
+    (result: AuthResult | null) => {
+      if (result === null || result.kind === "signed-in") return;
+      if (result.kind === "recovery-required") {
+        setStep({ kind: "redeem" });
+        return;
+      }
+      enter(result.challenge);
+    },
+    [enter],
+  );
+
+  const currentChallenge = step.kind === "challenge" || step.kind === "enroll" ? step.challenge : null;
+
+  /** A closed prompt is not a wrong key; a refusal by the server is. */
+  const passkeyFailed = useCallback(
+    async (cause: unknown) => {
+      if (cause instanceof PasskeyCancelledError) {
+        setError(t("auth.passkey.cancelled"));
+        return;
+      }
+      if (cause instanceof ApiError && cause.status === 409) {
+        setError(t("auth.passkey.unavailable"));
+        return;
+      }
+      await fail(cause, "auth.passkey.rejected");
+    },
+    [fail, t],
+  );
+
+  return {
+    step,
+    pending,
+    error,
+    enrollEmailWait:
+      emailWaitUntil === null ? null : Math.max(0, Math.ceil((emailWaitUntil - now) / 1000)),
+
+    async submitPassword(username, password, keepSignedIn = true) {
+      setError(null);
+      keep.current = keepSignedIn;
+      follow(await login(username, password, keepSignedIn));
+    },
+
+    verify(input) {
+      if (currentChallenge === null) return;
+      void run(async () => {
+        try {
+          complete(await challengePort.verify({ challengeId: currentChallenge.challengeId, ...input }));
+        } catch (cause) {
+          await fail(cause);
+        }
+      });
+    },
+
+    continueOnTrustedDevice() {
+      if (currentChallenge === null) return;
+      void run(async () => {
+        try {
+          complete(
+            await challengePort.verify({
+              challengeId: currentChallenge.challengeId,
+              useTrustedDevice: true,
+            }),
+          );
+        } catch (cause) {
+          await fail(cause, "auth.mfa.failed");
+        }
+      });
+    },
+
+    async sendEmailCode(methodId) {
+      if (currentChallenge === null) return null;
+      setError(null);
+      try {
+        const { retryAfterSeconds } = await challengePort.sendEmailCode(
+          currentChallenge.challengeId,
+          methodId,
+        );
+        return retryAfterSeconds;
+      } catch (cause) {
+        await fail(cause, "auth.mfa.failed");
+        return null;
+      }
+    },
+
+    setEnrollMode(mode) {
+      setError(null);
+      setStep((current) =>
+        current.kind === "enroll" ? { ...current, mode, enrollment: null } : current,
+      );
+    },
+
+    sendEnrollEmailCode() {
+      if (currentChallenge === null) return;
+      void run(async () => {
+        try {
+          const { retryAfterSeconds } = await challengePort.startEmail(
+            currentChallenge.challengeId,
+            t(NAME_KEY.email),
+          );
+          setNow(Date.now());
+          setEmailWaitUntil(Date.now() + retryAfterSeconds * 1000);
+        } catch (cause) {
+          await fail(cause, "auth.mfa.failed");
+        }
+      });
+    },
+
+    confirmEnrollment({ code, rememberDevice }) {
+      if (step.kind !== "enroll") return;
+      const { challenge, mode, enrollment } = step;
+      void run(async () => {
+        try {
+          complete(
+            mode === "totp" && enrollment !== null
+              ? await challengePort.confirmTotp({
+                  challengeId: challenge.challengeId,
+                  methodId: enrollment.methodId,
+                  code,
+                  name: t(NAME_KEY.totp),
+                  rememberDevice,
+                })
+              : await challengePort.confirmEmail({
+                  challengeId: challenge.challengeId,
+                  code,
+                  name: t(NAME_KEY.email),
+                  rememberDevice,
+                }),
+          );
+        } catch (cause) {
+          await fail(cause);
+        }
+      });
+    },
+
+    redeem(credential) {
+      void run(async () => {
+        try {
+          enter(
+            await (keep.current
+              ? challengePort.redeemRecovery(credential)
+              : challengePort.redeemRecovery(credential, false)),
+          );
+        } catch (cause) {
+          if (cause instanceof ApiError && (cause.status === 401 || cause.status === 400)) {
+            setError(t("auth.recover.invalid"));
+          } else {
+            await fail(cause, "auth.recover.invalid");
+          }
+        }
+      });
+    },
+
+    finishCodes() {
+      if (confirm && phase === "ready") setStep({ kind: "done" });
+      else reload();
+    },
+
+    confirmPassword(password) {
+      void run(async () => {
+        try {
+          enter(await security.startEnrollment(password));
+        } catch (cause) {
+          setError(
+            cause instanceof ApiError && cause.status === 403
+              ? t("security.password.wrong")
+              : challengeErrorMessage(cause, t, t("auth.mfa.failed")),
+          );
+        }
+      });
+    },
+
+    passkeysSupported,
+
+    answerWithPasskey(rememberDevice) {
+      if (currentChallenge === null) return;
+      const { challengeId } = currentChallenge;
+      void run(async () => {
+        try {
+          complete(await challengePort.answerWithPasskey({ challengeId, rememberDevice }));
+        } catch (cause) {
+          await passkeyFailed(cause);
+        }
+      });
+    },
+
+    createPasskey({ rememberDevice, name }) {
+      if (step.kind !== "enroll") return;
+      const { challengeId } = step.challenge;
+      void run(async () => {
+        try {
+          complete(
+            await challengePort.createPasskey({
+              challengeId,
+              name: name ?? t(NAME_KEY.passkey),
+              rememberDevice,
+            }),
+          );
+        } catch (cause) {
+          await passkeyFailed(cause);
+        }
+      });
+    },
+
+    signInWithPasskey(keepSignedIn) {
+      void run(async () => {
+        try {
+          const result = await ports.session.signInWithPasskey(keepSignedIn ? {} : { keepSignedIn: false });
+          if (result.kind === "signed-in") reload();
+          else follow(result);
+        } catch (cause) {
+          if (cause instanceof PasskeyCancelledError) setError(t("auth.passkey.cancelled"));
+          else if (cause instanceof ApiError && cause.status === 401) setError(t("auth.passkey.rejected"));
+          else if (cause instanceof ApiError && cause.status === 409) setError(t("auth.passkey.unavailable"));
+          else setError(challengeErrorMessage(cause, t, t("auth.mfa.failed")));
+        }
+      });
+    },
+
+    cancel() {
+      if (confirm && phase === "ready") {
+        // Signed in already: giving up the confirmation goes back to the app.
+        void challengePort.cancel().catch(() => undefined);
+        leaveFor("/");
+        return;
+      }
+      setError(null);
+      setStep({ kind: "password" });
+      void challengePort.cancel().catch(() => undefined);
+    },
+  };
+}

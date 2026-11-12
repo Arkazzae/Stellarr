@@ -1,0 +1,154 @@
+"use client";
+
+import { createContext, useContext, useId, type ReactNode } from "react";
+
+import { MfaChallengeStep } from "@/components/auth/MfaChallengeStep";
+import { MfaEnrollStep, type EnrollMode } from "@/components/auth/MfaEnrollStep";
+import { PasswordConfirmStep } from "@/components/auth/PasswordConfirmStep";
+import { QrCode } from "@/components/auth/QrCode";
+import { RecoveryCodesStep } from "@/components/auth/RecoveryCodesStep";
+import { Modal } from "@/components/primitives/Modal";
+import { DialogHeader } from "@/components/settings/DialogHeader";
+import type { Translator } from "@/i18n";
+import type { MfaChallenge, MfaEnrollment } from "@/ports";
+
+export type SecurityDialogStep =
+  | { kind: "password" }
+  | { kind: "reverify"; challenge: MfaChallenge }
+  | { kind: "enroll"; challenge: MfaChallenge; mode: EnrollMode; enrollment: MfaEnrollment | null }
+  | { kind: "codes"; codes: string[] };
+
+export interface SecurityStepDialogProps {
+  step: SecurityDialogStep | null;
+  username: string;
+  t: Translator;
+  pending: boolean;
+  error: string | null;
+  emailRetryAfter: number | null;
+  onPassword(password: string): void;
+  onVerify(input: { methodId?: string; code: string; rememberDevice: boolean }): void;
+  onSendEmailCode(methodId: string): Promise<number | null>;
+  onEnrollModeChange(mode: EnrollMode): void;
+  onSendEnrollEmailCode(): void;
+  onConfirmEnrollment(input: { code: string; rememberDevice: boolean; name?: string }): void;
+  onClose(): void;
+  /** This browser can use passkeys. */
+  passkeysSupported?: boolean;
+  onAnswerWithPasskey?(): void;
+  onCreatePasskey?(input: { rememberDevice: boolean; name?: string }): void;
+}
+
+const DialogContext = createContext<{ titleId: string; onClose: () => void }>({
+  titleId: "",
+  onClose: () => undefined,
+});
+
+/** The sign-in steps, drawn as a settings dialog instead of a page. */
+function DialogStepFrame({
+  title,
+  description,
+  children,
+}: {
+  title: string;
+  description: string;
+  children: ReactNode;
+}) {
+  const { titleId, onClose } = useContext(DialogContext);
+  return (
+    <div className="am-card sec-step">
+      <DialogHeader titleId={titleId} title={title} detail={description} onClose={onClose} />
+      <div className="dlg-body">{children}</div>
+    </div>
+  );
+}
+
+/**
+ * The proof and setup steps a change to the account's security runs through:
+ * the password before a first method, a fresh code before any other change,
+ * the setup itself and the recovery codes it issues.
+ */
+export function SecurityStepDialog({
+  step,
+  username,
+  t,
+  pending,
+  error,
+  emailRetryAfter,
+  onPassword,
+  onVerify,
+  onSendEmailCode,
+  onEnrollModeChange,
+  onSendEnrollEmailCode,
+  onConfirmEnrollment,
+  onClose,
+  passkeysSupported = false,
+  onAnswerWithPasskey,
+  onCreatePasskey,
+}: SecurityStepDialogProps) {
+  const titleId = useId();
+
+  return (
+    <Modal open={step !== null} onClose={onClose} labelledBy={titleId} className="act-modal sec-dialog" exitMs={200}>
+      <DialogContext.Provider value={{ titleId, onClose }}>
+        {step?.kind === "password" ? (
+          <PasswordConfirmStep
+            t={t}
+            pending={pending}
+            error={error}
+            onSubmit={onPassword}
+            frame={DialogStepFrame}
+          />
+        ) : step?.kind === "reverify" ? (
+          <MfaChallengeStep
+            challenge={step.challenge}
+            t={t}
+            pending={pending}
+            error={error}
+            onVerify={onVerify}
+            onUseTrustedDevice={() => undefined}
+            onSendEmailCode={onSendEmailCode}
+            onCancel={onClose}
+            frame={DialogStepFrame}
+            offerTrust={false}
+            cancelLabel={t("common.cancel")}
+            passkeysSupported={passkeysSupported}
+            {...(onAnswerWithPasskey === undefined ? {} : { onUsePasskey: () => onAnswerWithPasskey() })}
+          />
+        ) : step?.kind === "enroll" ? (
+          <MfaEnrollStep
+            challenge={step.challenge}
+            t={t}
+            mode={step.mode}
+            enrollment={step.enrollment}
+            emailRetryAfter={emailRetryAfter}
+            pending={pending}
+            error={error}
+            qr={
+              step.enrollment?.otpAuthUri === undefined ? undefined : (
+                <QrCode value={step.enrollment.otpAuthUri} label={t("auth.enroll.qrLabel")} />
+              )
+            }
+            onModeChange={onEnrollModeChange}
+            onSendEmailCode={onSendEnrollEmailCode}
+            onConfirm={onConfirmEnrollment}
+            onCancel={onClose}
+            frame={DialogStepFrame}
+            voluntary
+            cancelLabel={t("common.cancel")}
+            passkeysSupported={passkeysSupported}
+            {...(onCreatePasskey === undefined ? {} : { onCreatePasskey })}
+          />
+        ) : step?.kind === "codes" ? (
+          <RecoveryCodesStep
+            codes={step.codes}
+            username={username}
+            t={t}
+            onDone={onClose}
+            frame={DialogStepFrame}
+            doneLabel={t("security.codesDone")}
+          />
+        ) : null}
+      </DialogContext.Provider>
+    </Modal>
+  );
+}

@@ -182,6 +182,24 @@
   line-height: 1.5;
 }
 
+.check {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: 10px;
+  color: var(--text-muted);
+  font-size: var(--text-13);
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.check input {
+  width: 16px;
+  height: 16px;
+  margin: 2px 0 0;
+  accent-color: var(--accent);
+}
+
 .error,
 .success {
   margin: 0;
@@ -205,6 +223,14 @@
   color: var(--on-accent);
   font-weight: 650;
   transition: background var(--dur-fast) var(--ease-standard);
+}
+
+/* The same action drawn as a link, when it leads to another page. */
+a.submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
 }
 
 .submit:hover:not(:disabled) {
@@ -260,7 +286,7 @@
   }
 
   .field input {
-    font-size: 16px;
+    font-size: var(--text-16);
   }
 }
 
@@ -269,7 +295,7 @@
      Landscape phones can be wider than the narrow-phone rule above, so input
      method belongs in this condition alongside viewport width. */
   .field input {
-    font-size: 16px;
+    font-size: var(--text-16);
   }
 
   .textLink {

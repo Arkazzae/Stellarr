@@ -7,8 +7,6 @@ namespace Stellarr.Cli;
 internal static class SessionCommands
 {
     private const int MaxListedSessions = 500;
-    private const string RealtimeWarning =
-        "Active WebSocket connections are not disconnected immediately; their cookie is rejected on the next request. Realtime teardown is deferred to a later release.";
 
     internal static async Task<CliResult> ListAsync(
         CliRuntime runtime,
@@ -87,14 +85,13 @@ internal static class SessionCommands
                 session.UserId,
                 username = session.User.Username,
                 revoked = true,
-                realtimeDisconnectDeferred = true,
+                realtimeDisconnectPending = true,
             },
             [
                 $"Revoked session {session.Id} of {session.User.DisplayName} ({session.User.Username}).",
-                RealtimeWarning,
+                "The API closes a matching WebSocket connection within one second.",
                 "Audit: local-cli sessions.revoke " + session.Id,
-            ],
-            Warnings: [RealtimeWarning]);
+            ]);
     }
 
     internal static async Task<CliResult> RevokeAllAsync(
@@ -124,7 +121,7 @@ internal static class SessionCommands
                     username = user.Username,
                     sessionsRevoked = 0,
                     handoffsInvalidated = 0,
-                    realtimeDisconnectDeferred = true,
+                    realtimeDisconnectPending = true,
                 },
                 [$"No active sessions or approved pending handoffs for {user.DisplayName} ({user.Username})."]);
         }
@@ -151,15 +148,14 @@ internal static class SessionCommands
                 username = user.Username,
                 sessionsRevoked = revoked,
                 handoffsInvalidated = invalidated,
-                realtimeDisconnectDeferred = true,
+                realtimeDisconnectPending = true,
             },
             [
                 $"Revoked {revoked} active session(s) of {user.DisplayName} ({user.Username}).",
                 $"Invalidated {invalidated} approved desktop browser handoff(s) not yet redeemed.",
-                RealtimeWarning,
+                "The API closes matching WebSocket connections within one second.",
                 "Audit: local-cli sessions.revoke-all " + user.Id,
-            ],
-            Warnings: [RealtimeWarning]);
+            ]);
     }
 
     private static SessionItem Describe(UserSession session) => new(

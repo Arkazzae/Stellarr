@@ -40,9 +40,8 @@ export interface DirectoryPort {
 /**
  * Server administration, as the settings modal uses it.
  *
- * `supported` says which panes may act. The profile, roles, member
- * assignments, moderation and custom emoji are persisted; the rest stay
- * read-only until their endpoints land.
+ * `supported` says which panes this member may act in, from their effective
+ * permissions. A pane without permission stays readable and says why.
  */
 export interface ServerAdminPort {
   readonly supported: AdminSupport;
@@ -130,7 +129,6 @@ export interface ServerAdminPort {
 export interface AdminSupport {
   server: boolean;
   serverIcon: boolean;
-  notifications: boolean;
   channels: boolean;
   roles: boolean;
   members: boolean;

@@ -59,19 +59,16 @@ function props(overrides: Partial<UserSettingsProps> = {}): UserSettingsProps {
     onClose: vi.fn(),
     account,
     accountPane: {
-      profileSupported: true,
-      uploadsSupported: true,
       onSave: vi.fn(),
       onPickImage: vi.fn(),
       onRemoveImage: vi.fn(),
     },
     security: {
       emailSupported: true,
-      passwordSupported: true,
       onChangeEmail: vi.fn(),
       onChangePassword: vi.fn(async () => "changed" as const),
     },
-    preferences: { preferences, supported: true, onChange: vi.fn() },
+    preferences: { preferences, onChange: vi.fn() },
     keybinds: {
       bindings: { ...DEFAULT_KEYBINDINGS },
       recording: null,
@@ -82,7 +79,6 @@ function props(overrides: Partial<UserSettingsProps> = {}): UserSettingsProps {
       resetBindings: vi.fn(),
     },
     appearance: {
-      supported: true,
       theme: {
         palette: "midnight",
         accent: "#756cf7",

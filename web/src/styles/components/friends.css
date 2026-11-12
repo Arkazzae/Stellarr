@@ -43,7 +43,7 @@
     align-items: center;
     gap: 9px;
     color: var(--text-muted);
-    font-size: 14px;
+    font-size: var(--text-14);
     font-weight: 550;
     text-align: left;
     transition:
@@ -91,7 +91,7 @@
     justify-content: center;
     background: var(--accent);
     color: var(--on-accent);
-    font-size: 11px;
+    font-size: var(--text-11);
     font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
@@ -123,7 +123,7 @@
     background: var(--surface-field);
     border: 1px solid transparent;
     color: var(--text);
-    font-size: 13px;
+    font-size: var(--text-13);
     transition: border-color var(--dur-fast) var(--ease-standard);
   }
 
@@ -214,7 +214,7 @@
 
   .dm-call-copy span {
     color: var(--text-muted);
-    font-size: 12px;
+    font-size: var(--text-12);
   }
 
   .dm-call-answer,
@@ -286,7 +286,7 @@
   }
 
   .dm-txt b {
-    font-size: 14px;
+    font-size: var(--text-14);
     font-weight: 500;
     white-space: nowrap;
     overflow: hidden;
@@ -294,7 +294,7 @@
   }
 
   .dm-last {
-    font-size: 12px;
+    font-size: var(--text-12);
     color: var(--text-faint);
     white-space: nowrap;
     overflow: hidden;
@@ -322,13 +322,13 @@
     justify-content: center;
     background: var(--surface-pop);
     color: var(--text);
-    font-size: 11px;
+    font-size: var(--text-11);
     font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
 
   .dm-empty {
-    font-size: 12.5px;
+    font-size: var(--text-13);
     line-height: 1.5;
     color: var(--text-faint);
     padding: 4px 8px 8px;
@@ -349,7 +349,7 @@
     background: var(--accent);
     color: var(--on-accent);
     border: 2px solid var(--surface-canvas);
-    font-size: 11px;
+    font-size: var(--text-11);
     font-weight: 600;
     font-variant-numeric: tabular-nums;
   }
@@ -383,7 +383,7 @@
     align-items: center;
     gap: 7px;
     flex: none;
-    font-size: 13px;
+    font-size: var(--text-13);
     color: var(--text-muted);
     white-space: nowrap;
     transition:
@@ -465,14 +465,14 @@
   }
 
   .fr-activity-header h3 {
-    font-size: 17px;
+    font-size: var(--text-18);
     line-height: 1.4;
     font-weight: 600;
   }
 
   .fr-activity-header > span {
     color: var(--text-faint);
-    font-size: 12px;
+    font-size: var(--text-12);
     font-variant-numeric: tabular-nums;
   }
 
@@ -518,7 +518,7 @@
   }
 
   .fr-activity-who > b {
-    font-size: 14px;
+    font-size: var(--text-14);
     font-weight: 600;
     line-height: 1.4;
   }
@@ -532,7 +532,7 @@
 
   .fr-activity-status {
     color: var(--text-muted);
-    font-size: 12px;
+    font-size: var(--text-12);
     line-height: 1.4;
   }
 
@@ -567,7 +567,7 @@
     margin-top: 12px;
     padding-top: 10px;
     border-top: 1px solid var(--line-subtle);
-    font-size: 12px;
+    font-size: var(--text-12);
     color: var(--text-muted);
   }
 
@@ -607,13 +607,13 @@
   }
 
   .fr-activity-empty h4 {
-    font-size: 14px;
+    font-size: var(--text-14);
     font-weight: 600;
   }
 
   .fr-activity-empty p {
     color: var(--text-muted);
-    font-size: 13px;
+    font-size: var(--text-13);
     line-height: 1.6;
     overflow-wrap: anywhere;
   }
@@ -637,17 +637,6 @@
       width: 44px;
       height: 44px;
     }
-  }
-
-  .fr-note {
-    max-width: var(--measure);
-    margin-bottom: 20px;
-    padding: 10px 12px;
-    border: 1px solid var(--line-subtle);
-    border-radius: var(--radius-sm);
-    font-size: 12.5px;
-    line-height: 1.5;
-    color: var(--text-faint);
   }
 
   /* Spans the list it filters, so its right edge lands where the row actions
@@ -736,7 +725,7 @@
     align-items: baseline;
     gap: 7px;
     min-width: 0;
-    font-size: 14.5px;
+    font-size: var(--text-15);
     font-weight: 600;
     white-space: nowrap;
     overflow: hidden;
@@ -760,13 +749,13 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-    font-size: 12.5px;
+    font-size: var(--text-13);
     font-weight: 400;
     color: var(--text-faint);
   }
 
   .fr-state {
-    font-size: 12.5px;
+    font-size: var(--text-13);
     color: var(--text-faint);
     white-space: nowrap;
     overflow: hidden;
@@ -828,7 +817,7 @@
     align-items: center;
     gap: 8px;
     text-align: left;
-    font-size: 13px;
+    font-size: var(--text-13);
     color: var(--text-muted);
     transition:
       background var(--dur-fast) var(--ease-standard),
@@ -860,7 +849,7 @@
     justify-content: center;
     gap: 5px;
     text-align: center;
-    font-size: 12.5px;
+    font-size: var(--text-13);
     line-height: 1.55;
     color: var(--text-muted);
   }
@@ -870,7 +859,7 @@
   }
 
   .fr-empty b {
-    font-size: 14px;
+    font-size: var(--text-14);
     font-weight: 600;
     color: var(--text-muted);
   }
@@ -898,14 +887,14 @@
   }
 
   .fr-add-panel h3 {
-    font-size: 17px;
+    font-size: var(--text-18);
     font-weight: 600;
     line-height: 1.3;
     margin-bottom: 6px;
   }
 
   .fr-help {
-    font-size: 13px;
+    font-size: var(--text-13);
     line-height: 1.55;
     color: var(--text-faint);
     margin-bottom: 16px;
@@ -927,7 +916,7 @@
     background: var(--surface-field);
     border: 1px solid var(--line);
     color: var(--text);
-    font-size: 14px;
+    font-size: var(--text-14);
     transition: border-color var(--dur-fast) var(--ease-standard);
   }
 
@@ -946,7 +935,7 @@
 
   .fr-answer {
     margin-top: 12px;
-    font-size: 13px;
+    font-size: var(--text-13);
     line-height: 1.55;
   }
 
@@ -972,7 +961,7 @@
     gap: 7px;
     padding-left: 12px;
     border-left: 1px solid var(--line-subtle);
-    font-size: 12.5px;
+    font-size: var(--text-13);
     color: var(--text-faint);
     white-space: nowrap;
   }
@@ -997,14 +986,14 @@
   }
 
   .dm-intro h3 {
-    font-size: 26px;
+    font-size: var(--text-28);
     font-weight: 650;
     line-height: 1.15;
   }
 
   .dm-intro p {
     max-width: var(--measure);
-    font-size: 14px;
+    font-size: var(--text-14);
     line-height: 1.55;
     color: var(--text-faint);
   }
@@ -1113,7 +1102,7 @@
     .fr-find input,
     .fr-add-form input {
       min-height: 44px;
-      font-size: 16px;
+      font-size: var(--text-16);
     }
 
     .dm-home,
@@ -1153,7 +1142,7 @@
     }
 
     .dm-intro h3 {
-      font-size: 22px;
+      font-size: var(--text-24);
     }
   }
 

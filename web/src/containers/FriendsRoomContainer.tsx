@@ -139,7 +139,6 @@ export function FriendsRoomContainer() {
       friends={friendList}
       requests={requests}
       blocked={blocked}
-      supported={friends.supported}
       railOpen={ui.railOpen}
       onToggleRail={ui.toggleRail}
       onMessage={friends.messagePerson}

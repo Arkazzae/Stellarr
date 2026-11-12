@@ -38,8 +38,10 @@ public static class ServerAdministrationEndpoints
         admin.MapGet("/audit", ListAuditAsync);
         admin.MapGet("/notifications", GetNotificationsAsync);
         admin.MapPatch("/notifications", UpdateNotificationsAsync);
-        admin.MapPost("/server/transfer", TransferAsync);
-        admin.MapDelete("/server", DeleteServerAsync);
+        // Handing a server over or deleting it cannot be undone; on the instance
+        // server a hand-over makes someone else the instance owner.
+        admin.MapPost("/server/transfer", TransferAsync).AddEndpointFilter<FreshSecondStepFilter>();
+        admin.MapDelete("/server", DeleteServerAsync).AddEndpointFilter<FreshSecondStepFilter>();
         return endpoints;
     }
 

@@ -92,9 +92,6 @@ export interface FriendsPort {
   /** Fires after every mutation above and on incoming realtime events. */
   onChanged(handler: () => void): Unsubscribe;
 
-  /** Whether the connected backend exposes the social endpoints. */
-  readonly supported: boolean;
-
   /** Releases the realtime listeners an adapter owns. */
   dispose?(): void;
 }

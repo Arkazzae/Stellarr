@@ -70,8 +70,8 @@ describe("Roster panel", () => {
     const faces = within(column).getAllByRole("button");
 
     expect(faces.map((face) => face.getAttribute("aria-label"))).toEqual([
-      "Maja — Cisza",
-      "Nils — Poza siecią",
+      "Maja, Cisza",
+      "Nils, Poza siecią",
     ]);
   });
 
@@ -80,7 +80,7 @@ describe("Roster panel", () => {
     const onOpenProfile = vi.fn();
     render(<Roster {...props({ onOpenProfile })} />);
 
-    const face = screen.getByRole("button", { name: "Nils — Poza siecią" });
+    const face = screen.getByRole("button", { name: "Nils, Poza siecią" });
     await user.click(face);
 
     expect(onOpenProfile).toHaveBeenCalledWith("u-nils", face);

@@ -206,12 +206,12 @@ describe("SectionSettings", () => {
       });
     });
 
-    it("keeps the editor read-only when per-section overrides are not wired", async () => {
+    it("keeps the editor read-only without permission to manage roles", async () => {
       const user = userEvent.setup();
       render(<SectionSettings {...props({ permissionsSupported: false })} />);
       await goTo(user, "Uprawnienia");
 
-      expect(screen.getByText(/Wyjątki uprawnień nie są jeszcze podpięte/)).toBeInTheDocument();
+      expect(screen.getByText(/więc wyjątki są tylko do odczytu/)).toBeInTheDocument();
       expect(
         screen.getByRole("button", { name: "Edytuj uprawnienia roli Moderator" }),
       ).toBeDisabled();
@@ -229,11 +229,11 @@ describe("SectionSettings", () => {
     });
   });
 
-  it("is read-only and says why while sections are not wired", async () => {
+  it("is read-only and says why without permission to manage channels", async () => {
     const user = userEvent.setup();
     render(<SectionSettings {...props({ supported: false })} />);
 
-    expect(screen.getByText(/Ustawienia kanału nie są jeszcze podpięte/)).toBeInTheDocument();
+    expect(screen.getByText(/Nie masz uprawnienia do zarządzania kanałami/)).toBeInTheDocument();
     expect(nameField()).toBeDisabled();
     expect(saveButton()).toBeDisabled();
 

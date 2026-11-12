@@ -21,6 +21,19 @@ describe("LoginScreen", () => {
     expect(onSubmit).toHaveBeenCalledExactlyOnceWith("maja", "haslo123");
   });
 
+  it("offers to keep the session only where the page holds that choice", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    const { rerender } = render(<LoginScreen onSubmit={vi.fn()} />);
+    // The desktop app keeps its session; it passes no choice.
+    expect(screen.queryByRole("checkbox")).toBeNull();
+
+    rerender(<LoginScreen onSubmit={vi.fn()} keepSignedIn={{ checked: true, onChange }} />);
+    await user.click(screen.getByRole("checkbox", { name: "Nie wylogowuj mnie" }));
+
+    expect(onChange).toHaveBeenCalledExactlyOnceWith(false);
+  });
+
   it("asks for both fields before submitting anything", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn();

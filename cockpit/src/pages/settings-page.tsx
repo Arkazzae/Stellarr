@@ -1,4 +1,4 @@
-import { useState, type ComponentProps, type FormEvent, type ReactNode } from "react";
+import { useState, type ComponentProps, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 
 import { Spinner } from "@/components/spinner";
 import { PageHeader } from "@/components/page-header";
@@ -14,7 +14,10 @@ import { LOCALES, t, type Locale, type MessageKey } from "@/i18n";
 import {
   CockpitApiError,
   cockpitApi,
+  type CockpitMfaRequirement,
   type CockpitSecret,
+  type CockpitSecurityChanges,
+  type CockpitSecurityKey,
   type CockpitSettings,
   type CockpitSmtpSecurity,
 } from "@/lib/api";
@@ -23,7 +26,9 @@ import { useCockpit } from "@/state/cockpit-context";
 import { useLocale } from "@/state/locale-context";
 
 type FieldErrors = Record<string, string[]>;
-type Update = <K extends keyof CockpitSettings>(key: K, value: CockpitSettings[K]) => void;
+/** Edits the settings the page's button saves; the security card keeps its own changes. */
+type Update = <K extends Exclude<keyof CockpitSettings, CockpitSecurityKey>>(key: K, value: CockpitSettings[K]) => void;
+type SecurityUpdate = <K extends CockpitSecurityKey>(key: K, value: CockpitSettings[K]) => void;
 
 interface SectionProps {
   title: string;
@@ -312,6 +317,169 @@ function MailCard({ settings, update, errors, smtpPassword, onSecretChanged }: M
   );
 }
 
+const MFA_REQUIREMENTS: readonly {
+  value: CockpitMfaRequirement;
+  labelKey: MessageKey;
+  descriptionKey: MessageKey;
+}[] = [
+  {
+    value: "optional",
+    labelKey: "settings.security.requirement.optional",
+    descriptionKey: "settings.security.requirement.optionalDescription",
+  },
+  {
+    value: "admins",
+    labelKey: "settings.security.requirement.admins",
+    descriptionKey: "settings.security.requirement.adminsDescription",
+  },
+  {
+    value: "everyone",
+    labelKey: "settings.security.requirement.everyone",
+    descriptionKey: "settings.security.requirement.everyoneDescription",
+  },
+  {
+    value: "cockpit",
+    labelKey: "settings.security.requirement.cockpit",
+    descriptionKey: "settings.security.requirement.cockpitDescription",
+  },
+];
+
+interface SecurityLimit {
+  field: Exclude<CockpitSecurityKey, "mfaRequirement">;
+  id: string;
+  labelKey: MessageKey;
+  min: number;
+  max: number;
+}
+
+/** The ranges the server accepts (InstanceSettingsService.Validate). */
+const SECURITY_LIMITS: readonly SecurityLimit[] = [
+  { field: "trustedDeviceDays", id: "trusted-device-days", labelKey: "settings.security.trustedDeviceDays", min: 1, max: 365 },
+  { field: "authChallengeMinutes", id: "challenge-minutes", labelKey: "settings.security.challengeMinutes", min: 1, max: 60 },
+  { field: "emailCodeMinutes", id: "email-code-minutes", labelKey: "settings.security.emailCodeMinutes", min: 1, max: 60 },
+  {
+    field: "emailCodeCooldownSeconds",
+    id: "email-cooldown-seconds",
+    labelKey: "settings.security.emailCooldownSeconds",
+    min: 0,
+    max: 600,
+  },
+  { field: "emailCodeMaxAttempts", id: "email-attempts", labelKey: "settings.security.emailAttempts", min: 1, max: 10 },
+  { field: "emailCodeSendsPerHour", id: "email-sends", labelKey: "settings.security.emailSendsPerHour", min: 1, max: 60 },
+  { field: "cliRecoveryMinutes", id: "cli-recovery-minutes", labelKey: "settings.security.cliRecoveryMinutes", min: 1, max: 60 },
+];
+
+const withinLimit = (value: number, { min, max }: SecurityLimit) =>
+  Number.isInteger(value) && value >= min && value <= max;
+
+/** The draft's values that differ from what is stored; a value edited back to the stored one is not a change. */
+function securityChanges(stored: CockpitSettings, draft: CockpitSecurityChanges): CockpitSecurityChanges {
+  return Object.fromEntries(
+    Object.entries(draft).filter(([key, value]) => value !== stored[key as CockpitSecurityKey]),
+  ) as CockpitSecurityChanges;
+}
+
+interface SecurityCardProps {
+  /** The stored settings with the card's unsaved changes on top. */
+  settings: CockpitSettings;
+  /** The requirement the server has now, before the card's changes. */
+  storedRequirement: CockpitMfaRequirement;
+  update: SecurityUpdate;
+  errors: FieldErrors;
+  canSave: boolean;
+  saving: boolean;
+  notice: { message: string; error: boolean } | null;
+  onSave: () => void;
+}
+
+/**
+ * The account security settings, saved by the card's own button. The card is
+ * not a form of its own, so it can sit inside the page's: Enter in one of its
+ * fields saves the card instead of submitting the page around it.
+ */
+function SecurityCard({ settings, storedRequirement, update, errors, canSave, saving, notice, onSave }: SecurityCardProps) {
+  const requirementError = errors.mfaRequirement?.[0];
+  function saveOnEnter(event: KeyboardEvent<HTMLInputElement>) {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    if (canSave) onSave();
+  }
+  // Anything but optional makes Cockpit ask for a second factor. A stored
+  // requirement left as it is changes nothing, so it does not warn.
+  const locksCockpit = settings.mfaRequirement !== "optional" && settings.mfaRequirement !== storedRequirement;
+  return (
+    <Section title={t("settings.security.title")} description={t("settings.security.description")}>
+      <fieldset className="space-y-3">
+        <legend className="text-sm font-medium">{t("settings.security.requirement")}</legend>
+        {MFA_REQUIREMENTS.map((option) => (
+          <label key={option.value} className="flex cursor-pointer items-start gap-3 rounded-md border p-3">
+            <input
+              type="radio"
+              name="mfa-requirement"
+              value={option.value}
+              checked={settings.mfaRequirement === option.value}
+              onChange={() => update("mfaRequirement", option.value)}
+              onKeyDown={saveOnEnter}
+              className="mt-0.5 size-4 accent-[var(--primary)]"
+            />
+            <span>
+              <span className="block text-sm font-medium">{t(option.labelKey)}</span>
+              <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">{t(option.descriptionKey)}</span>
+            </span>
+          </label>
+        ))}
+        <p className="text-xs leading-5 text-muted-foreground">
+          {t("settings.security.cockpitNote")} {t("settings.security.sessionsNote")}
+        </p>
+        {requirementError ? <p className="text-xs text-danger">{requirementError}</p> : null}
+      </fieldset>
+      {locksCockpit ? (
+        <Alert>
+          <AlertTitle>{t("settings.security.warning.title")}</AlertTitle>
+          <AlertDescription>{t("settings.security.warning.description")}</AlertDescription>
+        </Alert>
+      ) : null}
+      <div className="grid gap-4 border-t pt-5 sm:grid-cols-2">
+        {SECURITY_LIMITS.map((limit) => {
+          const value = settings[limit.field];
+          const outside = !withinLimit(value, limit);
+          return (
+            <Field
+              key={limit.field}
+              id={limit.id}
+              label={t(limit.labelKey)}
+              type="number"
+              min={limit.min}
+              max={limit.max}
+              step={1}
+              value={String(value)}
+              onChange={(event) => update(limit.field, Number(event.target.value))}
+              onKeyDown={saveOnEnter}
+              hint={outside ? undefined : t("settings.security.range", { min: limit.min, max: limit.max })}
+              errors={
+                outside
+                  ? [t("settings.security.outOfRange", { min: limit.min, max: limit.max })]
+                  : errors[limit.field]
+              }
+            />
+          );
+        })}
+      </div>
+      <div className="flex flex-col items-end gap-2 border-t pt-5">
+        <Button type="button" disabled={!canSave} onClick={onSave}>
+          {saving ? <Spinner /> : null}
+          {saving ? t("common.saving") : t("settings.security.save")}
+        </Button>
+        {notice ? (
+          <p className={notice.error ? "text-xs text-danger" : "text-xs text-success"} role={notice.error ? "alert" : "status"}>
+            {notice.message}
+          </p>
+        ) : null}
+      </div>
+    </Section>
+  );
+}
+
 function TestMail({ settings }: { settings: CockpitSettings }) {
   const [recipient, setRecipient] = useState("");
   const [sending, setSending] = useState(false);
@@ -420,19 +588,36 @@ export function SettingsPage() {
   // What the server last stored, once a save has returned it, and the edits made since.
   const [stored, setStored] = useState<CockpitSettings | null>(null);
   const [edits, setEdits] = useState<Partial<CockpitSettings>>({});
-  const [saving, setSaving] = useState(false);
+  // The security card's edits, kept apart: each save sends and clears only its own.
+  const [securityEdits, setSecurityEdits] = useState<CockpitSecurityChanges>({});
+  // One save at a time: each sends the stored values of what it does not own.
+  const [saving, setSaving] = useState<"settings" | "security" | null>(null);
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
+  const [securityNotice, setSecurityNotice] = useState<SecurityCardProps["notice"]>(null);
+  const [securityErrors, setSecurityErrors] = useState<FieldErrors>({});
 
   const base = stored ?? data;
   const settings = base ? { ...base, ...edits } : null;
+  const security = base ? { ...base, ...securityEdits } : null;
+  const securityChanged = base ? Object.keys(securityChanges(base, securityEdits)).length > 0 : false;
+  const securityValid = security
+    ? SECURITY_LIMITS.every((limit) => withinLimit(security[limit.field], limit))
+    : false;
+  const canSaveSecurity = saving === null && securityChanged && securityValid;
 
   const update: Update = (key, value) => {
     setEdits((current) => ({ ...current, [key]: value }));
     setSaved(false);
     setSaveError(null);
     setFieldErrors({});
+  };
+
+  const updateSecurity: SecurityUpdate = (key, value) => {
+    setSecurityEdits((current) => ({ ...current, [key]: value }));
+    setSecurityNotice(null);
+    setSecurityErrors({});
   };
 
   // A secret changes whether mail is ready, so the settings are read again with it.
@@ -443,8 +628,8 @@ export function SettingsPage() {
 
   async function save(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!settings) return;
-    setSaving(true);
+    if (!settings || saving) return;
+    setSaving("settings");
     setSaved(false);
     setSaveError(null);
     setFieldErrors({});
@@ -457,7 +642,27 @@ export function SettingsPage() {
       setSaveError(cause instanceof Error ? cause.message : t("settings.saveFailed"));
       if (cause instanceof CockpitApiError) setFieldErrors(cause.errors);
     } finally {
-      setSaving(false);
+      setSaving(null);
+    }
+  }
+
+  // Sends the stored values of the other cards, so their unsaved edits stay
+  // edits, and of the security settings only those that changed. Nothing in
+  // the shell shows these settings, so the panel is not reloaded.
+  async function saveSecurity() {
+    if (!base || !canSaveSecurity) return;
+    setSaving("security");
+    setSecurityNotice(null);
+    setSecurityErrors({});
+    try {
+      setStored(await cockpitApi.updateSettings(base, securityChanges(base, securityEdits)));
+      setSecurityEdits({});
+      setSecurityNotice({ message: t("settings.security.saved"), error: false });
+    } catch (cause) {
+      setSecurityNotice({ message: cause instanceof Error ? cause.message : t("settings.saveFailed"), error: true });
+      if (cause instanceof CockpitApiError) setSecurityErrors(cause.errors);
+    } finally {
+      setSaving(null);
     }
   }
 
@@ -467,9 +672,9 @@ export function SettingsPage() {
         title={t("settings.title")}
         description={t("settings.description")}
         actions={
-          <Button type="submit" form="cockpit-settings-form" disabled={!settings || saving}>
-            {saving ? <Spinner /> : null}
-            {saving ? t("common.saving") : t("settings.save")}
+          <Button type="submit" form="cockpit-settings-form" disabled={!settings || saving !== null}>
+            {saving === "settings" ? <Spinner /> : null}
+            {saving === "settings" ? t("common.saving") : t("settings.save")}
           </Button>
         }
       />
@@ -503,7 +708,7 @@ export function SettingsPage() {
         </div>
       ) : null}
 
-      {settings ? (
+      {base && settings && security ? (
         <form
           id="cockpit-settings-form"
           onSubmit={(event) => void save(event)}
@@ -512,6 +717,16 @@ export function SettingsPage() {
           <div className="space-y-6">
             <InstanceCard settings={settings} update={update} errors={fieldErrors} />
             <RetentionCard settings={settings} update={update} errors={fieldErrors} />
+            <SecurityCard
+              settings={security}
+              storedRequirement={base.mfaRequirement}
+              update={updateSecurity}
+              errors={securityErrors}
+              canSave={canSaveSecurity}
+              saving={saving === "security"}
+              notice={securityNotice}
+              onSave={() => void saveSecurity()}
+            />
             <LanguageCard />
           </div>
           <div className="space-y-6">

@@ -8,7 +8,6 @@ import { AppearancePane, type AppearancePaneProps } from "./AppearancePane";
 
 function props(overrides: Partial<AppearancePaneProps> = {}): AppearancePaneProps {
   return {
-    supported: true,
     theme: DEFAULT_THEME,
     resolvedScheme: "dark",
     onChange: vi.fn(),

@@ -154,19 +154,16 @@ function setup(overrides: Partial<UserSettingsProps> = {}) {
     onClose: vi.fn(),
     account,
     accountPane: {
-      profileSupported: true,
-      uploadsSupported: true,
       onSave: vi.fn(),
       onPickImage: vi.fn(),
       onRemoveImage: vi.fn(),
     },
     security: {
       emailSupported: true,
-      passwordSupported: true,
       onChangeEmail: vi.fn(),
       onChangePassword: vi.fn(async () => "changed" as const),
     },
-    preferences: { preferences, supported: false, onChange: vi.fn() },
+    preferences: { preferences, onChange: vi.fn() },
     keybinds: {
       bindings: { ...DEFAULT_KEYBINDINGS },
       recording: null,
@@ -177,7 +174,6 @@ function setup(overrides: Partial<UserSettingsProps> = {}) {
       resetBindings: vi.fn(),
     },
     appearance: {
-      supported: true,
       theme: {
         palette: "midnight",
         accent: "#756cf7",
@@ -246,8 +242,6 @@ describe("UserSettings", () => {
     const preview = vi.fn();
     setup({
       accountPane: {
-        profileSupported: true,
-        uploadsSupported: true,
         onSave: vi.fn(),
         onPickImage: vi.fn(),
         onRemoveImage: vi.fn(),
@@ -274,8 +268,6 @@ describe("UserSettings", () => {
   it("keeps showing an arrival sound whose server was left", () => {
     setup({
       accountPane: {
-        profileSupported: true,
-        uploadsSupported: true,
         onSave: vi.fn(),
         onPickImage: vi.fn(),
         onRemoveImage: vi.fn(),
@@ -333,8 +325,6 @@ describe("UserSettings", () => {
     const user = userEvent.setup();
     setup({
       accountPane: {
-        profileSupported: true,
-        uploadsSupported: true,
         customEmoji: [
           {
             id: "emoji-party",
@@ -438,10 +428,12 @@ describe("UserSettings", () => {
     const field = screen.getByRole("textbox", { name: "Nowy adres e-mail" });
     await user.clear(field);
     await user.type(field, "nowy@example.com");
-    await user.click(screen.getByRole("button", { name: "Zapisz e-mail" }));
+    await user.type(screen.getByLabelText("Obecne hasło"), "haslo1234");
+    await user.click(screen.getByRole("button", { name: "Wyślij link" }));
 
     expect(props.security.onChangeEmail).toHaveBeenCalledExactlyOnceWith(
       "nowy@example.com",
+      "haslo1234",
     );
     expect(props.accountPane.onSave).not.toHaveBeenCalled();
   });
@@ -526,7 +518,7 @@ describe("UserSettings", () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
     setup({
-      preferences: { preferences, supported: true, onChange },
+      preferences: { preferences, onChange },
     });
 
     await user.click(screen.getByRole("button", { name: /Powiadomienia/ }));
@@ -734,7 +726,7 @@ describe("UserSettings", () => {
     expect(
       screen.getByRole("meter", { name: "Poziom mikrofonu" }),
     ).toHaveAttribute("aria-valuenow", "75");
-    expect(screen.getByText(/to trafiłoby do rozmowy/)).toBeInTheDocument();
+    expect(screen.getByText(/To trafiłoby do rozmowy/)).toBeInTheDocument();
   });
 
   it("does not claim a noise suppressor that failed to start", async () => {
@@ -791,17 +783,6 @@ describe("UserSettings", () => {
 
     await user.click(screen.getByRole("button", { name: "Tak, przywróć" }));
     expect(props.voice.onReset).toHaveBeenCalledOnce();
-  });
-
-  it("says so on every pane whose settings are not persisted", async () => {
-    const user = userEvent.setup();
-    setup();
-
-    await user.click(screen.getByRole("button", { name: /Prywatność/ }));
-
-    expect(
-      screen.getByText(/nie mają jeszcze swojej tabeli/),
-    ).toBeInTheDocument();
   });
 
   it("logs out from the nav", async () => {

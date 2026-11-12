@@ -117,7 +117,20 @@ export type PasswordChangeAnswer =
   | "changed"
   | "wrong-current"
   | "too-short"
-  | "same-as-current";
+  | "same-as-current"
+  | "second-step-required";
+
+/** What asking for a new address can answer; only "sent" mailed a link. */
+export type EmailChangeAnswer =
+  | "sent"
+  | "wrong-password"
+  | "second-step-required"
+  | "same"
+  | "taken"
+  | "mail-unavailable";
+
+/** What opening the link in the mail can answer. */
+export type EmailConfirmAnswer = "changed" | "invalid" | "taken";
 
 export interface Server {
   id: string;
@@ -482,6 +495,8 @@ export interface Bootstrap {
 export interface LoginInput {
   username: string;
   password: string;
+  /** False asks for a session that ends with the browser; left out, it is kept. */
+  keepSignedIn?: boolean;
 }
 
 export interface RegisterInput {
@@ -542,3 +557,157 @@ export type FriendRequestAnswer =
   | "already-sent"
   | "self"
   | "blocked";
+
+// ---- Sign-in with a second factor -----------------------------------------
+
+/** How a second-factor method proves who is signing in. */
+export type MfaMethodType = "totp" | "email" | "passkey";
+
+export interface MfaMethod {
+  id: string;
+  type: MfaMethodType;
+  name: string;
+  createdAt: string;
+  lastUsedAt?: string;
+  /** Only an email method names the address its codes go to. */
+  emailAddress?: string;
+  /** Started but not yet confirmed with a first code. */
+  pending: boolean;
+}
+
+/**
+ * Why a challenge exists: an ordinary sign-in, a required first method, a
+ * replacement after an operator recovery, or a fresh proof before a change to
+ * the account's security.
+ */
+export type MfaPurpose = "mfa" | "enrollment" | "recovery" | "reverify";
+
+/**
+ * A sign-in that has passed its first step and waits for a second factor, or
+ * for a first method to be set up. The server keeps the secret half in an
+ * HttpOnly cookie; `challengeId` only names it.
+ */
+export interface MfaChallenge {
+  /** True when there is no method yet and one has to be set up first. */
+  enrollment: boolean;
+  challengeId: string;
+  purpose: MfaPurpose;
+  expiresAt: string;
+  methods: MfaMethod[];
+  /** This browser holds a trusted-device token the server will accept. */
+  trustedDeviceAvailable: boolean;
+  /** The account has a confirmed email method and mail can be sent. */
+  emailCodeAvailable: boolean;
+  /** How long "remember this device" lasts, as the instance sets it. */
+  trustedDeviceDays: number;
+  /** The server can register and check passkeys: it has a public HTTPS address. */
+  passkeyAvailable: boolean;
+}
+
+/** What the first step of a sign-in or a registration led to. */
+export type AuthResult =
+  | { kind: "signed-in"; user: User }
+  | { kind: "challenge"; challenge: MfaChallenge }
+  /** An operator reset the account's security; only a recovery credential gets back in. */
+  | { kind: "recovery-required" };
+
+export interface MfaVerifyInput {
+  challengeId: string;
+  /** Absent with a recovery code, which belongs to no method. */
+  methodId?: string;
+  code?: string;
+  rememberDevice?: boolean;
+  useTrustedDevice?: boolean;
+}
+
+/** The end of a challenge: a full session, and recovery codes when new ones were issued. */
+export interface MfaCompletion {
+  user: User;
+  /** Shown once. Present only when this step issued them. */
+  recoveryCodes?: string[];
+  /** When this browser stops being trusted, if it just became so. */
+  trustedDeviceExpiresAt?: string;
+}
+
+/** A method being set up. The secret is shown once and never stored by the client. */
+export interface MfaEnrollment {
+  methodId: string;
+  type: MfaMethodType;
+  secret?: string;
+  otpAuthUri?: string;
+}
+
+/** A browser the account trusts to skip the second factor until `expiresAt`. */
+export interface TrustedDevice {
+  id: string;
+  name: string;
+  /** The browser and system the device reported, as the server recorded it. */
+  device: string;
+  createdAt: string;
+  expiresAt: string;
+  lastUsedAt?: string;
+}
+
+/** One entry of the account's security history. `kind` is the server's name for it. */
+export interface SecurityEvent {
+  id: string;
+  kind: string;
+  detail: string;
+  ipAddress: string;
+  device: string;
+  createdAt: string;
+}
+
+/** The account's second-factor state, as the security settings show it. */
+export interface AccountSecurity {
+  /** The instance's policy: "optional", "admins", "everyone" or "cockpit". */
+  requirement: string;
+  /** A second factor is due at this account's sign-in. */
+  mfaRequired: boolean;
+  /** This session proved a second factor recently enough to change security. */
+  freshMfa: boolean;
+  /** How this session passed its second step, such as "totp" or "trusted_device". */
+  mfaEvidence?: string;
+  /** When this session passed its second step, if it did. */
+  mfaCompletedAt?: string;
+  methods: MfaMethod[];
+  remainingRecoveryCodes: number;
+  trustedDevices: TrustedDevice[];
+  recentEvents: SecurityEvent[];
+  trustedDeviceDays: number;
+  emailCodeAvailable: boolean;
+  /** The server can register and check passkeys: it has a public HTTPS address. */
+  passkeyAvailable: boolean;
+  /** Identities at providers this account signs in with. */
+  identities: LinkedIdentity[];
+  /** The providers the account can link itself to. */
+  identityProviders: IdentityProvider[];
+}
+
+/** An identity at a provider the account signs in with. */
+export interface LinkedIdentity {
+  id: string;
+  /** The configured provider it was linked through; absent for older links. */
+  providerId?: string;
+  /** The provider's name, or its host when it is no longer configured. */
+  name: string;
+  createdAt: string;
+}
+
+export interface IdentityProvider {
+  id: string;
+  displayName: string;
+}
+
+/** One of the account's signed-in devices. */
+export interface OwnSession {
+  id: string;
+  /** The user agent the session signed in with. */
+  device: string;
+  ipAddress: string;
+  createdAt: string;
+  lastSeenAt: string;
+  expiresAt: string;
+  /** This browser's own session, which ends through signing out instead. */
+  current: boolean;
+}

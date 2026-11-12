@@ -36,9 +36,6 @@ import { useUiContext } from "./UiProvider";
 import { useVoiceContext } from "./VoiceProvider";
 
 export interface FriendsValue {
-  /** False when the connected server has no social endpoints. */
-  supported: boolean;
-
   friends: Friend[];
   requests: FriendRequest[];
   blocked: User[];
@@ -421,7 +418,6 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
 
   const value = useMemo<FriendsValue>(
     () => ({
-      supported: port.supported,
       friends,
       requests,
       blocked,
@@ -446,7 +442,6 @@ export function FriendsProvider({ children }: { children: ReactNode }) {
       ...commands,
     }),
     [
-      port,
       friends,
       requests,
       blocked,

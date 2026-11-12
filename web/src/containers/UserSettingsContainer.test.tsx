@@ -57,6 +57,10 @@ vi.mock("@/state/hooks", () => ({
   useUi: () => ({ modal: world.modal, closeModal: world.closeModal }),
 }));
 
+vi.mock("./useAccountSecurity", () => ({
+  useAccountSecurity: () => ({ sections: { marker: "security" }, dialog: { step: null } }),
+}));
+vi.mock("@/components/account/panes/SecurityStepDialog", () => ({ SecurityStepDialog: () => null }));
 vi.mock("./useMicTest", () => ({ useMicTest: () => ({ marker: "mic" }) }));
 vi.mock("./useOutputTest", () => ({ useOutputTest: () => ({ marker: "output" }) }));
 vi.mock("./useCameraTest", () => ({ useCameraTest: () => ({ marker: "camera" }) }));

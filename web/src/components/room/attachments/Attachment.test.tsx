@@ -66,7 +66,7 @@ describe("Attachment", () => {
     ["file", file, () => screen.getByRole("group", { name: "Załącznik report.pdf" })],
     ["audio", audio, () => screen.getByRole("slider")],
     ["video", video, () => screen.getByLabelText("Odtwórz wideo")],
-    ["embed", embed, () => screen.getByRole("link", { name: "A page — example.org" })],
+    ["embed", embed, () => screen.getByRole("link", { name: "A page (example.org)" })],
     ["video-embed", videoEmbed, () => screen.getByRole("button", { name: /A clip/ })],
     ["giphy", giphy, () => screen.getByRole("status")],
     ["code", code, () => screen.getByRole("combobox", { name: "Język podświetlania" })],
@@ -110,7 +110,7 @@ describe("Attachment", () => {
     expect(onPlayVideo).toHaveBeenCalledWith(video);
 
     rerender(<Attachment part={embed} callbacks={callbacks} />);
-    const card = screen.getByRole("link", { name: "A page — example.org" });
+    const card = screen.getByRole("link", { name: "A page (example.org)" });
     await user.click(card);
     fireEvent.keyDown(card, { key: "Enter" });
     expect(onOpenEmbed).toHaveBeenCalledTimes(2);

@@ -16,6 +16,7 @@ internal enum SettingKind
     TimeZone,
     MailAddress,
     SmtpSecurity,
+    MfaRequirement,
 }
 
 /// <summary>
@@ -98,6 +99,30 @@ internal static class SettingsCatalog
         Scalar("cleanup.enabled", SettingKind.Boolean, null,
             (settings, _, _) => settings.AutomaticCleanupEnabled,
             (request, value) => request with { AutomaticCleanupEnabled = ParseBoolean(value) }),
+        Scalar("mfa.requirement", SettingKind.MfaRequirement, null,
+            (settings, _, _) => MfaRequirements.Normalize(settings.MfaRequirement),
+            (request, value) => request with { MfaRequirement = MfaRequirements.Normalize(value) }),
+        Scalar("mfa.trusted-device-days", SettingKind.Integer, null,
+            (settings, _, _) => settings.TrustedDeviceDays,
+            (request, value) => request with { TrustedDeviceDays = ParseInteger(value) }),
+        Scalar("mfa.challenge-minutes", SettingKind.Integer, null,
+            (settings, _, _) => settings.AuthChallengeMinutes,
+            (request, value) => request with { AuthChallengeMinutes = ParseInteger(value) }),
+        Scalar("mfa.email-code-minutes", SettingKind.Integer, null,
+            (settings, _, _) => settings.EmailCodeMinutes,
+            (request, value) => request with { EmailCodeMinutes = ParseInteger(value) }),
+        Scalar("mfa.email-cooldown-seconds", SettingKind.Integer, null,
+            (settings, _, _) => settings.EmailCodeCooldownSeconds,
+            (request, value) => request with { EmailCodeCooldownSeconds = ParseInteger(value) }),
+        Scalar("mfa.email-attempts", SettingKind.Integer, null,
+            (settings, _, _) => settings.EmailCodeMaxAttempts,
+            (request, value) => request with { EmailCodeMaxAttempts = ParseInteger(value) }),
+        Scalar("mfa.email-sends-per-hour", SettingKind.Integer, null,
+            (settings, _, _) => settings.EmailCodeSendsPerHour,
+            (request, value) => request with { EmailCodeSendsPerHour = ParseInteger(value) }),
+        Scalar("mfa.cli-recovery-minutes", SettingKind.Integer, null,
+            (settings, _, _) => settings.CliRecoveryMinutes,
+            (request, value) => request with { CliRecoveryMinutes = ParseInteger(value) }),
     ];
 
     internal static readonly IReadOnlyList<StartupSetting> Startup =
@@ -123,6 +148,17 @@ internal static class SettingsCatalog
             "Set STELLARR_OIDC_CLIENT_ID in .env/Compose and recreate the container.",
             context => ContainerSettings.ConfigValue(
                 context, "Oidc:ClientId", "", "Oidc__ClientId", "STELLARR_OIDC_CLIENT_ID")),
+        new("oidc.trust-provider-mfa", "STELLARR_OIDC_TRUST_PROVIDER_MFA / Oidc__TrustProviderMfa",
+            "Set STELLARR_OIDC_TRUST_PROVIDER_MFA in .env/Compose and recreate the container. Off unless the provider reports a real second factor in amr.",
+            context => ContainerSettings.ConfigValue(
+                context, "Oidc:TrustProviderMfa", "false", "Oidc__TrustProviderMfa", "STELLARR_OIDC_TRUST_PROVIDER_MFA")),
+        new("oidc.provider-mfa-amr", "STELLARR_OIDC_PROVIDER_MFA_AMR / Oidc__ProviderMfaAmr",
+            "Set STELLARR_OIDC_PROVIDER_MFA_AMR in .env/Compose and recreate the container.",
+            context => ContainerSettings.ConfigValue(
+                context, "Oidc:ProviderMfaAmr", "mfa", "Oidc__ProviderMfaAmr", "STELLARR_OIDC_PROVIDER_MFA_AMR")),
+        new("oidc.providers", "Oidc__Providers__<id>__*",
+            "Add or remove Oidc__Providers__<id>__Authority, __ClientId, __ClientSecret(File), __DisplayName and the optional __TrustProviderMfa and __ProviderMfaAmr in Compose, then recreate the container.",
+            ContainerSettings.OidcProviders),
         new("oidc.callback-path", "Oidc__CallbackPath",
             "Set Oidc__CallbackPath in Compose and recreate the container. The normal value is /api/auth/oidc/callback.",
             context => ContainerSettings.ConfigValue(

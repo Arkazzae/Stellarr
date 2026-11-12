@@ -23,9 +23,6 @@ export interface AccountPaneProps {
   account: Account;
   /** The arrival sound, saved on its own the moment it changes. */
   joinSound?: JoinSoundPicker;
-  /** False only when connected to an older backend without profile writes. */
-  profileSupported: boolean;
-  uploadsSupported: boolean;
   customEmoji?: readonly CustomEmoji[];
   onSave: (patch: AccountPatch) => Promise<void> | void;
   onPickImage: (kind: ImageKind, file: File) => Promise<void> | void;
@@ -44,8 +41,6 @@ export interface AccountPaneProps {
 export function AccountPane({
   account,
   joinSound,
-  profileSupported,
-  uploadsSupported,
   customEmoji = [],
   onSave,
   onPickImage,
@@ -108,15 +103,10 @@ export function AccountPane({
 
   return (
     <>
-      {profileSupported && uploadsSupported ? null : (
-        <p className="set-note">{t("settings.serverUnsupported")}</p>
-      )}
-
       <ProfileCardPreview
         account={account}
         bio={bio}
         customEmoji={customEmoji}
-        uploadsSupported={uploadsSupported}
         onPickImage={pickImage}
       />
 

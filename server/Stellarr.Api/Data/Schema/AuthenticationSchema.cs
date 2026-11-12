@@ -14,6 +14,30 @@ internal static class AuthenticationSchema
         ("NormalizedEmail", """ALTER TABLE "Users" ADD COLUMN "NormalizedEmail" TEXT NULL;"""),
         ("IsDisabled", """ALTER TABLE "Users" ADD COLUMN "IsDisabled" INTEGER NOT NULL DEFAULT 0;"""),
         ("SessionVersion", """ALTER TABLE "Users" ADD COLUMN "SessionVersion" INTEGER NOT NULL DEFAULT 0;"""),
+        ("SecurityRecoveryRequired", """ALTER TABLE "Users" ADD COLUMN "SecurityRecoveryRequired" INTEGER NOT NULL DEFAULT 0;"""),
+    ];
+
+    private static readonly (string Column, string Statement)[] SessionColumns =
+    [
+        ("AbsoluteExpiresAt", """ALTER TABLE "UserSessions" ADD COLUMN "AbsoluteExpiresAt" TEXT NULL;"""),
+        ("PrimarySource", """ALTER TABLE "UserSessions" ADD COLUMN "PrimarySource" TEXT NOT NULL DEFAULT 'password';"""),
+        ("AuthenticatedAt", """ALTER TABLE "UserSessions" ADD COLUMN "AuthenticatedAt" TEXT NULL;"""),
+        ("MfaCompletedAt", """ALTER TABLE "UserSessions" ADD COLUMN "MfaCompletedAt" TEXT NULL;"""),
+        ("MfaEvidence", """ALTER TABLE "UserSessions" ADD COLUMN "MfaEvidence" TEXT NULL;"""),
+        ("SecurityVersion", """ALTER TABLE "UserSessions" ADD COLUMN "SecurityVersion" INTEGER NOT NULL DEFAULT 0;"""),
+        ("ShortLived", """ALTER TABLE "UserSessions" ADD COLUMN "ShortLived" INTEGER NOT NULL DEFAULT 0;"""),
+    ];
+
+    private static readonly (string Column, string Statement)[] DesktopColumns =
+    [
+        ("ApprovalTokenHash", """ALTER TABLE "DesktopBrowserLogins" ADD COLUMN "ApprovalTokenHash" TEXT NULL;"""),
+        ("ApprovalUserId", """ALTER TABLE "DesktopBrowserLogins" ADD COLUMN "ApprovalUserId" TEXT NULL;"""),
+        ("ApprovalSessionId", """ALTER TABLE "DesktopBrowserLogins" ADD COLUMN "ApprovalSessionId" TEXT NULL;"""),
+        ("ApprovedSessionId", """ALTER TABLE "DesktopBrowserLogins" ADD COLUMN "ApprovedSessionId" TEXT NULL;"""),
+        ("PrimarySource", """ALTER TABLE "DesktopBrowserLogins" ADD COLUMN "PrimarySource" TEXT NULL;"""),
+        ("MfaCompletedAt", """ALTER TABLE "DesktopBrowserLogins" ADD COLUMN "MfaCompletedAt" TEXT NULL;"""),
+        ("MfaEvidence", """ALTER TABLE "DesktopBrowserLogins" ADD COLUMN "MfaEvidence" TEXT NULL;"""),
+        ("SecurityVersion", """ALTER TABLE "DesktopBrowserLogins" ADD COLUMN "SecurityVersion" INTEGER NOT NULL DEFAULT 0;"""),
     ];
 
     internal static async Task UpgradeAsync(AppDbContext db, CancellationToken cancellationToken)
@@ -53,11 +77,28 @@ internal static class AuthenticationSchema
                 ON "PasswordResetTokens" ("TokenHash");
             CREATE INDEX IF NOT EXISTS "IX_PasswordResetTokens_UserId_ExpiresAt"
                 ON "PasswordResetTokens" ("UserId", "ExpiresAt");
+            CREATE TABLE IF NOT EXISTS "EmailChangeRequests" (
+                "Id" TEXT NOT NULL CONSTRAINT "PK_EmailChangeRequests" PRIMARY KEY,
+                "UserId" TEXT NOT NULL,
+                "NewEmail" TEXT NOT NULL,
+                "NormalizedNewEmail" TEXT NOT NULL,
+                "TokenHash" TEXT NOT NULL,
+                "CreatedAt" TEXT NOT NULL,
+                "ExpiresAt" TEXT NOT NULL,
+                "UsedAt" TEXT NULL,
+                CONSTRAINT "FK_EmailChangeRequests_Users_UserId"
+                    FOREIGN KEY ("UserId") REFERENCES "Users" ("Id") ON DELETE CASCADE
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS "IX_EmailChangeRequests_TokenHash"
+                ON "EmailChangeRequests" ("TokenHash");
+            CREATE INDEX IF NOT EXISTS "IX_EmailChangeRequests_UserId_ExpiresAt"
+                ON "EmailChangeRequests" ("UserId", "ExpiresAt");
             """,
             cancellationToken);
     }
 
-    private static async Task EnsureSessionsAsync(AppDbContext db, CancellationToken cancellationToken) =>
+    private static async Task EnsureSessionsAsync(AppDbContext db, CancellationToken cancellationToken)
+    {
         await db.Database.ExecuteSqlRawAsync(
             """
             CREATE TABLE IF NOT EXISTS "UserSessions" (
@@ -68,6 +109,12 @@ internal static class AuthenticationSchema
                 "CreatedAt" TEXT NOT NULL,
                 "LastSeenAt" TEXT NOT NULL,
                 "ExpiresAt" TEXT NOT NULL,
+                "AbsoluteExpiresAt" TEXT NULL,
+                "PrimarySource" TEXT NOT NULL DEFAULT 'password',
+                "AuthenticatedAt" TEXT NULL,
+                "MfaCompletedAt" TEXT NULL,
+                "MfaEvidence" TEXT NULL,
+                "SecurityVersion" INTEGER NOT NULL DEFAULT 0,
                 "RevokedAt" TEXT NULL,
                 CONSTRAINT "FK_UserSessions_Users_UserId"
                     FOREIGN KEY ("UserId") REFERENCES "Users" ("Id") ON DELETE CASCADE
@@ -77,13 +124,55 @@ internal static class AuthenticationSchema
             """,
             cancellationToken);
 
-    private static async Task EnsureDesktopBrowserLoginsAsync(AppDbContext db, CancellationToken cancellationToken) =>
+        foreach (var (column, statement) in SessionColumns)
+        {
+            if (!await SqliteSchema.HasColumnAsync(db, "UserSessions", column, cancellationToken))
+            {
+                await db.Database.ExecuteSqlRawAsync(statement, cancellationToken);
+                if (column == "SecurityVersion")
+                {
+                    // Existing rows were issued under the user's current version.
+                    // Only the migration that adds the column repairs them.
+                    await db.Database.ExecuteSqlRawAsync(
+                        """
+                        UPDATE "UserSessions"
+                        SET "SecurityVersion" = COALESCE((
+                            SELECT "SessionVersion" FROM "Users"
+                            WHERE "Users"."Id" = "UserSessions"."UserId"
+                        ), 0);
+                        """,
+                        cancellationToken);
+                }
+            }
+        }
+
+        // Older sessions keep the end they already had; new sessions get the
+        // hard limit when they are created.
+        await db.Database.ExecuteSqlRawAsync(
+            """
+            UPDATE "UserSessions"
+            SET "AbsoluteExpiresAt" = "ExpiresAt"
+            WHERE "AbsoluteExpiresAt" IS NULL;
+            """,
+            cancellationToken);
+    }
+
+    private static async Task EnsureDesktopBrowserLoginsAsync(AppDbContext db, CancellationToken cancellationToken)
+    {
         await db.Database.ExecuteSqlRawAsync(
             """
             CREATE TABLE IF NOT EXISTS "DesktopBrowserLogins" (
                 "Id" TEXT NOT NULL CONSTRAINT "PK_DesktopBrowserLogins" PRIMARY KEY,
                 "SecretHash" TEXT NOT NULL,
+                "ApprovalTokenHash" TEXT NULL,
+                "ApprovalUserId" TEXT NULL,
+                "ApprovalSessionId" TEXT NULL,
                 "UserId" TEXT NULL,
+                "ApprovedSessionId" TEXT NULL,
+                "PrimarySource" TEXT NULL,
+                "MfaCompletedAt" TEXT NULL,
+                "MfaEvidence" TEXT NULL,
+                "SecurityVersion" INTEGER NOT NULL DEFAULT 0,
                 "CreatedAt" TEXT NOT NULL,
                 "ExpiresAt" TEXT NOT NULL,
                 "ApprovedAt" TEXT NULL,
@@ -96,7 +185,17 @@ internal static class AuthenticationSchema
             """,
             cancellationToken);
 
-    private static async Task EnsureExternalIdentitiesAsync(AppDbContext db, CancellationToken cancellationToken) =>
+        foreach (var (column, statement) in DesktopColumns)
+        {
+            if (!await SqliteSchema.HasColumnAsync(db, "DesktopBrowserLogins", column, cancellationToken))
+            {
+                await db.Database.ExecuteSqlRawAsync(statement, cancellationToken);
+            }
+        }
+    }
+
+    private static async Task EnsureExternalIdentitiesAsync(AppDbContext db, CancellationToken cancellationToken)
+    {
         await db.Database.ExecuteSqlRawAsync(
             """
             CREATE TABLE IF NOT EXISTS "ExternalIdentities" (
@@ -114,4 +213,12 @@ internal static class AuthenticationSchema
                 ON "ExternalIdentities" ("UserId", "Issuer");
             """,
             cancellationToken);
+
+        if (!await SqliteSchema.HasColumnAsync(db, "ExternalIdentities", "ProviderId", cancellationToken))
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                """ALTER TABLE "ExternalIdentities" ADD COLUMN "ProviderId" TEXT NULL;""",
+                cancellationToken);
+        }
+    }
 }

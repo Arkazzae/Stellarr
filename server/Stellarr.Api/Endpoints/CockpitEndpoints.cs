@@ -24,15 +24,21 @@ public static partial class CockpitEndpoints
         cockpit.MapGet("/bootstrap", GetBootstrapAsync);
         cockpit.MapGet("/activity", GetActivityAsync);
         cockpit.MapGet("/users", GetUsersAsync);
-        cockpit.MapPost("/users", CreateUserAsync);
-        cockpit.MapPatch("/users/{userId:guid}/role", SetUserRoleAsync);
-        cockpit.MapPatch("/users/{userId:guid}/status", SetUserStatusAsync);
-        cockpit.MapPost("/roles", CreateRoleAsync);
+        // Changes that could hand the instance or an account to someone else
+        // need a second step from the last few minutes, not just a session.
+        cockpit.MapPost("/users", CreateUserAsync).AddEndpointFilter<FreshSecondStepFilter>();
+        cockpit.MapPatch("/users/{userId:guid}/role", SetUserRoleAsync).AddEndpointFilter<FreshSecondStepFilter>();
+        cockpit.MapPatch("/users/{userId:guid}/status", SetUserStatusAsync).AddEndpointFilter<FreshSecondStepFilter>();
+        cockpit.MapGet("/users/{userId:guid}/security", GetUserSecurityAsync);
+        cockpit.MapPost("/users/{userId:guid}/security/recover", RecoverUserAsync).AddEndpointFilter<FreshSecondStepFilter>();
+        cockpit.MapPost("/users/{userId:guid}/identities/{identityId:guid}/remove", UnlinkUserIdentityAsync)
+            .AddEndpointFilter<FreshSecondStepFilter>();
+        cockpit.MapPost("/roles", CreateRoleAsync).AddEndpointFilter<FreshSecondStepFilter>();
         cockpit.MapGet("/servers", GetServersAsync);
         cockpit.MapGet("/servers/{serverId:guid}/members", GetServerMembersAsync);
-        cockpit.MapPost("/servers/{serverId:guid}/transfer", TransferServerAsync);
-        cockpit.MapDelete("/servers/{serverId:guid}", DeleteServerAsync);
-        cockpit.MapPatch("/roles/{roleId:guid}", UpdateRoleAsync);
+        cockpit.MapPost("/servers/{serverId:guid}/transfer", TransferServerAsync).AddEndpointFilter<FreshSecondStepFilter>();
+        cockpit.MapDelete("/servers/{serverId:guid}", DeleteServerAsync).AddEndpointFilter<FreshSecondStepFilter>();
+        cockpit.MapPatch("/roles/{roleId:guid}", UpdateRoleAsync).AddEndpointFilter<FreshSecondStepFilter>();
         cockpit.MapGet("/sessions", GetSessionsAsync);
         cockpit.MapDelete("/sessions/{sessionId:guid}", RevokeSessionAsync);
         cockpit.MapGet("/runtime", GetRuntimeAsync);
@@ -41,16 +47,19 @@ public static partial class CockpitEndpoints
         cockpit.MapGet("/backups", GetBackupsAsync);
         cockpit.MapPost("/backups", CreateBackupAsync);
         cockpit.MapPost("/backups/{backupId}/verify", VerifyBackupAsync);
-        cockpit.MapGet("/backups/{backupId}/download", DownloadBackup);
+        cockpit.MapGet("/backups/{backupId}/download", DownloadBackup).AddEndpointFilter<FreshSecondStepFilter>();
+        // Asked before a plain download link is followed, so a refusal opens
+        // the confirmation instead of a page of JSON.
+        cockpit.MapGet("/fresh-second-step", () => Results.NoContent()).AddEndpointFilter<FreshSecondStepFilter>();
         cockpit.MapGet("/settings", GetSettingsAsync);
         cockpit.MapPut("/settings", UpdateSettingsAsync);
         cockpit.MapGet("/desktop-release", GetDesktopReleaseAsync);
-        cockpit.MapPut("/desktop-release", UpdateDesktopReleaseAsync);
+        cockpit.MapPut("/desktop-release", UpdateDesktopReleaseAsync).AddEndpointFilter<FreshSecondStepFilter>();
         cockpit.MapPost("/mail/test", SendTestMailAsync);
         cockpit.MapPost("/integrations/giphy/test", TestGiphyAsync);
         cockpit.MapGet("/secrets", GetSecretsAsync);
-        cockpit.MapPut("/secrets/{name}", SetSecretAsync);
-        cockpit.MapDelete("/secrets/{name}", ClearSecretAsync);
+        cockpit.MapPut("/secrets/{name}", SetSecretAsync).AddEndpointFilter<FreshSecondStepFilter>();
+        cockpit.MapDelete("/secrets/{name}", ClearSecretAsync).AddEndpointFilter<FreshSecondStepFilter>();
         return endpoints;
     }
 

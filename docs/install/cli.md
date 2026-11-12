@@ -1,6 +1,6 @@
 # Operator CLI
 
-`stellarr` is the operator CLI bundled inside the Stellarr container. It checks installation health, edits database-backed settings shared with Cockpit, manages encrypted secrets, and revokes sessions without signing in to Cockpit or starting a second API process.
+`stellarr` is the operator CLI bundled inside the Stellarr container. It checks installation health, edits database-backed settings shared with Cockpit, manages encrypted secrets, inspects account security, and revokes sessions without signing in to Cockpit or starting a second API process.
 
 It operates directly on the data volume rather than calling the HTTP API. Access control is therefore governed by container and volume access: anyone who can run `docker exec` or mount `/data/stellarr` already controls the instance. All CLI mutations record operator audit entries under the actor `local-cli`.
 
@@ -72,6 +72,14 @@ Database-backed keys:
 | `retention.logs-days` | integer, 1–3650 |
 | `retention.orphans-days` | integer, 1–3650 |
 | `cleanup.enabled` | boolean |
+| `mfa.requirement` | `optional`, `admins`, `everyone` or `cockpit` |
+| `mfa.trusted-device-days` | integer, 1–365 |
+| `mfa.challenge-minutes` | integer, 1–60 |
+| `mfa.email-code-minutes` | integer, 1–60 |
+| `mfa.email-cooldown-seconds` | integer, 0–600 |
+| `mfa.email-attempts` | integer, 1–10 |
+| `mfa.email-sends-per-hour` | integer, 1–60 |
+| `mfa.cli-recovery-minutes` | integer, 1–60 |
 
 Booleans accept `true`/`false` (as well as `1`/`0`, `yes`/`no`, `on`/`off`).
 
@@ -83,6 +91,8 @@ Startup settings are read-only. `config list` displays their current source and 
 - `tls.domain` (`STELLARR_DOMAIN`)
 - `https-port` (`PUBLIC_HTTPS_PORT`, normally set from host `STELLARR_HTTPS_PORT`; entrypoint default `443`)
 - `oidc.enabled`, `oidc.authority`, `oidc.client-id`, `oidc.callback-path`
+- `oidc.trust-provider-mfa`, `oidc.provider-mfa-amr`
+- `oidc.providers` (the ids of the providers under `Oidc__Providers__<id>__*`, each marked when its second step is trusted; no secrets)
 - `rtc.public-host`, `rtc.turn-port`, `rtc.turns-port`, `rtc.turns-enabled`, `rtc.turn-tcp-enabled`, `rtc.media-port`
 - `storage.endpoint` (always set to `http://127.0.0.1:9000` by the entrypoint)
 - `storage.bucket` (`RUSTFS_BUCKET`, default `stellarr-images`)
@@ -120,10 +130,28 @@ stellarr sessions revoke --user arkazz --all
 
 `users` and `sessions` lists return up to 200 and 500 rows respectively and expose only administrative metadata.
 
-Revoking a session updates the `UserSessions` table so the API rejects the session cookie on its next HTTP request. Revoking all sessions for an account also invalidates any unredeemed desktop browser handoff tokens.
+Revoking a session updates the `UserSessions` table so the API rejects the session cookie on its next HTTP request. The running API checks for revoked sessions at most once per second and closes the matching WebSocket connections, which ends any voice or media session they held. Revoking all sessions for an account also invalidates any unredeemed desktop browser handoff tokens.
 
-> [!WARNING]
-> Revoking a session from the CLI invalidates HTTP authentication immediately, but does not forcibly close an already-open SignalR WebSocket connection until the client reconnects or makes an HTTP request. `sessions revoke` notes this in both text and JSON output.
+### Account security and MFA recovery
+
+```sh
+stellarr security show arkazz
+stellarr security methods arkazz
+stellarr security recover arkazz --reason "lost authenticator"
+stellarr security unlink arkazz 3f2a6c1e-0b7d-4f5e-9a2c-8d1e4b6f7a90
+```
+
+`security show` reports the instance MFA requirement, confirmed and pending methods, trusted devices, active sessions, unused recovery-code count, the account's links to identity providers (each with its id, issuer and provider) and recent account-global security events. `security methods` prints the same inspection focused on method metadata. Neither command can read a TOTP seed, recovery-code hash, cookie or trusted-device token.
+
+`security unlink` removes one of those links after a confirmation, so that identity no longer signs in to the account. It records `security.unlink` in the operator audit and a security event. Sessions already open stay open; end them with `sessions revoke` when the provider account was compromised. A recovery keeps the links, so check them while cleaning up an account.
+
+`security recover` is the emergency path for an account that lost every second factor. It revokes all MFA methods, trusted devices, active sessions, approved desktop handoffs, unused recovery codes and earlier CLI recovery credentials, then increments the account's session version so older cookies fail. In the same transaction it issues one random recovery credential, prints it once and records `security.recover` as `local-cli` in the operator audit. The credential expires after `mfa.cli-recovery-minutes` (10 by default) and can be exchanged at `POST /api/auth/recovery/redeem` only for enrollment-only access. It cannot create an ordinary session, grant API or hub access, or disable an enforced MFA policy. A disabled account stays disabled and is refused by this command.
+
+Recovery sets a durable recovery-required state. Password, passkey, OIDC, registration and desktop sign-in cannot issue a session or an ordinary enrollment grant while it is set. Only the current CLI credential can start replacement enrollment, and the state clears only after a replacement factor is confirmed. The credential is stamped with the security version at issue: expiry, deletion, a password reset or any other security-version change makes it stale, and an old credential never silently adopts the newer version. A second reset therefore invalidates a pending replacement flow from the first.
+
+Verified addresses can receive an account security alert. That mail is sent only when mailing is operational and the operator enabled `mail.alerts.enabled`; the event itself and the in-app history are recorded regardless. The CLI records the reset event and alert recipient in the same transaction as the recovery, before the credential can expire.
+
+The recovery credential is the only secret-like value the CLI prints, and it is printed only when it is newly issued. Store it only long enough to complete enrollment.
 
 ### Emergency use with a stopped instance
 
@@ -196,6 +224,6 @@ Error codes: `usage`, `database_not_found`, `database_locked`, `schema_incompati
 
 ## Audit and safety
 
-Every successful mutation inserts an `OperatorAuditEntries` row with actor `local-cli`, the operation name (`config.set`, `secrets.set`, `secrets.clear`, `sessions.revoke`, `sessions.revoke-all`), its target, and a UTC timestamp in the same transaction as the change.
+Every successful mutation inserts an `OperatorAuditEntries` row with actor `local-cli`, the operation name (`config.set`, `secrets.set`, `secrets.clear`, `sessions.revoke`, `sessions.revoke-all`, `security.unlink`, `security.recover`), its target, and a UTC timestamp in the same transaction as the change.
 
-Read-only commands never modify settings, schema, or key files. MFA recovery, password resets, OIDC account linking, backup/restore, database repair, and service process supervision are not performed by the CLI.
+Read-only commands never modify settings, schema, or key files, and the CLI never creates or migrates a database. Secret values are left out of command output and audit records. Password resets, linking an identity provider, backup/restore, database repair, and service process supervision are not performed by the CLI.

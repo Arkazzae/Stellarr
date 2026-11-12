@@ -67,7 +67,6 @@ function view({ initialTab = "all", ...overrides }: Overrides = {}) {
     friends: [kasia, tomek, ada],
     requests: [],
     blocked: [],
-    supported: true,
     railOpen: false,
     onToggleRail: vi.fn(),
     onMessage: vi.fn(),
@@ -200,12 +199,6 @@ describe("FriendsView lists", () => {
     expect(screen.getByText("Nikogo teraz nie ma")).toBeTruthy();
   });
 
-  it("says why the server keeps nothing when the feature is unsupported", () => {
-    view({ supported: false });
-
-    expect(screen.getByText(/serwer nie ma jeszcze tych funkcji/)).toBeTruthy();
-  });
-
   it("offers the empty pending list a way to add somebody", async () => {
     const { user, spies } = view({ initialTab: "pending" });
 
@@ -315,7 +308,7 @@ describe("FriendsView requests and blocks", () => {
       blocked: [{ person: person("u6", "Zenek", "offline"), username: "zenek" }],
     });
 
-    expect(screen.getByText("Zablokowany — nie widzi Twoich wiadomości")).toBeTruthy();
+    expect(screen.getByText("Zablokowany (nie widzi Twoich wiadomości)")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Odblokuj" }));
 
     expect(spies.onUnblock).toHaveBeenCalledWith("u6");

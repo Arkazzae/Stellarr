@@ -242,7 +242,6 @@ describe("ChannelPanelContainer pins", () => {
       pinned,
       pinnedLoading: true,
       pinError: "boom",
-      pinsSupported: true,
     });
     panel().onOpenPin?.("m1");
     expect(onJump).toHaveBeenCalledExactlyOnceWith("m1");

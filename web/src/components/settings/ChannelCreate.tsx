@@ -13,7 +13,7 @@ export interface ChannelCreateProps {
   onClose: () => void;
   /** Which caption's "+" was pressed; the dialog opens on that kind. */
   kind: ChannelKind;
-  /** False keeps the form walkable and read-only, as every unwired pane does. */
+  /** False when this member may not manage channels: the form stays walkable and read-only. */
   supported: boolean;
   /** Offered as an optional home for the new channel; none hides the field. */
   sections: readonly { id: string; name: string }[];

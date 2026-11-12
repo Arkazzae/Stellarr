@@ -188,7 +188,6 @@ export function createFriendsAdapter(
   ];
 
   return {
-    supported: true,
     load,
     listFriends: () => friends,
     listRequests: () => requests,

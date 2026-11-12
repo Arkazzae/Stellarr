@@ -35,7 +35,7 @@
   .error-notice-copy strong {
     display: block;
     color: var(--danger-text);
-    font-size: 13px;
+    font-size: var(--text-13);
     font-weight: 600;
     line-height: 1.4;
   }
@@ -44,7 +44,7 @@
     margin-top: 2px;
     max-width: var(--measure);
     color: var(--text);
-    font-size: 12.5px;
+    font-size: var(--text-13);
     line-height: 1.5;
     text-wrap: pretty;
   }
@@ -67,7 +67,7 @@
     border-radius: var(--radius-sm);
     background: var(--surface-raised);
     color: var(--text-muted);
-    font-size: 12px;
+    font-size: var(--text-12);
     font-weight: 550;
     white-space: nowrap;
     transition:
@@ -105,7 +105,7 @@
 
   .error-notice.compact .error-notice-copy strong,
   .error-notice.compact .error-notice-copy p {
-    font-size: 12px;
+    font-size: var(--text-12);
   }
 
   @media (max-width: 620px) {

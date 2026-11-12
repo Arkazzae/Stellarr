@@ -13,8 +13,6 @@ export interface PinnedTabProps {
   loading: boolean;
   /** Why the last pin or unpin did not take. */
   error: string | null;
-  /** A server without the endpoint; false says so instead of showing an empty list. */
-  supported: boolean;
   /**
    * Scrolls the transcript to a pin and flashes it. Absent, the row is still
    * worth reading, so it stays a row rather than a button that does nothing.
@@ -49,7 +47,6 @@ export function PinnedTab({
   pinned,
   loading,
   error,
-  supported,
   onOpen,
   onUnpin,
 }: PinnedTabProps) {
@@ -62,9 +59,7 @@ export function PinnedTab({
           {error}
         </p>
       )}
-      {!supported ? (
-        <p className="cp-empty">{t("room.pinUnsupported")}</p>
-      ) : loading ? (
+      {loading ? (
         <p className="cp-empty">{t("room.loadingPins")}</p>
       ) : pinned.length === 0 ? (
         <p className="cp-empty">{t("room.noPins")}</p>

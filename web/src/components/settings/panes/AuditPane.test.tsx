@@ -40,11 +40,13 @@ describe("AuditPane", () => {
     expect(screen.getByText("Zdarzenie").nextElementSibling).toBeEmptyDOMElement();
   });
 
-  it("warns when the audit log is not wired to the backend", () => {
+  it("says why the log is hidden without permission to view it", () => {
     const { rerender } = render(<AuditPane supported entries={[]} />);
-    expect(screen.queryByText(/Dziennik zdarzeń nie jest jeszcze podpięty/)).toBeNull();
+    expect(screen.queryByText(/Nie masz uprawnienia/)).toBeNull();
 
     rerender(<AuditPane supported={false} entries={[]} />);
-    expect(screen.getByText(/Dziennik zdarzeń nie jest jeszcze podpięty/)).toBeVisible();
+    expect(
+      screen.getByText("Nie masz uprawnienia do przeglądania dziennika zdarzeń."),
+    ).toBeVisible();
   });
 });

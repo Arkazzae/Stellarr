@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { t } from "@/i18n";
 import { CockpitApiError } from "@/lib/api";
+import { WEB_CONFIRM_URL } from "@/lib/web-sign-in";
 import { useCockpit } from "@/state/cockpit-context";
 
 function CenteredState({ children }: { children: ReactNode }) {
@@ -27,6 +28,7 @@ function LoginScreen() {
   const { login } = useCockpit();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [keepSignedIn, setKeepSignedIn] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -35,7 +37,7 @@ function LoginScreen() {
     setSubmitting(true);
     setError(null);
     try {
-      await login(username, password);
+      await login(username, password, keepSignedIn);
       // Success replaces this screen, so the button stays disabled until it goes.
     } catch (cause) {
       setError(loginFailureMessage(cause));
@@ -75,6 +77,15 @@ function LoginScreen() {
                 required
               />
             </div>
+            <label className="flex cursor-pointer items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={keepSignedIn}
+                onChange={(event) => setKeepSignedIn(event.target.checked)}
+                className="size-4 accent-[var(--primary)]"
+              />
+              {t("gate.login.keepSignedIn")}
+            </label>
             {error ? (
               <Alert variant="destructive">
                 <AlertDescription>{error}</AlertDescription>
@@ -119,6 +130,23 @@ export function AppGate() {
             <CardContent>
               <Button variant="outline" onClick={() => void logout()}>
                 {t("gate.forbidden.logout")}
+              </Button>
+            </CardContent>
+          </Card>
+        </CenteredState>
+      );
+    case "mfa-required":
+      return (
+        <CenteredState>
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle>{t("gate.mfa.title")}</CardTitle>
+              <CardDescription>{t("gate.mfa.description")}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {/* A plain link: the sign-in page is the web client's, outside this app's router. */}
+              <Button asChild>
+                <a href={WEB_CONFIRM_URL}>{t("gate.mfa.confirm")}</a>
               </Button>
             </CardContent>
           </Card>

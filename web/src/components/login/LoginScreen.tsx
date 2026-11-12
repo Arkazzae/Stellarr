@@ -29,6 +29,15 @@ export interface LoginScreenProps {
     pending?: boolean;
   };
   externalError?: string | null;
+  /**
+   * "Keep me signed in", shown when given. The page holds the choice so the
+   * identity provider's link carries it too.
+   */
+  keepSignedIn?: { checked: boolean; onChange: (checked: boolean) => void };
+  /** The identity providers of the web sign-in page, as links, one per provider. */
+  externalLogins?: { href: string; label: string }[];
+  /** Signing in with a passkey alone, shown when given; the desktop app passes none. */
+  passkeyLogin?: { label: string; onClick: () => void; pending?: boolean };
 }
 
 export function LoginScreen({
@@ -42,6 +51,9 @@ export function LoginScreen({
   headingAction,
   externalLogin,
   externalError = null,
+  keepSignedIn,
+  passkeyLogin,
+  externalLogins = [],
 }: LoginScreenProps) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -89,9 +101,19 @@ export function LoginScreen({
         </p>
       ) : (
         <>
-          {externalLogin ? (
+          {externalLogin || passkeyLogin || externalLogins.length > 0 ? (
             <div className={styles.externalBlock}>
-              {externalLogin.onClick ? (
+              {passkeyLogin ? (
+                <button
+                  className={styles.externalLogin}
+                  type="button"
+                  onClick={passkeyLogin.onClick}
+                  disabled={pending || passkeyLogin.pending}
+                >
+                  {passkeyLogin.label}
+                </button>
+              ) : null}
+              {externalLogin === undefined ? null : externalLogin.onClick ? (
                 <button
                   className={styles.externalLogin}
                   type="button"
@@ -105,6 +127,11 @@ export function LoginScreen({
                   {externalLogin.label}
                 </a>
               )}
+              {externalLogins.map((login) => (
+                <a key={login.href} className={styles.externalLogin} href={login.href}>
+                  {login.label}
+                </a>
+              ))}
               <div className={styles.separator} aria-hidden="true">
                 <span>{t("auth.login.orPassword")}</span>
               </div>
@@ -137,6 +164,19 @@ export function LoginScreen({
               disabled={pending}
               {...fieldState}
             />
+
+            {keepSignedIn ? (
+              <label className={styles.check}>
+                <input
+                  type="checkbox"
+                  name="keepSignedIn"
+                  checked={keepSignedIn.checked}
+                  onChange={(event) => keepSignedIn.onChange(event.target.checked)}
+                  disabled={pending}
+                />
+                <span>{t("auth.login.keepSignedIn")}</span>
+              </label>
+            ) : null}
 
             {message ? (
               <p className={styles.error} id={errorId} role="alert">

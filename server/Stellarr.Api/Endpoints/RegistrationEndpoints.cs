@@ -3,6 +3,7 @@ using System.Text.RegularExpressions;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Stellarr.Api.Auth;
+using Stellarr.Api.Auth.Security;
 using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
 using Stellarr.Api.Domain;
@@ -136,8 +137,22 @@ public static partial class RegistrationEndpoints
             invite.Uses++;
         }
 
-        var session = SessionAuthentication.CreateSession(context, id, messages);
-        db.UserSessions.Add(session);
+        // The first owner cannot skip an instance-wide requirement by
+        // registering: the decision is made against the role just assigned.
+        var policy = await MfaPolicy.LoadAsync(db, cancellationToken);
+        bool? required = policy.MfaRequirement switch
+        {
+            MfaRequirements.Everyone => true,
+            MfaRequirements.Admins => role.IsOwner ||
+                (role.Permissions & ServerPrivileges.ManageServer) == ServerPrivileges.ManageServer,
+            _ => null,
+        };
+        var start = await AuthenticationFlow.StartAsync(
+            db, context, user, "registration", policy, messages, cancellationToken, required);
+        if (start.Session is { } session)
+        {
+            db.UserSessions.Add(session);
+        }
 
         try
         {
@@ -157,9 +172,15 @@ public static partial class RegistrationEndpoints
             throw;
         }
 
-        await SessionAuthentication.SignInAsync(context, user, session.Id);
         await ServerWelcome.PublishAsync(hub, server.Id, welcome, messages, CancellationToken.None);
-        return Results.Created("/api/me", user.ToDto("online"));
+        if (start.Session is not null)
+        {
+            // Registration offers no choice; the new account stays signed in.
+            await SessionAuthentication.SignInAsync(context, user, start.Session.Id, shortLived: false);
+            return Results.Created("/api/me", user.ToDto("online"));
+        }
+
+        return Results.Created("/api/me", start.Challenge);
     }
 
     private static Dictionary<string, string[]> Validate(RegisterRequest request, Messages messages)

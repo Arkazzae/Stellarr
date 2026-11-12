@@ -13,6 +13,7 @@ import {
   useVoice,
 } from "@/state/hooks";
 
+import { withFreshSecondStep } from "./freshSecondStep";
 import type { ServerAdmin } from "./useServerAdmin";
 
 interface ServerSettingsDialogProps extends ServerAdmin {
@@ -107,8 +108,9 @@ export function ServerSettingsDialog({ open, data, reload }: ServerSettingsDialo
       roles={{
         supported: supported.roles,
         roles: data.roles,
-        onCreate: (input) => reloadAfter(admin.createRole(input), reload),
-        onUpdate: (roleId, patch) => reloadAfter(admin.updateRole(roleId, patch), reload),
+        onCreate: (input) => reloadAfter(withFreshSecondStep(() => admin.createRole(input), t), reload),
+        onUpdate: (roleId, patch) =>
+          reloadAfter(withFreshSecondStep(() => admin.updateRole(roleId, patch), t), reload),
         onDelete: (roleId) => reloadAfter(admin.deleteRole(roleId), reload),
       }}
       members={{
@@ -116,7 +118,7 @@ export function ServerSettingsDialog({ open, data, reload }: ServerSettingsDialo
         members: data.members,
         roles: data.roles,
         onAssignRole: (userId, roleId) =>
-          reloadAfter(admin.assignRole(userId, roleId), reload),
+          reloadAfter(withFreshSecondStep(() => admin.assignRole(userId, roleId), t), reload),
       }}
       invites={{
         supported: supported.invites,
@@ -179,13 +181,20 @@ export function ServerSettingsDialog({ open, data, reload }: ServerSettingsDialo
               member.user.displayName.toLocaleLowerCase() === needle,
           );
           if (target === undefined) return;
-          await reloadAfter(admin.transferOwnership(target.user.id), reload);
+          await reloadAfter(
+            withFreshSecondStep(() => admin.transferOwnership(target.user.id), t),
+            reload,
+          );
         },
         onDelete: async () => {
           const answer = window.prompt(t("settings.deleteServerDetail"));
           if (answer !== server.name) return;
-          await admin.deleteServer();
-          window.location.reload();
+          // Refused for want of a fresh second step, the page leaves to confirm it instead.
+          const deleted = await withFreshSecondStep(async () => {
+            await admin.deleteServer();
+            return true;
+          }, t);
+          if (deleted === true) window.location.reload();
         },
       }}
     />

@@ -26,7 +26,7 @@ export function EmbedAttachment({ part, onOpen }: EmbedAttachmentProps) {
       tabIndex={0}
       // The card stands in for a URL no longer written out in the body, so it
       // has to say where it leads.
-      aria-label={`${part.title} — ${part.domain}`}
+      aria-label={`${part.title} (${part.domain})`}
       onClick={open}
       onKeyDown={onKeyDown}
     >

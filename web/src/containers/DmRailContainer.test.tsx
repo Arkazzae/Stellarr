@@ -83,7 +83,7 @@ describe("DmRailContainer", () => {
     render(<DmRailContainer />);
 
     expect(
-      within(rowOf("Ola")).getByText("Trwa rozmowa — kliknij, aby dołączyć"),
+      within(rowOf("Ola")).getByText("Trwa rozmowa. Kliknij, aby dołączyć"),
     ).toBeInTheDocument();
   });
 

@@ -54,7 +54,6 @@ function defaults(): HookStubs {
         developerMode: false,
         mutedChannelIds: [],
       },
-      supported: { profile: true },
       update: vi.fn(async () => {}),
       setPreferences: vi.fn(async () => {}),
     }),
@@ -123,7 +122,6 @@ function defaults(): HookStubs {
     session: stub<SessionValue>({
       user: { id: "u-maja", username: "maja", displayName: "Maja", presence: "online" },
       presence: "online",
-      presenceSupported: true,
       setPresence: vi.fn(),
       reload: vi.fn(),
       logout: vi.fn(async () => {}),

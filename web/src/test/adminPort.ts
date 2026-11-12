@@ -5,7 +5,6 @@ import type { AdminSupport, ServerAdminPort } from "@/ports";
 export const ALL_SUPPORTED: AdminSupport = {
   server: true,
   serverIcon: true,
-  notifications: true,
   channels: true,
   roles: true,
   members: true,

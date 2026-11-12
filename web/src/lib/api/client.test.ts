@@ -126,13 +126,51 @@ describe("http api client", () => {
       }),
     );
 
-    const user = await api.login({ username: "patryk", password: "x" });
+    const result = await api.login({ username: "patryk", password: "x" });
 
-    expect(user.displayName).toBe("Patryk");
+    expect(result).toMatchObject({ kind: "signed-in", user: { displayName: "Patryk" } });
     const [url, init] = fetchMock.mock.calls[0] ?? [];
     expect(url).toBe("/api/auth/login");
     expect(init?.credentials).toBe("same-origin");
     expect(init?.body).toBe(JSON.stringify({ username: "patryk", password: "x" }));
+  });
+
+  it("follows only the server's own link address when an account links a provider", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ url: "/api/auth/oidc/work/link?ticket=CfDJ8abc" }));
+    fetchMock.mockResolvedValueOnce(jsonResponse({ url: "https://evil.example/api/auth/oidc/link?ticket=x" }));
+
+    await expect(api.startIdentityLink("work", "haslo")).resolves.toBe("/api/auth/oidc/work/link?ticket=CfDJ8abc");
+    await expect(api.startIdentityLink("work")).rejects.toMatchObject({ kind: "malformed" });
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe("/api/me/security/identities/work/link");
+    expect(fetchMock.mock.calls[0]?.[1]?.body).toBe(JSON.stringify({ password: "haslo" }));
+  });
+
+  it("sends a short-lived sign-in choice to the password login and the recovery", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ id: "u-1", username: "patryk", displayName: "Patryk", presence: "online" }),
+    );
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        status: "mfa_enrollment_required",
+        challengeId: "c-1",
+        purpose: "recovery",
+        expiresAt: "2026-11-12T17:10:00Z",
+        methods: [],
+        trustedDeviceAvailable: false,
+        emailCodeAvailable: false,
+        trustedDeviceDays: 14,
+      }),
+    );
+
+    await api.login({ username: "patryk", password: "x", keepSignedIn: false });
+    await api.redeemRecoveryCredential("abc", false);
+
+    expect(fetchMock.mock.calls[0]?.[1]?.body).toBe(
+      JSON.stringify({ username: "patryk", password: "x", keepSignedIn: false }),
+    );
+    expect(fetchMock.mock.calls[1]?.[0]).toBe("/api/auth/recovery/redeem");
+    expect(fetchMock.mock.calls[1]?.[1]?.body).toBe(JSON.stringify({ credential: "abc", keepSignedIn: false }));
   });
 
   it("parses and mutates the private cursor-paged notification inbox", async () => {

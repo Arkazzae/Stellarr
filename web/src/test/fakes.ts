@@ -1,5 +1,6 @@
 import { vi } from "vitest";
 import type { ApiClient } from "@/lib/api/client";
+import { ApiError } from "@/lib/api/errors";
 import type { Bootstrap, Channel, Presence, Server, User } from "@/lib/api/types";
 import { ChangeNotifier, Emitter } from "@/lib/realtime/emitter";
 import type {
@@ -76,8 +77,59 @@ const ACCOUNT = {
 export function fakeApi(overrides: Partial<ApiClient> = {}): ApiClient {
   return {
     needsServerSetup: vi.fn(async () => false),
-    login: vi.fn(async () => SELF),
-    register: vi.fn(async () => SELF),
+    login: vi.fn(async () => ({ kind: "signed-in" as const, user: SELF })),
+    register: vi.fn(async () => ({ kind: "signed-in" as const, user: SELF })),
+    pendingChallenge: vi.fn(async () => {
+      throw new ApiError("unauthorized", "Nothing is pending.", 401);
+    }),
+    cancelChallenge: vi.fn(async () => {}),
+    verifyChallenge: vi.fn(async () => ({ user: SELF })),
+    sendChallengeEmailCode: vi.fn(async () => ({ retryAfterSeconds: 45 })),
+    startTotpEnrollment: vi.fn(async () => ({ methodId: "m-totp", type: "totp" as const })),
+    confirmTotpEnrollment: vi.fn(async () => ({ user: SELF })),
+    startEmailEnrollment: vi.fn(async () => ({ retryAfterSeconds: 45 })),
+    confirmEmailEnrollment: vi.fn(async () => ({ user: SELF })),
+    redeemRecoveryCredential: vi.fn(async () => {
+      throw new ApiError("unauthorized", "The credential is not valid.", 401);
+    }),
+    passkeyChallengeOptions: vi.fn(async () => ({})),
+    verifyPasskey: vi.fn(async () => ({ user: SELF })),
+    startPasskeyEnrollment: vi.fn(async () => ({})),
+    confirmPasskeyEnrollment: vi.fn(async () => ({ user: SELF })),
+    passkeySignInAvailable: vi.fn(async () => false),
+    passkeySignInOptions: vi.fn(async () => ({})),
+    signInWithPasskey: vi.fn(async () => ({ kind: "signed-in" as const, user: SELF })),
+    getAccountSecurity: vi.fn(async () => ({
+      requirement: "optional",
+      mfaRequired: false,
+      freshMfa: false,
+      methods: [],
+      remainingRecoveryCodes: 0,
+      trustedDevices: [],
+      recentEvents: [],
+      trustedDeviceDays: 14,
+      emailCodeAvailable: false,
+      passkeyAvailable: false,
+      identities: [],
+      identityProviders: [],
+    })),
+    listSecurityEvents: vi.fn(async () => []),
+    startMfaEnrollment: vi.fn(async () => {
+      throw new ApiError("forbidden", "A fresh proof is required.", 403);
+    }),
+    startMfaReverification: vi.fn(async () => {
+      throw new ApiError("forbidden", "A fresh proof is required.", 403);
+    }),
+    removeMfaMethod: vi.fn(async () => {}),
+    regenerateRecoveryCodes: vi.fn(async () => []),
+    revokeTrustedDevice: vi.fn(async () => {}),
+    listOwnSessions: vi.fn(async () => []),
+    revokeOwnSession: vi.fn(async () => {}),
+    revokeOtherSessions: vi.fn(async () => {}),
+    startIdentityLink: vi.fn(async () => "/api/auth/oidc/link?ticket=t"),
+    requestEmailChange: vi.fn(async () => "sent" as const),
+    confirmEmailChange: vi.fn(async () => "changed" as const),
+    removeIdentity: vi.fn(async () => {}),
     requestPasswordReset: vi.fn(async () => {}),
     resetPassword: vi.fn(async () => {}),
     logout: vi.fn(async () => {}),
@@ -282,6 +334,11 @@ export class FakeRealtimeClient implements RealtimeClient {
 
   async getRtcClock(): Promise<number> {
     return Date.now();
+  }
+
+  /** The server closed the hub, as it does when it revokes the session. */
+  drop(): void {
+    this.setStatus("reconnecting");
   }
 
   private setStatus(status: RealtimeStatus): void {

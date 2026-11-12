@@ -18,6 +18,14 @@ internal sealed class OperationsSettingsConfiguration : IEntityTypeConfiguration
         entity.Property(x => x.MailSmtpSecurity).HasMaxLength(16).HasDefaultValue("starttls");
         entity.Property(x => x.DesktopMinimumVersion).HasMaxLength(64);
         entity.Property(x => x.DesktopRecommendedVersion).HasMaxLength(64);
+        entity.Property(x => x.MfaRequirement).HasMaxLength(16).HasDefaultValue(MfaRequirements.Optional);
+        entity.Property(x => x.TrustedDeviceDays).HasDefaultValue(14);
+        entity.Property(x => x.AuthChallengeMinutes).HasDefaultValue(5);
+        entity.Property(x => x.EmailCodeMinutes).HasDefaultValue(8);
+        entity.Property(x => x.EmailCodeCooldownSeconds).HasDefaultValue(45);
+        entity.Property(x => x.EmailCodeMaxAttempts).HasDefaultValue(5);
+        entity.Property(x => x.EmailCodeSendsPerHour).HasDefaultValue(10);
+        entity.Property(x => x.CliRecoveryMinutes).HasDefaultValue(10);
         entity.HasOne(x => x.Server).WithOne().HasForeignKey<OperationsSettings>(x => x.ServerId)
             .OnDelete(DeleteBehavior.Cascade);
     }

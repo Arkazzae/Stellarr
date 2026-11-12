@@ -26,11 +26,12 @@ public static class RoleEndpoints
             .RequireAuthorization()
             .AddEndpointFilter<ServerMembershipFilter>();
         admin.MapGet("/roles", ListRolesAsync);
-        admin.MapPost("/roles", CreateRoleAsync);
-        admin.MapPatch("/roles/{roleId:guid}", UpdateRoleAsync);
+        // On the instance server, as in Cockpit, granting powers needs a fresh second step.
+        admin.MapPost("/roles", CreateRoleAsync).AddEndpointFilter<InstanceServerFreshSecondStepFilter>();
+        admin.MapPatch("/roles/{roleId:guid}", UpdateRoleAsync).AddEndpointFilter<InstanceServerFreshSecondStepFilter>();
         admin.MapDelete("/roles/{roleId:guid}", DeleteRoleAsync);
         admin.MapGet("/members", ListMembersAsync);
-        admin.MapPatch("/members/{userId:guid}/role", AssignRoleAsync);
+        admin.MapPatch("/members/{userId:guid}/role", AssignRoleAsync).AddEndpointFilter<InstanceServerFreshSecondStepFilter>();
         return endpoints;
     }
 

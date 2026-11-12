@@ -2,7 +2,8 @@ import { createContext, useContext } from "react";
 
 import type { CockpitBootstrap } from "@/lib/api";
 
-export type CockpitPhase = "loading" | "anonymous" | "forbidden" | "ready" | "error";
+/** `mfa-required`: the owner is signed in, but the session has not completed the second step Cockpit asks for. */
+export type CockpitPhase = "loading" | "anonymous" | "forbidden" | "mfa-required" | "ready" | "error";
 
 export interface CockpitContextValue {
   phase: CockpitPhase;
@@ -10,8 +11,12 @@ export interface CockpitContextValue {
   error: string | null;
   /** Refreshes the bootstrap. Keeps the current screen when already ready. */
   reload: () => Promise<void>;
-  /** Rejects when the credentials are refused, leaving the phase unchanged. */
-  login: (username: string, password: string) => Promise<void>;
+  /**
+   * Rejects when the credentials are refused, leaving the phase unchanged.
+   * When the password is not enough, leaves for the web client's sign-in page
+   * to finish the step there.
+   */
+  login: (username: string, password: string, keepSignedIn?: boolean) => Promise<void>;
   logout: () => Promise<void>;
 }
 

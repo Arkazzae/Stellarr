@@ -23,13 +23,13 @@ describe("message Markdown", () => {
       locale="pl" t={(key, values) => translateMessage("pl", key, values)}
       nodes={parseInline("Morderca to ||lokaj|| i ||ogrodnik||")}
     />);
-    const [first, second] = screen.getAllByRole("button", { name: "Spoiler — kliknij, aby odsłonić" });
+    const [first, second] = screen.getAllByRole("button", { name: "Spoiler (kliknij, aby odsłonić)" });
     expect(first).toHaveClass("msg-spoiler");
     expect(first).not.toHaveClass("revealed");
     fireEvent.click(first!);
     expect(screen.getByText("lokaj").closest(".msg-spoiler")).toHaveClass("revealed");
     fireEvent.keyDown(second!, { key: "Enter" });
-    expect(screen.queryAllByRole("button", { name: "Spoiler — kliknij, aby odsłonić" })).toHaveLength(0);
+    expect(screen.queryAllByRole("button", { name: "Spoiler (kliknij, aby odsłonić)" })).toHaveLength(0);
   });
   it("never turns authored HTML into elements", () => {
     const { container } = render(<TextAttachment

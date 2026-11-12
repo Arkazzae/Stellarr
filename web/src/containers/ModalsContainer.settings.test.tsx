@@ -2,7 +2,9 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
+import { createServerAdminAdapter } from "@/adapters/admin";
 import { translateMessage, type MessageKey } from "@/i18n";
+import type { AdminApiClient } from "@/lib/api/client";
 import { ApiError } from "@/lib/api/errors";
 import type { AdminMember, Invite, Role } from "@/ports";
 import { fakeAdminPort } from "@/test/adminPort";
@@ -73,6 +75,30 @@ describe("ModalsContainer: server settings", () => {
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(harness.ports.admin.listRoles).not.toHaveBeenCalled();
+  });
+
+  it("tells a member who may manage only roles why the overview is read-only", () => {
+    const noop = vi.fn();
+    const { supported } = createServerAdminAdapter(
+      {} as AdminApiClient,
+      () => ["manageRoles"],
+      noop,
+      noop,
+      noop,
+      noop,
+      noop,
+      noop,
+      noop,
+      noop,
+    );
+    harness.ports.admin = fakeAdminPort({ supported });
+
+    openSettings();
+
+    expect(
+      screen.getByText("Nie masz uprawnienia do zarządzania serwerem. Ustawienia są tylko do odczytu."),
+    ).toBeVisible();
+    expect(screen.queryByText(/backend/i)).not.toBeInTheDocument();
   });
 
   it("shows the roles it fetched and refetches them after a role is edited", async () => {

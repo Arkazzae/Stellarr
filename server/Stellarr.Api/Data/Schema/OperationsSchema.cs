@@ -41,6 +41,18 @@ internal static class OperationsSchema
         ("DesktopRecommendedVersion", """ALTER TABLE "OperationsSettings" ADD COLUMN "DesktopRecommendedVersion" TEXT NULL;"""),
     ];
 
+    private static readonly (string Column, string Statement)[] SecurityColumns =
+    [
+        ("MfaRequirement", """ALTER TABLE "OperationsSettings" ADD COLUMN "MfaRequirement" TEXT NOT NULL DEFAULT 'optional';"""),
+        ("TrustedDeviceDays", """ALTER TABLE "OperationsSettings" ADD COLUMN "TrustedDeviceDays" INTEGER NOT NULL DEFAULT 14;"""),
+        ("AuthChallengeMinutes", """ALTER TABLE "OperationsSettings" ADD COLUMN "AuthChallengeMinutes" INTEGER NOT NULL DEFAULT 5;"""),
+        ("EmailCodeMinutes", """ALTER TABLE "OperationsSettings" ADD COLUMN "EmailCodeMinutes" INTEGER NOT NULL DEFAULT 8;"""),
+        ("EmailCodeCooldownSeconds", """ALTER TABLE "OperationsSettings" ADD COLUMN "EmailCodeCooldownSeconds" INTEGER NOT NULL DEFAULT 45;"""),
+        ("EmailCodeMaxAttempts", """ALTER TABLE "OperationsSettings" ADD COLUMN "EmailCodeMaxAttempts" INTEGER NOT NULL DEFAULT 5;"""),
+        ("EmailCodeSendsPerHour", """ALTER TABLE "OperationsSettings" ADD COLUMN "EmailCodeSendsPerHour" INTEGER NOT NULL DEFAULT 10;"""),
+        ("CliRecoveryMinutes", """ALTER TABLE "OperationsSettings" ADD COLUMN "CliRecoveryMinutes" INTEGER NOT NULL DEFAULT 10;"""),
+    ];
+
     internal static async Task UpgradeAsync(AppDbContext db, CancellationToken cancellationToken)
     {
         await db.Database.ExecuteSqlRawAsync(
@@ -66,6 +78,14 @@ internal static class OperationsSchema
                 "AutomaticCleanupEnabled" INTEGER NOT NULL,
                 "DesktopMinimumVersion" TEXT NULL,
                 "DesktopRecommendedVersion" TEXT NULL,
+                "MfaRequirement" TEXT NOT NULL DEFAULT 'optional',
+                "TrustedDeviceDays" INTEGER NOT NULL DEFAULT 14,
+                "AuthChallengeMinutes" INTEGER NOT NULL DEFAULT 5,
+                "EmailCodeMinutes" INTEGER NOT NULL DEFAULT 8,
+                "EmailCodeCooldownSeconds" INTEGER NOT NULL DEFAULT 45,
+                "EmailCodeMaxAttempts" INTEGER NOT NULL DEFAULT 5,
+                "EmailCodeSendsPerHour" INTEGER NOT NULL DEFAULT 10,
+                "CliRecoveryMinutes" INTEGER NOT NULL DEFAULT 10,
                 "UpdatedAt" TEXT NOT NULL,
                 CONSTRAINT "FK_OperationsSettings_Servers_ServerId"
                     FOREIGN KEY ("ServerId") REFERENCES "Servers" ("Id") ON DELETE CASCADE
@@ -91,7 +111,10 @@ internal static class OperationsSchema
             }
         }
 
-        foreach (var (column, statement) in MailColumns.Concat(IntegrationColumns).Concat(DesktopColumns))
+        foreach (var (column, statement) in MailColumns
+                     .Concat(IntegrationColumns)
+                     .Concat(DesktopColumns)
+                     .Concat(SecurityColumns))
         {
             if (!await SqliteSchema.HasColumnAsync(db, "OperationsSettings", column, cancellationToken))
             {

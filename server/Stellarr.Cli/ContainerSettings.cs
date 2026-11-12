@@ -84,6 +84,28 @@ internal static class ContainerSettings
         return new StartupValue(fallback, "default");
     }
 
+    /// <summary>
+    /// The named identity providers, by id, each marked when the instance
+    /// trusts its own second step. Only ids and that flag: never a secret.
+    /// </summary>
+    internal static StartupValue OidcProviders(StartupContext context)
+    {
+        var providers = context.Configuration.GetSection("Oidc:Providers").GetChildren()
+            .OrderBy(x => x.Key, StringComparer.Ordinal)
+            .Select(x => string.Equals(x["TrustProviderMfa"], "true", StringComparison.OrdinalIgnoreCase)
+                ? $"{x.Key} (trusts provider MFA)"
+                : x.Key)
+            .ToArray();
+        if (providers.Length == 0)
+        {
+            return new StartupValue("(none)", "default");
+        }
+
+        var fromEnvironment = context.Environment.Keys.Any(
+            name => name.StartsWith("Oidc__Providers__", StringComparison.OrdinalIgnoreCase));
+        return new StartupValue(string.Join(", ", providers), fromEnvironment ? "environment" : "configuration");
+    }
+
     internal static StartupValue EnvironmentOrConfig(
         StartupContext context,
         string environmentName,

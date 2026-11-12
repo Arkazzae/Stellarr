@@ -62,26 +62,6 @@ describe("MessageToolbar", () => {
     expect(onAction).toHaveBeenCalledExactlyOnceWith("pin");
   });
 
-  it("disables the pin on a server that cannot store one", () => {
-    renderWithConfirm(
-      <MessageToolbar
-        canModerate
-        support={{
-          reactions: true,
-          replies: true,
-          threads: false,
-          editing: true,
-          deletion: true,
-          pins: false,
-        }}
-        onReact={vi.fn()}
-        onAction={vi.fn()}
-      />,
-    );
-
-    expect(screen.getByRole("button", { name: "Przypnij" })).toBeDisabled();
-  });
-
   it("deletes nothing until the question is answered", async () => {
     const user = userEvent.setup();
     const onAction = vi.fn();

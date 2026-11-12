@@ -56,6 +56,7 @@ public static class ClientGate
     private static readonly string[] GatedPaths =
     [
         "/api/auth/login",
+        "/api/auth/passkey/login",
         "/api/auth/register",
         "/api/auth/desktop/browser/start",
         "/api/auth/desktop/browser/exchange",

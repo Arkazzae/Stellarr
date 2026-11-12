@@ -13,6 +13,8 @@ import { isPresence } from "./types";
 import type {
   AccountDetails,
   AccountPreferences,
+  EmailChangeAnswer,
+  EmailConfirmAnswer,
   FriendRequestAnswer,
   PasswordChangeAnswer,
   SocialConversation,
@@ -106,13 +108,37 @@ export function parseAccount(value: unknown, path = "/api/me"): AccountDetails {
   };
 }
 
+const EMAIL_CHANGE_ANSWERS: readonly EmailChangeAnswer[] = [
+  "sent",
+  "wrong-password",
+  "second-step-required",
+  "same",
+  "taken",
+  "mail-unavailable",
+];
+const EMAIL_CONFIRM_ANSWERS: readonly EmailConfirmAnswer[] = ["changed", "invalid", "taken"];
+
+function oneAnswer<T extends string>(answers: readonly T[], value: unknown, path: string): T {
+  const result = expectRecord(value, path)["result"];
+  const known = answers.find((answer) => answer === result);
+  if (known === undefined) throw new ApiError("malformed", `${path} returned an unexpected result`);
+  return known;
+}
+
+export const parseEmailChangeAnswer = (value: unknown, path: string) =>
+  oneAnswer(EMAIL_CHANGE_ANSWERS, value, path);
+
+export const parseEmailConfirmAnswer = (value: unknown, path: string) =>
+  oneAnswer(EMAIL_CONFIRM_ANSWERS, value, path);
+
 export function parsePasswordAnswer(value: unknown, path: string): PasswordChangeAnswer {
   const result = expectRecord(value, path)["result"];
   if (
     result === "changed" ||
     result === "wrong-current" ||
     result === "too-short" ||
-    result === "same-as-current"
+    result === "same-as-current" ||
+    result === "second-step-required"
   ) {
     return result;
   }

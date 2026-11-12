@@ -3,7 +3,6 @@ import type { IconName } from "@stellarr/ui/icons";
 import type { MenuEntry } from "@/components/primitives/ContextMenu";
 import type { Confirm } from "@/components/primitives/ConfirmDialog";
 import type { MessageKey, Translator } from "@/i18n";
-import type { MessageActionSupport } from "@/ports";
 
 import { absoluteUrl, canCopyImages, copyImage } from "./mediaActions";
 import {
@@ -26,7 +25,6 @@ export interface MessageMenuInput {
   canModerate: boolean;
   /** Adds "copy identifier", as the preference in the advanced settings promises. */
   developerMode: boolean;
-  support: MessageActionSupport | undefined;
   /** Absent leaves the menu with only what needs no handler: copying and saving. */
   onAction?(action: MessageAction): void;
   confirm: Confirm;
@@ -73,9 +71,7 @@ function imageEntries(target: DownloadTarget, t: Translator): MenuEntry[] {
  * something is a menu that hides it.
  */
 export function messageMenuEntries(input: MessageMenuInput): MenuEntry[] {
-  const { messageId, parts, pinned, own, canModerate, support, onAction, confirm, t } = input;
-  const allowed = (flag: keyof MessageActionSupport) =>
-    support === undefined || support[flag];
+  const { messageId, parts, pinned, own, canModerate, onAction, confirm, t } = input;
   const entries: MenuEntry[] = [];
 
   if (onAction !== undefined) {
@@ -85,11 +81,11 @@ export function messageMenuEntries(input: MessageMenuInput): MenuEntry[] {
       icon,
       onSelect: () => onAction(id),
     });
-    if (allowed("replies")) entries.push(action("reply", "message.action.reply", "reply"));
-    if (allowed("threads")) entries.push(action("thread", "message.action.thread", "thread"));
-    if (own && allowed("editing")) entries.push(action("edit", "message.action.edit", "edit"));
+    entries.push(action("reply", "message.action.reply", "reply"));
+    entries.push(action("thread", "message.action.thread", "thread"));
+    if (own) entries.push(action("edit", "message.action.edit", "edit"));
     // The label is read off the message so the menu and the toolbar cannot disagree.
-    if (canModerate && allowed("pins")) {
+    if (canModerate) {
       entries.push(
         action(
           "pin",
@@ -126,7 +122,7 @@ export function messageMenuEntries(input: MessageMenuInput): MenuEntry[] {
     });
   }
 
-  if ((own || canModerate) && onAction !== undefined && allowed("deletion")) {
+  if ((own || canModerate) && onAction !== undefined) {
     entries.push("separator", {
       id: "delete",
       label: t("message.action.deleteMessage"),

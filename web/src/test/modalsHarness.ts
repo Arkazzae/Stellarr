@@ -60,7 +60,7 @@ export interface Harness {
       ReturnType<typeof vi.fn>
     >;
   voice: Pick<VoiceValue, "sounds" | "soundboard">;
-  account: Pick<AccountValue, "preferences" | "supported"> & {
+  account: Pick<AccountValue, "preferences"> & {
     setPreferences: ReturnType<typeof vi.fn>;
   };
   friends: Pick<FriendsValue, "friends">;
@@ -148,7 +148,6 @@ function freshHarness(): Harness {
     },
     account: {
       preferences: { mutedChannelIds: [] } as unknown as AccountValue["preferences"],
-      supported: { preferences: true } as unknown as AccountValue["supported"],
       setPreferences: vi.fn(async () => {}),
     },
     friends: { friends: [] },

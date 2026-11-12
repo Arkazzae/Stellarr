@@ -94,7 +94,7 @@ describe("ChannelsPane sections", () => {
     expect(screen.getByRole("button", { name: "Przesuń sekcję Dodatki w górę" })).toBeEnabled();
   });
 
-  it("leaves section actions off while the section endpoints are unwired", () => {
+  it("leaves section actions off without permission to manage channels", () => {
     render(<ChannelsPane {...props({ sectionsSupported: false })} />);
 
     expect(screen.getByRole("button", { name: "Dodaj sekcję" })).toBeDisabled();

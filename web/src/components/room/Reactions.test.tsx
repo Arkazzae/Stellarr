@@ -18,7 +18,7 @@ describe("Reactions", () => {
       />,
     );
 
-    const button = screen.getByRole("button", { name: ":mushris: — 2 reakcji" });
+    const button = screen.getByRole("button", { name: ":mushris:, liczba reakcji: 2" });
     expect(button.querySelector("img")).toHaveAttribute(
       "src",
       "/api/emoji/e-1/image",

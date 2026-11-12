@@ -12,7 +12,7 @@
   }
   .comp-reply-txt{
     flex:1;min-width:0;display:flex;align-items:center;gap:6px;
-    font-size:12.5px;color:var(--text-faint);
+    font-size:var(--text-13);color:var(--text-faint);
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   }
   .comp-reply-txt b{color:var(--text);font-weight:600;flex:none}
@@ -30,7 +30,7 @@
     display:flex;align-items:center;gap:8px;width:max-content;max-width:100%;
     margin:0 0 6px;padding:6px 8px 6px 10px;
     border:1px solid var(--line-subtle);border-radius:var(--radius-md);
-    background:var(--surface-pop);color:var(--text-muted);font-size:12px;
+    background:var(--surface-pop);color:var(--text-muted);font-size:var(--text-12);
     animation:msgIn 140ms var(--ease-standard);
   }
   .comp-code-bar > svg{flex:none;color:var(--accent-text)}
@@ -52,23 +52,23 @@
   .chip{
     display:flex;align-items:center;gap:8px;
     background:var(--surface-raised);border:1px solid var(--line-subtle);
-    border-radius:var(--radius-md);padding:6px 8px;font-size:12px;
+    border-radius:var(--radius-md);padding:6px 8px;font-size:var(--text-12);
     animation:msgIn 180ms var(--ease-standard);cursor:grab;
   }
   .chip .thumb{
     width:36px;height:36px;border-radius:var(--radius-sm);flex:none;
     background:var(--surface-overlay);display:flex;align-items:center;justify-content:center;
-    font-family:var(--font-mono);font-size:9px;font-weight:600;color:var(--accent-text);
+    font-family:var(--font-mono);font-size:var(--text-10);font-weight:600;color:var(--accent-text);
   }
   .chip-copy{display:flex;flex-direction:column;min-width:0;max-width:160px}
   .chip b{font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .chip-status{font-size:10.5px;color:var(--text-faint);line-height:1.35}
+  .chip-status{font-size:var(--text-11);color:var(--text-faint);line-height:1.35}
   .chip-status.error{color:var(--danger-text)}
-  .chip .retry{font-size:11px;font-weight:600;color:var(--accent-text);padding:4px 5px;border-radius:var(--radius-sm)}
+  .chip .retry{font-size:var(--text-11);font-weight:600;color:var(--accent-text);padding:4px 5px;border-radius:var(--radius-sm)}
   .chip .retry:hover{background:var(--surface-overlay)}
   .chip .x{
     width:20px;height:20px;border-radius:var(--radius-sm);color:var(--text-faint);
-    display:inline-flex;align-items:center;justify-content:center;font-size:14px;
+    display:inline-flex;align-items:center;justify-content:center;font-size:var(--text-14);
   }
   .chip .x:hover{background:var(--surface-overlay);color:var(--danger-text)}
   .composer-box{
@@ -94,11 +94,11 @@
   .mention-suggestions > button.selected{background:var(--surface-overlay);color:var(--text)}
   .mention-avatar{
     width:30px;height:30px;flex:none;border-radius:50%;display:grid;place-items:center;
-    background:var(--accent-soft);color:var(--accent-text);font-size:10px;font-weight:700;
+    background:var(--accent-soft);color:var(--accent-text);font-size:var(--text-10);font-weight:700;
   }
   .mention-copy{min-width:0;display:flex;flex-direction:column;line-height:1.25}
-  .mention-copy b{overflow:hidden;text-overflow:ellipsis;font-size:13px;font-weight:600}
-  .mention-copy small{color:var(--text-faint);font-size:11px}
+  .mention-copy b{overflow:hidden;text-overflow:ellipsis;font-size:var(--text-13);font-weight:600}
+  .mention-copy small{color:var(--text-faint);font-size:var(--text-11)}
   .composer-box.voice-mode{
     align-items:center;padding:8px 10px;background:var(--surface-field);
   }
@@ -138,7 +138,7 @@
   }
   .voice-rec-status{
     flex:none;display:flex;align-items:center;gap:7px;
-    color:var(--text-muted);font-size:12px;white-space:nowrap;
+    color:var(--text-muted);font-size:var(--text-12);white-space:nowrap;
   }
   /* The recording dot: red because that is what a recording dot is, and the
      one place in this interface that means "capturing right now". Still, not
@@ -200,7 +200,7 @@
      filling in behind the playhead. */
   .voice-rec-wave i.done{background:var(--accent)}
   .voice-rec-time{
-    flex:none;color:var(--text-faint);font-size:12px;
+    flex:none;color:var(--text-faint);font-size:var(--text-12);
     font-variant-numeric:tabular-nums;white-space:nowrap;
   }
   .voice-rec-time.near{color:var(--danger-text)}
@@ -214,12 +214,12 @@
   .voice-rec-send{margin-left:0}
   .voice-rec-retry{
     min-height:32px;padding:0 10px;border:1px solid var(--line);
-    border-radius:var(--radius-sm);color:var(--text-muted);font-size:12px;white-space:nowrap;
+    border-radius:var(--radius-sm);color:var(--text-muted);font-size:var(--text-12);white-space:nowrap;
   }
   .voice-rec-retry:hover{border-color:var(--line-strong);background:var(--surface-overlay);color:var(--text)}
   .voice-rec-error{
     width:100%;margin:0 2px 2px;color:var(--danger-text);
-    font-size:12px;line-height:1.45;
+    font-size:var(--text-12);line-height:1.45;
   }
   /* glif po lewej stronie pola — jak w oryginale */
   /* The same round target and the same hover/press as `.attach`, because it is
@@ -260,7 +260,7 @@
   .composer .send.sending{opacity:0.55;cursor:wait}
   .composer .send.waiting{opacity:0.45;cursor:wait}
   .composer-error{
-    margin-top:6px;color:var(--danger-text);font-size:12px;line-height:1.5;
+    margin-top:6px;color:var(--danger-text);font-size:var(--text-12);line-height:1.5;
   }
   .composer .attach{
     width:34px;height:34px;border-radius:50%;flex:none;color:var(--text-faint);
@@ -278,7 +278,7 @@
   }
   .fmt-btn{
     min-width:32px;height:32px;padding:0 8px;border-radius:7px;color:var(--text-muted);
-    font:600 14px/1 var(--font-sans, inherit);display:inline-flex;align-items:center;justify-content:center;
+    font:600 var(--text-14)/1 var(--font-sans, inherit);display:inline-flex;align-items:center;justify-content:center;
   }
   .fmt-btn:hover{background:var(--surface-overlay);color:var(--text)}
   .fmt-btn:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
@@ -290,7 +290,7 @@
     background:var(--accent-soft);color:var(--accent-text);
   }
   .composer .gif-trigger{
-    font-size:10px;font-weight:700;letter-spacing:0.01em;
+    font-size:var(--text-10);font-weight:700;letter-spacing:0.01em;
   }
   .composer .gif-trigger[aria-expanded="true"]{
     background:var(--surface-overlay);color:var(--text);
@@ -321,7 +321,7 @@
   .gif-search:focus-within{border-color:var(--line-strong);background:var(--surface-overlay)}
   .gif-search input{
     width:100%;min-width:0;background:none;border:0;outline:0;color:var(--text);
-    font:inherit;font-size:14px;
+    font:inherit;font-size:var(--text-14);
   }
   .gif-close{
     width:36px;height:36px;display:inline-flex;align-items:center;justify-content:center;
@@ -331,12 +331,12 @@
   .gif-close:hover{background:var(--surface-overlay);color:var(--text)}
   .gif-panel-head{
     display:flex;align-items:center;justify-content:space-between;gap:12px;
-    padding:4px 12px 8px;font-size:12px;color:var(--text-muted);
+    padding:4px 12px 8px;font-size:var(--text-12);color:var(--text-muted);
   }
   .gif-panel-head span:first-child{
     min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:550;
   }
-  .gif-panel-head span:last-child{flex:none;color:var(--text-faint);font-size:11px}
+  .gif-panel-head span:last-child{flex:none;color:var(--text-faint);font-size:var(--text-11)}
   .gif-results{flex:1;min-height:0;overflow-y:auto;padding:0 12px 12px}
   .gif-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
   .gif-tile,.gif-skeleton{
@@ -352,27 +352,27 @@
   .gif-creator{
     position:absolute;left:5px;right:5px;bottom:5px;padding:2px 4px;
     border-radius:var(--radius-sm);background:var(--veil-strong);color:var(--on-hang);
-    font-size:10px;line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    font-size:var(--text-10);line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   }
   .gif-sending{
     position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-    background:var(--veil);color:var(--on-hang);font-size:12px;font-weight:600;
+    background:var(--veil);color:var(--on-hang);font-size:var(--text-12);font-weight:600;
   }
   .gif-more{
     width:100%;height:34px;margin-top:8px;border:1px solid var(--line-subtle);
-    border-radius:var(--radius-sm);font-size:12px;color:var(--text-muted);
+    border-radius:var(--radius-sm);font-size:var(--text-12);color:var(--text-muted);
     transition:border-color var(--dur-fast) var(--ease-standard),background var(--dur-fast) var(--ease-standard),color var(--dur-fast) var(--ease-standard);
   }
   .gif-more:hover:not(:disabled){border-color:var(--line-strong);background:var(--surface-overlay);color:var(--text)}
   .gif-more:disabled{opacity:.55;cursor:wait}
   .gif-state{
     min-height:180px;display:flex;flex-direction:column;align-items:center;justify-content:center;
-    gap:6px;padding:24px;text-align:center;color:var(--text-muted);font-size:13px;
+    gap:6px;padding:24px;text-align:center;color:var(--text-muted);font-size:var(--text-13);
   }
-  .gif-state span{color:var(--text-faint);font-size:12px}
+  .gif-state span{color:var(--text-faint);font-size:var(--text-12)}
   .gif-state button{margin-top:6px;color:var(--accent-text);font-weight:550}
   .gif-state button:hover{text-decoration:underline}
-  .gif-send-error{padding:0 12px 8px;color:var(--danger-text);font-size:12px}
+  .gif-send-error{padding:0 12px 8px;color:var(--danger-text);font-size:var(--text-12)}
   .giphy-attribution{
     display:flex;align-items:center;justify-content:flex-end;min-height:34px;
     padding:5px 12px 8px;border-top:1px solid var(--line-subtle);
@@ -399,7 +399,7 @@
     .voice-rec-wave i{min-width:1px;max-width:1px}
     .voice-recorder[data-wave="live"] .voice-rec-wave i{flex:0 0 1px}
     .voice-rec-main{gap:8px}
-    .voice-rec-time{font-size:11px}
+    .voice-rec-time{font-size:var(--text-11)}
     .voice-recorder{gap:6px}
   }
 
@@ -450,7 +450,7 @@
     .voice-rec-retry{
       min-height:44px;
     }
-    .comp-code-bar select{font-size:16px}
+    .comp-code-bar select{font-size:var(--text-16)}
     .chip .retry{display:inline-flex;align-items:center;padding-inline:8px}
   }
 
@@ -474,7 +474,7 @@
       height:auto;min-height:0;
     }
     .gif-search{height:44px}
-    .gif-search input{font-size:16px}
+    .gif-search input{font-size:var(--text-16)}
     .gif-close{width:44px;height:44px}
     .gif-more,.gif-state button,.giphy-attribution{min-height:44px}
     .gif-state button{padding-inline:12px;border-radius:var(--radius-sm)}
@@ -482,7 +482,7 @@
 
   @media (pointer:coarse){
     .gif-search{min-height:44px}
-    .gif-search input{font-size:16px}
+    .gif-search input{font-size:var(--text-16)}
     .gif-close{min-width:44px;min-height:44px}
     .gif-more,.gif-state button,.giphy-attribution{min-height:44px}
   }
@@ -506,8 +506,8 @@
     border:2px dashed var(--accent-quiet);border-radius:var(--radius-lg);
     padding:40px 64px;text-align:center;background:var(--surface-base);
   }
-  .drop-card b{display:block;font-size:16px;font-weight:550;margin-top:12px}
-  .drop-card span{font-size:13px;color:var(--text-faint)}
+  .drop-card b{display:block;font-size:var(--text-16);font-weight:550;margin-top:12px}
+  .drop-card span{font-size:var(--text-13);color:var(--text-faint)}
   .drop-card .di{color:var(--accent-text);margin:0 auto;animation:bob 1.4s var(--ease-standard) infinite}
   @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
 

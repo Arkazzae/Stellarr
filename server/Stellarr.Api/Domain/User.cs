@@ -14,6 +14,13 @@ public sealed class User
     /// <summary>Incremented when credentials change, which invalidates older cookies.</summary>
     public int SessionVersion { get; set; }
 
+    /// <summary>
+    /// Set by an operator CLI recovery. Ordinary primary flows cannot create a
+    /// session or enrollment grant until a CLI credential has been redeemed and
+    /// a replacement factor has been confirmed.
+    /// </summary>
+    public bool SecurityRecoveryRequired { get; set; }
+
     public required string AvatarColor { get; set; }
     public DateTime CreatedAt { get; set; }
 

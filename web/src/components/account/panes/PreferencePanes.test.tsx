@@ -40,7 +40,7 @@ describe("UserNotificationsPane", () => {
   it("offers only the sounds the client delivers and writes each change", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
-    render(<UserNotificationsPane preferences={preferences} supported onChange={onChange} />);
+    render(<UserNotificationsPane preferences={preferences} onChange={onChange} />);
 
     expect(screen.queryByRole("button", { name: "Powiadomienia push" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Powiadomienia e-mail" })).toBeNull();
@@ -53,18 +53,10 @@ describe("UserNotificationsPane", () => {
     expect(onChange).toHaveBeenCalledWith({ joinLeaveSound: false });
   });
 
-  it("explains that nothing is stored and locks the switches", () => {
-    render(<UserNotificationsPane preferences={preferences} supported={false} onChange={vi.fn()} />);
-
-    expect(screen.getByText(/nie mają jeszcze swojej tabeli/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Dźwięk wiadomości" })).toBeDisabled();
-  });
-
   it("shows system notifications on only when the permission is granted too", () => {
     render(
       <UserNotificationsPane
         preferences={preferences}
-        supported
         onChange={vi.fn()}
         systemNotifications={{ ...system, permission: "default" }}
       />,
@@ -80,7 +72,6 @@ describe("UserNotificationsPane", () => {
     render(
       <UserNotificationsPane
         preferences={{ ...preferences, desktopNotifications: false }}
-        supported
         onChange={vi.fn()}
         systemNotifications={{ ...system, onChange }}
       />,
@@ -95,7 +86,6 @@ describe("UserNotificationsPane", () => {
     const { rerender } = render(
       <UserNotificationsPane
         preferences={preferences}
-        supported
         onChange={vi.fn()}
         systemNotifications={{ ...system, permission: "denied" }}
       />,
@@ -105,7 +95,6 @@ describe("UserNotificationsPane", () => {
     rerender(
       <UserNotificationsPane
         preferences={preferences}
-        supported
         onChange={vi.fn()}
         systemNotifications={{ ...system, supported: false, permission: "unsupported", error: true }}
       />,
@@ -120,7 +109,7 @@ describe("PrivacyPane", () => {
   it("writes each privacy switch under its own key", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
-    render(<PrivacyPane preferences={preferences} supported onChange={onChange} />);
+    render(<PrivacyPane preferences={preferences} onChange={onChange} />);
 
     await user.click(screen.getByRole("button", { name: "Wiadomości prywatne od osób z serwera" }));
     await user.click(screen.getByRole("button", { name: "Zaproszenia do znajomych" }));
@@ -130,19 +119,13 @@ describe("PrivacyPane", () => {
     expect(onChange).toHaveBeenNthCalledWith(2, { allowFriendRequests: true });
     expect(onChange).toHaveBeenNthCalledWith(3, { showPresence: false });
   });
-
-  it("says so once when the settings are not persisted", () => {
-    render(<PrivacyPane preferences={preferences} supported={false} onChange={vi.fn()} />);
-
-    expect(screen.getAllByText(/nie mają jeszcze swojej tabeli/)).toHaveLength(1);
-  });
 });
 
 describe("AdvancedPane", () => {
   it("writes developer mode and reduced motion", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
-    render(<AdvancedPane preferences={preferences} supported onChange={onChange} />);
+    render(<AdvancedPane preferences={preferences} onChange={onChange} />);
 
     await user.click(screen.getByRole("button", { name: "Tryb dewelopera" }));
     await user.click(screen.getByRole("button", { name: "Ogranicz animacje" }));
@@ -152,18 +135,17 @@ describe("AdvancedPane", () => {
   });
 
   it("leaves out system startup unless the desktop client supplies it", () => {
-    render(<AdvancedPane preferences={preferences} supported onChange={vi.fn()} />);
+    render(<AdvancedPane preferences={preferences} onChange={vi.fn()} />);
 
     expect(screen.queryByRole("button", { name: "Uruchamiaj Stellarr wraz z systemem" })).toBeNull();
   });
 
-  it("toggles system startup even while stored preferences are read-only", async () => {
+  it("toggles system startup", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
     render(
       <AdvancedPane
         preferences={preferences}
-        supported={false}
         onChange={vi.fn()}
         startup={{ enabled: false, pending: false, error: false, onChange }}
       />,
@@ -172,14 +154,12 @@ describe("AdvancedPane", () => {
     await user.click(screen.getByRole("button", { name: "Uruchamiaj Stellarr wraz z systemem" }));
 
     expect(onChange).toHaveBeenCalledExactlyOnceWith(true);
-    expect(screen.getByRole("button", { name: "Tryb dewelopera" })).toBeDisabled();
   });
 
   it("blocks the startup switch while a change is pending and reports a failure", () => {
     render(
       <AdvancedPane
         preferences={preferences}
-        supported
         onChange={vi.fn()}
         startup={{ enabled: true, pending: true, error: true, onChange: vi.fn() }}
       />,

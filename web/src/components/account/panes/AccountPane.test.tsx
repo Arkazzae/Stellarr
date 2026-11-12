@@ -18,8 +18,6 @@ describe("AccountPane", () => {
     render(
       <AccountPane
         account={account}
-        profileSupported
-        uploadsSupported
         onSave={vi.fn()}
         onPickImage={vi.fn()}
         onRemoveImage={vi.fn()}

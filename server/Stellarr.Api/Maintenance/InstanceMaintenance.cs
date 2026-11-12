@@ -65,7 +65,30 @@ public sealed class InstanceMaintenance(
             Cutoff(utcNow, settings.LogRetentionDays),
             "log");
 
+        await CleanupExpiredSecurityAsync(utcNow, cancellationToken);
+
         return new MaintenanceResult(true, orphans, backups, logs, await PendingDeletionsAsync(cancellationToken));
+    }
+
+    /// <summary>
+    /// Short-lived authentication records are deleted once they are well past
+    /// use; the durable security history stays account-global.
+    /// </summary>
+    private async Task CleanupExpiredSecurityAsync(DateTime utcNow, CancellationToken cancellationToken)
+    {
+        var ephemeral = utcNow.AddDays(-1);
+        await db.AuthChallenges.Where(x => x.ExpiresAt < ephemeral).ExecuteDeleteAsync(cancellationToken);
+        await db.EmailOtpCodes.Where(x => x.ExpiresAt < ephemeral).ExecuteDeleteAsync(cancellationToken);
+        await db.CliRecoveryCredentials.Where(x => x.ExpiresAt < ephemeral).ExecuteDeleteAsync(cancellationToken);
+
+        var oldDevices = utcNow.AddDays(-30);
+        await db.TrustedDevices.Where(x => x.ExpiresAt < oldDevices).ExecuteDeleteAsync(cancellationToken);
+        await db.RecoveryCodes
+            .Where(x => x.UsedAt != null && x.UsedAt < oldDevices)
+            .ExecuteDeleteAsync(cancellationToken);
+        await db.SecurityNotifications
+            .Where(x => x.SentAt != null && x.SentAt < oldDevices)
+            .ExecuteDeleteAsync(cancellationToken);
     }
 
     private static DateTime Cutoff(DateTime utcNow, int retentionDays) =>

@@ -1,5 +1,6 @@
 import { expectArray } from "../expect";
-import { fail, JSON_HEADERS, readJson, request } from "../transport";
+import { ApiError, statusToKind } from "../errors";
+import { fail, JSON_HEADERS, problemCode, readJson, request } from "../transport";
 
 /**
  * The few shapes every HTTP call of the client comes down to, so the request
@@ -54,8 +55,20 @@ async function succeed(
   signal?: AbortSignal,
 ): Promise<Response> {
   const response = await request(path, init, signal);
-  if (!response.ok) fail(response, path);
+  if (!response.ok) await refuse(response, path);
   return response;
+}
+
+/**
+ * Throws for a failed response. A refusal can say why, such as a second
+ * step that is not fresh enough, and the error then carries that code.
+ */
+async function refuse(response: Response, path: string): Promise<never> {
+  const code = response.status === 403 ? await problemCode(response) : null;
+  if (code !== null) {
+    throw new ApiError(statusToKind(403), `${path} responded 403`, 403, { code });
+  }
+  fail(response, path);
 }
 
 export async function getJson<T>(
@@ -95,7 +108,7 @@ export async function sendVoid(
  */
 export async function deleteResource(path: string, signal?: AbortSignal): Promise<void> {
   const response = await request(path, jsonInit("DELETE", undefined), signal);
-  if (!response.ok && response.status !== 404) fail(response, path);
+  if (!response.ok && response.status !== 404) await refuse(response, path);
 }
 
 /**

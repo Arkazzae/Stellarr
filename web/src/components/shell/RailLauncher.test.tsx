@@ -22,7 +22,7 @@ describe("RailLauncher", () => {
   it("names a row after its label and hint, and disables one with nothing behind it", () => {
     render(<RailLauncher items={items} />);
 
-    expect(screen.getByRole("button", { name: "Dodaj — Nowa rzecz", hidden: true })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Dodaj. Nowa rzecz", hidden: true })).toBeEnabled();
     expect(screen.getByRole("button", { name: "Szukaj", hidden: true })).toBeDisabled();
   });
 
@@ -41,7 +41,7 @@ describe("RailLauncher", () => {
 
     // The card's rows come before the tile in the tab order.
     await user.tab({ shift: true });
-    expect(screen.getByRole("button", { name: "Dodaj — Nowa rzecz" })).toHaveFocus();
+    expect(screen.getByRole("button", { name: "Dodaj. Nowa rzecz" })).toHaveFocus();
     expect(tile()).toHaveAttribute("aria-expanded", "true");
 
     await user.keyboard("{Escape}");
@@ -116,7 +116,7 @@ describe("RailLauncher", () => {
     render(<RailLauncher items={items} />);
 
     await user.click(tile());
-    await user.click(screen.getByRole("button", { name: "Dodaj — Nowa rzecz" }));
+    await user.click(screen.getByRole("button", { name: "Dodaj. Nowa rzecz" }));
 
     expect(onSelect).toHaveBeenCalledOnce();
     expect(tile()).toHaveAttribute("aria-expanded", "false");

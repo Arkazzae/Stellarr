@@ -297,9 +297,24 @@ internal static class ConfigCommands
         {
             SettingKind.Boolean => SettingsCatalog.ParseBoolean(value) ? "true" : "false",
             SettingKind.Integer => SettingsCatalog.ParseInteger(value).ToString(CultureInfo.InvariantCulture),
+            SettingKind.MfaRequirement => NormalizeMfaRequirement(value),
             SettingKind.TimeZone or SettingKind.MailAddress or SettingKind.SmtpSecurity or SettingKind.Text => value,
             _ => value,
         };
+    }
+
+    private static string NormalizeMfaRequirement(string value)
+    {
+        var normalized = value.Trim().ToLowerInvariant();
+        if (!MfaRequirements.IsKnown(normalized))
+        {
+            throw new CliException(
+                "invalid_value",
+                $"'{value}' is not an MFA requirement. Use optional, admins, everyone or cockpit.",
+                CliExit.Usage);
+        }
+
+        return normalized;
     }
 
     private static CliException InvalidSettings(Dictionary<string, string[]> problems) => new(

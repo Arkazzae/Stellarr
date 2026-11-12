@@ -243,6 +243,27 @@ export interface CockpitBackups {
 
 export type CockpitBackupChoice = Record<CockpitBackupPart, boolean>;
 
+/** An account's security as the owner sees it in Cockpit: metadata only, never a secret. */
+export interface CockpitUserSecurity {
+  userId: string;
+  /** An operator's recovery is waiting for the account to set up a new method. */
+  recoveryRequired: boolean;
+  methods: { id: string; type: string; name: string; confirmed: boolean; createdAt: string; lastUsedAt: string | null }[];
+  remainingRecoveryCodes: number;
+  trustedDevices: number;
+  identities: { id: string; name: string; issuer: string; createdAt: string }[];
+  events: { kind: string; ipAddress: string; createdAt: string }[];
+}
+
+/** What a recovery ended, and the credential to pass on once. */
+export interface CockpitRecovery {
+  credential: string;
+  expiresAt: string;
+  methodsRevoked: number;
+  trustedDevicesRevoked: number;
+  sessionsRevoked: number;
+}
+
 export type CockpitSecretName = "mail.resend-api-key" | "mail.smtp-password" | "giphy.api-key";
 
 /**
@@ -262,7 +283,27 @@ export interface CockpitSecret {
 /** An integration switch the operator flipped; one left out stays as stored. */
 export type CockpitIntegrationSwitches = Partial<Pick<CockpitSettings, "resendEnabled" | "giphyEnabled">>;
 
+export type CockpitSecurityKey =
+  | "mfaRequirement"
+  | "trustedDeviceDays"
+  | "authChallengeMinutes"
+  | "emailCodeMinutes"
+  | "emailCodeCooldownSeconds"
+  | "emailCodeMaxAttempts"
+  | "emailCodeSendsPerHour"
+  | "cliRecoveryMinutes";
+
+/** A sign-in security setting the operator changed; one left out stays as stored. */
+export type CockpitSecurityChanges = Partial<Pick<CockpitSettings, CockpitSecurityKey>>;
+
 export type CockpitSmtpSecurity = "starttls" | "tls" | "none";
+
+/**
+ * Who has to confirm sign-in with a second factor. Anything but `optional`
+ * also lets only a session confirmed with an actual second factor into
+ * Cockpit; a trusted device is not enough there.
+ */
+export type CockpitMfaRequirement = "optional" | "admins" | "everyone" | "cockpit";
 
 export interface CockpitSettings {
   instanceName: string;
@@ -293,12 +334,27 @@ export interface CockpitSettings {
   orphanObjectRetentionDays: number;
   automaticCleanupEnabled: boolean;
   updatedAt: string;
+  mfaRequirement: CockpitMfaRequirement;
+  /** How long a device remembered at sign-in skips the second factor. */
+  trustedDeviceDays: number;
+  /** How long a sign-in waits for its second factor. */
+  authChallengeMinutes: number;
+  emailCodeMinutes: number;
+  /** The wait before another email code can be sent; 0 means none. */
+  emailCodeCooldownSeconds: number;
+  /** Wrong entries one email code allows. */
+  emailCodeMaxAttempts: number;
+  emailCodeSendsPerHour: number;
+  /** How long a recovery credential printed by the operator CLI works. */
+  cliRecoveryMinutes: number;
 }
 
 interface ProblemDetails {
   title?: string;
   detail?: string;
   errors?: Record<string, string[]>;
+  /** The reason in a form code can test, which some refusals carry next to their text. */
+  code?: unknown;
 }
 
 export class CockpitApiError extends Error {
@@ -306,10 +362,51 @@ export class CockpitApiError extends Error {
     readonly status: number,
     message: string,
     readonly errors: Record<string, string[]> = {},
+    /** The problem's `code` when the server names the reason, null otherwise. */
+    readonly code: string | null = null,
   ) {
     super(message);
     this.name = "CockpitApiError";
   }
+}
+
+/** The code of a 403 that refuses the owner only because the session has not completed a second step. */
+export const COCKPIT_MFA_REQUIRED = "cockpit-mfa-required";
+
+/** The code of a 403 that wants a second step from the last few minutes before a sensitive change. */
+export const FRESH_SECOND_STEP_REQUIRED = "fresh-mfa-required";
+
+const freshSecondStepListeners = new Set<() => void>();
+
+/**
+ * Called whenever the server refuses a change for want of a fresh second
+ * step, so one dialog can offer to confirm it, whichever page asked.
+ */
+export function onFreshSecondStepRequired(listener: () => void): () => void {
+  freshSecondStepListeners.add(listener);
+  return () => {
+    freshSecondStepListeners.delete(listener);
+  };
+}
+
+/**
+ * What a sign-in answers instead of a user when the password is not enough:
+ * a second step, a first method to set up, or an account recovery. The web
+ * client's sign-in page finishes all three.
+ */
+export type CockpitLoginStep = "mfa_required" | "mfa_enrollment_required" | "security_recovery_required";
+
+const LOGIN_STEPS: readonly CockpitLoginStep[] = [
+  "mfa_required",
+  "mfa_enrollment_required",
+  "security_recovery_required",
+];
+
+/** The step a sign-in answer still asks for, or null when the answer is the signed-in user. */
+export function pendingLoginStep(answer: unknown): CockpitLoginStep | null {
+  if (typeof answer !== "object" || answer === null || !("status" in answer)) return null;
+  const { status } = answer;
+  return LOGIN_STEPS.find((step) => step === status) ?? null;
 }
 
 /**
@@ -362,11 +459,16 @@ async function request<T>(
 
   if (!response.ok) {
     const problem = await readProblem(response);
-    throw new CockpitApiError(
+    const error = new CockpitApiError(
       response.status,
       problem.detail ?? problem.title ?? t("api.status", { status: response.status }),
       problem.errors ?? {},
+      typeof problem.code === "string" ? problem.code : null,
     );
+    if (error.code === FRESH_SECOND_STEP_REQUIRED) {
+      for (const listener of freshSecondStepListeners) listener();
+    }
+    throw error;
   }
 
   if (response.status === 204) return undefined as T;
@@ -388,6 +490,20 @@ export const cockpitApi = {
     request<void>(`/api/cockpit/users/${segment(userId)}/role`, { method: "PATCH", body: { roleId } }, signal),
   setUserDisabled: (userId: string, disabled: boolean, signal?: AbortSignal) =>
     request<void>(`/api/cockpit/users/${segment(userId)}/status`, { method: "PATCH", body: { disabled } }, signal),
+  userSecurity: (userId: string, signal?: AbortSignal) =>
+    request<CockpitUserSecurity>(`/api/cockpit/users/${segment(userId)}/security`, {}, signal),
+  recoverUser: (userId: string, reason: string, signal?: AbortSignal) =>
+    request<CockpitRecovery>(
+      `/api/cockpit/users/${segment(userId)}/security/recover`,
+      { method: "POST", body: { reason } },
+      signal,
+    ),
+  unlinkUserIdentity: (userId: string, identityId: string, signal?: AbortSignal) =>
+    request<void>(
+      `/api/cockpit/users/${segment(userId)}/identities/${segment(identityId)}/remove`,
+      { method: "POST" },
+      signal,
+    ),
 
   createRole: (input: { name: string; color: string; permissions: string[] }, signal?: AbortSignal) =>
     request<CockpitRole>("/api/cockpit/roles", { method: "POST", body: input }, signal),
@@ -428,6 +544,9 @@ export const cockpitApi = {
   verifyBackup: (backupId: string, signal?: AbortSignal) =>
     request<CockpitBackup>(`/api/cockpit/backups/${segment(backupId)}/verify`, { method: "POST" }, signal),
   backupDownloadUrl: (backupId: string) => `/api/cockpit/backups/${segment(backupId)}/download`,
+  /** Resolves when this session may make a sensitive change now; a refusal opens the confirmation. */
+  checkFreshSecondStep: (signal?: AbortSignal) =>
+    request<void>("/api/cockpit/fresh-second-step", {}, signal),
 
   settings: (signal?: AbortSignal) => request<CockpitSettings>("/api/cockpit/settings", {}, signal),
   // The server owns publicUrl (it comes from the environment), mailProvider,
@@ -436,7 +555,13 @@ export const cockpitApi = {
   // The integration switches go only when the operator flips one. The settings
   // carry their effective state, and sending that back would turn "never
   // chosen" (on as soon as a key exists) into an explicit "off".
-  updateSettings: (settings: CockpitSettings, switches: CockpitIntegrationSwitches = {}, signal?: AbortSignal) =>
+  // The sign-in security settings go only when the operator changed one, so a
+  // save of the other settings leaves them as they are stored.
+  updateSettings: (
+    settings: CockpitSettings,
+    changes: CockpitIntegrationSwitches & CockpitSecurityChanges = {},
+    signal?: AbortSignal,
+  ) =>
     request<CockpitSettings>(
       "/api/cockpit/settings",
       {
@@ -457,7 +582,7 @@ export const cockpitApi = {
           smtpPort: settings.smtpPort,
           smtpSecurity: settings.smtpSecurity,
           smtpUsername: settings.smtpUsername,
-          ...switches,
+          ...changes,
         },
       },
       signal,
@@ -476,7 +601,15 @@ export const cockpitApi = {
 
   requestPasswordReset: (email: string, signal?: AbortSignal) =>
     request<void>("/api/auth/password/forgot", { method: "POST", body: { email } }, signal),
-  login: (username: string, password: string, signal?: AbortSignal) =>
-    request<unknown>("/api/auth/login", { method: "POST", body: { username, password } }, signal),
+  /** Resolves to null once signed in, or to the step the web client's sign-in page has to finish. */
+  /** `keepSignedIn` false asks for a session that ends with the browser. */
+  login: async (username: string, password: string, keepSignedIn = true, signal?: AbortSignal) =>
+    pendingLoginStep(
+      await request<unknown>(
+        "/api/auth/login",
+        { method: "POST", body: { username, password, ...(keepSignedIn ? {} : { keepSignedIn: false }) } },
+        signal,
+      ),
+    ),
   logout: (signal?: AbortSignal) => request<void>("/api/auth/logout", { method: "POST" }, signal),
 };

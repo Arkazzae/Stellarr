@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { t } from "@/i18n";
-import { CockpitApiError, cockpitApi, type CockpitBootstrap } from "@/lib/api";
+import { COCKPIT_MFA_REQUIRED, CockpitApiError, cockpitApi, type CockpitBootstrap } from "@/lib/api";
+import { leaveFor, webSignInUrl } from "@/lib/web-sign-in";
 import { CockpitContext, type CockpitContextValue, type CockpitPhase } from "@/state/cockpit-context";
 
 interface Session {
@@ -13,11 +14,15 @@ interface Session {
 const LOADING: Session = { phase: "loading", bootstrap: null, error: null };
 const ANONYMOUS: Session = { phase: "anonymous", bootstrap: null, error: null };
 
-/** A 401 means nobody is signed in, a 403 that the account is not the owner. */
+/**
+ * A 401 means nobody is signed in, a 403 that the account is not the owner,
+ * unless its code says the owner's session only lacks the second step.
+ */
 function sessionAfterFailure(cause: unknown): Session {
   if (cause instanceof CockpitApiError && cause.status === 401) return ANONYMOUS;
   if (cause instanceof CockpitApiError && cause.status === 403) {
-    return { phase: "forbidden", bootstrap: null, error: null };
+    const phase = cause.code === COCKPIT_MFA_REQUIRED ? "mfa-required" : "forbidden";
+    return { phase, bootstrap: null, error: null };
   }
   return {
     phase: "error",
@@ -63,8 +68,13 @@ export function CockpitProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(
-    async (username: string, password: string) => {
-      await cockpitApi.login(username, password);
+    async (username: string, password: string, keepSignedIn = true) => {
+      const step = await cockpitApi.login(username, password, keepSignedIn);
+      if (step !== null) {
+        // No session yet: the web client's sign-in page finishes the step and comes back.
+        leaveFor(webSignInUrl(step, keepSignedIn));
+        return;
+      }
       setSession(LOADING);
       await load();
     },

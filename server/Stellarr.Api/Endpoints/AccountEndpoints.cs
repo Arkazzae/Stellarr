@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Stellarr.Api.Auth;
+using Stellarr.Api.Auth.Security;
 using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
 using Stellarr.Api.Domain;
@@ -231,6 +232,13 @@ public static class AccountEndpoints
         }
 
         var user = await FindCurrentAsync(principal, db, cancellationToken);
+        // Checked before the password, so a stolen session cannot use this
+        // form to try passwords on an account that has a second step.
+        if (!await MfaPolicy.HasFreshSecondStepAsync(db, user.Id, principal.FindSessionId(), cancellationToken))
+        {
+            return Outcome("second-step-required");
+        }
+
         if (request.CurrentPassword is null || !passwords.Verify(request.CurrentPassword, user.PasswordHash))
         {
             return Outcome("wrong-current");
@@ -254,8 +262,27 @@ public static class AccountEndpoints
         await db.UserSessions
             .Where(x => x.UserId == user.Id && x.Id != currentSessionId && x.RevokedAt == null)
             .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.RevokedAt, now), cancellationToken);
+        await db.TrustedDevices
+            .Where(x => x.UserId == user.Id && x.RevokedAt == null)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.RevokedAt, now), cancellationToken);
+        await db.DesktopBrowserLogins
+            .Where(x => x.UserId == user.Id && x.ApprovedAt != null && x.RedeemedAt == null)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.RedeemedAt, now), cancellationToken);
+        await db.UserSessions
+            .Where(x => x.Id == currentSessionId)
+            .ExecuteUpdateAsync(
+                setters => setters.SetProperty(x => x.SecurityVersion, user.SessionVersion),
+                cancellationToken);
+        SecurityEvents.Record(
+            db, user.Id, SecurityEventKinds.PasswordChanged, context, "password changed",
+            await SecurityEvents.VerifiedEmailAsync(db, user.Id, cancellationToken));
+        await db.SaveChangesAsync(cancellationToken);
         // This request's own cookie carries the old version.
-        await SessionAuthentication.SignInAsync(context, user, currentSessionId);
+        var shortLived = await db.UserSessions.AsNoTracking()
+            .Where(x => x.Id == currentSessionId)
+            .Select(x => x.ShortLived)
+            .SingleAsync(cancellationToken);
+        await SessionAuthentication.SignInAsync(context, user, currentSessionId, shortLived);
         return Outcome("changed");
     }
 

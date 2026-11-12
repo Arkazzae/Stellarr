@@ -18,8 +18,6 @@ import { VoiceSection } from "./VoiceFields";
 
 export interface PreferencePaneProps {
   preferences: UserPreferences;
-  /** False while the backend cannot store preferences: the switches stay read-only. */
-  supported: boolean;
   onChange: (patch: Partial<UserPreferences>) => void;
 }
 
@@ -46,7 +44,7 @@ interface PreferenceRowProps {
   /** Why the last change did not take. */
   error?: string | null;
   checked: boolean;
-  disabled: boolean;
+  disabled?: boolean;
   onChange: (checked: boolean) => void;
 }
 
@@ -73,14 +71,8 @@ function SwitchCard({ title, icon, children }: { title: string; icon: IconName; 
   );
 }
 
-function UnsavedNote({ supported }: { supported: boolean }) {
-  const { t } = useLanguage();
-  return supported ? null : <p className="set-note">{t("preference.unsaved")}</p>;
-}
-
 export function UserNotificationsPane({
   preferences,
-  supported,
   onChange,
   systemNotifications,
 }: PreferencePaneProps & { systemNotifications?: SystemNotificationPreferenceProps }) {
@@ -95,7 +87,6 @@ export function UserNotificationsPane({
 
   return (
     <>
-      <UnsavedNote supported={supported} />
       <SwitchCard title={t("preference.notifications")} icon="bell">
         {systemNotifications === undefined ? null : (
           <PreferenceRow
@@ -105,7 +96,7 @@ export function UserNotificationsPane({
             checked={
               systemNotifications.permission === "granted" && preferences.desktopNotifications
             }
-            disabled={!supported || !systemNotifications.supported || systemNotifications.pending}
+            disabled={!systemNotifications.supported || systemNotifications.pending}
             onChange={systemNotifications.onChange}
           />
         )}
@@ -113,7 +104,6 @@ export function UserNotificationsPane({
           label={t("preference.messageSound")}
           detail={t("preference.messageSoundDetail")}
           checked={preferences.messageSound}
-          disabled={!supported}
           onChange={(messageSound) => onChange({ messageSound })}
         />
         {/* One switch covers both halves of a comings-and-goings sound: the
@@ -123,7 +113,6 @@ export function UserNotificationsPane({
           label={t("preference.joinLeaveSound")}
           detail={t("preference.joinLeaveSoundDetail")}
           checked={preferences.joinLeaveSound}
-          disabled={!supported}
           onChange={(joinLeaveSound) => onChange({ joinLeaveSound })}
         />
       </SwitchCard>
@@ -131,11 +120,10 @@ export function UserNotificationsPane({
   );
 }
 
-export function PrivacyPane({ preferences, supported, onChange }: PreferencePaneProps) {
+export function PrivacyPane({ preferences, onChange }: PreferencePaneProps) {
   const { t } = useLanguage();
   return (
     <>
-      <UnsavedNote supported={supported} />
       <SwitchCard title={t("preference.privacySecurity")} icon="shield">
         {/* The details say what turning a switch off takes away, because the
             off side is the one with consequences. */}
@@ -143,21 +131,18 @@ export function PrivacyPane({ preferences, supported, onChange }: PreferencePane
           label={t("preference.directMessages")}
           detail={t("preference.directMessagesDetail")}
           checked={preferences.allowDirectMessages}
-          disabled={!supported}
           onChange={(allowDirectMessages) => onChange({ allowDirectMessages })}
         />
         <PreferenceRow
           label={t("preference.friendRequests")}
           detail={t("preference.friendRequestsDetail")}
           checked={preferences.allowFriendRequests}
-          disabled={!supported}
           onChange={(allowFriendRequests) => onChange({ allowFriendRequests })}
         />
         <PreferenceRow
           label={t("preference.showPresence")}
           detail={t("preference.showPresenceDetail")}
           checked={preferences.showPresence}
-          disabled={!supported}
           onChange={(showPresence) => onChange({ showPresence })}
         />
       </SwitchCard>
@@ -167,7 +152,6 @@ export function PrivacyPane({ preferences, supported, onChange }: PreferencePane
 
 export function AdvancedPane({
   preferences,
-  supported,
   onChange,
   startup,
 }: PreferencePaneProps & { startup?: StartupPreferenceProps }) {
@@ -176,7 +160,7 @@ export function AdvancedPane({
     <>
       {startup === undefined ? null : (
         // Autostart lives in the operating system, not in the stored
-        // preferences, so it works even when those are read-only.
+        // preferences.
         <SwitchCard title={t("preference.system")} icon="gear">
           <PreferenceRow
             label={t("preference.startup")}
@@ -188,20 +172,17 @@ export function AdvancedPane({
           />
         </SwitchCard>
       )}
-      <UnsavedNote supported={supported} />
       <SwitchCard title={t("preference.advanced")} icon="sliders">
         <PreferenceRow
           label={t("preference.developerMode")}
           detail={t("preference.developerModeDetail")}
           checked={preferences.developerMode}
-          disabled={!supported}
           onChange={(developerMode) => onChange({ developerMode })}
         />
         <PreferenceRow
           label={t("preference.reducedMotion")}
           detail={t("preference.reducedMotionDetail")}
           checked={preferences.reducedMotion}
-          disabled={!supported}
           onChange={(reducedMotion) => onChange({ reducedMotion })}
         />
       </SwitchCard>

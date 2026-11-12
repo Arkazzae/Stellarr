@@ -127,7 +127,7 @@ export function RailLauncher({ items, label }: RailLauncherProps) {
       <div className="srv-menu" id={menuId} hidden={!open}>
         {items.map((item, index) => {
           // The tile shows only an icon, so the name carries the hint.
-          const name = item.hint === undefined ? item.label : `${item.label} — ${item.hint}`;
+          const name = item.hint === undefined ? item.label : `${item.label}. ${item.hint}`;
           return (
             <button
               key={item.key}

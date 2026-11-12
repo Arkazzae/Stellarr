@@ -4,6 +4,21 @@ using Stellarr.Api.Domain;
 
 namespace Stellarr.Api.Data.Configurations;
 
+internal sealed class EmailChangeRequestConfiguration : IEntityTypeConfiguration<EmailChangeRequest>
+{
+    public void Configure(EntityTypeBuilder<EmailChangeRequest> entity)
+    {
+        entity.HasKey(x => x.Id);
+        entity.HasIndex(x => x.TokenHash).IsUnique();
+        entity.HasIndex(x => new { x.UserId, x.ExpiresAt });
+        entity.Property(x => x.NewEmail).HasMaxLength(320);
+        entity.Property(x => x.NormalizedNewEmail).HasMaxLength(320);
+        entity.Property(x => x.TokenHash).HasMaxLength(64);
+        entity.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
 internal sealed class PasswordResetTokenConfiguration : IEntityTypeConfiguration<PasswordResetToken>
 {
     public void Configure(EntityTypeBuilder<PasswordResetToken> entity)
@@ -26,6 +41,7 @@ internal sealed class ExternalIdentityConfiguration : IEntityTypeConfiguration<E
         entity.HasIndex(x => new { x.UserId, x.Issuer }).IsUnique();
         entity.Property(x => x.Issuer).HasMaxLength(512);
         entity.Property(x => x.Subject).HasMaxLength(255);
+        entity.Property(x => x.ProviderId).HasMaxLength(32);
         entity.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId)
             .OnDelete(DeleteBehavior.Cascade);
     }
@@ -39,6 +55,8 @@ internal sealed class UserSessionConfiguration : IEntityTypeConfiguration<UserSe
         entity.HasIndex(x => new { x.UserId, x.LastSeenAt });
         entity.Property(x => x.Device).HasMaxLength(300);
         entity.Property(x => x.IpAddress).HasMaxLength(64);
+        entity.Property(x => x.PrimarySource).HasMaxLength(32).HasDefaultValue("password");
+        entity.Property(x => x.MfaEvidence).HasMaxLength(32);
         entity.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId)
             .OnDelete(DeleteBehavior.Cascade);
     }
@@ -51,6 +69,9 @@ internal sealed class DesktopBrowserLoginConfiguration : IEntityTypeConfiguratio
         entity.HasKey(x => x.Id);
         entity.HasIndex(x => x.ExpiresAt);
         entity.Property(x => x.SecretHash).HasMaxLength(64);
+        entity.Property(x => x.ApprovalTokenHash).HasMaxLength(64);
+        entity.Property(x => x.PrimarySource).HasMaxLength(32);
+        entity.Property(x => x.MfaEvidence).HasMaxLength(32);
         entity.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId)
             .OnDelete(DeleteBehavior.Cascade);
     }

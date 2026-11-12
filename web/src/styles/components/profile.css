@@ -131,7 +131,7 @@
   }
 
   .mp-name {
-    font-size: 21px;
+    font-size: var(--text-20);
     font-weight: 700;
     line-height: 1.2;
     overflow-wrap: anywhere;
@@ -142,7 +142,7 @@
     align-items: baseline;
     flex-wrap: wrap;
     gap: 8px;
-    font-size: 13.5px;
+    font-size: var(--text-14);
     color: var(--text-muted);
     line-height: 1.4;
     overflow-wrap: anywhere;
@@ -162,7 +162,7 @@
   .mp-status,
   .mp-bio {
     padding: 8px 16px 0;
-    font-size: 13.5px;
+    font-size: var(--text-14);
     line-height: 1.5;
     /* Their own words, so they may be selected and copied like message text. */
     -webkit-user-select: text;
@@ -231,7 +231,7 @@
   }
 
   .mp-cap {
-    font-size: 10.5px;
+    font-size: var(--text-11);
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.08em;
@@ -243,7 +243,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 13px;
+    font-size: var(--text-13);
     color: var(--text-muted);
     line-height: 1.4;
   }
@@ -267,7 +267,7 @@
     padding: 0 6px;
     border-radius: 999px;
     background: var(--surface-dark);
-    font-size: 9.5px;
+    font-size: var(--text-10);
     font-weight: 650;
     line-height: 1;
     letter-spacing: 0.04em;
@@ -284,7 +284,7 @@
   .mp-note {
     flex: 1;
     min-width: 0;
-    font-size: 12.5px;
+    font-size: var(--text-13);
     line-height: 1.45;
     color: var(--text-faint);
   }
@@ -312,7 +312,7 @@
     background: none;
     border: none;
     outline: none;
-    font-size: 13px;
+    font-size: var(--text-13);
     color: var(--text);
   }
 
@@ -363,7 +363,7 @@
     cursor: pointer;
     border-radius: var(--radius-sm);
     padding: 0;
-    font-size: 15px;
+    font-size: var(--text-15);
     font-weight: 600;
   }
 
@@ -406,7 +406,7 @@
     }
 
     .mp-send input {
-      font-size: 16px;
+      font-size: var(--text-16);
     }
 
     .mp-send-go {
@@ -430,7 +430,7 @@
     }
 
     .mp-send input {
-      font-size: 16px;
+      font-size: var(--text-16);
     }
   }
 }

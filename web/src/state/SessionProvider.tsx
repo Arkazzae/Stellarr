@@ -13,7 +13,7 @@ import {
 } from "react";
 
 import type { MessageKey, Translator } from "@/i18n";
-import type { Account, ConnectionStatus, Presence, User } from "@/ports";
+import type { Account, AuthResult, ConnectionStatus, Presence, User } from "@/ports";
 
 import { useLanguage } from "./LanguageProvider";
 import { usePorts, useRuntime } from "./PortsProvider";
@@ -38,11 +38,14 @@ export interface SessionValue {
    */
   presence: Presence;
   setPresence: (presence: Presence) => void;
-  /** Whether the active transport accepts and broadcasts a chosen status. */
-  presenceSupported: boolean;
   /** Retries the bootstrap. */
   reload: () => void;
-  login: (username: string, password: string) => Promise<boolean>;
+  /**
+   * The first step of a sign-in. The app boots only when that was enough;
+   * a challenge or a pending recovery is handed back for the sign-in page to
+   * finish, and null means the attempt failed and `loginError` says why.
+   */
+  login: (username: string, password: string, keepSignedIn?: boolean) => Promise<AuthResult | null>;
   loginPending: boolean;
   loginError: string | null;
   logout: () => Promise<void>;
@@ -250,26 +253,55 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [ports, signedIn, connection, presence]);
 
   const login = useCallback(
-    async (username: string, password: string) => {
+    async (username: string, password: string, keepSignedIn = true) => {
       setLoginPending(true);
       setLoginError(null);
       try {
-        await ports.session.login({ username, password });
-        reload();
-        return true;
+        const result = await ports.session.login({
+          username,
+          password,
+          ...(keepSignedIn ? {} : { keepSignedIn: false }),
+        });
+        // A second factor is still due: nothing may boot, open the hub or
+        // join voice until the challenge is answered.
+        if (result.kind === "signed-in") reload();
+        return result;
       } catch (cause) {
         setLoginError(
           isUnauthorized(cause)
             ? t("session.loginInvalid")
             : messageFor(cause, t, "session.loginFailed"),
         );
-        return false;
+        return null;
       } finally {
         setLoginPending(false);
       }
     },
     [ports, t],
   );
+
+  // A dropped hub is usually a network blip, which the client rides out. It
+  // can also be the server ending this session: signed out on another
+  // device, by an operator, or by a security change. Asking once per drop
+  // tells the two apart; a session the server no longer knows stops the
+  // reconnecting and leaves for the sign-in page, which unmounts voice.
+  useEffect(() => {
+    if (!signedIn || (connection !== "reconnecting" && connection !== "disconnected")) return;
+    let active = true;
+    ports.session.check().then(
+      (alive) => {
+        if (!active || alive) return;
+        void runtime.realtime.stop().catch(() => undefined);
+        setLoginError(t("session.unauthorized"));
+        setBoot(ANONYMOUS);
+      },
+      // Unreachable is not signed out; the reconnect keeps trying.
+      () => undefined,
+    );
+    return () => {
+      active = false;
+    };
+  }, [connection, ports, runtime, signedIn, t]);
 
   const logout = useCallback(async () => {
     try {
@@ -291,7 +323,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       connection,
       presence,
       setPresence,
-      presenceSupported: true,
       reload,
       login,
       loginPending,

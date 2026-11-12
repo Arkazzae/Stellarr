@@ -69,7 +69,6 @@ export function ChannelSettingsDialog({ roles }: { roles: readonly Role[] }) {
       notificationMuted={
         channelId !== null && account.preferences.mutedChannelIds.includes(channelId)
       }
-      notificationSupported={account.supported.preferences}
       onNotificationMutedChange={setMuted}
       onSave={async (patch) => {
         if (channelId !== null) await admin.updateChannel(channelId, patch);

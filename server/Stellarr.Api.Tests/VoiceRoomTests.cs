@@ -4,7 +4,9 @@ using Microsoft.AspNetCore.Http.Connections;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Stellarr.Api.Data;
 using Stellarr.Api.Domain;
 using Stellarr.Api.Realtime;
@@ -310,6 +312,43 @@ public sealed partial class VoiceRoomTests
     /// Stands in for Stellarr Media, for a test that looks at what the API asks
     /// of it. Without one the application gets the factory's own.
     /// </param>
+    [Fact]
+    public async Task RevokingOneSessionClosesItsRealHubAndMediaButLeavesAnotherAccountActive()
+    {
+        var media = new FakeMediaServer();
+        await using var app = new VoiceApp(media);
+        await app.MediaReadyAsync();
+        var revoked = await app.ConnectAsync("maja");
+        var other = await app.ConnectAsync("ada");
+        await revoked.JoinAsync(Salon);
+        await other.JoinAsync(Salon);
+        var revokedMedia = await revoked.OpenMediaAsync(Salon);
+        var otherMedia = await other.OpenMediaAsync(Salon);
+        await FakeMediaServer.UntilAsync(
+            () => media.Sessions.Contains(revokedMedia) && media.Sessions.Contains(otherMedia));
+
+        var closed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        revoked.Connection.Closed += _ =>
+        {
+            closed.TrySetResult();
+            return Task.CompletedTask;
+        };
+        await app.RevokeSessionsAsync(revoked.Id);
+        await app.RunRevocationWatcherAsync();
+
+        await closed.Task.WaitAsync(Patience);
+        await FakeMediaServer.UntilAsync(() => !app.Presence.ConnectionIds(revoked.Id).Any());
+        await FakeMediaServer.UntilAsync(() => !media.Sessions.Contains(revokedMedia));
+        Assert.True(await other.Connection.InvokeAsync<long>("GetRtcClock") > 0);
+        Assert.Contains(otherMedia, media.Sessions);
+        Assert.Contains(
+            media.Requests,
+            request => request.Method == "DELETE" && request.Path.EndsWith($"/{revokedMedia}", StringComparison.Ordinal));
+        Assert.DoesNotContain(
+            revoked.Id,
+            app.Presence.VoiceUsers(TestData.VoiceChannelId).Select(x => x.UserId));
+    }
+
     private sealed class VoiceApp(FakeMediaServer? mediaServer = null) : IAsyncDisposable
     {
         private readonly StellarrWebApplicationFactory _factory = new(
@@ -351,6 +390,22 @@ public sealed partial class VoiceRoomTests
             _peers.Add(peer);
             await peer.StartAsync();
             return peer;
+        }
+
+        public async Task RevokeSessionsAsync(Guid userId)
+        {
+            await using var scope = _factory.OpenScope(out var db);
+            var now = DateTime.UtcNow;
+            await db.UserSessions.Where(x => x.UserId == userId && x.RevokedAt == null)
+                .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.RevokedAt, now));
+        }
+
+        public async Task RunRevocationWatcherAsync()
+        {
+            var watcher = _factory.Services.GetServices<IHostedService>()
+                .OfType<SessionRevocationWatcher>()
+                .Single();
+            await watcher.SweepAsync(DateTime.UtcNow, CancellationToken.None);
         }
 
         public void Seed(Action<AppDbContext> change)

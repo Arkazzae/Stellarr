@@ -11,7 +11,6 @@ import { identityVars } from "@/design/identity";
 import { formatFull } from "@/lib/format";
 import type {
   CustomEmoji,
-  MessageActionSupport,
   MessageReference,
   Reaction,
 } from "@/ports";
@@ -71,7 +70,6 @@ export interface MessageGroupVM {
 export interface MessageGroupProps extends MessageGroupVM {
   /** Jumps to the answered message; absent leaves the line inert. */
   onOpenReply?: (messageId: string) => void;
-  support?: MessageActionSupport;
   onReact?(messageId: string, emoji: string): void;
   onAction?(messageId: string, action: MessageAction): void;
   attachments?: AttachmentCallbacks;
@@ -173,7 +171,6 @@ export function MessageGroup({
   bodies,
   replyTo,
   onOpenReply,
-  support,
   onReact,
   onAction,
   attachments,
@@ -224,7 +221,6 @@ export function MessageGroup({
             own,
             canModerate,
             developerMode,
-            support,
             onAction: onAction && ((action) => onAction(menuBody.id, action)),
             confirm,
             t,
@@ -290,7 +286,6 @@ export function MessageGroup({
               <MessageToolbar
                 onReact={onReact && ((emoji) => onReact(body.id, emoji))}
                 onAction={onAction && ((action) => onAction(body.id, action))}
-                support={support}
                 customEmoji={customEmoji}
                 // A server notice belongs to nobody and is edited by nobody;
                 // moderating one would delete the record of what the server did.
@@ -328,7 +323,6 @@ export function MessageGroup({
                 <Reactions
                   reactions={body.reactions}
                   onToggle={onReact && ((emoji) => onReact(body.id, emoji))}
-                  disabled={support !== undefined && !support.reactions}
                   customEmoji={customEmoji}
                 />
               )}

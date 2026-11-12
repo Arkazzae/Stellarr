@@ -233,7 +233,15 @@ public sealed record CockpitSettingsDto(
     bool SmtpPasswordConfigured,
     bool MailReady,
     bool GiphyEnabled,
-    bool GiphyKeyConfigured);
+    bool GiphyKeyConfigured,
+    string MfaRequirement,
+    int TrustedDeviceDays,
+    int AuthChallengeMinutes,
+    int EmailCodeMinutes,
+    int EmailCodeCooldownSeconds,
+    int EmailCodeMaxAttempts,
+    int EmailCodeSendsPerHour,
+    int CliRecoveryMinutes);
 
 public sealed record CockpitDesktopReleaseDto(
     string MinimumVersion,
@@ -269,7 +277,15 @@ public sealed record UpdateCockpitSettingsRequest(
     string? SmtpSecurity = null,
     string? SmtpUsername = null,
     bool? ResendEnabled = null,
-    bool? GiphyEnabled = null);
+    bool? GiphyEnabled = null,
+    string? MfaRequirement = null,
+    int? TrustedDeviceDays = null,
+    int? AuthChallengeMinutes = null,
+    int? EmailCodeMinutes = null,
+    int? EmailCodeCooldownSeconds = null,
+    int? EmailCodeMaxAttempts = null,
+    int? EmailCodeSendsPerHour = null,
+    int? CliRecoveryMinutes = null);
 
 /// <summary>
 /// Whether a secret is set and where its value comes from: <c>panel</c>,
@@ -322,7 +338,15 @@ public static class CockpitContractMappings
         secrets.SmtpPassword.IsSet,
         transport.Ready,
         GiphyState.Resolve(settings, secrets).Enabled,
-        secrets.GiphyApiKey.IsSet);
+        secrets.GiphyApiKey.IsSet,
+        MfaRequirements.Normalize(settings.MfaRequirement),
+        settings.TrustedDeviceDays,
+        settings.AuthChallengeMinutes,
+        settings.EmailCodeMinutes,
+        settings.EmailCodeCooldownSeconds,
+        settings.EmailCodeMaxAttempts,
+        settings.EmailCodeSendsPerHour,
+        settings.CliRecoveryMinutes);
     }
 
     public static CockpitRoleDto ToCockpitDto(this ServerRole role, int memberCount) => new(

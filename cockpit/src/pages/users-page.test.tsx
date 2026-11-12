@@ -331,6 +331,7 @@ describe("UsersPage row menu", () => {
 
     const memberMenu = await menuOf("Ben Kowalski");
     expect(itemNames(memberMenu)).toEqual([
+      "Bezpieczeństwo konta",
       "Wyślij reset hasła",
       "Moderator",
       "Zastępca właściciela",
@@ -339,7 +340,7 @@ describe("UsersPage row menu", () => {
     await userEvent.keyboard("{Escape}");
 
     const ownerMenu = await menuOf("Ola Owner");
-    expect(itemNames(ownerMenu)).toEqual(["Wyślij reset hasła", "Wyłącz konto"]);
+    expect(itemNames(ownerMenu)).toEqual(["Bezpieczeństwo konta", "Wyślij reset hasła", "Wyłącz konto"]);
     expect(within(ownerMenu).queryByText("Zmień rolę")).toBeNull();
   });
 
@@ -356,7 +357,7 @@ describe("UsersPage row menu", () => {
 
     const menu = await menuOf("Dawid Zastępca");
 
-    expect(itemNames(menu)).toEqual(["Wyślij reset hasła", "Członek", "Moderator", "Wyłącz konto"]);
+    expect(itemNames(menu)).toEqual(["Bezpieczeństwo konta", "Wyślij reset hasła", "Członek", "Moderator", "Wyłącz konto"]);
     expect(isDisabled(within(menu).getByRole("menuitem", { name: "Wyłącz konto" }))).toBe(false);
   });
 
@@ -367,7 +368,7 @@ describe("UsersPage row menu", () => {
 
     const menu = await menuOf("Ewa Szef");
 
-    expect(itemNames(menu)).toEqual(["Wyślij reset hasła", "Wyłącz konto"]);
+    expect(itemNames(menu)).toEqual(["Bezpieczeństwo konta", "Wyślij reset hasła", "Wyłącz konto"]);
     expect(isDisabled(within(menu).getByRole("menuitem", { name: "Wyłącz konto" }))).toBe(true);
   });
 

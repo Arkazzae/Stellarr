@@ -51,6 +51,23 @@ describe("AppGate by phase", () => {
     expect(value.logout).toHaveBeenCalledOnce();
   });
 
+  it("sends an owner without the second step to confirm it in Stellarr with a full page load", () => {
+    renderGate(cockpitValue({ phase: "mfa-required", bootstrap: null }));
+
+    expect(screen.getByText("Cockpit wymaga drugiego kroku")).toBeTruthy();
+    expect(screen.getByText(/zaufane urządzenie tu nie wystarcza/)).toBeTruthy();
+    const link = screen.getByRole("link", { name: "Potwierdź drugim krokiem" });
+    expect(link.getAttribute("href")).toBe("/login?confirm=1&returnUrl=%2Fcockpit%2F");
+    expect(screen.queryByText("To konto nie jest właścicielem")).toBeNull();
+    expect(screen.queryByRole("button")).toBeNull();
+  });
+
+  it("does not offer the second step to an account that is not the owner", () => {
+    renderGate(cockpitValue({ phase: "forbidden", bootstrap: null }));
+
+    expect(screen.queryByRole("link", { name: "Potwierdź drugim krokiem" })).toBeNull();
+  });
+
   it("shows the error and retries through reload", async () => {
     const user = userEvent.setup();
     const value = cockpitValue({ phase: "error", bootstrap: null, error: "Backend odpowiedział kodem 500." });
@@ -79,9 +96,20 @@ describe("AppGate sign-in form", () => {
 
     await fillAndSubmit(user);
 
-    expect(value.login).toHaveBeenCalledWith("owner", "sekret");
+    expect(value.login).toHaveBeenCalledWith("owner", "sekret", true);
     const submit = screen.getByRole("button", { name: "Logowanie" });
     expect((submit as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("signs in for this browser only when the box is cleared", async () => {
+    const user = userEvent.setup();
+    const value = cockpitValue({ ...anonymous, login: vi.fn(() => new Promise<void>(() => {})) });
+    renderGate(value);
+
+    await user.click(screen.getByRole("checkbox", { name: "Nie wylogowuj mnie" }));
+    await fillAndSubmit(user);
+
+    expect(value.login).toHaveBeenCalledWith("owner", "sekret", false);
   });
 
   it("maps HTTP 429 to the too-many-attempts message and re-enables the button", async () => {

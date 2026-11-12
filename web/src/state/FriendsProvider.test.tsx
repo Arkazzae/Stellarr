@@ -75,7 +75,6 @@ function file(name: string): File {
 /** A port whose lists are stable and whose commands are spies. */
 function stubPort(overrides: Partial<FriendsPort> = {}): FriendsPort {
   return {
-    supported: true,
     load: async () => {},
     listFriends: () => NOTHING,
     listRequests: () => NOTHING,

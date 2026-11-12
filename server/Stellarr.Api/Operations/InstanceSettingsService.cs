@@ -52,6 +52,14 @@ public static class InstanceSettingsService
             LogRetentionDays = 30,
             OrphanObjectRetentionDays = 1,
             AutomaticCleanupEnabled = true,
+            MfaRequirement = MfaRequirements.Optional,
+            TrustedDeviceDays = 14,
+            AuthChallengeMinutes = 5,
+            EmailCodeMinutes = 8,
+            EmailCodeCooldownSeconds = 45,
+            EmailCodeMaxAttempts = 5,
+            EmailCodeSendsPerHour = 10,
+            CliRecoveryMinutes = 10,
             UpdatedAt = server.CreatedAt,
         };
         db.OperationsSettings.Add(settings);
@@ -76,7 +84,15 @@ public static class InstanceSettingsService
         settings.MailSmtpSecurity,
         settings.MailSmtpUsername,
         settings.MailResendEnabled,
-        settings.GiphyEnabled);
+        settings.GiphyEnabled,
+        settings.MfaRequirement,
+        settings.TrustedDeviceDays,
+        settings.AuthChallengeMinutes,
+        settings.EmailCodeMinutes,
+        settings.EmailCodeCooldownSeconds,
+        settings.EmailCodeMaxAttempts,
+        settings.EmailCodeSendsPerHour,
+        settings.CliRecoveryMinutes);
 
     /// <summary>Applies a validated request. The caller stages the audit and saves.</summary>
     public static void Apply(
@@ -102,6 +118,16 @@ public static class InstanceSettingsService
         settings.MailSmtpUsername = request.SmtpUsername?.Trim() ?? settings.MailSmtpUsername;
         settings.MailResendEnabled = request.ResendEnabled ?? settings.MailResendEnabled;
         settings.GiphyEnabled = request.GiphyEnabled ?? settings.GiphyEnabled;
+        settings.MfaRequirement = request.MfaRequirement is null
+            ? settings.MfaRequirement
+            : MfaRequirements.Normalize(request.MfaRequirement);
+        settings.TrustedDeviceDays = request.TrustedDeviceDays ?? settings.TrustedDeviceDays;
+        settings.AuthChallengeMinutes = request.AuthChallengeMinutes ?? settings.AuthChallengeMinutes;
+        settings.EmailCodeMinutes = request.EmailCodeMinutes ?? settings.EmailCodeMinutes;
+        settings.EmailCodeCooldownSeconds = request.EmailCodeCooldownSeconds ?? settings.EmailCodeCooldownSeconds;
+        settings.EmailCodeMaxAttempts = request.EmailCodeMaxAttempts ?? settings.EmailCodeMaxAttempts;
+        settings.EmailCodeSendsPerHour = request.EmailCodeSendsPerHour ?? settings.EmailCodeSendsPerHour;
+        settings.CliRecoveryMinutes = request.CliRecoveryMinutes ?? settings.CliRecoveryMinutes;
         settings.UpdatedAt = DateTime.UtcNow;
     }
 
@@ -169,6 +195,46 @@ public static class InstanceSettingsService
         if (request.OrphanObjectRetentionDays is < 1 or > MaxRetentionDays)
         {
             problems["orphanObjectRetentionDays"] = [messages.Get(MessageKey.CockpitOrphanRetentionRange, ("max", MaxRetentionDays))];
+        }
+
+        if (request.MfaRequirement is { } requirement && !MfaRequirements.IsKnown(requirement))
+        {
+            problems["mfaRequirement"] = [messages.Get(MessageKey.SecurityRequirementUnknown)];
+        }
+
+        if (request.TrustedDeviceDays is < 1 or > 365)
+        {
+            problems["trustedDeviceDays"] = [messages.Get(MessageKey.SecurityTrustedDeviceDaysRange)];
+        }
+
+        if (request.AuthChallengeMinutes is < 1 or > 60)
+        {
+            problems["authChallengeMinutes"] = [messages.Get(MessageKey.SecurityChallengeMinutesRange)];
+        }
+
+        if (request.EmailCodeMinutes is < 1 or > 60)
+        {
+            problems["emailCodeMinutes"] = [messages.Get(MessageKey.SecurityEmailCodeMinutesRange)];
+        }
+
+        if (request.EmailCodeCooldownSeconds is < 0 or > 600)
+        {
+            problems["emailCodeCooldownSeconds"] = [messages.Get(MessageKey.SecurityEmailCooldownRange)];
+        }
+
+        if (request.EmailCodeMaxAttempts is < 1 or > 10)
+        {
+            problems["emailCodeMaxAttempts"] = [messages.Get(MessageKey.SecurityEmailAttemptsRange)];
+        }
+
+        if (request.EmailCodeSendsPerHour is < 1 or > 60)
+        {
+            problems["emailCodeSendsPerHour"] = [messages.Get(MessageKey.SecurityEmailSendsRange)];
+        }
+
+        if (request.CliRecoveryMinutes is < 1 or > 60)
+        {
+            problems["cliRecoveryMinutes"] = [messages.Get(MessageKey.SecurityCliRecoveryMinutesRange)];
         }
 
         return problems;

@@ -18,10 +18,10 @@
     color:var(--text);
   }
   .mv-bar h2{
-    flex:1;min-width:0;font-size:14px;font-weight:550;
+    flex:1;min-width:0;font-size:var(--text-14);font-weight:550;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   }
-  .mv-bar .mv-count{font-size:12px;color:var(--text-faint);font-variant-numeric:tabular-nums;flex:none}
+  .mv-bar .mv-count{font-size:var(--text-12);color:var(--text-faint);font-variant-numeric:tabular-nums;flex:none}
   .mv-bar .icon-btn{color:var(--text-muted)}
   .mv-bar .icon-btn:hover{background:oklch(1 0 0 / 0.1);color:var(--text)}
   .mv-stage{
@@ -53,7 +53,7 @@
   .mv-nav.prev{left:16px}
   .mv-nav.next{right:16px}
   .mv-missing{display:flex;flex-direction:column;align-items:center;gap:14px;max-width:100%}
-  .mv-note{font-size:13px;color:var(--text-muted);text-align:center}
+  .mv-note{font-size:var(--text-13);color:var(--text-muted);text-align:center}
   .mv-note a{color:var(--accent-text)}
 
   @media (max-width:767px){
@@ -114,7 +114,7 @@
     width: 100%;
     padding: 7px 9px;
     border-radius: var(--radius-sm);
-    font-size: 13.5px;
+    font-size: var(--text-14);
     color: var(--text-muted);
     text-align: left;
     transition:
@@ -164,7 +164,7 @@
     justify-content: space-between;
     gap: 12px;
     color: var(--text);
-    font-size: 13px;
+    font-size: var(--text-13);
     font-weight: 550;
   }
 
@@ -179,7 +179,7 @@
     flex: none;
     min-width: 38px;
     color: var(--text-muted);
-    font-size: 12px;
+    font-size: var(--text-12);
     font-weight: 500;
     text-align: right;
     font-variant-numeric: tabular-nums;
@@ -209,7 +209,7 @@
     padding-top: 8px;
     border-top: 1px solid var(--line);
     color: var(--text);
-    font-size: 13px;
+    font-size: var(--text-13);
     font-weight: 550;
   }
 
@@ -308,7 +308,7 @@
   }
 
   .dd-value b {
-    font-size: 14px;
+    font-size: var(--text-14);
     font-weight: 500;
     white-space: nowrap;
     overflow: hidden;
@@ -318,7 +318,7 @@
   /* The detail follows the value on one line here and takes its own line in
      the list: on the field it is a reminder, in the list it is the reason. */
   .dd-value > span {
-    font-size: 12.5px;
+    font-size: var(--text-13);
     color: var(--text-faint);
     white-space: nowrap;
     overflow: hidden;
@@ -352,7 +352,7 @@
     color: var(--text-muted);
   }
 
-  .dd.quiet .dd-value b { font-size: 12.5px; font-weight: 550 }
+  .dd.quiet .dd-value b { font-size: var(--text-13); font-weight: 550 }
   .dd.quiet:hover:not(:disabled) { background: var(--surface-overlay); border-color: transparent }
   .dd.quiet[aria-expanded="true"] { background: var(--surface-overlay); border-color: transparent }
 
@@ -414,17 +414,17 @@
   }
 
   .dd-opt-txt { min-width: 0; display: flex; flex-direction: column; gap: 2px }
-  .dd-opt-txt b { font-size: 13.5px; font-weight: 500; line-height: 1.35 }
-  .dd-opt-txt span { font-size: 12px; color: var(--text-faint); line-height: 1.4 }
+  .dd-opt-txt b { font-size: var(--text-14); font-weight: 500; line-height: 1.35 }
+  .dd-opt-txt span { font-size: var(--text-12); color: var(--text-faint); line-height: 1.4 }
 
   /* A finger needs a bigger row, and the field has to be able to fill its
      column instead of stopping at the desktop cap. */
   @media (max-width: 767px) {
     .dd,
-    .dd.quiet { max-width: 100%; min-height: 44px; font-size: 16px }
-    .dd-value b { font-size: 15px }
+    .dd.quiet { max-width: 100%; min-height: 44px; font-size: var(--text-16) }
+    .dd-value b { font-size: var(--text-15) }
     .dd-opt { min-height: 44px; padding: 10px 9px }
-    .dd-opt-txt b { font-size: 14.5px }
+    .dd-opt-txt b { font-size: var(--text-15) }
   }
 
   @media (pointer: coarse) {
@@ -469,8 +469,8 @@
   }
   .cf-ico.danger{background:var(--danger-soft);color:var(--danger-text)}
   .cf-copy{min-width:0;flex:1}
-  .cf-copy h2{font-size:17px;font-weight:600;line-height:1.3;overflow-wrap:anywhere}
-  .cf-copy p{font-size:13px;line-height:1.5;color:var(--text-muted);margin-top:6px;overflow-wrap:anywhere}
+  .cf-copy h2{font-size:var(--text-18);font-weight:600;line-height:1.3;overflow-wrap:anywhere}
+  .cf-copy p{font-size:var(--text-13);line-height:1.5;color:var(--text-muted);margin-top:6px;overflow-wrap:anywhere}
   .cf-field{margin-top:15px}
   .cf-field .fld-lab{margin-bottom:7px}
   .cf-foot{display:flex;justify-content:flex-end;gap:10px;margin-top:20px}

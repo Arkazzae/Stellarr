@@ -143,7 +143,6 @@ export function ChannelPanelContainer({
       pinned={chat.pinned}
       pinnedLoading={chat.pinnedLoading}
       pinError={chat.pinError}
-      pinsSupported={chat.support.pins}
       onOpenPin={onJump}
       // Only for those who may moderate: the toolbar and the context menu
       // follow the same rule, and the server enforces it for all three.

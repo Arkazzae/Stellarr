@@ -2,6 +2,7 @@ import { Fragment, useState } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 
 import { BrandMark } from "@/components/brand-mark";
+import { FreshSecondStepDialog } from "@/components/fresh-second-step-dialog";
 import { Icon, type IconName } from "@/components/icons/icon";
 import { Button } from "@/components/ui/button";
 import {
@@ -228,6 +229,7 @@ export function AppShell() {
           <main className="relative flex min-h-0 flex-1 flex-col overflow-y-auto">
             <div className="mx-auto flex min-h-0 w-full max-w-[87.5rem] flex-1 flex-col px-4 py-6 sm:px-6 sm:py-8 lg:px-8">
               <Outlet />
+              <FreshSecondStepDialog />
             </div>
           </main>
         </div>

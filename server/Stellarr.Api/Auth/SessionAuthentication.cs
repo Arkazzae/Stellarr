@@ -19,10 +19,17 @@ public static class SessionAuthentication
 
     internal static readonly TimeSpan Lifetime = TimeSpan.FromDays(30);
 
-    public static async Task SignInAsync(HttpContext context, User user, Guid sessionId)
+    /// <summary>The hard end of a sign-in that did not ask to stay signed in.</summary>
+    internal static readonly TimeSpan ShortLifetime = TimeSpan.FromHours(12);
+
+    /// <param name="shortLived">
+    /// Whether the session row is short-lived. Every caller passes it, so a
+    /// cookie issued again for an existing session keeps the lifetime it had.
+    /// </param>
+    public static async Task SignInAsync(HttpContext context, User user, Guid sessionId, bool shortLived)
     {
         var properties = new AuthenticationProperties();
-        KeepSignedIn(properties);
+        ApplyLifetime(properties, shortLived);
         await context.SignInAsync(
             CookieAuthenticationDefaults.AuthenticationScheme,
             CreatePrincipal(user, sessionId),
@@ -42,19 +49,33 @@ public static class SessionAuthentication
         return new ClaimsPrincipal(identity);
     }
 
-    /// <summary>Makes the cookie outlive the browser session and renew itself while in use.</summary>
-    internal static void KeepSignedIn(AuthenticationProperties properties)
+    /// <summary>
+    /// A kept sign-in gets a cookie that outlives the browser and renews itself
+    /// while in use. A short-lived one gets a cookie the browser drops when it
+    /// closes; its row ends after <see cref="ShortLifetime"/> either way.
+    /// </summary>
+    internal static void ApplyLifetime(AuthenticationProperties properties, bool shortLived)
     {
-        properties.IsPersistent = true;
+        properties.IsPersistent = !shortLived;
         properties.AllowRefresh = true;
-        properties.ExpiresUtc = DateTimeOffset.UtcNow.Add(Lifetime);
+        properties.ExpiresUtc = DateTimeOffset.UtcNow.Add(shortLived ? ShortLifetime : Lifetime);
     }
 
     /// <summary>A new, not yet saved session for a sign-in arriving on this request.</summary>
-    public static UserSession CreateSession(HttpContext context, Guid userId, Messages messages)
+    public static UserSession CreateSession(
+        HttpContext context,
+        Guid userId,
+        Messages messages,
+        string primarySource = "password",
+        DateTime? mfaCompletedAt = null,
+        string? mfaEvidence = null,
+        int securityVersion = 0,
+        DateTime? authenticatedAt = null,
+        bool shortLived = false)
     {
         var now = DateTime.UtcNow;
         var agent = context.Request.Headers.UserAgent.ToString().Trim();
+        var expiresAt = now.Add(shortLived ? ShortLifetime : Lifetime);
         return new UserSession
         {
             Id = Guid.NewGuid(),
@@ -63,7 +84,14 @@ public static class SessionAuthentication
             IpAddress = context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             CreatedAt = now,
             LastSeenAt = now,
-            ExpiresAt = now.Add(Lifetime),
+            ExpiresAt = expiresAt,
+            AbsoluteExpiresAt = expiresAt,
+            PrimarySource = primarySource,
+            AuthenticatedAt = authenticatedAt ?? now,
+            MfaCompletedAt = mfaCompletedAt,
+            MfaEvidence = mfaEvidence,
+            SecurityVersion = securityVersion,
+            ShortLived = shortLived,
         };
     }
 }

@@ -33,6 +33,13 @@ internal static class HelpText
           sessions revoke <id>           Revoke one durable session.
           sessions revoke --user <who> --all
                                          Revoke every session of an account and pending handoffs.
+          security show <id-or-username> Show MFA methods, trust, sessions and recent security events.
+          security methods <id-or-username>
+                                         List security-method metadata only.
+          security recover <id-or-username> --reason <text>
+                                         Revoke security and issue one enrollment-only recovery credential.
+          security unlink <id-or-username> <identity-id>
+                                         Remove one identity-provider link from an account.
 
         Global options:
           --data-root <path>   Data root holding db/stellarr.db and keys/.
@@ -58,8 +65,9 @@ internal static class HelpText
           The CLI never creates the database, runs migrations or seeds an instance. A new
           schema is installed by a normal API start. Mutations write an operator audit entry
           as local-cli in the same transaction. Secret values, hashes, cookies and tokens are
-          never printed. Active WebSocket connections are not disconnected by a session revoke;
-          realtime teardown is deferred. MFA commands are not part of this release.
+          never printed, except a newly issued MFA recovery credential, which is shown once.
+          Session revocation also closes matching WebSocket connections within one second;
+          voice and media are torn down by the normal disconnect lifecycle.
 
         Typical use:
           docker compose exec stellarr stellarr doctor
@@ -85,7 +93,10 @@ internal static class HelpText
               mail.smtp.host, mail.smtp.port, mail.smtp.username, mail.smtp.security,
               mail.resend.enabled, mail.invites.enabled, mail.recovery.enabled,
               mail.alerts.enabled, giphy.enabled, retention.backups-days,
-              retention.logs-days, retention.orphans-days, cleanup.enabled
+              retention.logs-days, retention.orphans-days, cleanup.enabled,
+              mfa.requirement, mfa.trusted-device-days, mfa.challenge-minutes,
+              mfa.email-code-minutes, mfa.email-cooldown-seconds, mfa.email-attempts,
+              mfa.email-sends-per-hour, mfa.cli-recovery-minutes
 
             Startup keys are read-only; change them in .env/Compose and recreate the
             container. `config list` names them with their environment variables.
@@ -112,8 +123,24 @@ internal static class HelpText
               stellarr sessions revoke --user <id-or-username> --all [--yes] [--json]
 
             Revocation updates the durable session records. Revoking all sessions also
-            invalidates approved desktop browser handoffs not yet redeemed. It does not
-            disconnect an already-open WebSocket immediately; realtime teardown is deferred.
+            invalidates approved desktop browser handoffs not yet redeemed. The API
+            closes matching WebSocket connections within one second, and the normal
+            disconnect lifecycle closes their voice and media sessions.
+            """,
+        "security" => """
+            Usage:
+              stellarr security show <id-or-username> [--json]
+              stellarr security methods <id-or-username> [--json]
+              stellarr security recover <id-or-username> --reason <text> [--yes] [--json]
+              stellarr security unlink <id-or-username> <identity-id> [--yes] [--json]
+
+            `show` inspects methods, trusted devices, active sessions and recent events
+            without printing seeds, hashes or codes. `recover` atomically revokes methods,
+            trust, sessions and approved handoffs, then prints one short-lived recovery
+            credential once. That credential can only enroll replacement security through
+            POST /api/auth/recovery/redeem; it never grants an ordinary session or disables
+            an enforced policy. Disabled accounts stay disabled. A recovery keeps the
+            account's identity-provider links; `show` lists them and `unlink` removes one.
             """,
         _ => Full,
     };

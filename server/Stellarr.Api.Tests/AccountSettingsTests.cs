@@ -27,7 +27,7 @@ public sealed class AccountSettingsTests
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         var errors = (await ReadJsonAsync(response)).GetProperty("errors");
         Assert.Equal(
-            "Zmiana adresu odzyskiwania wymaga potwierdzenia nowego adresu i jest obecnie wyłączona.",
+            "Adres zmienia się osobno, przez link wysłany na nowy adres.",
             Assert.Single(errors.GetProperty("email").EnumerateArray()).GetString());
         var account = await ReadJsonAsync(await client.GetAsync("/api/me"));
         Assert.Equal("Ada", account.GetProperty("displayName").GetString());

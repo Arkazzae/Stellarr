@@ -45,7 +45,18 @@ export type PasswordChangeResult =
   | "changed"
   | "wrong-current"
   | "too-short"
-  | "same-as-current";
+  | "same-as-current"
+  /** The account has a second step and the session has not passed it in the last minutes. */
+  | "second-step-required";
+
+/** What asking for a new address can answer; only "sent" mailed a link. */
+export type EmailChangeResult =
+  | "sent"
+  | "wrong-password"
+  | "second-step-required"
+  | "same"
+  | "taken"
+  | "mail-unavailable";
 
 /** Which picture an upload is for; the two have different size limits. */
 export type ImageKind = "avatar" | "banner";
@@ -84,16 +95,6 @@ export interface UserPreferences {
   joinSoundId: string | null;
 }
 
-/** Per capability, so an older backend can offer the parts it understands. */
-export interface AccountSupport {
-  /** Display name, custom status, bio and pronouns. */
-  profile: boolean;
-  /** Uploading an avatar or a banner. */
-  uploads: boolean;
-  password: boolean;
-  preferences: boolean;
-}
-
 export interface AccountPort {
   getAccount(): Account;
   getPreferences(): UserPreferences;
@@ -107,6 +108,12 @@ export interface AccountPort {
    * answer, not a failure, and the pane prints it as a sentence.
    */
   changePassword(current: string, next: string): Promise<PasswordChangeResult>;
+  /**
+   * Mails a link to the new address, after the password and, when the
+   * account has one, a fresh second step. The address changes when the
+   * link is opened, so the account here stays as it is until then.
+   */
+  requestEmailChange(email: string, password: string): Promise<EmailChangeResult>;
   /** Stores the picture and returns the URL to put on the account. */
   uploadImage(kind: ImageKind, file: File): Promise<string>;
 
@@ -116,8 +123,6 @@ export interface AccountPort {
    * it can be long.
    */
   listJoinSounds(signal?: AbortSignal): Promise<JoinSoundLibrary>;
-
-  readonly supported: AccountSupport;
 }
 
 /** The largest image the server accepts for each kind. */

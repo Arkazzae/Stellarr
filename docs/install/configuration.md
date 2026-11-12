@@ -14,7 +14,7 @@
 | `PUBLIC_IP` | IPv4 or `auto` | empty | IPv4 address browsers reach the host at, advertised by `coturn` (`external-ip`) and `stellarr-media`. Required for voice from any browser not on the Docker host itself; without it, such a browser connects only through TURN. `auto` resolves the `A` record of `STELLARR_DOMAIN` on startup and fails if no valid IPv4 is returned. |
 | `STELLARR_HTTPS_PORT` | port (`1–65535`) | `8443` | Host port mapped to container port `443/tcp` and used in HTTP-to-HTTPS redirects. |
 | `STELLARR_HTTP_PORT` | port or `ip:port` | `8888` | Host port mapped to container port `80/tcp` (HTTP redirect only). Prefix with an IP (e.g. `127.0.0.1:8888`) to bind to a single host interface. |
-| `STELLARR_PUBLIC_URL` | origin URL | empty | Explicit public origin (e.g. `https://chat.example.com`), overriding the URL derived from `STELLARR_DOMAIN` and `STELLARR_PUBLIC_PORT`. Used in password-reset links and `/.well-known/stellarr/client`. Displayed read-only in Cockpit. Must be an absolute `http` or `https` origin without credentials, query, or fragment. |
+| `STELLARR_PUBLIC_URL` | origin URL | empty | Explicit public origin (e.g. `https://chat.example.com`), overriding the URL derived from `STELLARR_DOMAIN` and `STELLARR_PUBLIC_PORT`. Used in password-reset links, `/.well-known/stellarr/client` and as the site passkeys are created for (passkeys need an HTTPS origin with a host name). Displayed read-only in Cockpit. Must be an absolute `http` or `https` origin without credentials, query, or fragment. |
 | `STELLARR_VERSION` | image tag | `latest` | Image tag for `ghcr.io/arkazzae/stellarr`. Pin a release tag (e.g. `1.2.3`) for production deployments. |
 
 If `/data/stellarr/tls/fullchain.pem` or `privkey.pem` is missing, the container generates a self-signed certificate. See [Reverse proxy and TLS](reverse-proxy-and-tls.md).
@@ -72,6 +72,46 @@ OpenID Connect login is optional; local username/password login remains availabl
 | `STELLARR_OIDC_CLIENT_SECRET` | string | empty | OIDC client secret (takes precedence over `STELLARR_OIDC_CLIENT_SECRET_FILE`). |
 | `STELLARR_OIDC_CLIENT_SECRET_FILE` | container path | empty | Path to a mounted file containing the OIDC client secret. |
 | `STELLARR_OIDC_DISPLAY_NAME` | string | `Main account` | Sign-in button label on the login screen. |
+| `STELLARR_OIDC_TRUST_PROVIDER_MFA` | `true` \| `false` | `false` | Counts a sign-in the provider confirmed with more than a password as the instance's second step (see below). |
+| `STELLARR_OIDC_PROVIDER_MFA_AMR` | comma-separated list | `mfa` | The `amr` values in the provider's ID token that mean it asked for more than a password. |
+
+### More than one provider
+
+Further providers are added in the `environment` of the `stellarr` service, each
+under an id of 1 to 32 lower-case letters, digits or hyphens (not `default`,
+`login` or `callback`). Each gets its own button and the callback
+`<public-url>/api/auth/oidc/<id>/callback`. The provider above keeps its
+callback and is offered first.
+
+```yaml
+      Oidc__Providers__work__DisplayName: Work account
+      Oidc__Providers__work__Authority: https://id.example.com/realms/work
+      Oidc__Providers__work__ClientId: stellarr
+      Oidc__Providers__work__ClientSecretFile: /run/secrets/oidc-work
+      # Optional, off by default:
+      Oidc__Providers__work__TrustProviderMfa: "true"
+      Oidc__Providers__work__ProviderMfaAmr: mfa,hwk
+```
+
+A provider is offered only when its issuer is HTTPS and it has a client ID and
+a secret; an id that breaks the rules stops the server at start. People link
+their accounts to a provider from their settings (see
+[Account security](account-security.md#signing-in-through-an-identity-provider)),
+which uses the same callback. An identity is linked to an account per issuer:
+the same subject at two providers is two different people, and no account is
+ever matched by its email address.
+
+### The provider's own second step
+
+By default the provider only proves who someone is, and the instance asks for
+its own second step after it, as after a password (see
+[Account security](account-security.md)). With `TrustProviderMfa` on, a
+sign-in whose ID token lists one of the configured `amr` values counts as the
+second step, Cockpit included. Such a provider is asked with `max_age=300` to
+sign the person in again when its own session is older than five minutes, and
+the token's `auth_time` must show a sign-in from the last five minutes; a
+token without it falls back to the instance's own step. Turn it on only for a
+provider that really requires a second factor and reports it in `amr`.
 
 ## Language
 

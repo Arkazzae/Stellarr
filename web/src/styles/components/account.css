@@ -29,7 +29,7 @@
   /* ---------- MOJE KONTO ---------- */
   .acc-answer {
     margin-top: 8px;
-    font-size: 12.5px;
+    font-size: var(--text-13);
     line-height: 1.5;
   }
 
@@ -78,14 +78,14 @@
   }
 
   .acc-security-copy b {
-    font-size: 14px;
+    font-size: var(--text-14);
     font-weight: 600;
   }
 
   .acc-security-copy > span {
     width: fit-content;
     max-width: 100%;
-    font-size: 14px;
+    font-size: var(--text-14);
     color: var(--text);
     overflow-wrap: anywhere;
   }
@@ -96,9 +96,46 @@
 
   .acc-security-copy small {
     max-width: 62ch;
-    font-size: 12.5px;
+    font-size: var(--text-13);
     line-height: 1.45;
     color: var(--text-faint);
+  }
+
+  .acc-security-empty {
+    margin: 0;
+    font-size: var(--text-13);
+    color: var(--text-muted);
+  }
+
+  /* Newest first, one line for what happened and one for when and where. */
+  .acc-security-history {
+    margin: 0;
+    padding: 6px 0 12px;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .acc-security-history li {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px 0;
+  }
+
+  .acc-security-history li + li {
+    border-top: 1px solid var(--line-subtle);
+  }
+
+  .acc-security-history span {
+    font-size: var(--text-14);
+    color: var(--text);
+  }
+
+  .acc-security-history small {
+    font-size: var(--text-13);
+    color: var(--text-faint);
+    overflow-wrap: anywhere;
   }
 
   .acc-credential-form {
@@ -175,22 +212,22 @@
   .lang-code{
     flex:none;display:inline-flex;align-items:center;justify-content:center;
     width:34px;height:28px;border-radius:var(--radius-sm);
-    background:var(--surface-overlay);font:650 11px/1 var(--font-mono);color:var(--text-muted);
+    background:var(--surface-overlay);font:650 var(--text-11)/1 var(--font-mono);color:var(--text-muted);
   }
   .lang-choice.on .lang-code{background:var(--accent-soft);color:var(--accent-text)}
   .lang-name{min-width:0;display:flex;flex-direction:column;gap:2px}
-  .lang-name b{font-size:13.5px;font-weight:600;line-height:1.25}
-  .lang-name span{font-size:11.5px;line-height:1.3;color:var(--text-faint)}
+  .lang-name b{font-size:var(--text-14);font-weight:600;line-height:1.25}
+  .lang-name span{font-size:var(--text-12);line-height:1.3;color:var(--text-faint)}
   .lang-target{padding-top:18px;border-top:1px solid var(--line-subtle)}
   .lang-model{min-height:32px;display:flex;align-items:center;margin-top:10px}
-  .lang-model-state,.lang-model-download{font-size:12px;color:var(--text-faint)}
+  .lang-model-state,.lang-model-download{font-size:var(--text-12);color:var(--text-faint)}
   .lang-model-state{display:inline-flex;align-items:center;gap:6px}
   .lang-model-state.ok{color:var(--live)}
   .lang-model-state.bad,.lang-model-error{color:var(--danger-text)}
   .lang-model-download{width:min(360px,100%);display:grid;grid-template-columns:auto minmax(80px,1fr) 36px;align-items:center;gap:10px}
   .lang-model-download progress{width:100%;height:6px;accent-color:var(--accent)}
   .lang-model-download b{text-align:right;font-variant-numeric:tabular-nums;color:var(--text-muted)}
-  .lang-model-error{display:flex;align-items:center;flex-wrap:wrap;gap:10px;font-size:12px}
+  .lang-model-error{display:flex;align-items:center;flex-wrap:wrap;gap:10px;font-size:var(--text-12)}
   .lang-model-error .btn-ghost{height:30px;padding-inline:12px}
   .lang-private-note{margin-top:10px;max-width:68ch}
 
@@ -256,7 +293,7 @@
     gap: 8px;
     background: oklch(0 0 0 / 0.55);
     color: #fff;
-    font-size: 13px;
+    font-size: var(--text-13);
     font-weight: 550;
     opacity: 0;
     transition: opacity var(--dur-fast) var(--ease-standard);
@@ -301,14 +338,14 @@
   }
 
   .pf-face-txt b {
-    font-size: 17px;
+    font-size: var(--text-18);
     font-weight: 650;
     line-height: 1.2;
     overflow-wrap: anywhere;
   }
 
   .pf-face-txt span {
-    font-size: 12.5px;
+    font-size: var(--text-13);
     color: var(--text-faint);
   }
 
@@ -318,7 +355,7 @@
 
   .pf-preview-bio {
     padding: 10px 16px 0;
-    font-size: 13.5px;
+    font-size: var(--text-14);
     line-height: 1.5;
     color: var(--text-muted);
     white-space: pre-wrap;
@@ -338,7 +375,7 @@
 
   .pf-count {
     margin-top: 4px;
-    font-size: 12px;
+    font-size: var(--text-12);
     color: var(--text-faint);
     font-variant-numeric: tabular-nums;
   }
@@ -497,7 +534,7 @@
     flex: none;
     min-width: 44px;
     text-align: right;
-    font-size: 13px;
+    font-size: var(--text-13);
     color: var(--text-muted);
     font-variant-numeric: tabular-nums;
   }
@@ -534,14 +571,14 @@
   }
 
   .voice-eq-copy b {
-    font-size: 13.5px;
+    font-size: var(--text-14);
     font-weight: 550;
   }
 
   .voice-eq-copy small {
     overflow: hidden;
     color: var(--text-faint);
-    font-size: 11.5px;
+    font-size: var(--text-12);
     line-height: 1.35;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -582,7 +619,7 @@
     justify-content: center;
     gap: 10px;
     color: var(--text-faint);
-    font-size: 12.5px;
+    font-size: var(--text-13);
   }
 
   .camera-empty svg {
@@ -629,12 +666,12 @@
     background: var(--surface-pop);
     border: 1px solid var(--line);
     font-family: var(--font-mono);
-    font-size: 11.5px;
+    font-size: var(--text-12);
     color: var(--text-muted);
   }
 
   .kb-what {
-    font-size: 13px;
+    font-size: var(--text-13);
     color: var(--text-muted);
     line-height: 1.45;
   }
@@ -654,14 +691,14 @@
   }
 
   .kb-action-copy b {
-    font-size: 13.5px;
+    font-size: var(--text-14);
     font-weight: 550;
     color: var(--text);
   }
 
   .kb-action-copy > span {
     max-width: 58ch;
-    font-size: 12.5px;
+    font-size: var(--text-13);
     line-height: 1.45;
     color: var(--text-faint);
   }
@@ -710,7 +747,7 @@
 
   .kb-listening,
   .kb-unassigned {
-    font-size: 12px;
+    font-size: var(--text-12);
     font-weight: 550;
   }
 
@@ -730,7 +767,7 @@
 
   .kb-error {
     grid-column: 1 / -1;
-    font-size: 12.5px;
+    font-size: var(--text-13);
     line-height: 1.4;
     color: var(--danger-text);
   }
@@ -745,7 +782,7 @@
   }
 
   .kb-reset-row > span {
-    font-size: 12px;
+    font-size: var(--text-12);
     line-height: 1.4;
     color: var(--text-faint);
   }
@@ -836,7 +873,7 @@
   /* ---------- TWÓJ STATUS ---------- */
   .acc-cap {
     padding: 0 2px 6px;
-    font-size: 10.5px;
+    font-size: var(--text-11);
     font-weight: 700;
     letter-spacing: 0.09em;
     text-transform: uppercase;
@@ -868,7 +905,7 @@
     border: none;
     outline: none;
     font: inherit;
-    font-size: 13px;
+    font-size: var(--text-13);
     line-height: 1.45;
     color: var(--text);
     overflow-y: auto;
@@ -914,7 +951,7 @@
     align-items: center;
     justify-content: center;
     border-radius: var(--radius-sm);
-    font-size: 14px;
+    font-size: var(--text-14);
     color: inherit;
     transition:
       background var(--dur-fast) var(--ease-standard),
@@ -947,7 +984,7 @@
     border: none;
     outline: none;
     font: inherit;
-    font-size: 13.5px;
+    font-size: var(--text-14);
     line-height: 1.55;
     color: var(--text);
   }
@@ -959,7 +996,7 @@
   .pf-bio-preview-text {
     min-height: 120px;
     padding: 12px;
-    font-size: 13.5px;
+    font-size: var(--text-14);
     line-height: 1.55;
     color: var(--text-muted);
     white-space: pre-wrap;
@@ -995,7 +1032,7 @@
     min-height: 28px;
     padding: 5px 10px;
     border-top: 1px solid var(--line-subtle);
-    font-size: 11px;
+    font-size: var(--text-11);
     color: var(--text-faint);
   }
 
@@ -1044,7 +1081,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 15px;
+    font-size: var(--text-15);
     line-height: 1;
     transition:
       background var(--dur-fast) var(--ease-standard),
@@ -1094,7 +1131,7 @@
   .acc-state-label {
     min-width: 0;
     flex: 1;
-    font-size: 11px;
+    font-size: var(--text-11);
     font-weight: 550;
     line-height: 1.2;
     color: var(--text-muted);
@@ -1130,14 +1167,6 @@
     display: flex;
     align-items: center;
     gap: 4px;
-  }
-
-  .acc-note {
-    flex: 1;
-    min-width: 0;
-    font-size: 11px;
-    line-height: 1.35;
-    color: var(--text-faint);
   }
 
   /* Without a note beside them the icons still belong on the right. */
@@ -1184,7 +1213,7 @@
 
     .acc-mood textarea,
     .pf-bio-editor textarea {
-      font-size: 16px;
+      font-size: var(--text-16);
     }
   }
 
@@ -1210,7 +1239,7 @@
   @media (pointer: coarse) {
     .acc-mood textarea,
     .pf-bio-editor textarea {
-      font-size: 16px;
+      font-size: var(--text-16);
     }
 
     .pf-format,

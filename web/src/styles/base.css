@@ -22,7 +22,7 @@
     font-family: var(--font-sans);
     background: var(--surface-canvas);
     color: var(--text);
-    font-size: 15px;
+    font-size: var(--text-15);
     line-height: 1.6;
     /* The app owns its own scroll regions; the page itself never scrolls. */
     overflow: hidden;
