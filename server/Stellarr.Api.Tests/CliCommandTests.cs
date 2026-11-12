@@ -680,7 +680,7 @@ public sealed class CliCommandTests
 
         var revoke = await fixture.RunAsync("--json", "sessions", "revoke", sessionId.ToString(), "--yes");
         Assert.Equal(0, revoke.ExitCode);
-        Assert.Contains("deferred", revoke.Output, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("realtimeDisconnectPending", revoke.Output, StringComparison.Ordinal);
         await using (var db = fixture.OpenDb())
         {
             Assert.NotNull((await db.UserSessions.SingleAsync(x => x.Id == sessionId)).RevokedAt);
@@ -745,7 +745,7 @@ public sealed class CliCommandTests
             var data = json.RootElement.GetProperty("data");
             Assert.Equal(2, data.GetProperty("sessionsRevoked").GetInt32());
             Assert.Equal(1, data.GetProperty("handoffsInvalidated").GetInt32());
-            Assert.True(data.GetProperty("realtimeDisconnectDeferred").GetBoolean());
+            Assert.True(data.GetProperty("realtimeDisconnectPending").GetBoolean());
         }
 
         await using (var db = fixture.OpenDb())

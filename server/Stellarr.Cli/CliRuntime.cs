@@ -336,13 +336,18 @@ internal sealed class CliDatabase(AppDbContext context) : IAsyncDisposable
         var tables = await ReadTablesAsync(context, cancellationToken);
         var required = new (string Table, string[] Columns)[]
         {
-            ("Users", ["Id", "Username", "NormalizedUsername", "DisplayName", "PasswordHash", "IsDisabled", "SessionVersion", "AvatarColor", "CreatedAt"]),
+            ("Users", ["Id", "Username", "NormalizedUsername", "DisplayName", "PasswordHash", "IsDisabled", "SessionVersion", "SecurityRecoveryRequired", "AvatarColor", "CreatedAt"]),
             ("Servers", ["Id", "Name", "CreatedAt"]),
             ("ServerRoles", ["Id", "ServerId", "Name", "IsOwner"]),
             ("ServerMembers", ["ServerId", "UserId", "RoleId", "JoinedAt"]),
-            ("UserSessions", ["Id", "UserId", "Device", "IpAddress", "CreatedAt", "LastSeenAt", "ExpiresAt", "RevokedAt"]),
-            ("DesktopBrowserLogins", ["Id", "UserId", "CreatedAt", "ExpiresAt", "ApprovedAt", "RedeemedAt"]),
-            ("OperationsSettings", ["ServerId", "TimeZone", "MailingEnabled", "MailFromAddress", "MailSmtpHost", "MailSmtpPort", "MailSmtpUsername", "MailSmtpSecurity", "MailResendEnabled", "GiphyEnabled", "InviteMailEnabled", "RecoveryMailEnabled", "AlertMailEnabled", "BackupRetentionDays", "LogRetentionDays", "OrphanObjectRetentionDays", "AutomaticCleanupEnabled", "UpdatedAt"]),
+            ("UserSessions", ["Id", "UserId", "Device", "IpAddress", "CreatedAt", "LastSeenAt", "ExpiresAt", "RevokedAt", "AbsoluteExpiresAt", "PrimarySource", "MfaCompletedAt", "MfaEvidence", "SecurityVersion"]),
+            ("DesktopBrowserLogins", ["Id", "UserId", "CreatedAt", "ExpiresAt", "ApprovedAt", "RedeemedAt", "ApprovalTokenHash", "ApprovalUserId", "ApprovalSessionId", "ApprovedSessionId", "SecurityVersion"]),
+            ("MfaMethods", ["Id", "UserId", "Type", "Name", "CreatedAt", "ConfirmedAt", "RevokedAt"]),
+            ("RecoveryCodes", ["Id", "UserId", "BatchId", "CodeHash", "CreatedAt", "UsedAt"]),
+            ("TrustedDevices", ["Id", "UserId", "TokenHash", "Name", "CreatedAt", "ExpiresAt", "RevokedAt"]),
+            ("CliRecoveryCredentials", ["Id", "UserId", "TokenHash", "Reason", "SecurityVersion", "CreatedAt", "ExpiresAt", "UsedAt"]),
+            ("SecurityEvents", ["Id", "UserId", "Kind", "Detail", "CreatedAt"]),
+            ("OperationsSettings", ["ServerId", "TimeZone", "MailingEnabled", "MailFromAddress", "MailSmtpHost", "MailSmtpPort", "MailSmtpUsername", "MailSmtpSecurity", "MailResendEnabled", "GiphyEnabled", "InviteMailEnabled", "RecoveryMailEnabled", "AlertMailEnabled", "BackupRetentionDays", "LogRetentionDays", "OrphanObjectRetentionDays", "AutomaticCleanupEnabled", "MfaRequirement", "TrustedDeviceDays", "AuthChallengeMinutes", "EmailCodeMinutes", "EmailCodeCooldownSeconds", "EmailCodeMaxAttempts", "EmailCodeSendsPerHour", "CliRecoveryMinutes", "UpdatedAt"]),
             ("InstanceSecrets", ["Name", "ProtectedValue", "UpdatedAt"]),
         };
         var missingTables = required.Select(x => x.Table).Where(table => !tables.Contains(table)).ToList();

@@ -14,7 +14,7 @@ internal sealed class CliInvocation
 
     private static readonly HashSet<string> Valued = new(StringComparer.Ordinal)
     {
-        "--data-root", "--user",
+        "--data-root", "--user", "--reason",
     };
 
     private CliInvocation()
@@ -26,6 +26,8 @@ internal sealed class CliInvocation
     internal string? DataRoot { get; private set; }
 
     internal string? User { get; private set; }
+
+    internal string? Reason { get; private set; }
 
     internal bool Json { get; private set; }
 
@@ -68,6 +70,15 @@ internal sealed class CliInvocation
                         }
 
                         invocation.DataRoot = value.Trim();
+                    }
+                    else if (name == "--reason")
+                    {
+                        if (string.IsNullOrWhiteSpace(value))
+                        {
+                            throw Usage("--reason needs a non-empty value.");
+                        }
+
+                        invocation.Reason = value.Trim();
                     }
                     else
                     {

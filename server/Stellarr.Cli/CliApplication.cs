@@ -130,6 +130,9 @@ public static class CliApplication
             case "sessions":
                 return await DispatchSessionsAsync(runtime, invocation, cancellationToken);
 
+            case "security":
+                return await DispatchSecurityAsync(runtime, invocation, cancellationToken);
+
             default:
                 throw new CliException(
                     "unknown_command",
@@ -292,6 +295,48 @@ public static class CliApplication
         return await SessionCommands.RevokeAsync(runtime, positions[2], cancellationToken);
     }
 
+    private static async Task<CliResult> DispatchSecurityAsync(
+        CliRuntime runtime,
+        CliInvocation invocation,
+        CancellationToken cancellationToken)
+    {
+        var positions = invocation.Positionals;
+        if (positions.Count < 2)
+        {
+            throw Usage("security needs a subcommand: show, methods or recover.");
+        }
+
+        var action = positions[1].ToLowerInvariant();
+        switch (action)
+        {
+            case "show":
+                EnsureReadOnly(invocation, "security show <id-or-username>", exact: 3);
+                return await SecurityCommands.ShowAsync(runtime, positions[2], cancellationToken);
+
+            case "methods":
+                EnsureReadOnly(invocation, "security methods <id-or-username>", exact: 3);
+                return await SecurityCommands.MethodsAsync(runtime, positions[2], cancellationToken);
+
+            case "recover":
+                if (positions.Count != 3 || invocation.Reason is null)
+                {
+                    throw Usage("security recover <id-or-username> --reason <text> [--yes]");
+                }
+
+                EnsureMutation(
+                    invocation,
+                    "security recover <id-or-username> --reason <text>",
+                    exact: 3,
+                    allowStdin: false,
+                    allowAll: false);
+                return await SecurityCommands.RecoverAsync(
+                    runtime, positions[2], invocation.Reason, cancellationToken);
+
+            default:
+                throw Usage($"Unknown security subcommand '{action}'. Use show, methods or recover.");
+        }
+    }
+
     private static void EnsureReadOnly(CliInvocation invocation, string usage, int exact = -1, int maximum = -1)
     {
         EnsureCount(invocation, value: exact >= 0 ? exact : 1, usage, maximum: maximum, exact: exact >= 0);
@@ -299,6 +344,7 @@ public static class CliApplication
         Reject(invocation.Stdin, "--stdin", usage);
         Reject(invocation.All, "--all", usage);
         Reject(invocation.User is not null, "--user", usage);
+        Reject(invocation.Reason is not null, "--reason", usage);
     }
 
     private static void EnsureSessionsList(CliInvocation invocation)
@@ -320,6 +366,7 @@ public static class CliApplication
         Reject(invocation.Stdin && !allowStdin, "--stdin", usage);
         Reject(invocation.All && !allowAll, "--all", usage);
         Reject(invocation.User is not null && !usage.Contains("--user", StringComparison.Ordinal), "--user", usage);
+        Reject(invocation.Reason is not null && !usage.Contains("--reason", StringComparison.Ordinal), "--reason", usage);
     }
 
     private static void EnsureCount(

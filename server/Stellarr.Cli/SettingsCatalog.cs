@@ -16,6 +16,7 @@ internal enum SettingKind
     TimeZone,
     MailAddress,
     SmtpSecurity,
+    MfaRequirement,
 }
 
 /// <summary>
@@ -98,6 +99,30 @@ internal static class SettingsCatalog
         Scalar("cleanup.enabled", SettingKind.Boolean, null,
             (settings, _, _) => settings.AutomaticCleanupEnabled,
             (request, value) => request with { AutomaticCleanupEnabled = ParseBoolean(value) }),
+        Scalar("mfa.requirement", SettingKind.MfaRequirement, null,
+            (settings, _, _) => MfaRequirements.Normalize(settings.MfaRequirement),
+            (request, value) => request with { MfaRequirement = MfaRequirements.Normalize(value) }),
+        Scalar("mfa.trusted-device-days", SettingKind.Integer, null,
+            (settings, _, _) => settings.TrustedDeviceDays,
+            (request, value) => request with { TrustedDeviceDays = ParseInteger(value) }),
+        Scalar("mfa.challenge-minutes", SettingKind.Integer, null,
+            (settings, _, _) => settings.AuthChallengeMinutes,
+            (request, value) => request with { AuthChallengeMinutes = ParseInteger(value) }),
+        Scalar("mfa.email-code-minutes", SettingKind.Integer, null,
+            (settings, _, _) => settings.EmailCodeMinutes,
+            (request, value) => request with { EmailCodeMinutes = ParseInteger(value) }),
+        Scalar("mfa.email-cooldown-seconds", SettingKind.Integer, null,
+            (settings, _, _) => settings.EmailCodeCooldownSeconds,
+            (request, value) => request with { EmailCodeCooldownSeconds = ParseInteger(value) }),
+        Scalar("mfa.email-attempts", SettingKind.Integer, null,
+            (settings, _, _) => settings.EmailCodeMaxAttempts,
+            (request, value) => request with { EmailCodeMaxAttempts = ParseInteger(value) }),
+        Scalar("mfa.email-sends-per-hour", SettingKind.Integer, null,
+            (settings, _, _) => settings.EmailCodeSendsPerHour,
+            (request, value) => request with { EmailCodeSendsPerHour = ParseInteger(value) }),
+        Scalar("mfa.cli-recovery-minutes", SettingKind.Integer, null,
+            (settings, _, _) => settings.CliRecoveryMinutes,
+            (request, value) => request with { CliRecoveryMinutes = ParseInteger(value) }),
     ];
 
     internal static readonly IReadOnlyList<StartupSetting> Startup =
