@@ -29,13 +29,19 @@ COPY cockpit/ ./
 RUN npm run build
 
 FROM --platform=$BUILDPLATFORM mcr.microsoft.com/dotnet/sdk:10.0-noble AS api-build
+ARG VERSION=2.0.0
 WORKDIR /src
 COPY global.json Directory.Build.props Stellarr.slnx ./
 COPY server/Stellarr.Api/Stellarr.Api.csproj server/Stellarr.Api/packages.lock.json server/Stellarr.Api/
-RUN dotnet restore server/Stellarr.Api/Stellarr.Api.csproj --locked-mode
+COPY server/Stellarr.Cli/Stellarr.Cli.csproj server/Stellarr.Cli/packages.lock.json server/Stellarr.Cli/
+RUN dotnet restore server/Stellarr.Cli/Stellarr.Cli.csproj --locked-mode \
+    && dotnet restore server/Stellarr.Api/Stellarr.Api.csproj --locked-mode
 COPY server/Stellarr.Api/ server/Stellarr.Api/
+COPY server/Stellarr.Cli/ server/Stellarr.Cli/
 RUN dotnet publish server/Stellarr.Api/Stellarr.Api.csproj \
-    -c Release -o /out/api --no-restore -p:UseAppHost=false
+    -c Release -o /out/api --no-restore -p:UseAppHost=false -p:Version=${VERSION}
+RUN dotnet publish server/Stellarr.Cli/Stellarr.Cli.csproj \
+    -c Release -o /out/cli --no-restore -p:UseAppHost=false -p:Version=${VERSION}
 
 # The media crate with every Rust file replaced by an empty stub. It changes
 # only when the manifest, the lockfile or the set of files changes, so the
@@ -130,9 +136,11 @@ COPY infra/turnserver.conf.template /etc/turnserver.conf.template
 COPY infra/supervisord.conf /etc/supervisor/supervisord.conf
 COPY --chmod=0755 infra/entrypoint.sh /usr/local/bin/stellarr-entrypoint
 COPY --chmod=0755 infra/tls-maintenance.sh /usr/local/bin/stellarr-tls-maintenance
+COPY --chmod=0755 infra/stellarr-cli.sh /usr/local/bin/stellarr
 
 COPY --from=cockpit-build /src/cockpit/dist /srv/cockpit
 COPY --from=api-build /out/api /opt/stellarr/api
+COPY --from=api-build /out/cli /opt/stellarr/cli
 COPY --from=web-build /src/web/.next/standalone /opt/stellarr/web
 COPY --from=web-build /src/web/.next/static /opt/stellarr/web/.next/static
 COPY --from=web-build /src/web/public /opt/stellarr/web/public

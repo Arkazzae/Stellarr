@@ -186,3 +186,8 @@ jobs:
             docker logs stellarr 2>&1 | tail -n 80
             exit 1
           fi
+      # The operator CLI ships in the same image and must work without the API.
+      - name: Check the packaged operator CLI
+        run: |
+          docker run --rm --entrypoint stellarr stellarr:ci version
+          docker run --rm --entrypoint stellarr stellarr:ci --help >/dev/null
