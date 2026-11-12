@@ -88,7 +88,8 @@ describe("ICON_PATHS", () => {
   });
 
   it("includes the glyphs Cockpit needs beyond the web client's", () => {
-    expect(ICON_PATHS.refresh).toBeDefined();
-    expect(ICON_PATHS.info).toBeDefined();
+    for (const name of ["refresh", "info", "chart", "pulse", "memory", "database", "clock"]) {
+      expect(ICON_PATHS, name).toHaveProperty(name);
+    }
   });
 });
