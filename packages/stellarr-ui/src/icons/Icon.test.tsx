@@ -86,4 +86,9 @@ describe("ICON_PATHS", () => {
       }
     }
   });
+
+  it("includes the glyphs Cockpit needs beyond the web client's", () => {
+    expect(ICON_PATHS.refresh).toBeDefined();
+    expect(ICON_PATHS.info).toBeDefined();
+  });
 });

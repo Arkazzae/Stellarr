@@ -172,6 +172,9 @@ export const ICON_PATHS = {
   channelPanel: [frame, "M14.5 2.5V21.5M17.5 8H18.5M17.5 12H18.5M17.5 16H18.5"],
   ban: [ring, "M18.5 5.5L5.5 18.5"],
   tick: [ring, "M7.5 12L10.5 15L19.5 6"],
+  info: [ring, "M12 11V16.5M12 7.5H12.01"],
+  /** Two arcs of the ring's radius chasing each other, with corner heads. */
+  refresh: ["M2.5 12A9.5 9.5 0 0 1 20.2 7.2", "M20.2 3.2V7.2H16.2", "M21.5 12A9.5 9.5 0 0 1 3.8 16.8", "M3.8 20.8V16.8H7.8"],
   hash2: hash,
   brush: ["M8 14L14.6 3.9C15.3 2.8 16.6 2.5 17.7 3.2L20.1 4.8C21.2 5.5 21.5 6.8 20.8 7.9L14 18", "M8 14L14 18M7.5 14C4.2 14 3 16.2 3 19V21.5H6C9.3 21.5 11 20 11 17.5"],
   sidebar: [frame, "M8.5 2.5V21.5M5.5 7H5.51M5.5 11H5.51"],
