@@ -36,6 +36,10 @@ export const pl = {
   "gate.forbidden.description":
     "Zaloguj się kontem przypisanym do systemowej roli właściciela instancji.",
   "gate.forbidden.logout": "Wyloguj konto",
+  "gate.mfa.title": "Cockpit wymaga drugiego kroku",
+  "gate.mfa.description":
+    "Cockpit działa tylko w sesji potwierdzonej drugim krokiem, a zaufane urządzenie tu nie wystarcza. Stellarr poprosi o kod albo, gdy konto nie ma jeszcze logowania dwuetapowego, o jego włączenie, a potem wróci do Cockpitu.",
+  "gate.mfa.confirm": "Potwierdź drugim krokiem",
   "gate.error.title": "Nie udało się uruchomić Cockpitu",
   "gate.error.fallback": "Backend nie odpowiedział poprawnie.",
   "gate.error.retry": "Spróbuj ponownie",

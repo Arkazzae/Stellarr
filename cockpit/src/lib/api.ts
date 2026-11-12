@@ -332,6 +332,8 @@ interface ProblemDetails {
   title?: string;
   detail?: string;
   errors?: Record<string, string[]>;
+  /** The reason in a form code can test, which some refusals carry next to their text. */
+  code?: unknown;
 }
 
 export class CockpitApiError extends Error {
@@ -339,10 +341,35 @@ export class CockpitApiError extends Error {
     readonly status: number,
     message: string,
     readonly errors: Record<string, string[]> = {},
+    /** The problem's `code` when the server names the reason, null otherwise. */
+    readonly code: string | null = null,
   ) {
     super(message);
     this.name = "CockpitApiError";
   }
+}
+
+/** The code of a 403 that refuses the owner only because the session has not completed a second step. */
+export const COCKPIT_MFA_REQUIRED = "cockpit-mfa-required";
+
+/**
+ * What a sign-in answers instead of a user when the password is not enough:
+ * a second step, a first method to set up, or an account recovery. The web
+ * client's sign-in page finishes all three.
+ */
+export type CockpitLoginStep = "mfa_required" | "mfa_enrollment_required" | "security_recovery_required";
+
+const LOGIN_STEPS: readonly CockpitLoginStep[] = [
+  "mfa_required",
+  "mfa_enrollment_required",
+  "security_recovery_required",
+];
+
+/** The step a sign-in answer still asks for, or null when the answer is the signed-in user. */
+export function pendingLoginStep(answer: unknown): CockpitLoginStep | null {
+  if (typeof answer !== "object" || answer === null || !("status" in answer)) return null;
+  const { status } = answer;
+  return LOGIN_STEPS.find((step) => step === status) ?? null;
 }
 
 /**
@@ -399,6 +426,7 @@ async function request<T>(
       response.status,
       problem.detail ?? problem.title ?? t("api.status", { status: response.status }),
       problem.errors ?? {},
+      typeof problem.code === "string" ? problem.code : null,
     );
   }
 
@@ -515,7 +543,10 @@ export const cockpitApi = {
 
   requestPasswordReset: (email: string, signal?: AbortSignal) =>
     request<void>("/api/auth/password/forgot", { method: "POST", body: { email } }, signal),
-  login: (username: string, password: string, signal?: AbortSignal) =>
-    request<unknown>("/api/auth/login", { method: "POST", body: { username, password } }, signal),
+  /** Resolves to null once signed in, or to the step the web client's sign-in page has to finish. */
+  login: async (username: string, password: string, signal?: AbortSignal) =>
+    pendingLoginStep(
+      await request<unknown>("/api/auth/login", { method: "POST", body: { username, password } }, signal),
+    ),
   logout: (signal?: AbortSignal) => request<void>("/api/auth/logout", { method: "POST" }, signal),
 };

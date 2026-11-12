@@ -1,6 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { version as PACKAGE_VERSION } from "../../package.json";
-import { CLIENT_KIND, CLIENT_VERSION, CockpitApiError, cockpitApi, type CockpitSettings } from "./api";
+import {
+  CLIENT_KIND,
+  CLIENT_VERSION,
+  COCKPIT_MFA_REQUIRED,
+  CockpitApiError,
+  cockpitApi,
+  pendingLoginStep,
+  type CockpitSettings,
+} from "./api";
 import { selectPolish } from "@/test/locale";
 
 const fetchMock = vi.fn<typeof fetch>();
@@ -133,6 +141,28 @@ describe("failures", () => {
     expect(error.status).toBe(422);
     expect(error.message).toBe("Nazwa jest zajęta.");
     expect(error.errors).toEqual({ name: ["zajęta"] });
+    expect(error.code).toBeNull();
+  });
+
+  it("keeps the code a refusal names its reason with", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ title: "Potwierdź drugi składnik.", status: 403, code: "cockpit-mfa-required" }, 403),
+    );
+
+    const error = await failureOf(cockpitApi.bootstrap());
+
+    expect(error.status).toBe(403);
+    expect(error.message).toBe("Potwierdź drugi składnik.");
+    expect(error.code).toBe(COCKPIT_MFA_REQUIRED);
+    expect(COCKPIT_MFA_REQUIRED).toBe("cockpit-mfa-required");
+  });
+
+  it("ignores a code that is not text", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ title: "Forbidden", code: 7 }, 403));
+
+    const error = await failureOf(cockpitApi.bootstrap());
+
+    expect(error.code).toBeNull();
   });
 
   it("falls back to the problem title when there is no detail", async () => {
@@ -157,6 +187,36 @@ describe("failures", () => {
     expect(error.status).toBe(502);
     expect(error.message).toBe("Backend odpowiedział kodem 502.");
     expect(error.errors).toEqual({});
+    expect(error.code).toBeNull();
+  });
+});
+
+describe("login answers", () => {
+  it.each(["mfa_required", "mfa_enrollment_required", "security_recovery_required"] as const)(
+    "resolves to the pending step %s",
+    async (status) => {
+      fetchMock.mockResolvedValueOnce(jsonResponse({ status, challengeId: "c1", methods: [] }));
+
+      await expect(cockpitApi.login("owner", "sekret")).resolves.toBe(status);
+    },
+  );
+
+  it("resolves to null when the answer is the signed-in user", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ id: "u1", username: "owner", presence: "online", customStatus: "mfa_required" }),
+    );
+
+    await expect(cockpitApi.login("owner", "sekret")).resolves.toBeNull();
+  });
+
+  it.each([
+    ["an unknown status", { status: "done" }],
+    ["a status that is not text", { status: 1 }],
+    ["null", null],
+    ["text", "mfa_required"],
+    ["nothing", undefined],
+  ])("reads %s as no pending step", (_label, answer) => {
+    expect(pendingLoginStep(answer)).toBeNull();
   });
 });
 

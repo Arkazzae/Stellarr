@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { t } from "@/i18n";
 import { CockpitApiError } from "@/lib/api";
+import { WEB_CONFIRM_URL } from "@/lib/web-sign-in";
 import { useCockpit } from "@/state/cockpit-context";
 
 function CenteredState({ children }: { children: ReactNode }) {
@@ -119,6 +120,23 @@ export function AppGate() {
             <CardContent>
               <Button variant="outline" onClick={() => void logout()}>
                 {t("gate.forbidden.logout")}
+              </Button>
+            </CardContent>
+          </Card>
+        </CenteredState>
+      );
+    case "mfa-required":
+      return (
+        <CenteredState>
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle>{t("gate.mfa.title")}</CardTitle>
+              <CardDescription>{t("gate.mfa.description")}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {/* A plain link: the sign-in page is the web client's, outside this app's router. */}
+              <Button asChild>
+                <a href={WEB_CONFIRM_URL}>{t("gate.mfa.confirm")}</a>
               </Button>
             </CardContent>
           </Card>

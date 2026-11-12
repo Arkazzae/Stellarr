@@ -41,6 +41,10 @@ export const en = {
   "gate.forbidden.description":
     "Log in with the account that holds the instance's built-in owner role.",
   "gate.forbidden.logout": "Log out",
+  "gate.mfa.title": "Cockpit needs a second step",
+  "gate.mfa.description":
+    "Cockpit works only in a session confirmed with a second step, and a trusted device is not enough here. Stellarr asks for a code, or to turn on two-step sign-in if the account has none yet, then returns to Cockpit.",
+  "gate.mfa.confirm": "Confirm with a second step",
   "gate.error.title": "Cockpit could not start",
   "gate.error.fallback": "The backend did not respond correctly.",
   "gate.error.retry": "Try again",

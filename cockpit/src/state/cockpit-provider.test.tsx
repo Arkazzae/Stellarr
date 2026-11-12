@@ -2,7 +2,8 @@ import { act, render, renderHook, screen, waitFor } from "@testing-library/react
 import { StrictMode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { CockpitApiError, cockpitApi, type CockpitBootstrap } from "@/lib/api";
+import { CockpitApiError, cockpitApi, type CockpitBootstrap, type CockpitLoginStep } from "@/lib/api";
+import { leaveFor } from "@/lib/web-sign-in";
 import { useCockpit } from "@/state/cockpit-context";
 import { CockpitProvider } from "@/state/cockpit-provider";
 import { selectPolish } from "@/test/locale";
@@ -14,7 +15,14 @@ vi.mock("@/lib/api", async (importOriginal) => ({
   cockpitApi: { bootstrap: vi.fn(), login: vi.fn(), logout: vi.fn() },
 }));
 
+// jsdom cannot navigate; the full page load is checked by where it would go.
+vi.mock("@/lib/web-sign-in", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/web-sign-in")>()),
+  leaveFor: vi.fn(),
+}));
+
 const bootstrapMock = vi.mocked(cockpitApi.bootstrap);
+const leaveForMock = vi.mocked(leaveFor);
 const loginMock = vi.mocked(cockpitApi.login);
 const logoutMock = vi.mocked(cockpitApi.logout);
 
@@ -87,6 +95,19 @@ describe("CockpitProvider loading", () => {
     expect(forbidden.result.current.error).toBeNull();
   });
 
+  it("tells an owner who lacks the second step apart from an account that is not the owner", async () => {
+    bootstrapMock.mockRejectedValue(
+      new CockpitApiError(403, "Potwierdź drugi składnik.", {}, "cockpit-mfa-required"),
+    );
+    const owner = renderOps();
+    await waitFor(() => expect(owner.result.current.phase).toBe("mfa-required"));
+    expect(owner.result.current).toMatchObject({ bootstrap: null, error: null });
+
+    bootstrapMock.mockRejectedValue(new CockpitApiError(403, "Brak dostępu.", {}, "something-else"));
+    const other = renderOps();
+    await waitFor(() => expect(other.result.current.phase).toBe("forbidden"));
+  });
+
   it("reports any other failure as an error carrying its message", async () => {
     bootstrapMock.mockRejectedValue(new CockpitApiError(500, "Backend odpowiedział kodem 500."));
 
@@ -157,7 +178,7 @@ describe("login", () => {
     await waitFor(() => expect(result.current.phase).toBe("anonymous"));
 
     const reloaded = deferred<CockpitBootstrap>();
-    loginMock.mockResolvedValue(undefined);
+    loginMock.mockResolvedValue(null);
     bootstrapMock.mockReturnValueOnce(reloaded.promise);
 
     let signIn!: Promise<void>;
@@ -173,6 +194,24 @@ describe("login", () => {
     });
     expect(result.current.phase).toBe("ready");
     expect(result.current.bootstrap?.instance.name).toBe("Domek");
+    expect(leaveForMock).not.toHaveBeenCalled();
+  });
+
+  it.each<[CockpitLoginStep, string]>([
+    ["mfa_required", "/login?returnUrl=%2Fcockpit%2F"],
+    ["mfa_enrollment_required", "/login?returnUrl=%2Fcockpit%2F"],
+    ["security_recovery_required", "/login?returnUrl=%2Fcockpit%2F&security_recovery_required=1"],
+  ])("leaves for the web client's sign-in page when the answer is %s", async (step, target) => {
+    bootstrapMock.mockRejectedValueOnce(new CockpitApiError(401, "Brak sesji."));
+    const { result } = renderOps();
+    await waitFor(() => expect(result.current.phase).toBe("anonymous"));
+    loginMock.mockResolvedValue(step);
+
+    await act(async () => result.current.login("owner", "sekret"));
+
+    expect(leaveForMock).toHaveBeenCalledExactlyOnceWith(target);
+    expect(result.current.phase).toBe("anonymous");
+    expect(bootstrapMock).toHaveBeenCalledTimes(1);
   });
 
   it("rejects a failed login to the caller and leaves the phase alone", async () => {
@@ -276,6 +315,19 @@ describe("reload", () => {
     });
     expect(result.current.phase).toBe("ready");
     expect(result.current.error).toBeNull();
+  });
+
+  it("asks a ready session for the second step when a refresh is refused for it", async () => {
+    bootstrapMock.mockResolvedValueOnce(bootstrapFor("Domek"));
+    const { result } = renderOps();
+    await waitFor(() => expect(result.current.phase).toBe("ready"));
+
+    bootstrapMock.mockRejectedValueOnce(
+      new CockpitApiError(403, "Potwierdź drugi składnik.", {}, "cockpit-mfa-required"),
+    );
+    await act(async () => result.current.reload());
+
+    expect(result.current).toMatchObject({ phase: "mfa-required", bootstrap: null });
   });
 
   it("goes anonymous when the refresh finds the session gone", async () => {
