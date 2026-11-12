@@ -88,6 +88,25 @@ public sealed class OidcSignInFlowTests(StellarrWebApplicationFactory factory)
     }
 
     [Fact]
+    public async Task ProviderSignInKeepsTheChoiceMadeBeforeLeaving()
+    {
+        using var provider = new FakeProvider();
+        using var host = Host(provider);
+        using var client = BrowserClient(host);
+        var account = await CreateLinkedAccountAsync(provider);
+
+        using var callback = await SignInThroughProviderAsync(client, provider, "/", keepSignedIn: false);
+
+        Assert.Equal(HttpStatusCode.Redirect, callback.StatusCode);
+        var cookie = Assert.Single(
+            callback.Headers.GetValues("Set-Cookie"),
+            header => header.Split('=', 2)[0].EndsWith("-session", StringComparison.Ordinal));
+        Assert.DoesNotContain("expires=", cookie, StringComparison.OrdinalIgnoreCase);
+        await using var scope = factory.OpenScope(out var db);
+        Assert.True((await db.UserSessions.SingleAsync(x => x.UserId == account.Id)).ShortLived);
+    }
+
+    [Fact]
     public async Task SignedInSessionCanBeRevokedLikeAnyOther()
     {
         using var provider = new FakeProvider();
@@ -176,8 +195,17 @@ public sealed class OidcSignInFlowTests(StellarrWebApplicationFactory factory)
         Assert.Equal("/login?security_recovery_required=1", callback.Headers.Location!.OriginalString);
         var session = await client.GetFromJsonAsync<JsonElement>("/api/session");
         Assert.Equal(JsonValueKind.Null, session.GetProperty("user").ValueKind);
-        await using var check = factory.OpenScope(out var checkDb);
-        Assert.False(await checkDb.UserSessions.AnyAsync(x => x.UserId == account.Id));
+        await using (var check = factory.OpenScope(out var checkDb))
+        {
+            Assert.False(await checkDb.UserSessions.AnyAsync(x => x.UserId == account.Id));
+        }
+
+        // The recovery is finished on the sign-in page, which learns the choice
+        // made before leaving for the provider.
+        using var brief = await SignInThroughProviderAsync(client, provider, "/", keepSignedIn: false);
+        Assert.Equal(
+            "/login?security_recovery_required=1&keep_signed_in=0",
+            brief.Headers.Location!.OriginalString);
     }
 
     [Theory]
@@ -399,10 +427,12 @@ public sealed class OidcSignInFlowTests(StellarrWebApplicationFactory factory)
     private static async Task<HttpResponseMessage> SignInThroughProviderAsync(
         HttpClient client,
         FakeProvider provider,
-        string returnUrl)
+        string returnUrl,
+        bool? keepSignedIn = null)
     {
+        var keep = keepSignedIn is { } value ? $"&keepSignedIn={(value ? "true" : "false")}" : "";
         using var login = await client.GetAsync(
-            $"/api/auth/oidc/login?returnUrl={Uri.EscapeDataString(returnUrl)}");
+            $"/api/auth/oidc/login?returnUrl={Uri.EscapeDataString(returnUrl)}{keep}");
         Assert.Equal(HttpStatusCode.Redirect, login.StatusCode);
         var query = QueryHelpers.ParseQuery(login.Headers.Location!.Query);
         provider.Nonce = query["nonce"].ToString();

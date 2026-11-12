@@ -65,8 +65,9 @@ public static class AuthEndpoints
         }
 
         var policy = await MfaPolicy.LoadAsync(db, cancellationToken);
+        var shortLived = request.KeepSignedIn == false;
         var start = await AuthenticationFlow.StartAsync(
-            db, context, user, "password", policy, messages, cancellationToken);
+            db, context, user, "password", policy, messages, cancellationToken, shortLived: shortLived);
         if (start.RecoveryRequired)
         {
             return Results.Ok(new { status = "security_recovery_required" });
@@ -79,7 +80,7 @@ public static class AuthEndpoints
                 db, user.Id, SecurityEventKinds.LoginSucceeded, context, "password",
                 await SecurityEvents.VerifiedEmailAsync(db, user.Id, cancellationToken));
             await db.SaveChangesAsync(cancellationToken);
-            await SessionAuthentication.SignInAsync(context, user, session.Id);
+            await SessionAuthentication.SignInAsync(context, user, session.Id, shortLived);
             return Results.Ok(user.ToDto("online"));
         }
 
@@ -97,12 +98,18 @@ public static class AuthEndpoints
                 : options.DisplayName,
         });
 
-    private static IResult ChallengeOidc(string? returnUrl, ExternalOidcOptions options) =>
-        options.IsConfigured
-            ? Results.Challenge(
-                new AuthenticationProperties { RedirectUri = ExternalOidcOptions.SafeReturnUrl(returnUrl) },
-                [ExternalOidcOptions.AuthenticationScheme])
-            : Results.NotFound();
+    private static IResult ChallengeOidc(string? returnUrl, bool? keepSignedIn, ExternalOidcOptions options)
+    {
+        if (!options.IsConfigured)
+        {
+            return Results.NotFound();
+        }
+
+        var properties = new AuthenticationProperties { RedirectUri = ExternalOidcOptions.SafeReturnUrl(returnUrl) };
+        // Kept in the protected state, so the choice comes back with the provider's answer.
+        ExternalOidcAuthentication.RememberShortLived(properties, keepSignedIn == false);
+        return Results.Challenge(properties, [ExternalOidcOptions.AuthenticationScheme]);
+    }
 
     private static async Task<IResult> LogoutAsync(
         HttpContext context,

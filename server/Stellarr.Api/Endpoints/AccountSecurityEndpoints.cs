@@ -143,7 +143,7 @@ public static class AccountSecurityEndpoints
         var challenge = await AuthenticationFlow.CreateChallengeAsync(
             db, context, user, current.PrimarySource,
             AuthChallengePurposes.Enrollment, policy, messages, cancellationToken,
-            parentSessionId: current.Id);
+            parentSessionId: current.Id, shortLived: current.ShortLived);
         var methods = await AuthenticationFlow.ConfirmedMethodsAsync(db, user.Id, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
@@ -196,7 +196,7 @@ public static class AccountSecurityEndpoints
         var challenge = await AuthenticationFlow.CreateChallengeAsync(
             db, context, user, current.PrimarySource,
             AuthChallengePurposes.Reverify, policy, messages, cancellationToken,
-            parentSessionId: current.Id);
+            parentSessionId: current.Id, shortLived: current.ShortLived);
         var methods = await AuthenticationFlow.ConfirmedMethodsAsync(db, user.Id, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
@@ -271,6 +271,16 @@ public static class AccountSecurityEndpoints
         }
 
         var currentSessionId = context.User.FindSessionId()!.Value;
+        var lifetime = await db.UserSessions.AsNoTracking()
+            .Where(x => x.Id == currentSessionId)
+            .Select(x => new { x.ShortLived, x.AbsoluteExpiresAt })
+            .SingleAsync(cancellationToken);
+        var renewedEnd = now.Add(SessionAuthentication.Lifetime);
+        if (lifetime.AbsoluteExpiresAt is { } hardEnd && hardEnd < renewedEnd)
+        {
+            renewedEnd = hardEnd;
+        }
+
         await db.SaveChangesAsync(cancellationToken);
         await db.UserSessions
             .Where(x => x.Id == currentSessionId)
@@ -278,13 +288,13 @@ public static class AccountSecurityEndpoints
                 setters => setters
                     .SetProperty(x => x.RevokedAt, (DateTime?)null)
                     .SetProperty(x => x.SecurityVersion, user.SessionVersion)
-                    .SetProperty(x => x.ExpiresAt, now.Add(SessionAuthentication.Lifetime)),
+                    .SetProperty(x => x.ExpiresAt, renewedEnd),
                 cancellationToken);
         SecurityEvents.Record(
             db, user.Id, SecurityEventKinds.MethodRemoved, context, method.Type, alertRecipient);
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
-        await SessionAuthentication.SignInAsync(context, user, currentSessionId);
+        await SessionAuthentication.SignInAsync(context, user, currentSessionId, lifetime.ShortLived);
         return Results.NoContent();
     }
 

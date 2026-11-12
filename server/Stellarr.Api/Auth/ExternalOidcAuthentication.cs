@@ -93,11 +93,16 @@ public static class ExternalOidcAuthentication
 
         var messages = context.HttpContext.RequestServices.GetRequiredService<Messages>();
         var policy = await MfaPolicy.LoadAsync(db, cancellationToken);
+        var shortLived = IsShortLived(context.Properties);
         var start = await AuthenticationFlow.StartAsync(
-            db, context.HttpContext, user, "oidc", policy, messages, cancellationToken);
+            db, context.HttpContext, user, "oidc", policy, messages, cancellationToken, shortLived: shortLived);
         if (start.RecoveryRequired)
         {
-            context.Response.Redirect("/login?security_recovery_required=1");
+            // The recovery is finished on the sign-in page, which has to know
+            // the choice made before leaving for the provider.
+            context.Response.Redirect(shortLived
+                ? "/login?security_recovery_required=1&keep_signed_in=0"
+                : "/login?security_recovery_required=1");
             context.HandleResponse();
             return;
         }
@@ -127,8 +132,21 @@ public static class ExternalOidcAuthentication
 
         context.Principal = SessionAuthentication.CreatePrincipal(user, session.Id);
         context.Properties ??= new AuthenticationProperties();
-        SessionAuthentication.KeepSignedIn(context.Properties);
+        SessionAuthentication.ApplyLifetime(context.Properties, shortLived);
     }
+
+    private const string ShortLivedItem = "stellarr.short-lived";
+
+    internal static void RememberShortLived(AuthenticationProperties properties, bool shortLived)
+    {
+        if (shortLived)
+        {
+            properties.Items[ShortLivedItem] = "true";
+        }
+    }
+
+    private static bool IsShortLived(AuthenticationProperties? properties) =>
+        properties?.Items.TryGetValue(ShortLivedItem, out var value) == true && value == "true";
 
     /// <summary>Sends a failed or cancelled sign-in back to the login page, saying roughly why.</summary>
     private static Task RedirectToLoginAsync(RemoteFailureContext context)

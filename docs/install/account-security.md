@@ -106,7 +106,14 @@ recovery code or the operator's recovery to get back in.
 
 ## Sessions
 
-A session lasts 30 days from sign-in. Signing out, a sign-out from another
+A session lasts 30 days from sign-in. The sign-in forms of the web client and
+Cockpit have **Keep me signed in** ticked. Clearing it gives a session that
+ends when the browser closes, and 12 hours after sign-in in any case, also in
+a browser that restores its tabs and cookies. The choice also applies when the
+sign-in goes through the identity provider or continues with a second step or
+an operator's recovery. A session approved for the desktop app is always kept.
+
+Signing out, a sign-out from another
 device and an operator's recovery end sessions, and a change to the account's
 methods ends its other sessions. The server closes their live connections, and
 each client returns to the sign-in page with a message that the session ended.

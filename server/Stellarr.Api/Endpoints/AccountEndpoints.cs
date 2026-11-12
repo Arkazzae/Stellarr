@@ -271,7 +271,11 @@ public static class AccountEndpoints
             await SecurityEvents.VerifiedEmailAsync(db, user.Id, cancellationToken));
         await db.SaveChangesAsync(cancellationToken);
         // This request's own cookie carries the old version.
-        await SessionAuthentication.SignInAsync(context, user, currentSessionId);
+        var shortLived = await db.UserSessions.AsNoTracking()
+            .Where(x => x.Id == currentSessionId)
+            .Select(x => x.ShortLived)
+            .SingleAsync(cancellationToken);
+        await SessionAuthentication.SignInAsync(context, user, currentSessionId, shortLived);
         return Outcome("changed");
     }
 

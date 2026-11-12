@@ -18,7 +18,7 @@ using Stellarr.Api.Realtime;
 
 namespace Stellarr.Api.Tests;
 
-public sealed class AccountSecurityFlowTests
+public sealed partial class AccountSecurityFlowTests
 {
     private const string Password = "Security!2026";
 

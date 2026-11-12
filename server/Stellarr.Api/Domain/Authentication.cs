@@ -60,6 +60,13 @@ public sealed class UserSession
     /// <summary>The session version the assurance was recorded under.</summary>
     public int SecurityVersion { get; set; }
 
+    /// <summary>
+    /// Signed in without "keep me signed in": the cookie ends with the browser
+    /// and the session after <see cref="Auth.SessionAuthentication.ShortLifetime"/>,
+    /// even in a browser that restores its cookies.
+    /// </summary>
+    public bool ShortLived { get; set; }
+
     public DateTime? RevokedAt { get; set; }
 
     public User User { get; set; } = null!;

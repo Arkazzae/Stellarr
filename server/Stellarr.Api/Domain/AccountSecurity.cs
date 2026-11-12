@@ -149,6 +149,10 @@ public sealed class AuthChallenge
     public Guid? ParentSessionId { get; set; }
 
     public int SecurityVersion { get; set; }
+
+    /// <summary>The session this challenge ends in is short-lived, as the sign-in asked.</summary>
+    public bool ShortLived { get; set; }
+
     public int Attempts { get; set; }
     public int MaxAttempts { get; set; } = 5;
     public DateTime CreatedAt { get; set; }

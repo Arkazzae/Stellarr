@@ -308,14 +308,17 @@ public static class DesktopBrowserLoginEndpoints
             login.MfaCompletedAt,
             login.MfaEvidence,
             user.SessionVersion,
-            source.AuthenticatedAt ?? source.CreatedAt);
+            source.AuthenticatedAt ?? source.CreatedAt,
+            // The desktop app keeps its own cookie jar across restarts; a
+            // browser-length cookie would sign it out at every quit.
+            shortLived: false);
         db.UserSessions.Add(session);
         SecurityEvents.Record(
             db, user.Id, SecurityEventKinds.LoginSucceeded, context, "desktop",
             await SecurityEvents.VerifiedEmailAsync(db, user.Id, cancellationToken));
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
-        await SessionAuthentication.SignInAsync(context, user, session.Id);
+        await SessionAuthentication.SignInAsync(context, user, session.Id, shortLived: false);
         return Results.Ok(user.ToDto("online"));
     }
 

@@ -665,7 +665,8 @@ public static class MfaEndpoints
             db, user.Id, SecurityEventKinds.MethodAdded, context, methodType,
             notificationEmail ?? await SecurityEvents.VerifiedEmailAsync(db, user.Id, cancellationToken));
         var session = SessionAuthentication.CreateSession(
-            context, user.Id, messages, challenge.PrimarySource, now, methodType, user.SessionVersion);
+            context, user.Id, messages, challenge.PrimarySource, now, methodType, user.SessionVersion,
+            shortLived: challenge.ShortLived);
         db.UserSessions.Add(session);
         SecurityEvents.Record(
             db, user.Id, SecurityEventKinds.MfaSucceeded, context, methodType,
@@ -673,7 +674,7 @@ public static class MfaEndpoints
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
 
-        await SessionAuthentication.SignInAsync(context, user, session.Id);
+        await SessionAuthentication.SignInAsync(context, user, session.Id, challenge.ShortLived);
         SecurityCookies.ClearPreauth(context);
         return Results.Ok(new MfaCompleteDto("ok", user.ToDto("online"), codes, trustedExpiresAt));
     }
@@ -829,7 +830,8 @@ public static class MfaEndpoints
             challenge.PrimarySource,
             fresh ? now : null,
             evidence,
-            user.SessionVersion);
+            user.SessionVersion,
+            shortLived: challenge.ShortLived);
         db.UserSessions.Add(session);
 
         var kind = evidence == "recovery"
@@ -841,7 +843,7 @@ public static class MfaEndpoints
         await db.SaveChangesAsync(cancellationToken);
         await transaction.CommitAsync(cancellationToken);
 
-        await SessionAuthentication.SignInAsync(context, user, session.Id);
+        await SessionAuthentication.SignInAsync(context, user, session.Id, challenge.ShortLived);
         SecurityCookies.ClearPreauth(context);
         return Results.Ok(new MfaCompleteDto(
             "ok",

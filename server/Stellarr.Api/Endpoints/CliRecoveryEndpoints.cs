@@ -60,7 +60,8 @@ public static class CliRecoveryEndpoints
 
         var policy = await MfaPolicy.LoadAsync(db, cancellationToken);
         var challenge = await AuthenticationFlow.CreateChallengeAsync(
-            db, context, credential.User, "cli-recovery", AuthChallengePurposes.Recovery, policy, messages, cancellationToken);
+            db, context, credential.User, "cli-recovery", AuthChallengePurposes.Recovery, policy, messages, cancellationToken,
+            shortLived: request.KeepSignedIn == false);
         var methods = await AuthenticationFlow.ConfirmedMethodsAsync(db, credential.UserId, cancellationToken);
         SecurityEvents.Record(
             db, credential.UserId, SecurityEventKinds.CliRecovery, context, "recovery credential redeemed",

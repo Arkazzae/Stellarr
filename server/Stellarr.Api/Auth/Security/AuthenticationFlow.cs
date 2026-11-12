@@ -40,7 +40,8 @@ public static class AuthenticationFlow
         SecurityPolicy policy,
         Messages messages,
         CancellationToken cancellationToken,
-        bool? requiredOverride = null)
+        bool? requiredOverride = null,
+        bool shortLived = false)
     {
         var methods = await ConfirmedMethodsAsync(db, user.Id, cancellationToken);
         if (user.SecurityRecoveryRequired)
@@ -53,14 +54,16 @@ public static class AuthenticationFlow
         if (methods.Count == 0 && !required)
         {
             return new AuthStart(null, SessionAuthentication.CreateSession(
-                context, user.Id, messages, primarySource, securityVersion: user.SessionVersion));
+                context, user.Id, messages, primarySource, securityVersion: user.SessionVersion,
+                shortLived: shortLived));
         }
 
         var purpose = methods.Count == 0
             ? AuthChallengePurposes.Enrollment
             : AuthChallengePurposes.Mfa;
         var challenge = await CreateChallengeAsync(
-            db, context, user, primarySource, purpose, policy, messages, cancellationToken);
+            db, context, user, primarySource, purpose, policy, messages, cancellationToken,
+            shortLived: shortLived);
         return new AuthStart(
             await DescribeAsync(db, context, user, challenge, methods, policy, cancellationToken),
             null);
@@ -75,7 +78,8 @@ public static class AuthenticationFlow
         SecurityPolicy policy,
         Messages messages,
         CancellationToken cancellationToken,
-        Guid? parentSessionId = null)
+        Guid? parentSessionId = null,
+        bool shortLived = false)
     {
         var now = DateTime.UtcNow;
         var secret = SecurityTokens.Random(32);
@@ -88,6 +92,7 @@ public static class AuthenticationFlow
             PrimarySource = primarySource,
             ParentSessionId = parentSessionId,
             SecurityVersion = user.SessionVersion,
+            ShortLived = shortLived,
             MaxAttempts = 5,
             CreatedAt = now,
             ExpiresAt = now + policy.ChallengeLifetime,

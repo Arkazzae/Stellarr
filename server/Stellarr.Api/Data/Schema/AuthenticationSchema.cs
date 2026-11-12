@@ -25,6 +25,7 @@ internal static class AuthenticationSchema
         ("MfaCompletedAt", """ALTER TABLE "UserSessions" ADD COLUMN "MfaCompletedAt" TEXT NULL;"""),
         ("MfaEvidence", """ALTER TABLE "UserSessions" ADD COLUMN "MfaEvidence" TEXT NULL;"""),
         ("SecurityVersion", """ALTER TABLE "UserSessions" ADD COLUMN "SecurityVersion" INTEGER NOT NULL DEFAULT 0;"""),
+        ("ShortLived", """ALTER TABLE "UserSessions" ADD COLUMN "ShortLived" INTEGER NOT NULL DEFAULT 0;"""),
     ];
 
     private static readonly (string Column, string Statement)[] DesktopColumns =

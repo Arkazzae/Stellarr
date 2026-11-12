@@ -2,7 +2,8 @@ using Stellarr.Api.Domain;
 
 namespace Stellarr.Api.Contracts;
 
-public sealed record LoginRequest(string Username, string Password);
+/// <param name="KeepSignedIn">False asks for a short-lived session; left out, the session is kept.</param>
+public sealed record LoginRequest(string Username, string Password, bool? KeepSignedIn = null);
 
 public sealed record DesktopBrowserExchangeRequest(string RequestId, string Secret);
 

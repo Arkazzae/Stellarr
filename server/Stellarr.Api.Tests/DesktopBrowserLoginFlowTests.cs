@@ -105,6 +105,41 @@ public sealed class DesktopBrowserLoginFlowTests
         Assert.Equal(HttpStatusCode.BadRequest, rejected.StatusCode);
     }
 
+    [Fact]
+    public async Task DesktopSessionStaysSignedInWhateverTheApprovingBrowserChose()
+    {
+        using var factory = Factory();
+        using var desktop = DesktopClient(factory);
+        var (requestId, secret) = await StartHandleAsync(desktop);
+        using var browser = factory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions
+        {
+            AllowAutoRedirect = false,
+            HandleCookies = true,
+        });
+        (await browser.PostAsJsonAsync(
+            "/api/auth/login",
+            new { username = "maja", password = "Aurora!2026", keepSignedIn = false }))
+            .EnsureSuccessStatusCode();
+        using var approval = await browser.GetAsync($"/api/auth/desktop/browser/verify/{requestId}");
+        var token = ApprovalToken(await approval.Content.ReadAsStringAsync());
+        (await browser.PostAsync(
+            $"/api/auth/desktop/browser/verify/{requestId}",
+            new FormUrlEncodedContent([new KeyValuePair<string, string>("token", token)])))
+            .EnsureSuccessStatusCode();
+
+        using var exchange = await desktop.PostAsJsonAsync(
+            "/api/auth/desktop/browser/exchange",
+            new { requestId, secret });
+
+        exchange.EnsureSuccessStatusCode();
+        // The desktop app keeps its cookie jar across restarts; a cookie
+        // without an expiry would sign it out at every quit.
+        var cookie = Assert.Single(
+            exchange.Headers.GetValues("Set-Cookie"),
+            header => header.Split('=', 2)[0].EndsWith("-session", StringComparison.Ordinal));
+        Assert.Contains("expires=", cookie, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static HttpClient DesktopClient(StellarrWebApplicationFactory factory)
     {
         var client = factory.CreateClient(new Microsoft.AspNetCore.Mvc.Testing.WebApplicationFactoryClientOptions

@@ -178,6 +178,13 @@ internal static class SecuritySchema
                 cancellationToken);
         }
 
+        if (!await SqliteSchema.HasColumnAsync(db, "AuthChallenges", "ShortLived", cancellationToken))
+        {
+            await db.Database.ExecuteSqlRawAsync(
+                """ALTER TABLE "AuthChallenges" ADD COLUMN "ShortLived" INTEGER NOT NULL DEFAULT 0;""",
+                cancellationToken);
+        }
+
         await db.Database.ExecuteSqlRawAsync(
             """
             CREATE INDEX IF NOT EXISTS "IX_EmailOtpCodes_ChallengeId_Purpose"

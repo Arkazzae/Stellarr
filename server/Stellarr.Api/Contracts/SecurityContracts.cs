@@ -110,7 +110,8 @@ public sealed record RegenerateRecoveryCodesRequest(string? Password);
 
 public sealed record RemoveMfaMethodRequest(string? Password);
 
-public sealed record CliRecoveryRedeemRequest(string Credential);
+/// <param name="KeepSignedIn">The choice made at the sign-in this recovery continues.</param>
+public sealed record CliRecoveryRedeemRequest(string Credential, bool? KeepSignedIn = null);
 
 public static class SecurityContractMappings
 {

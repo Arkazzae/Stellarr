@@ -175,7 +175,8 @@ public static partial class RegistrationEndpoints
         await ServerWelcome.PublishAsync(hub, server.Id, welcome, messages, CancellationToken.None);
         if (start.Session is not null)
         {
-            await SessionAuthentication.SignInAsync(context, user, start.Session.Id);
+            // Registration offers no choice; the new account stays signed in.
+            await SessionAuthentication.SignInAsync(context, user, start.Session.Id, shortLived: false);
             return Results.Created("/api/me", user.ToDto("online"));
         }
 

@@ -136,6 +136,47 @@ public sealed class DatabaseSchemaTests
     }
 
     [Fact]
+    public async Task SessionsFromBeforeKeepSignedInStayKept()
+    {
+        using var factory = new StellarrWebApplicationFactory();
+        using var client = factory.CreateClient();
+        _ = await client.GetAsync("/health/ready");
+
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var user = await db.Users.OrderBy(x => x.CreatedAt).FirstAsync();
+        var now = DateTime.UtcNow;
+        var sessionId = Guid.NewGuid();
+        db.UserSessions.Add(new UserSession
+        {
+            Id = sessionId,
+            UserId = user.Id,
+            Device = "legacy",
+            IpAddress = "192.0.2.1",
+            CreatedAt = now,
+            LastSeenAt = now,
+            ExpiresAt = now.AddDays(30),
+            AbsoluteExpiresAt = now.AddDays(30),
+        });
+        await db.SaveChangesAsync();
+        await db.Database.ExecuteSqlRawAsync(
+            """
+            ALTER TABLE "UserSessions" DROP COLUMN "ShortLived";
+            ALTER TABLE "AuthChallenges" DROP COLUMN "ShortLived";
+            """);
+
+        await DatabaseSchema.UpgradeAsync(db, default);
+        await DatabaseSchema.UpgradeAsync(db, default);
+        db.ChangeTracker.Clear();
+
+        Assert.False((await db.UserSessions.SingleAsync(x => x.Id == sessionId)).ShortLived);
+        var columns = await db.Database.SqlQueryRaw<string>(
+                "SELECT name AS Value FROM pragma_table_info('AuthChallenges')")
+            .ToArrayAsync();
+        Assert.Contains("ShortLived", columns);
+    }
+
+    [Fact]
     public async Task UpgradeAddsOperatorAuditForTheLocalCli()
     {
         using var factory = new StellarrWebApplicationFactory();
