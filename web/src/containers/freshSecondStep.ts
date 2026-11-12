@@ -8,7 +8,8 @@ export const FRESH_SECOND_STEP_REQUIRED = "fresh-mfa-required";
 /**
  * Runs a sensitive change. When the server wants a fresh second step first,
  * offers to confirm it on the sign-in page, which brings the person back to
- * this page to make the change again; any other failure is passed on.
+ * this page (the settings themselves are not in the address, so they open
+ * them again to repeat the change); any other failure is passed on.
  */
 export async function withFreshSecondStep<T>(change: () => Promise<T>, t: Translator): Promise<T | undefined> {
   try {

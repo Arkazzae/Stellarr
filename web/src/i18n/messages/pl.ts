@@ -1146,7 +1146,7 @@ export const pl = {
   "settings.emojiUnsupported": "Nie masz uprawnienia do zarządzania emoji. Możesz nadal przeglądać emoji dostępne na serwerze.",
   "settings.soundboardUnsupported": "Nie masz uprawnienia do zarządzania soundboardem. Lista pozostaje dostępna tylko do odczytu.",
   "settings.dangerUnsupported": "Nie masz uprawnienia do zarządzania serwerem, więc te operacje są wyłączone.",
-  "settings.freshSecondStep": "Ta zmiana wymaga drugiego kroku sprzed najwyżej 5 minut. Potwierdzić go teraz? Wrócisz tutaj i ponowisz zmianę.",
+  "settings.freshSecondStep": "Ta zmiana wymaga drugiego kroku sprzed najwyżej 5 minut. Potwierdzić go teraz? Potem otwórz ustawienia serwera jeszcze raz i powtórz zmianę.",
   "settings.transferServer": "Przekaż serwer",
   "settings.transferServerDetail": "Właścicielem zostanie inna osoba z ekipy",
   "settings.transfer": "Przekaż",

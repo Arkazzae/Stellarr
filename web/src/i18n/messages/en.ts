@@ -1148,7 +1148,7 @@ export const en = {
   "settings.emojiUnsupported": "You do not have permission to manage emoji. You can still browse emoji available on the server.",
   "settings.soundboardUnsupported": "You do not have permission to manage the soundboard. The list is read-only.",
   "settings.dangerUnsupported": "You do not have permission to manage this server, so these actions are disabled.",
-  "settings.freshSecondStep": "This change needs a second step from the last 5 minutes. Confirm it now? You will come back here to make the change again.",
+  "settings.freshSecondStep": "This change needs a second step from the last 5 minutes. Confirm it now? Then open the server settings again and repeat the change.",
   "settings.transferServer": "Transfer server",
   "settings.transferServerDetail": "Someone else on the team will become the owner",
   "settings.transfer": "Transfer",
