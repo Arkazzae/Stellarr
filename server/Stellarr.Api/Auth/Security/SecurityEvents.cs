@@ -27,6 +27,7 @@ public static class SecurityEvents
         SecurityEventKinds.DesktopApproved,
         SecurityEventKinds.IdentityLinked,
         SecurityEventKinds.IdentityUnlinked,
+        SecurityEventKinds.EmailChanged,
     ];
 
     /// <summary>

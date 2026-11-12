@@ -4,6 +4,21 @@ using Stellarr.Api.Domain;
 
 namespace Stellarr.Api.Data.Configurations;
 
+internal sealed class EmailChangeRequestConfiguration : IEntityTypeConfiguration<EmailChangeRequest>
+{
+    public void Configure(EntityTypeBuilder<EmailChangeRequest> entity)
+    {
+        entity.HasKey(x => x.Id);
+        entity.HasIndex(x => x.TokenHash).IsUnique();
+        entity.HasIndex(x => new { x.UserId, x.ExpiresAt });
+        entity.Property(x => x.NewEmail).HasMaxLength(320);
+        entity.Property(x => x.NormalizedNewEmail).HasMaxLength(320);
+        entity.Property(x => x.TokenHash).HasMaxLength(64);
+        entity.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+    }
+}
+
 internal sealed class PasswordResetTokenConfiguration : IEntityTypeConfiguration<PasswordResetToken>
 {
     public void Configure(EntityTypeBuilder<PasswordResetToken> entity)

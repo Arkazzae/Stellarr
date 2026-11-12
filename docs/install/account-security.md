@@ -79,6 +79,17 @@ policy the session is treated as having passed a second step, Cockpit
 included. A security key that does not keep the account on the key works as a
 second step after the password, but not on its own.
 
+## Changing the account's address
+
+The account's address receives the email codes, the security alerts and the
+password reset links, so a person changes it under **Settings → Login and
+security** with the current password and, once the account has a second step,
+a fresh one. Stellarr mails a link to the new address, valid for 60 minutes;
+the address changes only when someone opens that link and presses the button,
+on any device. The old address then gets a security alert. An email method,
+codes and password reset links that went to the old address stop working.
+Changing the address needs mail delivery to be configured.
+
 ## Trusted devices
 
 At the second step a person can tick "Don't ask for a code on this device for

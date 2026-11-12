@@ -49,6 +49,49 @@ public static class AccountEmail
             $"password-reset/{tokenId:N}");
     }
 
+    /// <summary>Sent to the new address of an account, which proves it receives mail by opening the link.</summary>
+    public static EmailMessage EmailChange(
+        string from,
+        string to,
+        string displayName,
+        string instanceName,
+        string confirmUrl,
+        Guid requestId,
+        Messages messages)
+    {
+        var name = WebUtility.HtmlEncode(displayName);
+        var instance = WebUtility.HtmlEncode(instanceName);
+        var link = WebUtility.HtmlEncode(confirmUrl);
+        var text = string.Join(
+            "\n",
+            messages.Get(MessageKey.EmailChangeGreeting, ("name", displayName)),
+            "",
+            messages.Get(MessageKey.EmailChangeInstruction, ("instance", instanceName)),
+            confirmUrl,
+            "",
+            messages.Get(MessageKey.EmailChangeValidity));
+        var html = $$"""
+            <!doctype html>
+            <html lang="{{messages.Language}}"><body style="margin:0;background:#171717;color:#f5f5f5;font-family:system-ui,-apple-system,Segoe UI,sans-serif">
+              <div style="max-width:560px;margin:0 auto;padding:40px 24px">
+                <p style="margin:0 0 24px;color:#d6a554;font-weight:700">{{instance}}</p>
+                <h1 style="margin:0 0 16px;font-size:26px;line-height:1.25">{{messages.Get(MessageKey.EmailChangeHeading)}}</h1>
+                <p style="margin:0 0 24px;color:#d4d4d4;line-height:1.6">{{messages.Get(MessageKey.EmailChangeIntro, ("name", name))}}</p>
+                <p style="margin:0 0 28px"><a href="{{link}}" style="display:inline-block;padding:12px 18px;background:#d6a554;color:#17130d;text-decoration:none;font-weight:700;border-radius:4px">{{messages.Get(MessageKey.EmailChangeButton)}}</a></p>
+                <p style="margin:0;color:#a3a3a3;font-size:13px;line-height:1.6">{{messages.Get(MessageKey.EmailChangeIgnore)}}</p>
+              </div>
+            </body></html>
+            """;
+
+        return new EmailMessage(
+            from,
+            to,
+            messages.Get(MessageKey.EmailChangeSubject, ("instance", instanceName)),
+            html,
+            text,
+            $"email-change/{requestId:N}");
+    }
+
     /// <summary>What the operator panel sends to check that the provider accepts mail.</summary>
     public static EmailMessage DeliveryTest(string from, string to, string instanceName, Messages messages)
     {

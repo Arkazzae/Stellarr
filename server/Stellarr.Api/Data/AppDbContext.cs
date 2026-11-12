@@ -12,6 +12,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
 {
     public DbSet<User> Users => Set<User>();
     public DbSet<PasswordResetToken> PasswordResetTokens => Set<PasswordResetToken>();
+    public DbSet<EmailChangeRequest> EmailChangeRequests => Set<EmailChangeRequest>();
     public DbSet<ExternalIdentity> ExternalIdentities => Set<ExternalIdentity>();
     public DbSet<UserPreferenceSettings> UserPreferences => Set<UserPreferenceSettings>();
     public DbSet<UserSession> UserSessions => Set<UserSession>();

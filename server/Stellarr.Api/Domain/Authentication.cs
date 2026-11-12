@@ -4,6 +4,24 @@ namespace Stellarr.Api.Domain;
 /// A one-time password recovery credential. Only its SHA-256 digest is stored;
 /// the token itself lives briefly in the recovery link that is mailed out.
 /// </summary>
+/// <summary>
+/// A change of the account's address, waiting for the new address to prove
+/// it receives mail. Only a digest of the link's token is stored.
+/// </summary>
+public sealed class EmailChangeRequest
+{
+    public Guid Id { get; set; }
+    public Guid UserId { get; set; }
+    public required string NewEmail { get; set; }
+    public required string NormalizedNewEmail { get; set; }
+    public required string TokenHash { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime ExpiresAt { get; set; }
+    public DateTime? UsedAt { get; set; }
+
+    public User User { get; set; } = null!;
+}
+
 public sealed class PasswordResetToken
 {
     public Guid Id { get; set; }

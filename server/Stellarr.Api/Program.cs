@@ -229,6 +229,7 @@ app.MapDesktopUpdateEndpoints();
 app.MapAuthEndpoints();
 app.MapMfaEndpoints();
 app.MapPasskeySignInEndpoints();
+app.MapEmailChangeEndpoints();
 app.MapCliRecoveryEndpoints();
 app.MapPasswordRecoveryEndpoints();
 app.MapRegistrationEndpoints();

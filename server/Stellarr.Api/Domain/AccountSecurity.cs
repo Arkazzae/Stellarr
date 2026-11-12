@@ -68,6 +68,7 @@ public static class SecurityEventKinds
     public const string DesktopApproved = "desktop-approved";
     public const string IdentityLinked = "identity-linked";
     public const string IdentityUnlinked = "identity-unlinked";
+    public const string EmailChanged = "email-changed";
 }
 
 /// <summary>

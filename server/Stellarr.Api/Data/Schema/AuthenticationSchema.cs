@@ -77,6 +77,22 @@ internal static class AuthenticationSchema
                 ON "PasswordResetTokens" ("TokenHash");
             CREATE INDEX IF NOT EXISTS "IX_PasswordResetTokens_UserId_ExpiresAt"
                 ON "PasswordResetTokens" ("UserId", "ExpiresAt");
+            CREATE TABLE IF NOT EXISTS "EmailChangeRequests" (
+                "Id" TEXT NOT NULL CONSTRAINT "PK_EmailChangeRequests" PRIMARY KEY,
+                "UserId" TEXT NOT NULL,
+                "NewEmail" TEXT NOT NULL,
+                "NormalizedNewEmail" TEXT NOT NULL,
+                "TokenHash" TEXT NOT NULL,
+                "CreatedAt" TEXT NOT NULL,
+                "ExpiresAt" TEXT NOT NULL,
+                "UsedAt" TEXT NULL,
+                CONSTRAINT "FK_EmailChangeRequests_Users_UserId"
+                    FOREIGN KEY ("UserId") REFERENCES "Users" ("Id") ON DELETE CASCADE
+            );
+            CREATE UNIQUE INDEX IF NOT EXISTS "IX_EmailChangeRequests_TokenHash"
+                ON "EmailChangeRequests" ("TokenHash");
+            CREATE INDEX IF NOT EXISTS "IX_EmailChangeRequests_UserId_ExpiresAt"
+                ON "EmailChangeRequests" ("UserId", "ExpiresAt");
             """,
             cancellationToken);
     }
