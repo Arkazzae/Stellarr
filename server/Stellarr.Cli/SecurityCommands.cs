@@ -264,79 +264,20 @@ internal static class SecurityCommands
             $"{user.DisplayName} ({user.Username}), then issue one recovery credential valid for " +
             $"{policy.CliRecoveryMinutes} minutes. Reason: {trimmedReason}");
 
-        await using var transaction = await db.Database.BeginTransactionAsync(
-            System.Data.IsolationLevel.Serializable, cancellationToken);
-        await db.Database.ExecuteSqlInterpolatedAsync(
-            $"UPDATE \"Users\" SET \"SessionVersion\" = \"SessionVersion\" WHERE \"Id\" = {user.Id};",
-            cancellationToken);
-        await db.Entry(user).ReloadAsync(cancellationToken);
-        if (user.IsDisabled)
-        {
-            throw new CliException(
+        var result = await AccountRecovery.RecoverAsync(
+            db,
+            user.Id,
+            trimmedReason,
+            policy,
+            audit =>
+            {
+                audit.OperatorAuditEntries.Add(CliDatabase.Audit("security.recover", user.Id.ToString()));
+                return Task.CompletedTask;
+            },
+            cancellationToken) ?? throw new CliException(
                 "account_disabled",
                 "The account is disabled. Enable it before recovering its security methods.",
                 CliExit.Conflict);
-        }
-
-        var now = DateTime.UtcNow;
-        verifiedEmailMethod = user.NormalizedEmail is { Length: > 0 } currentNormalized
-            ? await db.MfaMethods.AsNoTracking().FirstOrDefaultAsync(
-                x => x.UserId == user.Id &&
-                    x.Type == MfaMethodTypes.Email &&
-                    x.ConfirmedAt != null &&
-                    x.RevokedAt == null &&
-                    x.EmailAddress == currentNormalized,
-                cancellationToken)
-            : null;
-        alertRecipient = verifiedEmailMethod is null ? null : user.Email?.Trim();
-        methods = await db.MfaMethods.AsNoTracking()
-            .CountAsync(x => x.UserId == user.Id && x.RevokedAt == null, cancellationToken);
-        devices = await db.TrustedDevices.AsNoTracking()
-            .CountAsync(x => x.UserId == user.Id && x.RevokedAt == null, cancellationToken);
-        sessions = await db.UserSessions.AsNoTracking()
-            .CountAsync(x => x.UserId == user.Id && x.RevokedAt == null && x.ExpiresAt > now, cancellationToken);
-        handoffs = await db.DesktopBrowserLogins.AsNoTracking()
-            .CountAsync(x => x.UserId == user.Id && x.ApprovedAt != null && x.RedeemedAt == null, cancellationToken);
-
-        await db.MfaMethods
-            .Where(x => x.UserId == user.Id && x.RevokedAt == null)
-            .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.RevokedAt, now), cancellationToken);
-        await db.TrustedDevices
-            .Where(x => x.UserId == user.Id && x.RevokedAt == null)
-            .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.RevokedAt, now), cancellationToken);
-        await db.UserSessions
-            .Where(x => x.UserId == user.Id && x.RevokedAt == null)
-            .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.RevokedAt, now), cancellationToken);
-        await db.DesktopBrowserLogins
-            .Where(x => x.UserId == user.Id && x.ApprovedAt != null && x.RedeemedAt == null)
-            .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.RedeemedAt, now), cancellationToken);
-        await db.RecoveryCodes
-            .Where(x => x.UserId == user.Id && x.UsedAt == null)
-            .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.UsedAt, now), cancellationToken);
-        await db.CliRecoveryCredentials
-            .Where(x => x.UserId == user.Id && x.UsedAt == null)
-            .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.UsedAt, now), cancellationToken);
-
-        user.SessionVersion++;
-        user.SecurityRecoveryRequired = true;
-        var credential = SecurityTokens.Random(32);
-        var recovery = new CliRecoveryCredential
-        {
-            Id = Guid.NewGuid(),
-            UserId = user.Id,
-            TokenHash = SecurityTokens.Hash(credential),
-            Reason = trimmedReason,
-            SecurityVersion = user.SessionVersion,
-            CreatedAt = now,
-            ExpiresAt = now + policy.CliRecoveryLifetime,
-        };
-        db.CliRecoveryCredentials.Add(recovery);
-        SecurityEvents.Record(
-            db, user.Id, SecurityEventKinds.CliRecovery, null,
-            $"operator recovery: {trimmedReason}", alertRecipient);
-        db.OperatorAuditEntries.Add(CliDatabase.Audit("security.recover", user.Id.ToString()));
-        await db.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
 
         return new CliResult(
             "security.recover",
@@ -344,22 +285,22 @@ internal static class SecurityCommands
             {
                 userId = user.Id.ToString(),
                 username = user.Username,
-                methodsRevoked = methods,
-                trustedDevicesRevoked = devices,
-                sessionsRevoked = sessions,
-                handoffsInvalidated = handoffs,
-                recoveryCredential = credential,
-                recoveryExpiresAt = recovery.ExpiresAt,
-                sessionVersion = user.SessionVersion,
+                methodsRevoked = result.MethodsRevoked,
+                trustedDevicesRevoked = result.TrustedDevicesRevoked,
+                sessionsRevoked = result.SessionsRevoked,
+                handoffsInvalidated = result.HandoffsInvalidated,
+                recoveryCredential = result.Credential,
+                recoveryExpiresAt = result.ExpiresAt,
+                sessionVersion = result.SessionVersion,
                 securityRecoveryRequired = true,
                 auditActor = "local-cli",
             },
             [
                 $"Recovered the account security of {user.DisplayName} ({user.Username}).",
-                $"Revoked {methods} method(s), {devices} trusted device(s), {sessions} session(s) and {handoffs} handoff(s).",
+                $"Revoked {result.MethodsRevoked} method(s), {result.TrustedDevicesRevoked} trusted device(s), {result.SessionsRevoked} session(s) and {result.HandoffsInvalidated} handoff(s).",
                 "Ordinary password, OIDC and desktop sign-in remain blocked until replacement security is enrolled.",
-                $"Recovery credential (shown once, valid until {recovery.ExpiresAt:O}):",
-                credential,
+                $"Recovery credential (shown once, valid until {result.ExpiresAt:O}):",
+                result.Credential,
                 "Exchange it through POST /api/auth/recovery/redeem; it can only enroll replacement security.",
                 "Audit: local-cli security.recover " + user.Id,
             ]);
