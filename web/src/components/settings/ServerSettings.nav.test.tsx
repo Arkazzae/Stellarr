@@ -99,7 +99,7 @@ const PANES = [
   { item: "Emoji", detail: "Emoji dostępne dla wszystkich na serwerze", marker: () => screen.getByText("Jeszcze nie ma własnych emoji") },
   { item: "Soundboard", detail: "Dźwięki dostępne na kanałach głosowych", marker: () => screen.getByText("Nie ma jeszcze żadnych dźwięków") },
   { item: "Dziennik zdarzeń", detail: "Kto co zmienił na serwerze", marker: () => screen.getByText("Ostatnie 30 dni") },
-  { item: "Bany", detail: "Osoby, które nie mogą wrócić na serwer", marker: () => screen.getByText("Lista banów — 0") },
+  { item: "Bany", detail: "Osoby, które nie mogą wrócić na serwer", marker: () => screen.getByText("Lista banów (0)") },
   { item: "Strefa zagrożenia", detail: "Operacje, których nie da się cofnąć", marker: () => screen.getByRole("region", { name: "Strefa zagrożenia" }) },
 ];
 

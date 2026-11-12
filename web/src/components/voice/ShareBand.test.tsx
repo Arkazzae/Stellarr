@@ -21,7 +21,7 @@ describe("ShareBand", () => {
       />,
     );
 
-    const video = screen.getByLabelText("Udostępniany ekran — Maja");
+    const video = screen.getByLabelText("Udostępniany ekran: Maja");
     expect(video).toBeInstanceOf(HTMLVideoElement);
     expect(video).toHaveProperty("srcObject", stream);
     expect(video).toHaveProperty("muted", true);

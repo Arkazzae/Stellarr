@@ -101,7 +101,7 @@ describe("Composer attachments", () => {
       onSendVoice: vi.fn(),
     });
 
-    const reason = "Załączniki w wiadomościach prywatnych — jeszcze niedostępne";
+    const reason = "Załączniki w wiadomościach prywatnych nie są jeszcze dostępne";
     expect(screen.getByRole("button", { name: "Dodaj załącznik" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Dodaj załącznik" })).toHaveAttribute("title", reason);
     expect(screen.getByRole("button", { name: "Nagraj wiadomość głosową" })).toBeDisabled();

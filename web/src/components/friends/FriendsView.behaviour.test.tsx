@@ -308,7 +308,7 @@ describe("FriendsView requests and blocks", () => {
       blocked: [{ person: person("u6", "Zenek", "offline"), username: "zenek" }],
     });
 
-    expect(screen.getByText("Zablokowany — nie widzi Twoich wiadomości")).toBeTruthy();
+    expect(screen.getByText("Zablokowany (nie widzi Twoich wiadomości)")).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Odblokuj" }));
 
     expect(spies.onUnblock).toHaveBeenCalledWith("u6");

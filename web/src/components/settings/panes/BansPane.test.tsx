@@ -27,7 +27,7 @@ describe("BansPane", () => {
   it("lists who was banned, by whom, why and when", () => {
     render(<BansPane supported bans={BANS} onUnban={vi.fn()} />);
 
-    expect(screen.getByText("Lista banów — 2")).toBeVisible();
+    expect(screen.getByText("Lista banów (2)")).toBeVisible();
     expect(screen.getByText("zbanował·a Jan · spam · 6.03.2026")).toBeVisible();
     expect(screen.getByText("zbanował·a Maja · reklamy · 1.04.2026")).toBeVisible();
   });

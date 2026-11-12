@@ -93,7 +93,7 @@ describe("ServerRail launcher", () => {
     await user.click(launcher());
 
     expect(
-      screen.getByRole("button", { name: /Utwórz serwer — Jeszcze niedostępne/ }),
+      screen.getByRole("button", { name: /Utwórz serwer\. Jeszcze niedostępne/ }),
     ).toBeDisabled();
   });
 });

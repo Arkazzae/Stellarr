@@ -23,7 +23,7 @@ vi.mock("@/lib/notifications/browser", () => ({
   closeIncomingCallNotification: vi.fn(async () => {}),
 }));
 
-const BODY = "Dzwoni do Ciebie — odbierz w Stellarr.";
+const BODY = "Dzwoni do Ciebie. Odbierz w Stellarr.";
 
 /** A direct conversation in which the other person is in the room. */
 function ringing(callId = "call-1"): DmConversation {

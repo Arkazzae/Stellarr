@@ -46,7 +46,7 @@ describe("CodeAttachment", () => {
     const source = Array.from({ length: 20 }, (_, index) => `const line${index} = ${index};`).join("\n");
     render(<CodeAttachment part={codePart(source)} />);
 
-    const pre = screen.getByLabelText("Kod — TypeScript");
+    const pre = screen.getByLabelText("Kod: TypeScript");
     expect(pre.closest(".att-code")).toHaveClass("att-window");
     expect(pre).toHaveClass("compact");
     expect(pre).toHaveAttribute("tabindex", "0");

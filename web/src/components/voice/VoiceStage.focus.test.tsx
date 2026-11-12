@@ -31,7 +31,7 @@ function stage(props: Partial<VoiceStageProps> = {}) {
   );
 }
 
-const sharedScreen = () => screen.queryByRole("img", { name: "Udostępniany ekran — Ada" });
+const sharedScreen = () => screen.queryByRole("img", { name: "Udostępniany ekran: Ada" });
 const focusBar = () => screen.queryByRole("group", { name: "Co pokazać na scenie" });
 
 describe("VoiceStage", () => {
@@ -46,7 +46,7 @@ describe("VoiceStage", () => {
     const user = userEvent.setup();
     const { container } = render(stage({ share: SHARE }));
 
-    expect(screen.getByRole("button", { name: "Ada — ekran" })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "Ada (ekran)" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
@@ -62,7 +62,7 @@ describe("VoiceStage", () => {
     // The tiles stay on the stage whichever surface is focused.
     expect(screen.getByText("Ada", { selector: ".t-name span" })).toBeVisible();
 
-    await user.click(screen.getByRole("button", { name: "Ada — ekran" }));
+    await user.click(screen.getByRole("button", { name: "Ada (ekran)" }));
     expect(container.firstElementChild).toHaveClass("streaming");
     expect(sharedScreen()).toBeVisible();
   });

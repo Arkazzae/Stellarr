@@ -199,7 +199,7 @@ describe("MessageGroup inline editing", () => {
       within(second as HTMLElement).getByRole("button", { name: "Odepnij" }),
     );
     await user.click(
-      within(second as HTMLElement).getByRole("button", { name: "🔥 — 2 reakcji" }),
+      within(second as HTMLElement).getByRole("button", { name: "🔥, liczba reakcji: 2" }),
     );
 
     expect(onAction).toHaveBeenCalledExactlyOnceWith("m-2", "pin");

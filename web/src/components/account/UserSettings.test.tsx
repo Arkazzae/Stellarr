@@ -724,7 +724,7 @@ describe("UserSettings", () => {
     expect(
       screen.getByRole("meter", { name: "Poziom mikrofonu" }),
     ).toHaveAttribute("aria-valuenow", "75");
-    expect(screen.getByText(/to trafiłoby do rozmowy/)).toBeInTheDocument();
+    expect(screen.getByText(/To trafiłoby do rozmowy/)).toBeInTheDocument();
   });
 
   it("does not claim a noise suppressor that failed to start", async () => {

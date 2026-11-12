@@ -99,7 +99,7 @@ describe("MiniProfile relationship controls", () => {
     const { onUnblock } = setup("blocked");
 
     expect(
-      screen.getByText("Zablokowany — nie widzi Twoich wiadomości."),
+      screen.getByText("Zablokowany. Nie widzi Twoich wiadomości."),
     ).toBeVisible();
     await user.click(screen.getByRole("button", { name: "Odblokuj Ada" }));
 

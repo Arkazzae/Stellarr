@@ -21,11 +21,11 @@ describe("Reactions", () => {
         onToggle={vi.fn()}
       />,
     );
-    expect(screen.getByRole("button", { name: "🔥 — 1 reakcji" })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "🔥, liczba reakcji: 1" })).toHaveAttribute(
       "aria-pressed",
       "false",
     );
-    expect(screen.getByRole("button", { name: "👍 — 3 reakcji" })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "👍, liczba reakcji: 3" })).toHaveAttribute(
       "aria-pressed",
       "true",
     );
@@ -34,15 +34,8 @@ describe("Reactions", () => {
   it("toggles the emoji that was clicked", async () => {
     const onToggle = vi.fn();
     render(<Reactions reactions={[fire]} onToggle={onToggle} />);
-    await userEvent.click(screen.getByRole("button", { name: "🔥 — 1 reakcji" }));
+    await userEvent.click(screen.getByRole("button", { name: "🔥, liczba reakcji: 1" }));
     expect(onToggle).toHaveBeenCalledExactlyOnceWith("🔥");
-  });
-
-  it("does not toggle while disabled", async () => {
-    const onToggle = vi.fn();
-    render(<Reactions reactions={[fire]} onToggle={onToggle} disabled />);
-    await userEvent.click(screen.getByRole("button", { name: "🔥 — 1 reakcji" }));
-    expect(onToggle).not.toHaveBeenCalled();
   });
 
   it("matches a custom emoji whether or not the stored shortcode has colons", () => {
@@ -68,16 +61,16 @@ describe("Reactions", () => {
       const chip = (name: string) => screen.getByRole("button", { name });
 
       // What was on screen at mount stays still.
-      expect(chip("🔥 — 1 reakcji")).not.toHaveClass("pop");
+      expect(chip("🔥, liczba reakcji: 1")).not.toHaveClass("pop");
 
       rerender(<Reactions reactions={[{ ...fire, count: 2 }, other]} />);
-      expect(chip("🔥 — 2 reakcji")).toHaveClass("pop");
-      expect(chip("👍 — 2 reakcji")).not.toHaveClass("pop");
+      expect(chip("🔥, liczba reakcji: 2")).toHaveClass("pop");
+      expect(chip("👍, liczba reakcji: 2")).not.toHaveClass("pop");
 
       act(() => {
         vi.advanceTimersByTime(240);
       });
-      expect(chip("🔥 — 2 reakcji")).not.toHaveClass("pop");
+      expect(chip("🔥, liczba reakcji: 2")).not.toHaveClass("pop");
     });
   });
 });

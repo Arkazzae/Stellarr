@@ -60,7 +60,7 @@ describe("VoiceProcessingSection noise reduction", () => {
     });
 
     expect(
-      screen.getByText(/mikrofon czyści teraz nic — surowy dźwięk z mikrofonu/),
+      screen.getByText(/mikrofon czyści teraz nic \(surowy dźwięk z mikrofonu\)/),
     ).toBeInTheDocument();
   });
 

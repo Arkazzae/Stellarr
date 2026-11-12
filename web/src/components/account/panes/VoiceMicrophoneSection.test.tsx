@@ -108,7 +108,7 @@ describe("VoiceMicrophoneSection test", () => {
       "aria-valuenow",
       "75",
     );
-    expect(screen.getByText(/to trafiłoby do rozmowy/)).toBeInTheDocument();
+    expect(screen.getByText(/To trafiłoby do rozmowy/)).toBeInTheDocument();
 
     rerender(
       <VoiceMicrophoneSection
@@ -118,7 +118,7 @@ describe("VoiceMicrophoneSection test", () => {
         mic={{ ...idleMic, running: true, speaking: false, level: 0.1 }}
       />,
     );
-    expect(screen.getByText(/to zostałoby uznane za tło/)).toBeInTheDocument();
+    expect(screen.getByText(/To zostałoby uznane za tło/)).toBeInTheDocument();
   });
 
   it("shows the failure with a retry in place of the status line", async () => {
