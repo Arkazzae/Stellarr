@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.RegularExpressions;
+using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -853,6 +854,43 @@ public sealed class AccountSecurityFlowTests
                 code = TotpService.ComputeAt(method.GetProperty("secret").GetString()!, DateTime.UtcNow),
             });
         Assert.Equal(HttpStatusCode.TooManyRequests, confirm.StatusCode);
+    }
+
+    [Fact]
+    public async Task SecondStepChangesCountApartFromMailAndRegistration()
+    {
+        // The limits are lifted in the Testing environment, so this host runs
+        // as development, where they come from configuration.
+        using var factory = new StellarrWebApplicationFactory();
+        using var limited = factory.WithWebHostBuilder(builder =>
+        {
+            builder.UseEnvironment("Development");
+            builder.UseSetting("RateLimiting:AuthWrite:PermitLimit", "2");
+            builder.UseSetting("RateLimiting:SecurityWrite:PermitLimit", "3");
+        });
+        using var client = limited.CreateClient();
+
+        var cancels = new List<HttpStatusCode>();
+        for (var attempt = 0; attempt < 4; attempt++)
+        {
+            using var response = await client.PostAsync("/api/auth/mfa/cancel", null);
+            cancels.Add(response.StatusCode);
+        }
+
+        var mail = new List<HttpStatusCode>();
+        for (var attempt = 0; attempt < 3; attempt++)
+        {
+            using var response = await client.PostAsJsonAsync(
+                "/api/auth/mfa/email/send",
+                new { challengeId = Guid.NewGuid().ToString(), methodId = Guid.NewGuid().ToString() });
+            mail.Add(response.StatusCode);
+        }
+
+        Assert.Equal(3, cancels.Count(x => x != HttpStatusCode.TooManyRequests));
+        Assert.Equal(HttpStatusCode.TooManyRequests, cancels[3]);
+        // Sending mail keeps its own, smaller budget, untouched by the cancels.
+        Assert.DoesNotContain(HttpStatusCode.TooManyRequests, mail.Take(2));
+        Assert.Equal(HttpStatusCode.TooManyRequests, mail[2]);
     }
 
     [Fact]

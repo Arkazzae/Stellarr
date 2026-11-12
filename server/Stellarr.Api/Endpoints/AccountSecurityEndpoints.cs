@@ -18,10 +18,10 @@ public static class AccountSecurityEndpoints
         group.AddEndpointFilter(AuthEndpoints.NoStoreAsync);
         group.MapGet("", GetAsync);
         group.MapGet("/events", GetEventsAsync);
-        group.MapPost("/mfa/enroll/start", StartEnrollmentAsync).RequireRateLimiting(RateLimitPolicies.AuthWrite);
-        group.MapPost("/mfa/reverify/start", StartReverificationAsync).RequireRateLimiting(RateLimitPolicies.AuthWrite);
-        group.MapPost("/mfa/{methodId:guid}/remove", RemoveMethodAsync).RequireRateLimiting(RateLimitPolicies.AuthWrite);
-        group.MapPost("/recovery/regenerate", RegenerateRecoveryAsync).RequireRateLimiting(RateLimitPolicies.AuthWrite);
+        group.MapPost("/mfa/enroll/start", StartEnrollmentAsync).RequireRateLimiting(RateLimitPolicies.SecurityWrite);
+        group.MapPost("/mfa/reverify/start", StartReverificationAsync).RequireRateLimiting(RateLimitPolicies.SecurityWrite);
+        group.MapPost("/mfa/{methodId:guid}/remove", RemoveMethodAsync).RequireRateLimiting(RateLimitPolicies.SecurityWrite);
+        group.MapPost("/recovery/regenerate", RegenerateRecoveryAsync).RequireRateLimiting(RateLimitPolicies.SecurityWrite);
         group.MapDelete("/trusted/{deviceId:guid}", RevokeTrustedDeviceAsync);
         group.MapGet("/sessions", ListSessionsAsync);
         group.MapDelete("/sessions/{sessionId:guid}", RevokeSessionAsync);

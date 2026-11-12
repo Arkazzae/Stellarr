@@ -23,10 +23,10 @@ public static class MfaEndpoints
         var group = endpoints.MapGroup("/api/auth/mfa");
         group.AddEndpointFilter(AuthEndpoints.NoStoreAsync);
         group.MapGet("/pending", PendingAsync).RequireRateLimiting(RateLimitPolicies.LoginPoll);
-        group.MapPost("/cancel", CancelAsync).RequireRateLimiting(RateLimitPolicies.AuthWrite);
+        group.MapPost("/cancel", CancelAsync).RequireRateLimiting(RateLimitPolicies.SecurityWrite);
         group.MapPost("/verify", VerifyAsync).RequireRateLimiting(RateLimitPolicies.Login);
         group.MapPost("/email/send", SendEmailAsync).RequireRateLimiting(RateLimitPolicies.AuthWrite);
-        group.MapPost("/enroll/totp/start", StartTotpAsync).RequireRateLimiting(RateLimitPolicies.AuthWrite);
+        group.MapPost("/enroll/totp/start", StartTotpAsync).RequireRateLimiting(RateLimitPolicies.SecurityWrite);
         group.MapPost("/enroll/totp/confirm", ConfirmTotpAsync).RequireRateLimiting(RateLimitPolicies.Login);
         group.MapPost("/enroll/email/start", StartEmailAsync).RequireRateLimiting(RateLimitPolicies.AuthWrite);
         group.MapPost("/enroll/email/confirm", ConfirmEmailAsync).RequireRateLimiting(RateLimitPolicies.Login);

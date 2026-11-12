@@ -28,8 +28,10 @@ its browser returns to the sign-in page.
 
 Adding or removing a method and replacing the recovery codes need proof: a
 second step completed in the last five minutes, or the password when the
-account has no method yet. The pane asks for it when needed. These requests
-are limited to five per 15 minutes from one address.
+account has no method yet. The pane asks for it when needed. One address can
+make 30 of these requests, the steps of a setup included, in 15 minutes.
+Sending an email code falls under the stricter limit shared with registration
+and password reset: five requests per 15 minutes.
 
 Signing in through the identity provider (OIDC) is followed by the same second
 step.
