@@ -79,7 +79,7 @@ function ActivityCard({ activity, error, className }: ActivityCardProps) {
 
   return (
     <Card className={cn("gap-0 py-0", className)}>
-      <CardTitleRow icon="signal" title={t("dashboard.activity.title")}>
+      <CardTitleRow icon="chart" title={t("dashboard.activity.title")}>
         {activity ? (
           <span className="text-xs text-muted-foreground">
             {t("dashboard.activity.window", { zone: activity.timeZone })}
@@ -264,7 +264,7 @@ export function DashboardPage() {
         />
 
         <StatTile
-          icon="cpu"
+          icon="clock"
           title={t("dashboard.uptime.since")}
           value={runtime.data ? formatUptime(runtime.data.uptimeSeconds) : "…"}
           caption={runtime.data ? t("dashboard.uptime.started", { date: formatDateTime(runtime.data.startedAt) }) : ""}
