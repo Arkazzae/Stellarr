@@ -1,6 +1,6 @@
 import type { ApiClient } from "../client";
 import { ApiError, isUnauthorized } from "../errors";
-import { unwrap } from "../expect";
+import { expectBoolean, expectRecord, unwrap } from "../expect";
 import { parseBootstrap, parseUser } from "../parsers";
 import { parseAuthResult } from "../securityParsers";
 import {
@@ -14,6 +14,7 @@ import { getJson, sendJson, sendVoid } from "./http";
 
 type SessionCalls = Pick<
   ApiClient,
+  | "needsServerSetup"
   | "login"
   | "register"
   | "requestPasswordReset"
@@ -53,6 +54,11 @@ async function fetchBootstrap(signal?: AbortSignal): Promise<Bootstrap> {
 
 export function sessionCalls(): SessionCalls {
   return {
+    needsServerSetup: (signal) => getJson(
+      "/api/auth/registration",
+      (value, path) => expectBoolean(expectRecord(value, path), "needsServerSetup", path),
+      signal,
+    ),
     login: (input, signal) =>
       sendJson("POST", "/api/auth/login", input, parseAuthResult, signal),
 

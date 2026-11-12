@@ -81,16 +81,16 @@ public sealed class MailDeliveryTests
             "jo@example.test",
             "<b>Jo</b>",
             "Orbit & Co",
-            "https://chat.test/reset-hasla?token=abc&x=1",
+            "https://chat.test/reset-password?token=abc&x=1",
             tokenId,
             new Messages(new LanguageOptions { Language = "pl" }));
 
         Assert.Contains("&lt;b&gt;Jo&lt;/b&gt;", mail.Html, StringComparison.Ordinal);
         Assert.DoesNotContain("<b>Jo</b>", mail.Html, StringComparison.Ordinal);
         Assert.Contains("Orbit &amp; Co", mail.Html, StringComparison.Ordinal);
-        Assert.Contains("href=\"https://chat.test/reset-hasla?token=abc&amp;x=1\"", mail.Html, StringComparison.Ordinal);
+        Assert.Contains("href=\"https://chat.test/reset-password?token=abc&amp;x=1\"", mail.Html, StringComparison.Ordinal);
         Assert.Contains("<b>Jo</b>", mail.Text, StringComparison.Ordinal);
-        Assert.Contains("https://chat.test/reset-hasla?token=abc&x=1", mail.Text, StringComparison.Ordinal);
+        Assert.Contains("https://chat.test/reset-password?token=abc&x=1", mail.Text, StringComparison.Ordinal);
         Assert.Equal("Zmień hasło w Orbit & Co", mail.Subject);
         // The same message is the same delivery, whichever attempt sends it.
         Assert.Equal($"password-reset/{tokenId:N}", mail.IdempotencyKey);

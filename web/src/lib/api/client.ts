@@ -83,6 +83,7 @@ export {
  * last argument, except `logout`.
  */
 export interface ApiClient {
+  needsServerSetup(signal?: AbortSignal): Promise<boolean>;
   login(input: LoginInput, signal?: AbortSignal): Promise<AuthResult>;
   register(input: RegisterInput, signal?: AbortSignal): Promise<AuthResult>;
   /** The challenge this browser left unfinished, after a reload or an OIDC redirect. */

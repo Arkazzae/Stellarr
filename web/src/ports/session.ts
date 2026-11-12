@@ -25,6 +25,12 @@ export interface RegistrationInput {
   email: string;
   password: string;
   inviteCode?: string;
+  initialServer?: {
+    name: string;
+    description: string;
+    textChannelName: string;
+    voiceChannelName: string;
+  };
 }
 
 /**
@@ -61,6 +67,7 @@ export interface SignInChallengePort {
 
 /** Signing in and out, and the one payload the app boots from. */
 export interface SessionPort {
+  needsServerSetup(): Promise<boolean>;
   bootstrap(): Promise<Bootstrap>;
   login(input: LoginInput): Promise<AuthResult>;
   register(input: RegistrationInput): Promise<AuthResult>;

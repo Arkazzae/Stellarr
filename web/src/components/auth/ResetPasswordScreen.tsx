@@ -55,7 +55,7 @@ export function ResetPasswordScreen({
         title={t("auth.reset.missingTitle")}
         description={t("auth.reset.missingDescription")}
       >
-        <Link className={styles.textLink} href="/zapomniane-haslo">
+        <Link className={styles.textLink} href="/forgot-password">
           {t("auth.reset.newLink")}
         </Link>
       </AuthFrame>

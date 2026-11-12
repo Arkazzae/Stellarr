@@ -83,7 +83,7 @@ public static partial class PasswordRecoveryEndpoints
         db.PasswordResetTokens.Add(token);
         await db.SaveChangesAsync(cancellationToken);
 
-        var link = $"{mailing.PublicUrl}/reset-hasla?token={Uri.EscapeDataString(rawToken)}";
+        var link = $"{mailing.PublicUrl}/reset-password?token={Uri.EscapeDataString(rawToken)}";
         try
         {
             await delivery.SendAsync(
