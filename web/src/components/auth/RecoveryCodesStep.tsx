@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { AuthFrame, authStyles as styles } from "@/components/auth/AuthFrame";
+import { AuthFrame, authStyles as styles, type StepFrame } from "@/components/auth/AuthFrame";
 import type { Translator } from "@/i18n";
 
 import steps from "./SignInSteps.module.css";
@@ -12,13 +12,23 @@ export interface RecoveryCodesStepProps {
   username: string;
   t: Translator;
   onDone(): void;
+  /** Defaults to the sign-in page. */
+  frame?: StepFrame;
+  doneLabel?: string;
 }
 
 /**
  * The recovery codes, shown the one time the server hands them out. Leaving
  * needs a tick that they were saved, because nothing brings them back.
  */
-export function RecoveryCodesStep({ codes, username, t, onDone }: RecoveryCodesStepProps) {
+export function RecoveryCodesStep({
+  codes,
+  username,
+  t,
+  onDone,
+  frame: Frame = AuthFrame,
+  doneLabel,
+}: RecoveryCodesStepProps) {
   const [saved, setSaved] = useState(false);
   const [copied, setCopied] = useState(false);
   const text = [t("auth.codes.fileHeader", { username }), "", ...codes, ""].join("\n");
@@ -42,7 +52,7 @@ export function RecoveryCodesStep({ codes, username, t, onDone }: RecoveryCodesS
   };
 
   return (
-    <AuthFrame title={t("auth.codes.title")} description={t("auth.codes.description")}>
+    <Frame title={t("auth.codes.title")} description={t("auth.codes.description")}>
       <div className={styles.form}>
         <ul className={steps.codes} aria-label={t("auth.codes.title")}>
           {codes.map((code) => (
@@ -62,9 +72,9 @@ export function RecoveryCodesStep({ codes, username, t, onDone }: RecoveryCodesS
           <span>{t("auth.codes.saved")}</span>
         </label>
         <button type="button" className={styles.submit} disabled={!saved} onClick={onDone}>
-          {t("auth.codes.continue")}
+          {doneLabel ?? t("auth.codes.continue")}
         </button>
       </div>
-    </AuthFrame>
+    </Frame>
   );
 }

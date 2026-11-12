@@ -613,3 +613,40 @@ export interface MfaEnrollment {
   secret?: string;
   otpAuthUri?: string;
 }
+
+/** A browser the account trusts to skip the second factor until `expiresAt`. */
+export interface TrustedDevice {
+  id: string;
+  name: string;
+  /** The browser and system the device reported, as the server recorded it. */
+  device: string;
+  createdAt: string;
+  expiresAt: string;
+  lastUsedAt?: string;
+}
+
+/** One entry of the account's security history. `kind` is the server's name for it. */
+export interface SecurityEvent {
+  id: string;
+  kind: string;
+  detail: string;
+  ipAddress: string;
+  device: string;
+  createdAt: string;
+}
+
+/** The account's second-factor state, as the security settings show it. */
+export interface AccountSecurity {
+  /** The instance's policy: "optional", "admins", "everyone" or "cockpit". */
+  requirement: string;
+  /** A second factor is due at this account's sign-in. */
+  mfaRequired: boolean;
+  /** This session proved a second factor recently enough to change security. */
+  freshMfa: boolean;
+  methods: MfaMethod[];
+  remainingRecoveryCodes: number;
+  trustedDevices: TrustedDevice[];
+  recentEvents: SecurityEvent[];
+  trustedDeviceDays: number;
+  emailCodeAvailable: boolean;
+}

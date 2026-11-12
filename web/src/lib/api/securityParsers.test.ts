@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { ApiError } from "./errors";
 import {
+  parseAccountSecurity,
   parseAuthResult,
   parseMfaChallenge,
   parseMfaCompletion,
@@ -60,6 +61,69 @@ const TOTP_STARTED = {
   "type": "totp",
   "secret": "JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP",
   "otpAuthUri": "otpauth://totp/Stellarr%3Amaja?secret=JBSWY3DPEHPK3PXPJBSWY3DPEHPK3PXP&issuer=Stellarr&algorithm=SHA1&digits=6&period=30"
+};
+
+const SECURITY = {
+  "requirement": "optional",
+  "mfaRequired": true,
+  "freshMfa": true,
+  "mfaEvidence": "totp",
+  "mfaCompletedAt": "2026-11-12T17:50:01.129968Z",
+  "trustedDeviceAvailable": false,
+  "methods": [
+    {
+      "id": "4d530edd-05fd-41ef-923c-8216a16f0168",
+      "type": "totp",
+      "name": "Aplikacja uwierzytelniająca",
+      "createdAt": "2026-11-12T17:23:11.271327Z",
+      "lastUsedAt": "2026-11-12T17:50:01.129806Z",
+      "emailAddress": null,
+      "pending": false
+    },
+    {
+      "id": "c0ca0bf6-f775-4071-b862-f8a441323214",
+      "type": "totp",
+      "name": "Aplikacja uwierzytelniająca",
+      "createdAt": "2026-11-12T17:39:32.662904Z",
+      "lastUsedAt": "2026-11-12T17:40:01.014034Z",
+      "emailAddress": null,
+      "pending": false
+    }
+  ],
+  "remainingRecoveryCodes": 10,
+  "trustedDevices": [
+    {
+      "id": "5de3e024-e4c2-477f-9944-6257ded35eec",
+      "name": "Unknown device",
+      "device": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+      "createdAt": "2026-11-12T17:48:31.430624Z",
+      "expiresAt": "2026-11-26T17:48:31.430624Z",
+      "lastUsedAt": "2026-11-12T17:48:36.976627Z"
+    }
+  ],
+  "recentEvents": [
+    {
+      "id": "b1ab2d6e-52ed-462e-bb71-8cbc16a418fe",
+      "kind": "mfa-succeeded",
+      "detail": "totp",
+      "ipAddress": "127.0.0.1",
+      "device": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+      "createdAt": "2026-11-12T17:50:01.130075Z"
+    },
+    {
+      "id": "90f19529-713e-43ec-87d9-cd4230ff743d",
+      "kind": "mfa-succeeded",
+      "detail": "totp",
+      "ipAddress": "127.0.0.1",
+      "device": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/142.0.0.0 Safari/537.36",
+      "createdAt": "2026-11-12T17:49:31.392008Z"
+    }
+  ],
+  "freshMfaWindowSeconds": 300,
+  "trustedDeviceDays": 14,
+  "emailCodeAvailable": false,
+  "emailResendCooldownSeconds": 45,
+  "securityRecoveryRequired": false
 };
 
 const COMPLETED = {
@@ -172,5 +236,22 @@ describe("parseMfaCompletion", () => {
     expect(() =>
       parseMfaCompletion({ ...COMPLETED, status: "pending" }, "/api/auth/mfa/verify"),
     ).toThrow(ApiError);
+  });
+});
+
+describe("parseAccountSecurity", () => {
+  it("reads the methods, trusted devices and history the settings show", () => {
+    const security = parseAccountSecurity(SECURITY, "/api/me/security");
+
+    expect(security.methods).toHaveLength(2);
+    expect(security.trustedDevices[0]).toMatchObject({ id: SECURITY.trustedDevices[0]?.id });
+    expect(security.recentEvents.map((event) => event.kind)).toEqual(
+      SECURITY.recentEvents.map((event) => event.kind),
+    );
+    expect(security).toMatchObject({
+      requirement: "optional",
+      remainingRecoveryCodes: SECURITY.remainingRecoveryCodes,
+      trustedDeviceDays: 14,
+    });
   });
 });

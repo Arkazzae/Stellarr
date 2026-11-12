@@ -7,6 +7,11 @@ import type { Translator } from "@/i18n";
 import type { Account, PasswordChangeResult } from "@/ports";
 import { useLanguage } from "@/state/hooks";
 
+import {
+  AccountSecuritySections,
+  type AccountSecuritySectionsProps,
+} from "./AccountSecuritySections";
+
 /** The server rejects shorter passwords too; checking here saves a round trip. */
 const MIN_PASSWORD_LENGTH = 8;
 const MAX_EMAIL_LENGTH = 320;
@@ -14,6 +19,8 @@ const MAX_EMAIL_LENGTH = 320;
 export interface SecurityPaneProps {
   account: Account;
   emailSupported: boolean;
+  /** The second factor, trusted devices and history, when the container wires them. */
+  twoStep?: AccountSecuritySectionsProps;
   onChangeEmail(email: string): Promise<void> | void;
   onChangePassword(current: string, next: string): Promise<PasswordChangeResult>;
 }
@@ -332,26 +339,30 @@ function PasswordSection({
 export function SecurityPane({
   account,
   emailSupported,
+  twoStep,
   onChangeEmail,
   onChangePassword,
 }: SecurityPaneProps) {
   const { t } = useLanguage();
   return (
-    <section className="sc acc-security">
-      <header className="sc-h">
-        <span className="sc-ico" aria-hidden="true">
-          <Icon name="lock" size={17} />
-        </span>
-        {t("account.loginSecurity")}
-      </header>
-      <div className="sc-b acc-security-list">
-        <EmailSection
-          savedEmail={account.email ?? ""}
-          supported={emailSupported}
-          onChangeEmail={onChangeEmail}
-        />
-        <PasswordSection onChangePassword={onChangePassword} />
-      </div>
-    </section>
+    <>
+      <section className="sc acc-security">
+        <header className="sc-h">
+          <span className="sc-ico" aria-hidden="true">
+            <Icon name="lock" size={17} />
+          </span>
+          {t("account.loginSecurity")}
+        </header>
+        <div className="sc-b acc-security-list">
+          <EmailSection
+            savedEmail={account.email ?? ""}
+            supported={emailSupported}
+            onChangeEmail={onChangeEmail}
+          />
+          <PasswordSection onChangePassword={onChangePassword} />
+        </div>
+      </section>
+      {twoStep ? <AccountSecuritySections {...twoStep} /> : null}
+    </>
   );
 }

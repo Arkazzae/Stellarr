@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { ComponentType, ReactNode } from "react";
 
 import styles from "./AuthFrame.module.css";
 import { StellarrMark } from "./StellarrMark";
@@ -40,3 +40,9 @@ export function AuthFrame({ title, description, headingAction, children }: AuthF
 }
 
 export { styles as authStyles };
+
+/**
+ * What a sign-in step is drawn inside: the full sign-in page by default, or a
+ * dialog when the same step runs from the account settings.
+ */
+export type StepFrame = ComponentType<{ title: string; description: string; children: ReactNode }>;

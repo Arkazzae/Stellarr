@@ -876,6 +876,11 @@
     transition:opacity var(--dur-slow) var(--ease-standard);
   }
   .act-modal.open{opacity:1;pointer-events:auto}
+  /* A security step opens from inside the user settings, so it sits above
+     them and below a confirmation it might raise. */
+  .act-modal.sec-dialog{z-index:98}
+  .sec-dialog .am-card{width:min(480px, 100%)}
+  .sec-dialog .dlg-body{overflow-y:auto}
   .am-card{
     width:min(1180px, 100%);max-height:calc(100vh - 64px);
     display:flex;flex-direction:column;min-height:0;

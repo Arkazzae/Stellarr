@@ -9,6 +9,8 @@ import { useLanguage, usePorts, useSession } from "@/state/hooks";
 
 import type { EnrollMode } from "@/components/auth/MfaEnrollStep";
 
+import { challengeErrorMessage } from "./challengeErrors";
+
 export type SignInStep =
   | { kind: "password" }
   | { kind: "resuming" }
@@ -38,11 +40,6 @@ export interface SignInFlow {
 const NAME_KEY: Record<EnrollMode, MessageKey> = {
   totp: "auth.enroll.totpName",
   email: "auth.enroll.emailName",
-};
-
-const retryAfterOf = (cause: unknown): number | null => {
-  const seconds = cause instanceof ApiError ? cause.details?.["retryAfterSeconds"] : undefined;
-  return typeof seconds === "number" ? seconds : null;
 };
 
 /**
@@ -112,24 +109,7 @@ export function useSignInFlow({ recoveryRequired = false }: { recoveryRequired?:
         setError(t(unauthorized));
         return;
       }
-      if (cause instanceof ApiError && cause.status === 429) {
-        const seconds = retryAfterOf(cause);
-        setError(
-          seconds !== null && seconds < 600
-            ? t("auth.mfa.emailCooldown", { seconds })
-            : t("auth.mfa.tooMany"),
-        );
-        return;
-      }
-      if (cause instanceof ApiError && cause.status === 409) {
-        setError(t("auth.mfa.emailUnavailable"));
-        return;
-      }
-      if (cause instanceof ApiError && cause.status === 502) {
-        setError(t("auth.mfa.deliveryFailed"));
-        return;
-      }
-      setError(t("auth.mfa.failed"));
+      setError(challengeErrorMessage(cause, t, t("auth.mfa.failed")));
     },
     [challengePort, t],
   );

@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 
 import { AuthField } from "@/components/auth/AuthField";
-import { AuthFrame, authStyles as styles } from "@/components/auth/AuthFrame";
+import { AuthFrame, authStyles as styles, type StepFrame } from "@/components/auth/AuthFrame";
 import type { Translator } from "@/i18n";
 import type { MfaChallenge, MfaMethod } from "@/ports";
 
@@ -21,6 +21,14 @@ export interface MfaChallengeStepProps {
   /** Resolves with the seconds until another code may be sent, or null when sending failed. */
   onSendEmailCode(methodId: string): Promise<number | null>;
   onCancel(): void;
+  /** Defaults to the sign-in page. */
+  frame?: StepFrame;
+  /**
+   * Offers to trust this device. Off for a proof before a security change,
+   * which a trusted device cannot give.
+   */
+  offerTrust?: boolean;
+  cancelLabel?: string;
 }
 
 const confirmed = (methods: readonly MfaMethod[], type: MfaMethod["type"]) =>
@@ -40,6 +48,9 @@ export function MfaChallengeStep({
   onUseTrustedDevice,
   onSendEmailCode,
   onCancel,
+  frame: Frame = AuthFrame,
+  offerTrust = true,
+  cancelLabel,
 }: MfaChallengeStepProps) {
   const apps = confirmed(challenge.methods, "totp");
   const emails = confirmed(challenge.methods, "email");
@@ -94,7 +105,7 @@ export function MfaChallengeStep({
     onVerify({
       ...(mode === "totp" ? { methodId: appId } : mode === "email" ? { methodId: email?.id } : {}),
       code: mode === "recovery" ? typed : typed.replace(/\s+/g, ""),
-      rememberDevice: remember,
+      rememberDevice: offerTrust && remember,
     });
   };
 
@@ -113,8 +124,8 @@ export function MfaChallengeStep({
   const fieldState = { invalid: Boolean(message), errorId: message ? errorId : undefined };
 
   return (
-    <AuthFrame title={title} description={description}>
-      {challenge.trustedDeviceAvailable ? (
+    <Frame title={title} description={description}>
+      {offerTrust && challenge.trustedDeviceAvailable ? (
         <div className={styles.externalBlock}>
           <button
             type="button"
@@ -183,15 +194,17 @@ export function MfaChallengeStep({
           {...fieldState}
         />
 
-        <label className={steps.check}>
-          <input
-            type="checkbox"
-            checked={remember}
-            onChange={(event) => setRemember(event.target.checked)}
-            disabled={pending}
-          />
-          <span>{t("auth.mfa.remember", { days: challenge.trustedDeviceDays })}</span>
-        </label>
+        {offerTrust ? (
+          <label className={steps.check}>
+            <input
+              type="checkbox"
+              checked={remember}
+              onChange={(event) => setRemember(event.target.checked)}
+              disabled={pending}
+            />
+            <span>{t("auth.mfa.remember", { days: challenge.trustedDeviceDays })}</span>
+          </label>
+        ) : null}
 
         {message ? (
           <p className={styles.error} id={errorId} role="alert">
@@ -221,9 +234,9 @@ export function MfaChallengeStep({
           </button>
         ) : null}
         <button type="button" className={styles.textLink} onClick={onCancel}>
-          {t("auth.mfa.cancel")}
+          {cancelLabel ?? t("auth.mfa.cancel")}
         </button>
       </nav>
-    </AuthFrame>
+    </Frame>
   );
 }

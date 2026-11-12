@@ -10,6 +10,7 @@ import {
 } from "./expect";
 import { parseUser } from "./parsers";
 import type {
+  AccountSecurity,
   AuthResult,
   MfaChallenge,
   MfaCompletion,
@@ -17,6 +18,8 @@ import type {
   MfaMethod,
   MfaMethodType,
   MfaPurpose,
+  SecurityEvent,
+  TrustedDevice,
 } from "./types";
 
 const METHOD_TYPES: readonly MfaMethodType[] = ["totp", "email"];
@@ -129,4 +132,61 @@ export function parseEmailCodeSent(value: unknown, path: string): { retryAfterSe
   return {
     retryAfterSeconds: typeof seconds === "number" && Number.isFinite(seconds) ? seconds : 0,
   };
+}
+
+export function parseTrustedDevice(value: unknown, path: string): TrustedDevice {
+  const record = expectRecord(value, path);
+  const lastUsedAt = optionalString(record, "lastUsedAt");
+  return {
+    id: expectString(record, "id", path),
+    name: expectString(record, "name", path),
+    device: expectString(record, "device", path),
+    createdAt: expectString(record, "createdAt", path),
+    expiresAt: expectString(record, "expiresAt", path),
+    ...(lastUsedAt === undefined ? {} : { lastUsedAt }),
+  };
+}
+
+export function parseSecurityEvent(value: unknown, path: string): SecurityEvent {
+  const record = expectRecord(value, path);
+  return {
+    id: expectString(record, "id", path),
+    kind: expectString(record, "kind", path),
+    detail: expectString(record, "detail", path),
+    ipAddress: expectString(record, "ipAddress", path),
+    device: expectString(record, "device", path),
+    createdAt: expectString(record, "createdAt", path),
+  };
+}
+
+export function parseAccountSecurity(value: unknown, path: string): AccountSecurity {
+  const record = expectRecord(value, path);
+  return {
+    requirement: expectString(record, "requirement", path),
+    mfaRequired: expectBoolean(record, "mfaRequired", path),
+    freshMfa: expectBoolean(record, "freshMfa", path),
+    methods: expectArray(record["methods"], `${path}.methods`).map((item, index) =>
+      parseMfaMethod(item, `${path}.methods[${index}]`),
+    ),
+    remainingRecoveryCodes: expectSafeInteger(record, "remainingRecoveryCodes", path),
+    trustedDevices: expectArray(record["trustedDevices"], `${path}.trustedDevices`).map(
+      (item, index) => parseTrustedDevice(item, `${path}.trustedDevices[${index}]`),
+    ),
+    recentEvents: expectArray(record["recentEvents"], `${path}.recentEvents`).map((item, index) =>
+      parseSecurityEvent(item, `${path}.recentEvents[${index}]`),
+    ),
+    trustedDeviceDays: expectSafeInteger(record, "trustedDeviceDays", path),
+    emailCodeAvailable: expectBoolean(record, "emailCodeAvailable", path),
+  };
+}
+
+/** New recovery codes, which the server shows only in this answer. */
+export function parseRecoveryCodes(value: unknown, path: string): string[] {
+  const record = expectRecord(value, path);
+  return expectArray(record["recoveryCodes"], `${path}.recoveryCodes`).map((code, index) => {
+    if (typeof code !== "string") {
+      throw new ApiError("malformed", `${path}.recoveryCodes[${index}] must be a string`);
+    }
+    return code;
+  });
 }

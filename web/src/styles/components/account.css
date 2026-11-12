@@ -101,6 +101,43 @@
     color: var(--text-faint);
   }
 
+  .acc-security-empty {
+    margin: 0;
+    font-size: var(--text-13);
+    color: var(--text-muted);
+  }
+
+  /* Newest first, one line for what happened and one for when and where. */
+  .acc-security-history {
+    margin: 0;
+    padding: 6px 0 12px;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .acc-security-history li {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 10px 0;
+  }
+
+  .acc-security-history li + li {
+    border-top: 1px solid var(--line-subtle);
+  }
+
+  .acc-security-history span {
+    font-size: var(--text-14);
+    color: var(--text);
+  }
+
+  .acc-security-history small {
+    font-size: var(--text-13);
+    color: var(--text-faint);
+    overflow-wrap: anywhere;
+  }
+
   .acc-credential-form {
     display: grid;
     grid-template-columns: 200px minmax(0, 1fr);

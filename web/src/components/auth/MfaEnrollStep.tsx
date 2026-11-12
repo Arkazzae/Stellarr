@@ -3,7 +3,7 @@
 import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from "react";
 
 import { AuthField } from "@/components/auth/AuthField";
-import { AuthFrame, authStyles as styles } from "@/components/auth/AuthFrame";
+import { AuthFrame, authStyles as styles, type StepFrame } from "@/components/auth/AuthFrame";
 import type { Translator } from "@/i18n";
 import type { MfaChallenge, MfaEnrollment } from "@/ports";
 
@@ -25,8 +25,13 @@ export interface MfaEnrollStepProps {
   qr?: ReactNode;
   onModeChange(mode: EnrollMode): void;
   onSendEmailCode(): void;
-  onConfirm(input: { code: string; rememberDevice: boolean }): void;
+  onConfirm(input: { code: string; rememberDevice: boolean; name?: string }): void;
   onCancel(): void;
+  /** Defaults to the sign-in page. */
+  frame?: StepFrame;
+  /** Added by choice from the account settings rather than required at sign-in. */
+  voluntary?: boolean;
+  cancelLabel?: string;
 }
 
 /** "ABCD EFGH IJKL", which is easier to copy by eye than one long run. */
@@ -49,8 +54,12 @@ export function MfaEnrollStep({
   onSendEmailCode,
   onConfirm,
   onCancel,
+  frame: Frame = AuthFrame,
+  voluntary = false,
+  cancelLabel,
 }: MfaEnrollStepProps) {
   const [code, setCode] = useState("");
+  const [name, setName] = useState("");
   const [remember, setRemember] = useState(false);
   const [copied, setCopied] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
@@ -84,7 +93,11 @@ export function MfaEnrollStep({
       return;
     }
     setLocalError(null);
-    onConfirm({ code: typed, rememberDevice: remember });
+    onConfirm({
+      code: typed,
+      rememberDevice: remember,
+      ...(name.trim() === "" ? {} : { name: name.trim() }),
+    });
   };
 
   const switchTo = (next: EnrollMode) => {
@@ -98,9 +111,21 @@ export function MfaEnrollStep({
   const ready = mode === "email" ? emailRetryAfter !== null : secret !== undefined;
 
   return (
-    <AuthFrame
-      title={recovery ? t("auth.enroll.recoveryTitle") : t("auth.enroll.title")}
-      description={recovery ? t("auth.enroll.recoveryDescription") : t("auth.enroll.description")}
+    <Frame
+      title={
+        recovery
+          ? t("auth.enroll.recoveryTitle")
+          : voluntary
+            ? t("auth.enroll.voluntaryTitle")
+            : t("auth.enroll.title")
+      }
+      description={
+        recovery
+          ? t("auth.enroll.recoveryDescription")
+          : voluntary
+            ? t("auth.enroll.voluntaryDescription")
+            : t("auth.enroll.description")
+      }
     >
       <form className={styles.form} onSubmit={submit} noValidate>
         {mode === "totp" ? (
@@ -147,6 +172,19 @@ export function MfaEnrollStep({
 
         {ready ? (
           <>
+            {voluntary ? (
+              <AuthField
+                label={t("auth.enroll.name")}
+                hint={t("auth.enroll.nameHint")}
+                name="method-name"
+                type="text"
+                autoComplete="off"
+                maxLength={64}
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                disabled={pending}
+              />
+            ) : null}
             <AuthField
               ref={codeRef}
               label={t("auth.mfa.code")}
@@ -199,9 +237,9 @@ export function MfaEnrollStep({
           </button>
         )}
         <button type="button" className={styles.textLink} onClick={onCancel}>
-          {t("auth.mfa.cancel")}
+          {cancelLabel ?? t("auth.mfa.cancel")}
         </button>
       </nav>
-    </AuthFrame>
+    </Frame>
   );
 }

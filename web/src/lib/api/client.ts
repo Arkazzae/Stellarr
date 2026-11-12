@@ -8,11 +8,13 @@ import { memberCalls } from "./calls/members";
 import { messageCalls } from "./calls/messages";
 import { notificationCalls } from "./calls/notifications";
 import { serverCalls } from "./calls/server";
+import { securityCalls } from "./calls/security";
 import { sessionCalls } from "./calls/session";
 import { signInCalls } from "./calls/signIn";
 import { socialCalls } from "./calls/social";
 import type {
   AccountDetails,
+  AccountSecurity,
   AuthResult,
   AccountImageKind,
   AccountPreferences,
@@ -42,6 +44,7 @@ import type {
   PasswordChangeAnswer,
   RegisterInput,
   Section,
+  SecurityEvent,
   SendMessageInput,
   Server,
   ServerBan,
@@ -106,6 +109,18 @@ export interface ApiClient {
   ): Promise<MfaCompletion>;
   /** Trades an operator's one-time recovery credential for a replacement-enrollment challenge. */
   redeemRecoveryCredential(credential: string, signal?: AbortSignal): Promise<MfaChallenge>;
+  getAccountSecurity(signal?: AbortSignal): Promise<AccountSecurity>;
+  listSecurityEvents(signal?: AbortSignal): Promise<SecurityEvent[]>;
+  /**
+   * Opens the setup of another method. Refused with 403 unless the session
+   * proved a second factor recently, or, for a first method, the password.
+   */
+  startMfaEnrollment(password?: string, signal?: AbortSignal): Promise<MfaChallenge>;
+  /** A fresh second-factor proof for a change to the account's security. */
+  startMfaReverification(signal?: AbortSignal): Promise<MfaChallenge>;
+  removeMfaMethod(methodId: string, password?: string): Promise<void>;
+  regenerateRecoveryCodes(password?: string, signal?: AbortSignal): Promise<string[]>;
+  revokeTrustedDevice(deviceId: string): Promise<void>;
   requestPasswordReset(email: string, signal?: AbortSignal): Promise<void>;
   resetPassword(token: string, newPassword: string, signal?: AbortSignal): Promise<void>;
   logout(): Promise<void>;
@@ -442,6 +457,7 @@ export function createHttpApiClient(): ApiClient & SocialApiClient & AdminApiCli
   return {
     ...sessionCalls(),
     ...signInCalls(),
+    ...securityCalls(),
     ...serverCalls(),
     ...memberCalls(),
     ...channelCalls(),

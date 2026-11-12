@@ -91,6 +91,27 @@ export function fakeApi(overrides: Partial<ApiClient> = {}): ApiClient {
     redeemRecoveryCredential: vi.fn(async () => {
       throw new ApiError("unauthorized", "The credential is not valid.", 401);
     }),
+    getAccountSecurity: vi.fn(async () => ({
+      requirement: "optional",
+      mfaRequired: false,
+      freshMfa: false,
+      methods: [],
+      remainingRecoveryCodes: 0,
+      trustedDevices: [],
+      recentEvents: [],
+      trustedDeviceDays: 14,
+      emailCodeAvailable: false,
+    })),
+    listSecurityEvents: vi.fn(async () => []),
+    startMfaEnrollment: vi.fn(async () => {
+      throw new ApiError("forbidden", "A fresh proof is required.", 403);
+    }),
+    startMfaReverification: vi.fn(async () => {
+      throw new ApiError("forbidden", "A fresh proof is required.", 403);
+    }),
+    removeMfaMethod: vi.fn(async () => {}),
+    regenerateRecoveryCodes: vi.fn(async () => []),
+    revokeTrustedDevice: vi.fn(async () => {}),
     requestPasswordReset: vi.fn(async () => {}),
     resetPassword: vi.fn(async () => {}),
     logout: vi.fn(async () => {}),
