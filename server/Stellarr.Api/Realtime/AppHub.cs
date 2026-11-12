@@ -21,6 +21,7 @@ public sealed partial class AppHub(
     HubThrottleGate throttle,
     MediaPlane mediaPlane,
     MediaControlClient mediaControl,
+    HubConnectionRegistry connections,
     ILogger<AppHub> logger) : Hub
 {
     private static readonly TimeSpan TypingLifetime = TimeSpan.FromSeconds(6);
@@ -34,6 +35,15 @@ public sealed partial class AppHub(
     public override async Task OnConnectedAsync()
     {
         var userId = Context.User!.RequireUserId();
+        if (Context.User!.FindSessionId() is { } sessionId)
+        {
+            var version = int.TryParse(
+                Context.User!.FindFirst(SessionAuthentication.VersionClaim)?.Value,
+                System.Globalization.CultureInfo.InvariantCulture,
+                out var parsed) ? parsed : 0;
+            connections.Register(Context.ConnectionId, userId, sessionId, version, Context.Abort);
+        }
+
         await Groups.AddToGroupAsync(Context.ConnectionId, UserGroup(userId));
 
         // A connection follows one server at a time: the one the client asked
@@ -72,6 +82,7 @@ public sealed partial class AppHub(
 
     public override async Task OnDisconnectedAsync(Exception? exception)
     {
+        connections.Unregister(Context.ConnectionId);
         var (becameOffline, departure) = presence.Disconnect(Context.ConnectionId);
         if (departure is not null)
         {

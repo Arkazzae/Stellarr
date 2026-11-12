@@ -44,6 +44,12 @@
           "SQLitePCLRaw.core": "2.1.13"
         }
       },
+      "Otp.NET": {
+        "type": "Direct",
+        "requested": "[1.4.1, )",
+        "resolved": "1.4.1",
+        "contentHash": "UXjZ80T6BfVACJWmEcz4UFZ93hwX3STKojKvVpPk3qUhubjnLwIiZMsI4Hh91HhYxC0JlatNdNrVK2wkv4O9/Q=="
+      },
       "SQLitePCLRaw.lib.e_sqlite3": {
         "type": "Direct",
         "requested": "[3.53.3, )",

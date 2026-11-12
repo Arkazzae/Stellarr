@@ -2,9 +2,12 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 using Stellarr.Api.Auth;
+using Stellarr.Api.Auth.Security;
 using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
+using Stellarr.Api.Domain;
 using Stellarr.Api.Localization;
+using Stellarr.Api.Realtime;
 
 namespace Stellarr.Api.Endpoints;
 
@@ -13,6 +16,7 @@ public static class AuthEndpoints
     public static IEndpointRouteBuilder MapAuthEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var group = endpoints.MapGroup("/api/auth");
+        group.AddEndpointFilter(NoStoreAsync);
 
         group.MapPost("/login", LoginAsync).RequireRateLimiting(RateLimitPolicies.Login);
         group.MapPost("/logout", LogoutAsync).RequireAuthorization();
@@ -20,6 +24,15 @@ public static class AuthEndpoints
         group.MapGet("/oidc/login", ChallengeOidc).RequireRateLimiting(RateLimitPolicies.Login);
 
         return endpoints;
+    }
+
+    internal static async ValueTask<object?> NoStoreAsync(
+        EndpointFilterInvocationContext context,
+        EndpointFilterDelegate next)
+    {
+        context.HttpContext.Response.Headers.CacheControl = "no-store";
+        context.HttpContext.Response.Headers.Pragma = "no-cache";
+        return await next(context);
     }
 
     private static async Task<IResult> LoginAsync(
@@ -37,6 +50,12 @@ public static class AuthEndpoints
             cancellationToken);
         if (user is null || user.IsDisabled || !passwords.Verify(request.Password ?? "", user.PasswordHash))
         {
+            if (user is not null)
+            {
+                SecurityEvents.Record(db, user.Id, SecurityEventKinds.LoginFailed, context, "password");
+                await db.SaveChangesAsync(cancellationToken);
+            }
+
             // The same answer for every kind of failure, slowed a little so
             // that how quickly it comes back says little about which one it was.
             await Task.Delay(Random.Shared.Next(80, 180), cancellationToken);
@@ -45,11 +64,27 @@ public static class AuthEndpoints
                 title: messages.Get(MessageKey.SignInFailed));
         }
 
-        var session = SessionAuthentication.CreateSession(context, user.Id, messages);
-        db.UserSessions.Add(session);
+        var policy = await MfaPolicy.LoadAsync(db, cancellationToken);
+        var start = await AuthenticationFlow.StartAsync(
+            db, context, user, "password", policy, messages, cancellationToken);
+        if (start.RecoveryRequired)
+        {
+            return Results.Ok(new { status = "security_recovery_required" });
+        }
+
+        if (start.Session is { } session)
+        {
+            db.UserSessions.Add(session);
+            SecurityEvents.Record(
+                db, user.Id, SecurityEventKinds.LoginSucceeded, context, "password",
+                await SecurityEvents.VerifiedEmailAsync(db, user.Id, cancellationToken));
+            await db.SaveChangesAsync(cancellationToken);
+            await SessionAuthentication.SignInAsync(context, user, session.Id);
+            return Results.Ok(user.ToDto("online"));
+        }
+
         await db.SaveChangesAsync(cancellationToken);
-        await SessionAuthentication.SignInAsync(context, user, session.Id);
-        return Results.Ok(user.ToDto("online"));
+        return Results.Ok(start.Challenge);
     }
 
     /// <summary>Whether the sign-in page should offer the provider, and under what name.</summary>
@@ -72,13 +107,22 @@ public static class AuthEndpoints
     private static async Task<IResult> LogoutAsync(
         HttpContext context,
         AppDbContext db,
+        HubConnectionRegistry connections,
         CancellationToken cancellationToken)
     {
         if (context.User.FindSessionId() is { } sessionId)
         {
             var now = DateTime.UtcNow;
-            await db.UserSessions.Where(x => x.Id == sessionId && x.RevokedAt == null)
+            var changed = await db.UserSessions.Where(x => x.Id == sessionId && x.RevokedAt == null)
                 .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.RevokedAt, now), cancellationToken);
+            if (changed == 1)
+            {
+                SecurityEvents.Record(
+                    db, context.User.RequireUserId(), SecurityEventKinds.SessionRevoked, context, "logout");
+                await db.SaveChangesAsync(cancellationToken);
+            }
+
+            connections.AbortSession(sessionId);
         }
 
         await context.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);

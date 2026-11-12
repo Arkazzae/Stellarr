@@ -39,6 +39,8 @@ internal sealed class UserSessionConfiguration : IEntityTypeConfiguration<UserSe
         entity.HasIndex(x => new { x.UserId, x.LastSeenAt });
         entity.Property(x => x.Device).HasMaxLength(300);
         entity.Property(x => x.IpAddress).HasMaxLength(64);
+        entity.Property(x => x.PrimarySource).HasMaxLength(32).HasDefaultValue("password");
+        entity.Property(x => x.MfaEvidence).HasMaxLength(32);
         entity.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId)
             .OnDelete(DeleteBehavior.Cascade);
     }
@@ -51,6 +53,9 @@ internal sealed class DesktopBrowserLoginConfiguration : IEntityTypeConfiguratio
         entity.HasKey(x => x.Id);
         entity.HasIndex(x => x.ExpiresAt);
         entity.Property(x => x.SecretHash).HasMaxLength(64);
+        entity.Property(x => x.ApprovalTokenHash).HasMaxLength(64);
+        entity.Property(x => x.PrimarySource).HasMaxLength(32);
+        entity.Property(x => x.MfaEvidence).HasMaxLength(32);
         entity.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId)
             .OnDelete(DeleteBehavior.Cascade);
     }

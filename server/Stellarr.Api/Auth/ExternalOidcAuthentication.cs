@@ -4,7 +4,9 @@ using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
 using Microsoft.IdentityModel.Tokens;
+using Stellarr.Api.Auth.Security;
 using Stellarr.Api.Data;
+using Stellarr.Api.Domain;
 using Stellarr.Api.Localization;
 
 namespace Stellarr.Api.Auth;
@@ -89,9 +91,38 @@ public static class ExternalOidcAuthentication
             return;
         }
 
-        var session = SessionAuthentication.CreateSession(
-            context.HttpContext, user.Id, context.HttpContext.RequestServices.GetRequiredService<Messages>());
+        var messages = context.HttpContext.RequestServices.GetRequiredService<Messages>();
+        var policy = await MfaPolicy.LoadAsync(db, cancellationToken);
+        var start = await AuthenticationFlow.StartAsync(
+            db, context.HttpContext, user, "oidc", policy, messages, cancellationToken);
+        if (start.RecoveryRequired)
+        {
+            context.Response.Redirect("/login?security_recovery_required=1");
+            context.HandleResponse();
+            return;
+        }
+
+        if (start.Session is not { } session)
+        {
+            await db.SaveChangesAsync(cancellationToken);
+            var page = start.Challenge?.Status == "mfa_enrollment_required"
+                ? "/login?mfa_enrollment=1"
+                : "/login?mfa_required=1";
+            var returnUrl = context.Properties?.RedirectUri;
+            if (!string.IsNullOrWhiteSpace(returnUrl))
+            {
+                page += $"&returnUrl={Uri.EscapeDataString(returnUrl)}";
+            }
+
+            context.Response.Redirect(page);
+            context.HandleResponse();
+            return;
+        }
+
         db.UserSessions.Add(session);
+        SecurityEvents.Record(
+            db, user.Id, SecurityEventKinds.LoginSucceeded, context.HttpContext, "oidc",
+            await SecurityEvents.VerifiedEmailAsync(db, user.Id, cancellationToken));
         await db.SaveChangesAsync(cancellationToken);
 
         context.Principal = SessionAuthentication.CreatePrincipal(user, session.Id);

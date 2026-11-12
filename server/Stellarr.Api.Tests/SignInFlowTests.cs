@@ -252,6 +252,25 @@ public sealed class SignInFlowTests(StellarrWebApplicationFactory factory)
     }
 
     [Fact]
+    public async Task LegacySlidingSessionOlderThanThirtyDaysUsesItsAbsoluteExpiry()
+    {
+        var account = await CreateAccountAsync();
+        using var client = NewClient();
+        var cookie = await SignInAsync(client, account.Username);
+        await using (var scope = factory.OpenScope(out var db))
+        {
+            var now = DateTime.UtcNow;
+            await db.UserSessions.Where(x => x.UserId == account.Id).ExecuteUpdateAsync(setters => setters
+                .SetProperty(x => x.CreatedAt, now.AddDays(-40))
+                .SetProperty(x => x.LastSeenAt, now)
+                .SetProperty(x => x.ExpiresAt, now.AddDays(5))
+                .SetProperty(x => x.AbsoluteExpiresAt, now.AddDays(5)));
+        }
+
+        Assert.Equal(JsonValueKind.Object, (await SessionUserAsync(client, cookie)).ValueKind);
+    }
+
+    [Fact]
     public async Task PasswordAttemptsAreLimitedPerAddress()
     {
         // The limits are lifted in the Testing environment, so this host runs

@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Stellarr.Api.Data;
+using Stellarr.Api.Domain;
 
 namespace Stellarr.Api.Tests;
 
@@ -34,6 +35,104 @@ public sealed class DatabaseSchemaTests
                 "SELECT name AS Value FROM pragma_table_info('UserNotifications')")
             .ToArrayAsync();
         Assert.Contains("TargetInviteCode", columns);
+    }
+
+    [Fact]
+    public async Task UpgradeAddsAccountSecurityTablesAndSessionAssurance()
+    {
+        using var factory = new StellarrWebApplicationFactory();
+        using var client = factory.CreateClient();
+        _ = await client.GetAsync("/health/ready");
+
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        await db.Database.ExecuteSqlRawAsync(
+            """
+            DROP TABLE "SecurityNotifications";
+            DROP TABLE "SecurityEvents";
+            DROP TABLE "CliRecoveryCredentials";
+            DROP TABLE "EmailOtpCodes";
+            DROP TABLE "AuthChallenges";
+            DROP TABLE "TrustedDevices";
+            DROP TABLE "RecoveryCodes";
+            DROP TABLE "MfaMethods";
+            ALTER TABLE "UserSessions" DROP COLUMN "AbsoluteExpiresAt";
+            ALTER TABLE "UserSessions" DROP COLUMN "PrimarySource";
+            ALTER TABLE "UserSessions" DROP COLUMN "AuthenticatedAt";
+            ALTER TABLE "UserSessions" DROP COLUMN "MfaCompletedAt";
+            ALTER TABLE "UserSessions" DROP COLUMN "MfaEvidence";
+            ALTER TABLE "UserSessions" DROP COLUMN "SecurityVersion";
+            """);
+
+        await DatabaseSchema.UpgradeAsync(db, default);
+        await DatabaseSchema.UpgradeAsync(db, default);
+
+        var tables = await db.Database.SqlQueryRaw<string>(
+                "SELECT name AS Value FROM sqlite_master WHERE type = 'table'")
+            .ToArrayAsync();
+        foreach (var table in new[]
+                 {
+                     "MfaMethods", "RecoveryCodes", "TrustedDevices", "AuthChallenges",
+                     "EmailOtpCodes", "CliRecoveryCredentials", "SecurityEvents", "SecurityNotifications",
+                 })
+        {
+            Assert.Contains(table, tables);
+        }
+
+        var columns = await db.Database.SqlQueryRaw<string>(
+                "SELECT name AS Value FROM pragma_table_info('UserSessions')")
+            .ToArrayAsync();
+        foreach (var column in new[]
+                 {
+                     "AbsoluteExpiresAt", "PrimarySource", "AuthenticatedAt",
+                     "MfaCompletedAt", "MfaEvidence", "SecurityVersion",
+                 })
+        {
+            Assert.Contains(column, columns);
+        }
+    }
+
+    [Fact]
+    public async Task UpgradeBackfillsSessionSecurityVersionOnlyWhenAddingTheColumn()
+    {
+        using var factory = new StellarrWebApplicationFactory();
+        using var client = factory.CreateClient();
+        _ = await client.GetAsync("/health/ready");
+
+        await using var scope = factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var user = await db.Users.OrderBy(x => x.CreatedAt).FirstAsync();
+        var now = DateTime.UtcNow;
+        user.SessionVersion = 7;
+        var sessionId = Guid.NewGuid();
+        db.UserSessions.Add(new UserSession
+        {
+            Id = sessionId,
+            UserId = user.Id,
+            Device = "legacy",
+            IpAddress = "192.0.2.1",
+            CreatedAt = now.AddDays(-40),
+            LastSeenAt = now,
+            ExpiresAt = now.AddDays(5),
+            AbsoluteExpiresAt = now.AddDays(5),
+            PrimarySource = "password",
+            SecurityVersion = 0,
+        });
+        await db.SaveChangesAsync();
+        await db.Database.ExecuteSqlRawAsync("""ALTER TABLE "UserSessions" DROP COLUMN "SecurityVersion";""");
+
+        await DatabaseSchema.UpgradeAsync(db, default);
+        db.ChangeTracker.Clear();
+        Assert.Equal(7, (await db.UserSessions.SingleAsync(x => x.Id == sessionId)).SecurityVersion);
+
+        await db.UserSessions.Where(x => x.Id == sessionId)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.SecurityVersion, 9));
+        user = await db.Users.SingleAsync(x => x.Id == user.Id);
+        user.SessionVersion = 10;
+        await db.SaveChangesAsync();
+        await DatabaseSchema.UpgradeAsync(db, default);
+        db.ChangeTracker.Clear();
+        Assert.Equal(9, (await db.UserSessions.SingleAsync(x => x.Id == sessionId)).SecurityVersion);
     }
 
     [Fact]

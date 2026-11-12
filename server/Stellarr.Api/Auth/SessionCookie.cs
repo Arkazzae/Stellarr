@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.EntityFrameworkCore;
 using Stellarr.Api.Data;
+using Stellarr.Api.Auth.Security;
 
 namespace Stellarr.Api.Auth;
 
@@ -63,13 +64,32 @@ public static class SessionCookie
             {
                 x.LastSeenAt,
                 x.ExpiresAt,
+                x.AbsoluteExpiresAt,
+                x.CreatedAt,
                 x.RevokedAt,
-                x.User.SessionVersion,
-                x.User.IsDisabled,
+                x.SecurityVersion,
+                x.MfaCompletedAt,
+                x.MfaEvidence,
+                UserSessionVersion = x.User.SessionVersion,
+                UserIsDisabled = x.User.IsDisabled,
             })
             .SingleOrDefaultAsync(cancellationToken);
-        if (session is null || session.IsDisabled || session.SessionVersion != claims.Version ||
-            session.RevokedAt is not null || session.ExpiresAt <= now)
+        var absoluteExpiresAt = session?.AbsoluteExpiresAt ?? session?.CreatedAt.Add(SessionAuthentication.Lifetime);
+        if (session is null || session.UserIsDisabled || session.SecurityVersion != claims.Version ||
+            session.UserSessionVersion != claims.Version ||
+            session.RevokedAt is not null || session.ExpiresAt <= now ||
+            absoluteExpiresAt <= now)
+        {
+            await RejectAsync(context);
+            return;
+        }
+
+        var policy = await MfaPolicy.LoadAsync(db, cancellationToken);
+        if (await MfaPolicy.IsRequiredAtLoginAsync(db, policy, claims.UserId, cancellationToken) &&
+            !MfaPolicy.IsSatisfied(
+                session.MfaCompletedAt is not null,
+                session.MfaEvidence,
+                policy.MfaRequirement))
         {
             await RejectAsync(context);
             return;
@@ -79,8 +99,10 @@ public static class SessionCookie
         // session seen minutes ago is fresh enough.
         if (session.LastSeenAt < now - SeenGranularity)
         {
+            var renewed = now + SessionAuthentication.Lifetime;
+            var hardEnd = absoluteExpiresAt.GetValueOrDefault(now);
             var expiresAt = session.ExpiresAt < now + RenewalThreshold
-                ? now + SessionAuthentication.Lifetime
+                ? (renewed < hardEnd ? renewed : hardEnd)
                 : session.ExpiresAt;
             await db.UserSessions.Where(x => x.Id == claims.SessionId)
                 .ExecuteUpdateAsync(

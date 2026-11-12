@@ -16,6 +16,14 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<UserPreferenceSettings> UserPreferences => Set<UserPreferenceSettings>();
     public DbSet<UserSession> UserSessions => Set<UserSession>();
     public DbSet<DesktopBrowserLogin> DesktopBrowserLogins => Set<DesktopBrowserLogin>();
+    public DbSet<MfaMethod> MfaMethods => Set<MfaMethod>();
+    public DbSet<RecoveryCode> RecoveryCodes => Set<RecoveryCode>();
+    public DbSet<TrustedDevice> TrustedDevices => Set<TrustedDevice>();
+    public DbSet<AuthChallenge> AuthChallenges => Set<AuthChallenge>();
+    public DbSet<EmailOtpCode> EmailOtpCodes => Set<EmailOtpCode>();
+    public DbSet<CliRecoveryCredential> CliRecoveryCredentials => Set<CliRecoveryCredential>();
+    public DbSet<SecurityEvent> SecurityEvents => Set<SecurityEvent>();
+    public DbSet<SecurityNotification> SecurityNotifications => Set<SecurityNotification>();
     public DbSet<StellarrServer> Servers => Set<StellarrServer>();
     public DbSet<OperationsSettings> OperationsSettings => Set<OperationsSettings>();
     public DbSet<InstanceSecret> InstanceSecrets => Set<InstanceSecret>();

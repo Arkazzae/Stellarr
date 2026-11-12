@@ -42,6 +42,24 @@ public sealed class UserSession
     public DateTime CreatedAt { get; set; }
     public DateTime LastSeenAt { get; set; }
     public DateTime ExpiresAt { get; set; }
+
+    /// <summary>The hard end of the session, which sliding renewal cannot pass.</summary>
+    public DateTime? AbsoluteExpiresAt { get; set; }
+
+    /// <summary>How the account proved itself first: password, oidc, desktop or registration.</summary>
+    public string PrimarySource { get; set; } = "password";
+
+    public DateTime? AuthenticatedAt { get; set; }
+
+    /// <summary>When a real second factor was completed, not when trust was remembered.</summary>
+    public DateTime? MfaCompletedAt { get; set; }
+
+    /// <summary>The second-factor evidence, such as totp, email, recovery or trusted_device.</summary>
+    public string? MfaEvidence { get; set; }
+
+    /// <summary>The session version the assurance was recorded under.</summary>
+    public int SecurityVersion { get; set; }
+
     public DateTime? RevokedAt { get; set; }
 
     public User User { get; set; } = null!;
@@ -57,8 +75,23 @@ public sealed class DesktopBrowserLogin
     public Guid Id { get; set; }
     public required string SecretHash { get; set; }
 
+    /// <summary>The digest of the CSRF token in the explicit approval form.</summary>
+    public string? ApprovalTokenHash { get; set; }
+
+    /// <summary>The exact signed-in account and browser session the approval token is bound to.</summary>
+    public Guid? ApprovalUserId { get; set; }
+    public Guid? ApprovalSessionId { get; set; }
+
     /// <summary>The account that approved the login, or null while it is still pending.</summary>
     public Guid? UserId { get; set; }
+
+    /// <summary>The browser session whose assurance is carried into the handoff.</summary>
+    public Guid? ApprovedSessionId { get; set; }
+
+    public string? PrimarySource { get; set; }
+    public DateTime? MfaCompletedAt { get; set; }
+    public string? MfaEvidence { get; set; }
+    public int SecurityVersion { get; set; }
 
     public DateTime CreatedAt { get; set; }
     public DateTime ExpiresAt { get; set; }

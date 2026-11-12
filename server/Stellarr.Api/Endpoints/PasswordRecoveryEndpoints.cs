@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Stellarr.Api.Auth;
+using Stellarr.Api.Auth.Security;
 using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
 using Stellarr.Api.Domain;
@@ -143,13 +144,27 @@ public static partial class PasswordRecoveryEndpoints
         token.User.PasswordHash = passwords.Hash(request.NewPassword);
         // Every cookie issued before this point stops working.
         token.User.SessionVersion++;
+        var usedAt = DateTime.UtcNow;
         var unusedLinks = await db.PasswordResetTokens
             .Where(x => x.UserId == token.UserId && x.UsedAt == null)
             .ToArrayAsync(cancellationToken);
         foreach (var link in unusedLinks)
         {
-            link.UsedAt = now;
+            link.UsedAt = usedAt;
         }
+
+        await db.UserSessions
+            .Where(x => x.UserId == token.UserId && x.RevokedAt == null)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.RevokedAt, usedAt), cancellationToken);
+        await db.TrustedDevices
+            .Where(x => x.UserId == token.UserId && x.RevokedAt == null)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.RevokedAt, usedAt), cancellationToken);
+        await db.DesktopBrowserLogins
+            .Where(x => x.UserId == token.UserId && x.ApprovedAt != null && x.RedeemedAt == null)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.RedeemedAt, usedAt), cancellationToken);
+        SecurityEvents.Record(
+            db, token.UserId, SecurityEventKinds.PasswordChanged, null, "password reset",
+            await SecurityEvents.VerifiedEmailAsync(db, token.UserId, cancellationToken));
 
         await db.SaveChangesAsync(cancellationToken);
         return Results.NoContent();

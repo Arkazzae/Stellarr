@@ -51,10 +51,19 @@ public static class SessionAuthentication
     }
 
     /// <summary>A new, not yet saved session for a sign-in arriving on this request.</summary>
-    public static UserSession CreateSession(HttpContext context, Guid userId, Messages messages)
+    public static UserSession CreateSession(
+        HttpContext context,
+        Guid userId,
+        Messages messages,
+        string primarySource = "password",
+        DateTime? mfaCompletedAt = null,
+        string? mfaEvidence = null,
+        int securityVersion = 0,
+        DateTime? authenticatedAt = null)
     {
         var now = DateTime.UtcNow;
         var agent = context.Request.Headers.UserAgent.ToString().Trim();
+        var expiresAt = now.Add(Lifetime);
         return new UserSession
         {
             Id = Guid.NewGuid(),
@@ -63,7 +72,13 @@ public static class SessionAuthentication
             IpAddress = context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
             CreatedAt = now,
             LastSeenAt = now,
-            ExpiresAt = now.Add(Lifetime),
+            ExpiresAt = expiresAt,
+            AbsoluteExpiresAt = expiresAt,
+            PrimarySource = primarySource,
+            AuthenticatedAt = authenticatedAt ?? now,
+            MfaCompletedAt = mfaCompletedAt,
+            MfaEvidence = mfaEvidence,
+            SecurityVersion = securityVersion,
         };
     }
 }

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Stellarr.Api.Auth.Security;
 using Stellarr.Api.Data;
 using Stellarr.Api.Domain;
 
@@ -47,13 +48,32 @@ public sealed class InstanceOwnerFilter : IEndpointFilter
         EndpointFilterDelegate next)
     {
         var http = context.HttpContext;
+        var userId = http.User.RequireUserId();
         var server = await InstanceAccess.FindAdministeredServerAsync(
             http.RequestServices.GetRequiredService<AppDbContext>(),
-            http.User.RequireUserId(),
+            userId,
             http.RequestAborted);
         if (server is null)
         {
             return Results.Forbid();
+        }
+
+        var db = http.RequestServices.GetRequiredService<AppDbContext>();
+        var policy = await MfaPolicy.LoadAsync(db, http.RequestAborted);
+        if (MfaPolicy.RequiresCockpitMfa(policy))
+        {
+            var sessionId = http.User.FindSessionId();
+            var fresh = sessionId is { } id && await db.UserSessions.AsNoTracking().AnyAsync(
+                x => x.Id == id &&
+                    x.UserId == userId &&
+                    x.RevokedAt == null &&
+                    x.MfaCompletedAt != null &&
+                    x.ExpiresAt > DateTime.UtcNow,
+                http.RequestAborted);
+            if (!fresh)
+            {
+                return Results.Forbid();
+            }
         }
 
         http.Items[InstanceAccess.ContextItemKey] = server;

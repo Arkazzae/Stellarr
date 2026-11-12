@@ -3,6 +3,7 @@ using System.Text.Json;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using Stellarr.Api.Auth;
+using Stellarr.Api.Auth.Security;
 using Stellarr.Api.Contracts;
 using Stellarr.Api.Data;
 using Stellarr.Api.Domain;
@@ -254,6 +255,21 @@ public static class AccountEndpoints
         await db.UserSessions
             .Where(x => x.UserId == user.Id && x.Id != currentSessionId && x.RevokedAt == null)
             .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.RevokedAt, now), cancellationToken);
+        await db.TrustedDevices
+            .Where(x => x.UserId == user.Id && x.RevokedAt == null)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.RevokedAt, now), cancellationToken);
+        await db.DesktopBrowserLogins
+            .Where(x => x.UserId == user.Id && x.ApprovedAt != null && x.RedeemedAt == null)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.RedeemedAt, now), cancellationToken);
+        await db.UserSessions
+            .Where(x => x.Id == currentSessionId)
+            .ExecuteUpdateAsync(
+                setters => setters.SetProperty(x => x.SecurityVersion, user.SessionVersion),
+                cancellationToken);
+        SecurityEvents.Record(
+            db, user.Id, SecurityEventKinds.PasswordChanged, context, "password changed",
+            await SecurityEvents.VerifiedEmailAsync(db, user.Id, cancellationToken));
+        await db.SaveChangesAsync(cancellationToken);
         // This request's own cookie carries the old version.
         await SessionAuthentication.SignInAsync(context, user, currentSessionId);
         return Outcome("changed");

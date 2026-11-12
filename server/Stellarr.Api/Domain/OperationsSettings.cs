@@ -35,6 +35,18 @@ public sealed class OperationsSettings
     public bool AutomaticCleanupEnabled { get; set; } = true;
     public string? DesktopMinimumVersion { get; set; }
     public string? DesktopRecommendedVersion { get; set; }
+
+    // Account-security policy. The defaults keep an existing installation on
+    // optional MFA, so nobody is locked out by upgrading.
+    public string MfaRequirement { get; set; } = MfaRequirements.Optional;
+    public int TrustedDeviceDays { get; set; } = 14;
+    public int AuthChallengeMinutes { get; set; } = 5;
+    public int EmailCodeMinutes { get; set; } = 8;
+    public int EmailCodeCooldownSeconds { get; set; } = 45;
+    public int EmailCodeMaxAttempts { get; set; } = 5;
+    public int EmailCodeSendsPerHour { get; set; } = 10;
+    public int CliRecoveryMinutes { get; set; } = 10;
+
     public DateTime UpdatedAt { get; set; }
 
     public StellarrServer Server { get; set; } = null!;
