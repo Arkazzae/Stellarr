@@ -130,7 +130,7 @@ export interface NegotiatorEnv {
  *
  * Glare is not handled here. The browser is the impolite side, so `Sfu` never
  * hands over a media server offer that meets one of its own; the media server
- * rolls its offer back and offers again (docs/STELLARR_MEDIA.md, "Negotiation
+ * rolls its offer back and offers again (docs/stellarr-media.md, "Negotiation
  * rules").
  */
 export class Negotiator {

@@ -120,7 +120,7 @@ interface MediaSessionLink {
 /**
  * How a call is connected: one connection to Stellarr Media, which forwards
  * everybody else's tracks on it (the "Client rules" of
- * docs/STELLARR_MEDIA.md).
+ * docs/stellarr-media.md).
  *
  * The connection belongs to a media session that the hub opens for this
  * seat. The browser offers what it publishes and answers what the media

@@ -10,6 +10,7 @@
     "test": "node --test \".vitepress/*.test.ts\""
   },
   "dependencies": {
+    "mermaid": "^12.3.0",
     "vitepress": "1.6.4"
   },
   "overrides": {

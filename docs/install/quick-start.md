@@ -36,7 +36,8 @@ The container reports `healthy` once both `/health` (API) and `/login` (web clie
 
 Open `https://localhost:8443` in your browser.
 
-On first start, the container generates a 365-day self-signed TLS certificate for `localhost`. Accept the browser's self-signed certificate warning to continue. For remote deployments, configure a trusted certificate as described in [Reverse proxy and TLS](reverse-proxy-and-tls.md).
+> [!NOTE]
+> On first start, the container generates a 365-day self-signed TLS certificate for `localhost`. Accept the browser's certificate warning to continue. For remote deployments, configure a trusted certificate as described in [Reverse proxy and TLS](reverse-proxy-and-tls.md).
 
 ## 4. Create the owner account
 
@@ -67,9 +68,10 @@ The account and its private server are created together. This first account beco
 2. In both browser windows, join the voice channel you configured during setup and grant microphone access.
 3. Verify two-way audio and check the connection indicator (`Connected`) in the bottom-left status bar.
 
-This test needs no further setup because both browsers run on the Docker host. Voice for a browser on any other device, including one in your local network, requires `PUBLIC_IP` and UDP port `49000` (`STELLARR_MEDIA_PORT`) forwarded to the host on the same external port. See [Requirements](requirements.md#behind-nat).
+> [!IMPORTANT]
+> Local testing on one machine works without extra network setup because both browsers run on the Docker host. For calls from any other device (including another machine on your LAN), set `PUBLIC_IP` in `.env` and forward UDP port `49000` (`STELLARR_MEDIA_PORT`) on your router. See [Requirements](requirements.md#behind-nat).
 
-If voice remains stuck on connecting or fails across networks, follow the checklist in [RTC and ports](../RTC_AND_PORTS.md#diagnostics).
+If voice remains stuck on connecting or fails across networks, follow the checklist in [RTC and ports](../rtc-and-ports.md#diagnostics).
 
 ## Stop or remove
 
@@ -98,4 +100,4 @@ cd Stellarr
 docker compose up -d --build
 ```
 
-The multi-stage `Dockerfile` compiles the .NET API, Next.js web client, Cockpit operator panel, and Rust media server inside Docker—no local toolchains are required on the host.
+The multi-stage `Dockerfile` compiles the .NET API, Next.js web client, Cockpit operator panel, and Rust media server inside Docker, so no local build toolchains are required on the host.

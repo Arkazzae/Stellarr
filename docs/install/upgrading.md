@@ -25,7 +25,8 @@ Always take a full volume backup while the container is stopped so SQLite (`stel
 
 The archive contains the SQLite database, uploaded objects, session keys, shared secrets, and TLS private key. Store it securely off-host.
 
-Cockpit can also make backups while the instance runs (**Backups**). A database-only backup is a plain SQLite file. A full backup is a zip archive with the database, every object in the object store, the data-protection keys and the instance files (generated secrets, TLS certificates, desktop releases), described by a `manifest.json`. Backups are kept on the same volume, under `/data/stellarr/backups`, so download the ones you keep off-host. Neither covers the `.env` file you wrote: keep a copy of it with the archive. Cockpit makes backups but does not restore them; restore by unpacking the archive into a stopped volume.
+> [!TIP]
+> You can also create backups from Cockpit (**Backups**) while the instance is running. A database-only backup produces a single SQLite file; a full backup creates a `.zip` archive containing the database, uploaded objects, data-protection keys, and instance files (`secrets/`, `tls/`, desktop releases) with a `manifest.json`. Because Cockpit stores backups in `/data/stellarr/backups` on the same volume, download copies off-host and keep a copy of your `.env` file alongside them. To restore a Cockpit full backup, unpack the archive into a stopped data volume.
 
 ## 2. Pull and start the new version
 
@@ -58,7 +59,10 @@ Release notes are published at <https://github.com/Arkazzae/Stellarr/releases>.
 
 ## Database schema updates
 
-On startup, the API enables SQLite WAL mode and runs idempotent schema initialization steps (creating missing tables/indexes, adding columns, and backfilling values). Schema changes modify the database in place and are not backward-compatible; do not start an older image against a volume opened by a newer version. Use the volume backup to roll back.
+On startup, the API enables SQLite WAL mode and runs idempotent schema initialization steps (creating missing tables/indexes, adding columns, and backfilling values).
+
+> [!WARNING]
+> Schema changes modify the SQLite database in place and are not backward-compatible. Do not start an older container image against a data volume that has already been opened by a newer version; restore your volume backup to roll back.
 
 ## Rollback
 
@@ -86,7 +90,7 @@ Existing user sessions remain valid because the data-protection keys are restore
 
 - The operator panel has been renamed from `ops` to **Stellarr Cockpit** and is served at `/cockpit/` (`/ops/` redirects with `308`).
 - `STELLARR_DOMAIN` replaces `PUBLIC_HOST` as the primary hostname variable (`PUBLIC_HOST` is still read as a fallback when `STELLARR_DOMAIN` is unset).
-- The public origin used in password-reset links and `/.well-known/stellarr/client` is now derived exclusively from environment variables (`https://<STELLARR_DOMAIN>:<STELLARR_PUBLIC_PORT>`, or `STELLARR_PUBLIC_URL` when set) and is read-only in Cockpit. Behind a reverse proxy on port `443`, set `STELLARR_PUBLIC_PORT=443` or `STELLARR_PUBLIC_URL`.
+- The public origin used in password-reset links and `/.well-known/stellarr/client` is now derived from environment variables (`https://<STELLARR_DOMAIN>:<STELLARR_PUBLIC_PORT>`, or `STELLARR_PUBLIC_URL` when set) and is read-only in Cockpit. Behind a reverse proxy on port `443`, set `STELLARR_PUBLIC_PORT=443` or `STELLARR_PUBLIC_URL`.
 - In `docker-compose.dev.yml`, `STELLARR_DEV_OPS_PORT` has been renamed to `STELLARR_DEV_COCKPIT_PORT`.
 
 ### Language default (`STELLARR_LANGUAGE`)

@@ -51,7 +51,7 @@ export interface SfuCondition {
 /**
  * Whether the one connection to the media server really works, and whose
  * microphone really arrives on it ("Client state and recovery" of
- * docs/STELLARR_MEDIA.md).
+ * docs/stellarr-media.md).
  *
  * Proof keeps its v1 meaning: cumulative RTP counters that advance, never a
  * state the browser reports. Outgoing audio is proven for the connection as a

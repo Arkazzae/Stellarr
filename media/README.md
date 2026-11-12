@@ -1,6 +1,6 @@
 # Stellarr Media
 
-Stellarr Media (`stellarr-media`) is Stellarr's Rust WebRTC Selective Forwarding Unit (SFU). Its full protocol and operational specification is in [`docs/STELLARR_MEDIA.md`](../docs/STELLARR_MEDIA.md).
+Stellarr Media (`stellarr-media`) is Stellarr's Rust WebRTC Selective Forwarding Unit (SFU). Its full protocol and operational reference is in [`docs/stellarr-media.md`](../docs/stellarr-media.md).
 
 ## Running locally
 

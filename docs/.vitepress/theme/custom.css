@@ -180,3 +180,27 @@
     color: var(--vp-c-text-1);
   }
 }
+
+/* Callout blocks aligned with Cockpit's card radius. */
+:root .vp-doc .custom-block {
+  border-radius: 10px;
+  padding: 14px 16px 12px;
+  margin: 16px 0;
+}
+
+/* Mermaid diagrams rendered inside Cockpit-styled cards. */
+.vp-doc .mermaid-diagram {
+  margin: 20px 0 24px;
+  padding: 20px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--vp-c-divider);
+  background-color: var(--vp-c-bg-soft);
+  overflow-x: auto;
+  display: flex;
+  justify-content: center;
+}
+
+.vp-doc .mermaid-diagram svg {
+  max-width: 100%;
+  height: auto;
+}

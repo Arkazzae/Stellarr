@@ -2,7 +2,7 @@
 //!
 //! [`core`] is the media server itself, free of sockets and clocks.
 //! [`server`] runs it on a UDP socket and serves the control API of
-//! [`http`] next to it. `docs/STELLARR_MEDIA.md` is the contract.
+//! [`http`] next to it. See `docs/stellarr-media.md`.
 
 pub mod config;
 pub mod core;

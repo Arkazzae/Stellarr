@@ -1,4 +1,4 @@
-//! Configuration from the environment, as `docs/STELLARR_MEDIA.md` lists it.
+//! Configuration from the environment, as `docs/stellarr-media.md` lists it.
 
 use std::fmt;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr, SocketAddrV4, UdpSocket};

@@ -11,10 +11,10 @@ interface Section {
 // The order of the documentation map in README.md. A section is left out
 // until it has a page.
 const sections: Section[] = [
-  { folder: 'install', label: 'Install' },
-  { folder: 'admin', label: 'Administer' },
-  { folder: null, label: 'Understand' },
-  { folder: 'development', label: 'Develop' },
+  { folder: 'install', label: 'Self-hosting' },
+  { folder: 'admin', label: 'Administration' },
+  { folder: null, label: 'Reference' },
+  { folder: 'development', label: 'Development' },
 ]
 
 interface Page {

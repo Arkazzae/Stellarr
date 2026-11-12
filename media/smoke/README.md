@@ -1,6 +1,6 @@
 # Stellarr Media smoke test
 
-End-to-end browser test suite that runs the `stellarr-media` release binary against headless Chromium instances to verify WebRTC negotiation, codec selection, RTCP feedback, and media forwarding as specified in [`docs/STELLARR_MEDIA.md`](../../docs/STELLARR_MEDIA.md).
+End-to-end browser test suite that runs the `stellarr-media` release binary against headless Chromium instances to verify WebRTC negotiation, codec selection, RTCP feedback, and media forwarding as described in [`docs/stellarr-media.md`](../../docs/stellarr-media.md).
 
 ## Running
 
@@ -26,7 +26,7 @@ Each scenario prints `PASS` or `FAIL` with the verified metrics and writes `stel
 ## Architecture
 
 - `smoke.mjs` acts as the signaling hub: it spawns `stellarr-media` on ephemeral loopback ports, creates/deletes sessions via the HTTP control API, relays browser offers/answers/candidates, and long-polls `/v1/events` (optionally delaying events to stage glare collisions).
-- `page/client.js` implements the SFU client contract: a single `RTCPeerConnection` (`max-bundle`), `sendonly` transceivers for published tracks, impolite glare handling, and track attribution via the server directory.
+- `page/client.js` implements the browser side of the SFU protocol: a single `RTCPeerConnection` (`max-bundle`), `sendonly` transceivers for published tracks, impolite glare handling, and track attribution via the server directory.
 - Each simulated participant runs in an isolated Chromium instance with a distinct synthetic audio frequency and video color (`lib/fixtures.mjs`). Receivers verify both `RTCPeerConnection.getStats()` counters (`packetsReceived`, `framesDecoded`, `packetsSent`, keyframes, NACKs, RTX, candidate pairs) and the decoded audio frequencies and video frame colors against the track directory.
 
 ## Scenarios

@@ -1,39 +1,51 @@
 # Stellarr Media
 
-Status: **binding contract**  
-Wire protocol version: **1** (additive to [`RTC_STANDARD.md`](./RTC_STANDARD.md))
+Stellarr Media (`stellarr-media`, in `media/`) is Stellarr's Rust Selective Forwarding Unit (SFU). Every voice channel and direct call goes through it: each participant opens a single `RTCPeerConnection` to the media server, which forwards microphone, camera, and screen-share RTP packets to everyone else in the room without transcoding or mixing. Browsers never send media directly to one another.
 
-Stellarr Media (`stellarr-media`, in `media/`) is Stellarr's Rust Selective Forwarding Unit (SFU), and every call goes through it. Each participant opens a single `RTCPeerConnection` to the media server, which forwards microphone, camera, and screen-share RTP packets to all other participants in the room without transcoding or mixing. Browsers never send media to each other directly.
-
-This document specifies:
+This page covers:
 
 1. **Hub leg**: SignalR methods and events between browser clients and `AppHub`.
 2. **Control API**: Loopback HTTP protocol between `AppHub` and `stellarr-media`.
 3. **Media plane**: ICE-lite transport, SDP negotiation, RTP forwarding, and resource limits.
 
-All shared contracts (bootstrap, `VoiceSignal` state messages, `VoiceState`, and audio/video profiles) remain governed by [`RTC_STANDARD.md`](./RTC_STANDARD.md).
+See [Voice and RTC protocol](./rtc-protocol.md) for bootstrap configuration, `VoiceSignal` state messages, `VoiceState`, and audio/video profiles.
 
-## Design summary
+## Overview
 
-| Aspect | Decision |
+| Aspect | Behavior |
 | --- | --- |
 | WebRTC engine | `str0m` (sans-IO ICE, DTLS, SRTP, RTP/RTCP) |
 | Transport | ICE-lite on a single UDP socket (`0.0.0.0:49000`) |
 | Forwarded media | Microphone audio, camera video, screen video, and screen audio |
 | Media processing | Packet-level RTP forwarding; no decoding, mixing, or transcoding |
-| Authorization | `AppHub` is the sole authority; `stellarr-media` only accepts commands from its loopback control API |
+| Authorization | `AppHub` authorizes seats; `stellarr-media` only accepts commands on its loopback control API |
 | Signaling path | Browser ↔ `AppHub` (SignalR) ↔ `stellarr-media` (`127.0.0.1:5200`) |
 | Connections per client | Single `RTCPeerConnection` (`bundlePolicy: "max-bundle"`) |
 | Offer direction | Browser offers published tracks (`sendonly`); `stellarr-media` offers forwarded tracks (`sendonly` to the receiver) |
 | Glare resolution | Browser is the impolite peer; `stellarr-media` is the polite peer |
 | Track attribution | Server-issued directory mapping SDP `mid` → `{ userId, kind, streamId }` |
-| Direct calls | Go through the media server, like server voice channels |
+| Direct calls | Routed through the media server just like server voice channels |
 
 ## Topology
 
-Every browser in a call connects to Stellarr Media, which forwards its media to the rest of the room.
+```mermaid
+flowchart LR
+    BrowserA["Participant A (Browser)"]
+    BrowserB["Participant B (Browser)"]
+    Turn["coturn (:3478 / 49160-49200/udp)"]
+    Hub["AppHub SignalR (/hubs/app)"]
+    Media["stellarr-media (:49000/udp)"]
 
-Because all media goes through the container, a browser that is not on the Docker host itself needs the media server's public candidate: set `PUBLIC_IP` and forward UDP `STELLARR_MEDIA_PORT` (default `49000`) to the host on the same external port. Without `PUBLIC_IP`, the media server advertises only the container's own address, which such a browser reaches only through TURN (`coturn`). See [Requirements](install/requirements.md#behind-nat).
+    BrowserA <-->|"OpenMediaSession / SendMediaSignal"| Hub
+    BrowserB <-->|"OpenMediaSession / SendMediaSignal"| Hub
+    Hub <-->|"HTTP Control API (127.0.0.1:5200)"| Media
+
+    BrowserA <-->|"Direct SRTP (:49000/udp)"| Media
+    BrowserB <-->|"TURN relay (when direct UDP is blocked)"| Turn
+    Turn <-->|"Local UDP"| Media
+```
+
+Because all media goes through the container, any browser outside the Docker host needs the media server's public candidate: set `PUBLIC_IP` and forward UDP `STELLARR_MEDIA_PORT` (default `49000`) to the host on the same external port. Without `PUBLIC_IP`, the media server advertises only the container's internal address, which off-host browsers can reach only through TURN (`coturn`). See [Requirements](install/requirements.md#behind-nat).
 
 `GET /api/bootstrap` returns:
 
@@ -44,18 +56,18 @@ Because all media goes through the container, a browser that is not on the Docke
 }
 ```
 
-- `mediaServer` is `udp://{Rtc:PublicHost}:{Rtc:MediaPort}` (with `localhost` when `Rtc:PublicHost` is unset). It is diagnostic; actual connection addresses come from SDP ICE candidates.
+- `mediaServer` is `udp://{Rtc:PublicHost}:{Rtc:MediaPort}` (falling back to `localhost` when `Rtc:PublicHost` is unset). It is used for diagnostics; actual connection addresses come from SDP ICE candidates.
 
 ## Hub leg
 
-`AppHub` has two SignalR methods and two events for the media server:
+`AppHub` exposes two SignalR methods and two events for the media server:
 
 | Type | Name | Description |
 | --- | --- | --- |
 | Method | `OpenMediaSession` | Allocate a media session for the caller's active voice seat |
 | Method | `SendMediaSignal` | Send an SDP offer/answer or ICE candidate to `stellarr-media` |
 | Event | `MediaSignal` | Deliver an SDP offer/answer or track directory from `stellarr-media` |
-| Event | `MediaSessionClosed` | Notify the client that the media session was terminated by the media plane |
+| Event | `MediaSessionClosed` | Notify the client that the media session was closed by the media server |
 
 ### `OpenMediaSession(channelId) → { sessionId }`
 
@@ -107,26 +119,48 @@ Each `Track` entry in the directory has the shape:
 
 ### Negotiation rules
 
+```mermaid
+sequenceDiagram
+    participant B as Browser
+    participant H as AppHub (SignalR)
+    participant M as stellarr-media (:5200)
+
+    B->>H: JoinVoice(channelId)
+    B->>H: OpenMediaSession(channelId)
+    H->>M: POST /v1/sessions { roomId, userId }
+    M-->>H: 201 { sessionId, epoch }
+    H-->>B: { sessionId }
+    B->>H: SendMediaSignal(offer)
+    H->>M: POST /v1/sessions/{id}/offer
+    M-->>H: Event: signal (answer)
+    H-->>B: MediaSignal(answer)
+    M-->>H: Event: signal (offer + tracks, negotiationId)
+    H-->>B: MediaSignal(offer + tracks)
+    B->>H: SendMediaSignal(answer, negotiationId)
+    H->>M: POST /v1/sessions/{id}/answer
+```
+
 - **Browser offers (publishing)**: The browser sends an SDP offer whenever its published tracks change (initial join, camera toggle, screen-share toggle). The initial offer after `OpenMediaSession` must contain at least one m-line; a receive-only client offers a `recvonly` audio transceiver (answered `inactive`).
-- **Transceiver creation**: Published tracks must be added on dedicated transceivers via `addTransceiver(track, { direction: "sendonly", streams: [stream] })`. `stellarr-media` never accepts media on m-lines it created itself (answering `sendonly` or `inactive`), so `addTrack` must not be used (browsers may attach `addTrack` to an existing server-created transceiver).
 - **Server offers (forwarding)**: `stellarr-media` sends an offer whenever forwarded tracks for the session change, but only after answering the browser's first offer.
-- **Ordering**: Signals from `stellarr-media` are delivered in strict sequence order. The browser serializes its outgoing `SendMediaSignal` calls, awaiting each hub response before sending the next.
+- **Ordering**: Signals from `stellarr-media` are delivered in sequence order. The browser serializes its outgoing `SendMediaSignal` calls, awaiting each hub response before sending the next.
 - **Glare**: The browser is impolite and drops any incoming media-server offer while its own offer is in flight. `stellarr-media` is polite: if a browser offer arrives while a server offer is pending, it rolls back the server offer, answers the browser's offer, and issues a new server offer with an incremented `negotiationId`.
 - **Stale answers and timeouts**: Each server offer carries a monotonically increasing `negotiationId` (starting at `1`), which the browser echoes in its `answer`. Answers with a non-matching `negotiationId` are rejected with `409 stale-negotiation`. If a server offer receives no answer or competing browser offer within 10 s, it is rolled back and re-offered; after 3 consecutive unanswered offers, the session is closed with `error`.
 - **Immediate client recovery**: If the browser fails to apply a remote SDP description or `SendMediaSignal` is rejected by the hub, the client immediately replaces the media session rather than waiting for server timeouts.
 
+> [!IMPORTANT]
+> Published tracks must be added on dedicated transceivers via `addTransceiver(track, { direction: "sendonly", streams: [stream] })`. Do not use `addTrack`: browsers may attach `addTrack` to an existing server-created transceiver, which `stellarr-media` never accepts incoming media on (answering `sendonly` or `inactive`).
+
 ### Track directory
 
-Because all remote media arrives over a single `RTCPeerConnection`, the client attributes incoming tracks exclusively via the server-provided directory:
+Because all remote media arrives over a single `RTCPeerConnection`, the client attributes incoming tracks using the server-provided directory:
 
-- `mid`: Matches the receiving transceiver's SDP `a=mid` value. Assigned by `stellarr-media`.
+- `mid`: Matches the receiving transceiver's SDP `a=mid` value, assigned by `stellarr-media`.
 - `userId`: Lowercase UUID of the publishing user, bound from the authenticated seat.
 - `streamId`: Stream identifier declared by the publisher (`""` if none), matched against `screenStreamId` and `cameraStreamId` in the publisher's `VoiceSignal` (`kind: "state"`) to distinguish microphone, camera, and screen tracks.
-- A publisher sends its microphone and its camera in one stream (one `msid`), created per call, and announces that stream's id as `cameraStreamId` while the camera is on. `stellarr-media` keeps the publisher's `msid` in its offers, so the receiving browser groups the voice and the face and plays them in sync. A screen share has a stream of its own.
-- On the receiving side an audio track is the publisher's microphone when its stream is the announced camera stream, or when it was filed before any video was known on its stream; it is a share's sound when its stream is the announced screen stream, or when video was known on its stream first. The directory names a share's video before its sound is filed, so a share is recognised before its `state` frame arrives.
-- Tracks whose `mid` is not present in the directory—or whose `userId` is not present in the current `VoiceParticipantChanged` occupancy snapshot—are held unplayed until both the directory and occupancy snapshot include them.
-- When a publisher swaps capture devices and updates its stream ID without adding a new transceiver, `stellarr-media` emits a `tracks` signal without renegotiating SDP.
-- `SendVoiceSignal` carries only `kind: "state"` frames, broadcast to the room or sent to one participant with `toUserId`. `offer`, `answer`, and `candidate` are refused with `HubException("Invalid voice signal.")`, so browsers never exchange descriptions or candidates with each other.
+- **Shared microphone and camera stream**: A publisher places its microphone and camera tracks into a single `MediaStream` (one `msid`) per call and advertises that stream ID as `cameraStreamId` while the camera is active. `stellarr-media` preserves the publisher's `msid` in forwarded offers so receiving browsers keep voice and camera synchronized. Screen shares use a separate `MediaStream`.
+- **Distinguishing microphone vs. screen audio**: On the receiving side, an incoming audio track is treated as the publisher's microphone if its stream matches `cameraStreamId` or if the audio track was registered on that stream before any video track. It is treated as screen-share audio if its stream matches `screenStreamId` or if a video track was registered on that stream first. Because the track directory lists a screen share's video track before its audio track, receivers classify screen audio accurately even before the publisher's `state` signal arrives.
+- **Holding unattributed tracks**: Tracks whose `mid` is not yet in the directory, or whose `userId` is not in the current `VoiceParticipantChanged` occupancy snapshot, remain muted/unplayed until both include them.
+- **In-place track swaps**: When a publisher switches capture devices and updates its stream ID without adding a new transceiver, `stellarr-media` emits a `tracks` signal without renegotiating SDP.
 
 ### `MediaSessionClosed`
 
@@ -134,7 +168,7 @@ Because all remote media arrives over a single `RTCPeerConnection`, the client a
 { "channelId": "uuid", "sessionId": "opaque", "reason": "media-restarted | transport-timeout | error" }
 ```
 
-Sent only when the media plane closes a session while the user's voice seat is still active:
+Sent only when the media server closes a session while the user's voice seat is still active:
 
 | Reason | Cause |
 | --- | --- |
@@ -146,7 +180,7 @@ Sessions closed because the user left the seat or opened a replacement session d
 
 ## Seat and session lifecycle
 
-A media session is strictly bound to an active voice seat in `PresenceTracker`. `AppHub` and moderation endpoints close the media session whenever a seat changes:
+A media session is bound to an active voice seat in `PresenceTracker`. `AppHub` and moderation endpoints close the media session whenever a seat changes:
 
 | Trigger | Source |
 | --- | --- |
@@ -158,7 +192,7 @@ A media session is strictly bound to an active voice seat in `PresenceTracker`. 
 | Moderator kicks or moves user in voice | `VoiceModerationEndpoints` |
 | Moderator kicks or bans user from server | `ModerationEndpoints` |
 
-`PresenceTracker` detaches the session immediately in memory and enqueues a `DELETE /v1/sessions/{sessionId}` job in `MediaSessionCloser` (which retries every 2 s up to a bounded queue of 4,096 pending deletes). Re-calling `JoinVoice` for the room the connection already occupies is a no-op and preserves the existing session.
+`PresenceTracker` detaches the session immediately in memory and enqueues a `DELETE /v1/sessions/{sessionId}` job in `MediaSessionCloser` (which retries every 2 s up to a bounded queue of 4,096 pending deletes). Calling `JoinVoice` again for the room the connection already occupies is a no-op and preserves the existing session.
 
 ## Client state and recovery
 
@@ -171,20 +205,20 @@ A media session is strictly bound to an active voice seat in `PresenceTracker`. 
 | `transport.media = connecting` | Peer connection is not yet `connected`, or outgoing audio RTP packets have not yet advanced |
 | `transport.media = ready` | Peer connection is `connected`, outgoing audio RTP is verified, and `peerCount === 0` |
 | `transport.media = connected` | Peer connection is `connected`, and every other participant's microphone either arrives or is still within its arrival grace, with at least one arriving |
-| `transport.media = degraded` | A microphone missing past its arrival grace, connection `disconnected`/`failed`, outgoing audio unverified after 3 stats samples (`voiceClient.mediaServerStalled`), or session replacement in progress |
+| `transport.media = degraded` | A microphone is missing past its arrival grace, connection is `disconnected`/`failed`, outgoing audio is unverified after 3 stats samples (`voiceClient.mediaServerStalled`), or session replacement is in progress |
 | `transport.media = failed` | Automatic session replacement attempts exhausted (`voiceClient.mediaServerLost`) |
 
 ### Session recovery
 
 - If the peer connection stays `disconnected` for more than 10 s, transitions to `failed`/`closed`, receives `MediaSessionClosed`, fails SDP application, or fails `OpenMediaSession`/`SendMediaSignal`, the client closes the `RTCPeerConnection` and opens a replacement media session while keeping local microphone, camera, and screen tracks alive.
 - The client performs up to 3 automatic replacement attempts with backoff delays of `2 s`, `4 s`, and `8 s`. Once outgoing audio RTP is verified (or on a fresh `JoinVoice`), the retry counter resets. If all 3 attempts fail, `transport.media` enters `failed` (`voiceClient.mediaServerLost`).
-- "Reconnect" in the call's notice repairs the call in place: it refreshes the ICE servers, calls `JoinVoice` for the room the seat already holds (a no-op that keeps the seat), and opens a new media session with a fresh budget. The other participants never see the person leave. Only a call that has no seat joins again.
+- Clicking **Reconnect** in the call banner repairs the session in place: it refreshes ICE credentials, calls `JoinVoice` for the current room (keeping the seat without broadcasting a leave/join to other participants), and opens a new media session with a reset retry budget.
 
 ### Proving media quickly
 
-- Media is proven from cumulative RTP counters (`getStats`), sampled every 3 s. When the connection reaches `connected`, or somebody joins the room, the client samples after 250 ms, 500 ms, 1 s and 2 s until media is proven, then restarts the 3 s cadence from there. These extra rounds settle only the transport state; diagnostics and the adaptive bitrate keep the 3 s cadence.
-- A participant whose microphone has not arrived yet is pending, not missing, for an arrival grace of 3 s counted from when the connection came up or the participant joined, whichever is later. While everyone missing is pending, the call is `connected` if it was already `ready` or `connected` on this connection or somebody is heard, and `connecting` otherwise.
-- A microphone section is judged again only 500 ms or more after its last judgement; a round sooner than that keeps the previous verdict. Packets come every 20 ms while somebody talks but only every 400 ms in DTX silence, so rounds closer together could see a working microphone stand still.
+- Transport health is verified from cumulative RTP counters (`getStats`), sampled on a 3 s interval. When the connection first reaches `connected` or a new participant joins, the client runs rapid initial checks at `250 ms`, `500 ms`, `1 s`, and `2 s` until RTP flow is confirmed, then resumes the normal 3 s interval.
+- A newly joined participant's microphone is treated as pending (not missing) for a 3 s grace window starting from when the connection came up or when the participant joined, whichever is later.
+- Each remote microphone transceiver is re-evaluated at most once every 500 ms; samples taken less than 500 ms apart keep the previous status so DTX silence packets (sent every 400 ms) are not mistaken for a stalled stream.
 
 ## Control API (`127.0.0.1:5200`)
 
@@ -196,15 +230,15 @@ A media session is strictly bound to an active voice seat in `PresenceTracker`. 
 
 | Endpoint | Success response | Error statuses |
 | --- | --- | --- |
-| `GET /v1/health` | `200 { "status": "ok", "version": "…", "epoch": "…", "rooms": 0, "sessions": 0 }` | — |
-| `POST /v1/reset` | `200 { "epoch": "…", "seq": 0 }` | — |
+| `GET /v1/health` | `200 { "status": "ok", "version": "…", "epoch": "…", "rooms": 0, "sessions": 0 }` | None |
+| `POST /v1/reset` | `200 { "epoch": "…", "seq": 0 }` | None |
 | `POST /v1/sessions` (`{ "roomId", "userId" }`) | `201 { "sessionId": "…", "epoch": "…" }` | `422 invalid-request` |
-| `DELETE /v1/sessions/{sessionId}` | `204` (idempotent for unknown sessions) | — |
+| `DELETE /v1/sessions/{sessionId}` | `204` (idempotent for unknown sessions) | None |
 | `POST /v1/sessions/{sessionId}/offer` (`{ "sdp" }`) | `204` | `404 unknown-session`, `422 invalid-sdp`, `422 limit-exceeded` |
 | `POST /v1/sessions/{sessionId}/answer` (`{ "sdp", "negotiationId" }`) | `204` | `404 unknown-session`, `409 stale-negotiation`, `422 invalid-sdp` |
 | `POST /v1/sessions/{sessionId}/candidate` (`{ "candidate" }`) | `204` | `404 unknown-session`, `422 invalid-candidate` |
 | `GET /v1/events?epoch=…&after=…&waitMs=…` | `200 { "epoch": "…", "reset": false, "events": [Event] }` | `422 invalid-request` |
-| `GET /v1/stats` | `200 { "epoch": "…", "rooms": [...] }` | — |
+| `GET /v1/stats` | `200 { "epoch": "…", "rooms": [...] }` | None |
 
 Additional status codes: `413 payload-too-large` (request body > 256 KiB), `404 not-found`, `405 method-not-allowed`, `503 unavailable`.
 
@@ -251,7 +285,7 @@ Returns immediately when events with `seq > after` exist, or waits up to `waitMs
 
 ### Transport
 
-- Single UDP socket (`0.0.0.0:49000`); incoming packets are demultiplexed by remote socket address (and by STUN username fragment on the initial check).
+- Single UDP socket (`0.0.0.0:49000`); incoming packets are demultiplexed by remote socket address (and by STUN username fragment on the initial connectivity check).
 - Each session accepts connectivity checks from at most 64 distinct remote addresses over its lifetime.
 - ICE-lite: `stellarr-media` responds to STUN checks and acts as DTLS server.
 - Advertised host candidates (IPv4 only): `STELLARR_MEDIA_PUBLIC_IP:STELLARR_MEDIA_PUBLIC_PORT` (when set) followed by the primary local IPv4 address on the bound port (used for internal `coturn` relay).
@@ -259,7 +293,7 @@ Returns immediately when events with `seq > after` exist, or waits up to `waitMs
 ### Forwarding
 
 - Every session in a `roomId` receives all tracks published by other sessions in the same room and never receives its own tracks.
-- Per connection, `stellarr-media` rewrites SSRC, payload type, RTP header extension IDs, and sequence numbers/timestamps while leaving encrypted media payloads untouched after SRTP decryption/re-encryption.
+- Per connection, `stellarr-media` rewrites SSRC, payload type, RTP header extension IDs, and sequence numbers/timestamps while leaving media payloads untouched after SRTP decryption and re-encryption.
 - Supported codecs: Opus, VP9, VP8, H.264, AV1. Publisher codec order is preserved, and publisher Opus `a=fmtp` parameters are echoed back so the browser configures its encoder according to the selected profile.
 - Audio level RTP header extensions are forwarded.
 - NACK, RTX, transport-wide congestion control (TWCC), and keyframe requests (PLI/FIR, rate-limited to once per second per track) are handled per leg.
@@ -279,15 +313,16 @@ Returns immediately when events with `seq > after` exist, or waits up to `waitMs
 
 ### Current limitations
 
-These apply to every call, since all media goes through Stellarr Media. Stellarr Media does not yet:
+`stellarr-media` does not currently implement:
 
-- Adapt the downlink to slow receivers. Each receiver gets the publisher's full stream, with no VP9 temporal-layer dropping and no simulcast.
-- Recycle inactive SDP m-lines within a session. A long session with many track toggles eventually hits the 128 KiB SDP limit and reconnects automatically with a fresh session.
-- Forward only the active speakers, or let receivers choose which video they subscribe to.
-- Keep a session across a SignalR hub reconnect or an ICE restart. The client opens a new session instead.
-- Support IPv6 or ICE-TCP. It uses IPv4 UDP only; a client that can only use TCP connects through `coturn`.
+- **Downlink adaptation for slow receivers**: Every receiver gets the publisher's full stream, without VP9 temporal-layer dropping or simulcast.
+- **SDP m-line recycling**: Inactive m-lines are not reused within a session. A long session with many track toggles eventually reaches the 128 KiB SDP limit and automatically reconnects with a fresh session.
+- **Selective video subscription or active-speaker filtering**: All published tracks in a room are forwarded to every participant.
+- **Session persistence across hub reconnects or ICE restarts**: The client opens a new session instead.
+- **IPv6 or direct ICE-TCP**: The media socket uses IPv4 UDP only; clients restricted to TCP connect through `coturn`.
 
-Media is not end-to-end encrypted between browsers. `stellarr-media` terminates SRTP on every leg, so audio and video are decrypted in its memory while they are forwarded, and WebRTC Insertable Streams encryption is not used. Whoever controls the host can access call media.
+> [!WARNING]
+> Call media is encrypted in transit between each browser and `stellarr-media` (DTLS-SRTP), not end-to-end encrypted between browsers. Because `stellarr-media` terminates SRTP on each leg to forward packets, audio and video are decrypted in process memory on the host running the container.
 
 ## Process configuration
 
