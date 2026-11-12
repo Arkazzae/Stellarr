@@ -41,6 +41,10 @@ export const pl = {
   "gate.mfa.description":
     "Cockpit działa tylko w sesji potwierdzonej drugim krokiem, a zaufane urządzenie tu nie wystarcza. Stellarr poprosi o kod albo, gdy konto nie ma jeszcze logowania dwuetapowego, o jego włączenie, a potem wróci do Cockpitu.",
   "gate.mfa.confirm": "Potwierdź drugim krokiem",
+  "fresh.title": "Potwierdź drugi krok",
+  "fresh.description":
+    "Zmiany kont, ról, serwerów, sekretów, wydań aplikacji desktopowej i zabezpieczeń oraz pobranie kopii zapasowej wymagają drugiego kroku sprzed najwyżej 5 minut. Potwierdź go w Stellarr, wrócisz tutaj i ponowisz zmianę.",
+  "fresh.cancel": "Anuluj",
   "gate.error.title": "Nie udało się uruchomić Cockpitu",
   "gate.error.fallback": "Backend nie odpowiedział poprawnie.",
   "gate.error.retry": "Spróbuj ponownie",

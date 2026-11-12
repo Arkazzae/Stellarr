@@ -21,6 +21,14 @@ export function webSignInUrl(step: CockpitLoginStep, keepSignedIn = true): strin
 /** Where a signed-in owner confirms a second step, or sets up a first method, for Cockpit. */
 export const WEB_CONFIRM_URL = `/login?confirm=1&${BACK_TO_COCKPIT}`;
 
+/**
+ * Where an owner confirms a second step from the last few minutes before a
+ * sensitive change, coming back to the page that asked for it.
+ */
+export function webFreshConfirmUrl(returnPath: string): string {
+  return `/login?confirm=1&fresh=1&returnUrl=${encodeURIComponent(returnPath)}`;
+}
+
 /** A full page load: the sign-in page belongs to the web client, not to this app. */
 export function leaveFor(path: string): void {
   window.location.assign(path);

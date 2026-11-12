@@ -46,6 +46,10 @@ export const en = {
   "gate.mfa.description":
     "Cockpit works only in a session confirmed with a second step, and a trusted device is not enough here. Stellarr asks for a code, or to turn on two-step sign-in if the account has none yet, then returns to Cockpit.",
   "gate.mfa.confirm": "Confirm with a second step",
+  "fresh.title": "Confirm a second step",
+  "fresh.description":
+    "Changes to accounts, roles, servers, secrets, desktop releases and security, and downloading a backup, need a second step from the last 5 minutes. Confirm it in Stellarr, come back here and make the change again.",
+  "fresh.cancel": "Cancel",
   "gate.error.title": "Cockpit could not start",
   "gate.error.fallback": "The backend did not respond correctly.",
   "gate.error.retry": "Try again",

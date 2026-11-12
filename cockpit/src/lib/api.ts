@@ -352,6 +352,22 @@ export class CockpitApiError extends Error {
 /** The code of a 403 that refuses the owner only because the session has not completed a second step. */
 export const COCKPIT_MFA_REQUIRED = "cockpit-mfa-required";
 
+/** The code of a 403 that wants a second step from the last few minutes before a sensitive change. */
+export const FRESH_SECOND_STEP_REQUIRED = "fresh-mfa-required";
+
+const freshSecondStepListeners = new Set<() => void>();
+
+/**
+ * Called whenever the server refuses a change for want of a fresh second
+ * step, so one dialog can offer to confirm it, whichever page asked.
+ */
+export function onFreshSecondStepRequired(listener: () => void): () => void {
+  freshSecondStepListeners.add(listener);
+  return () => {
+    freshSecondStepListeners.delete(listener);
+  };
+}
+
 /**
  * What a sign-in answers instead of a user when the password is not enough:
  * a second step, a first method to set up, or an account recovery. The web
@@ -422,12 +438,16 @@ async function request<T>(
 
   if (!response.ok) {
     const problem = await readProblem(response);
-    throw new CockpitApiError(
+    const error = new CockpitApiError(
       response.status,
       problem.detail ?? problem.title ?? t("api.status", { status: response.status }),
       problem.errors ?? {},
       typeof problem.code === "string" ? problem.code : null,
     );
+    if (error.code === FRESH_SECOND_STEP_REQUIRED) {
+      for (const listener of freshSecondStepListeners) listener();
+    }
+    throw error;
   }
 
   if (response.status === 204) return undefined as T;
@@ -489,6 +509,9 @@ export const cockpitApi = {
   verifyBackup: (backupId: string, signal?: AbortSignal) =>
     request<CockpitBackup>(`/api/cockpit/backups/${segment(backupId)}/verify`, { method: "POST" }, signal),
   backupDownloadUrl: (backupId: string) => `/api/cockpit/backups/${segment(backupId)}/download`,
+  /** Resolves when this session may make a sensitive change now; a refusal opens the confirmation. */
+  checkFreshSecondStep: (signal?: AbortSignal) =>
+    request<void>("/api/cockpit/fresh-second-step", {}, signal),
 
   settings: (signal?: AbortSignal) => request<CockpitSettings>("/api/cockpit/settings", {}, signal),
   // The server owns publicUrl (it comes from the environment), mailProvider,

@@ -36,6 +36,7 @@ import {
   type CockpitBackupPart,
 } from "@/lib/api";
 import { useCockpitResource } from "@/lib/use-cockpit-resource";
+import { leaveFor } from "@/lib/web-sign-in";
 import { useCockpit } from "@/state/cockpit-context";
 
 const formatSize = (bytes: number) => formatMegabytes(bytes, 2);
@@ -103,7 +104,18 @@ function BackupRow({ backup, verifying, onVerify }: BackupRowProps) {
             {t("backups.verify")}
           </Button>
           <Button variant="ghost" size="icon-sm" asChild>
-            <a href={cockpitApi.backupDownloadUrl(backup.id)} download aria-label={t("backups.download", { id: backup.id })}>
+            <a
+              href={cockpitApi.backupDownloadUrl(backup.id)}
+              download
+              aria-label={t("backups.download", { id: backup.id })}
+              onClick={(event) => {
+                // A download needs a recent second step; without one the
+                // confirmation opens instead of a refusal saved as a file.
+                event.preventDefault();
+                const url = cockpitApi.backupDownloadUrl(backup.id);
+                cockpitApi.checkFreshSecondStep().then(() => leaveFor(url), () => undefined);
+              }}
+            >
               <Icon name="download" />
             </a>
           </Button>
