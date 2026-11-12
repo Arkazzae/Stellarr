@@ -96,6 +96,19 @@ export async function readJson(response: Response, path: string): Promise<unknow
   }
 }
 
+/**
+ * The `code` extension of a problem document, which names why a request was
+ * refused when the status alone does not; null when there is none.
+ */
+export async function problemCode(response: Response): Promise<string | null> {
+  try {
+    const payload = (await response.clone().json()) as unknown;
+    return isRecord(payload) && typeof payload["code"] === "string" ? payload["code"] : null;
+  } catch {
+    return null;
+  }
+}
+
 /** Throws the `ApiError` for a failed response, classified by its status. */
 export function fail(response: Response, path: string): never {
   throw new ApiError(

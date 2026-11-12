@@ -142,6 +142,22 @@ describe("sendVoid", () => {
     fetchMock.mockResolvedValue(new Response(null, { status: 404 }));
     await expect(sendVoid("DELETE", "/api/x")).rejects.toMatchObject({ kind: "not-found" });
   });
+
+  it("carries the code of a refusal that gives one", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ title: "Confirm first.", code: "fresh-mfa-required" }, 403));
+    await expect(sendVoid("POST", "/api/x", {})).rejects.toMatchObject({
+      kind: "forbidden",
+      status: 403,
+      code: "fresh-mfa-required",
+    });
+  });
+
+  it("leaves the code out of a refusal without one", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ title: "No." }, 403));
+    const error = await sendVoid("POST", "/api/x", {}).catch((cause: unknown) => cause);
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).code).toBeUndefined();
+  });
 });
 
 describe("deleteResource", () => {
@@ -153,6 +169,11 @@ describe("deleteResource", () => {
   it("still fails on any other refusal", async () => {
     fetchMock.mockResolvedValue(new Response(null, { status: 403 }));
     await expect(deleteResource("/api/x")).rejects.toMatchObject({ kind: "forbidden" });
+  });
+
+  it("carries the code of a refusal that gives one", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ code: "fresh-mfa-required" }, 403));
+    await expect(deleteResource("/api/x")).rejects.toMatchObject({ code: "fresh-mfa-required" });
   });
 });
 
