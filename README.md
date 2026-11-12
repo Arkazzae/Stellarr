@@ -26,6 +26,7 @@ Full documentation lives in [`docs/`](docs/README.md):
 | --- | --- |
 | `web/` | Next.js web client |
 | `cockpit/` | [Stellarr Cockpit](cockpit/README.md), the instance operator panel (`/cockpit/`) |
+| `packages/` | Code shared by `web/` and `cockpit/` ([`@stellarr/ui`](packages/stellarr-ui/README.md)); the root `package.json` makes `web/`, `cockpit/` and `packages/*` one npm workspace with one `package-lock.json` |
 | `server/` | ASP.NET Core control plane, SignalR hub, operator CLI, and tests |
 | `media/` | [Stellarr Media](media/README.md), the Rust WebRTC SFU (`stellarr-media`) |
 | `infra/` | Container entrypoint, Nginx, coturn, supervisord, and TLS scripts |

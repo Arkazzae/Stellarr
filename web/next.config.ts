@@ -1,3 +1,5 @@
+import path from "node:path";
+
 import type { NextConfig } from "next";
 
 const apiOrigin = process.env.STELLARR_API_ORIGIN ?? "http://127.0.0.1:5000";
@@ -18,6 +20,14 @@ const allowedDevOrigins = [
   ...new Set(["127.0.0.1", ...commaSeparated(process.env.STELLARR_ALLOWED_DEV_ORIGINS)]),
 ];
 
+/**
+ * `web/` is a workspace of the repository root, which holds the hoisted
+ * `node_modules` and the shared `packages/`. File tracing and Turbopack must
+ * start there, or the standalone output misses the hoisted dependencies and the
+ * shared package. The output then nests the app as `web/server.js`.
+ */
+const workspaceRoot = path.resolve(import.meta.dirname, "..");
+
 const IMMUTABLE = "public, max-age=31536000, immutable";
 const REVALIDATE_HOURLY = "public, max-age=3600, must-revalidate";
 
@@ -29,7 +39,10 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
   output: "standalone",
-  outputFileTracingRoot: import.meta.dirname,
+  outputFileTracingRoot: workspaceRoot,
+  turbopack: { root: workspaceRoot },
+  // @stellarr/ui is consumed as TypeScript source, with no build step.
+  transpilePackages: ["@stellarr/ui"],
   allowedDevOrigins,
   experimental: {
     // Dev rewrites buffer uploads in the Next server. 128 MB is the transport
