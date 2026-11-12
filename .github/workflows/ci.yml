@@ -106,6 +106,9 @@ jobs:
       - run: npm run typecheck:ui
       - run: npm run typecheck:web
       - run: npm run test:web
+      # branding/icons/ is exported from the web client's icon paths; a glyph
+      # changed in one place only fails here.
+      - run: npm run icons:export -w stellarr-web -- --check
       - run: npm run build:web
 
   cockpit:
