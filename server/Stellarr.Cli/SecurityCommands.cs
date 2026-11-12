@@ -33,6 +33,10 @@ internal static class SecurityCommands
             .ToArrayAsync(cancellationToken);
         var remainingCodes = await db.RecoveryCodes.AsNoTracking()
             .CountAsync(x => x.UserId == user.Id && x.UsedAt == null, cancellationToken);
+        var identities = await db.ExternalIdentities.AsNoTracking()
+            .Where(x => x.UserId == user.Id)
+            .OrderBy(x => x.CreatedAt)
+            .ToArrayAsync(cancellationToken);
         var events = await db.SecurityEvents.AsNoTracking()
             .Where(x => x.UserId == user.Id)
             .OrderByDescending(x => x.CreatedAt)
@@ -90,6 +94,13 @@ internal static class SecurityCommands
                 expiresAt = session.ExpiresAt,
             }).ToArray(),
             remainingRecoveryCodes = remainingCodes,
+            identities = identities.Select(identity => new
+            {
+                id = identity.Id.ToString(),
+                issuer = identity.Issuer,
+                providerId = identity.ProviderId,
+                createdAt = identity.CreatedAt,
+            }).ToArray(),
             events = events.Select(securityEvent => new
             {
                 kind = securityEvent.Kind,
@@ -116,6 +127,9 @@ internal static class SecurityCommands
         lines.Add($"Trusted devices: {devices.Length}");
         lines.Add($"Active sessions: {sessions.Length}");
         lines.Add($"Unused recovery codes: {remainingCodes}");
+        lines.Add($"Linked identities: {identities.Length}");
+        lines.AddRange(identities.Select(identity =>
+            $"  {identity.Id}  {identity.Issuer}  {identity.ProviderId ?? "(provider not recorded)"}  linked {identity.CreatedAt:O}"));
         lines.Add($"Recent security events: {events.Length}");
         return new CliResult("security.show", data, lines);
     }
@@ -127,6 +141,61 @@ internal static class SecurityCommands
     {
         var shown = await ShowAsync(runtime, idOrUsername, cancellationToken);
         return shown with { Command = "security.methods" };
+    }
+
+    /// <summary>
+    /// Removes one identity-provider link. A recovery keeps links, so an
+    /// operator cleaning up a compromised account removes them here.
+    /// </summary>
+    internal static async Task<CliResult> UnlinkAsync(
+        CliRuntime runtime,
+        string idOrUsername,
+        string identityId,
+        CancellationToken cancellationToken)
+    {
+        if (!Guid.TryParse(identityId.Trim(), out var id))
+        {
+            throw new CliException(
+                "identity_not_found",
+                $"No linked identity matches '{identityId}'. Take the id from `security show`.",
+                CliExit.NotFound);
+        }
+
+        await using var database = await runtime.OpenDatabaseAsync(mutation: true, cancellationToken);
+        var db = database.Context;
+        var user = await CommandSupport.ResolveUserAsync(db, idOrUsername, cancellationToken);
+        var identity = await db.ExternalIdentities
+            .SingleOrDefaultAsync(x => x.Id == id && x.UserId == user.Id, cancellationToken)
+            ?? throw new CliException(
+                "identity_not_found",
+                $"{user.Username} has no linked identity '{identityId}'. Take the id from `security show`.",
+                CliExit.NotFound);
+
+        runtime.Confirm(
+            $"Will unlink {identity.Issuer} from {user.DisplayName} ({user.Username}); " +
+            "that identity will no longer sign in to the account. Sessions already open stay open; end them with `sessions revoke`.");
+
+        db.ExternalIdentities.Remove(identity);
+        SecurityEvents.Record(
+            db, user.Id, SecurityEventKinds.IdentityUnlinked, null, $"operator: {identity.Issuer}",
+            await SecurityEvents.VerifiedEmailAsync(db, user.Id, cancellationToken));
+        db.OperatorAuditEntries.Add(CliDatabase.Audit("security.unlink", user.Id.ToString()));
+        await db.SaveChangesAsync(cancellationToken);
+
+        return new CliResult(
+            "security.unlink",
+            new
+            {
+                userId = user.Id.ToString(),
+                username = user.Username,
+                identityId = identity.Id.ToString(),
+                issuer = identity.Issuer,
+                auditActor = "local-cli",
+            },
+            [
+                $"Unlinked {identity.Issuer} from {user.DisplayName} ({user.Username}).",
+                "Audit: local-cli security.unlink " + user.Id,
+            ]);
     }
 
     internal static async Task<CliResult> RecoverAsync(

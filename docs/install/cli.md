@@ -129,6 +129,8 @@ Read-only startup keys include:
 - `tls.domain` (`STELLARR_DOMAIN`)
 - `https-port` (`PUBLIC_HTTPS_PORT`, normally set from host `STELLARR_HTTPS_PORT`; entrypoint default `443`)
 - `oidc.enabled`, `oidc.authority`, `oidc.client-id`, `oidc.callback-path`
+- `oidc.trust-provider-mfa`, `oidc.provider-mfa-amr`
+- `oidc.providers` (the ids of the providers under `Oidc__Providers__<id>__*`, each marked when its second step is trusted; no secrets)
 - `rtc.public-host`, `rtc.turn-port`, `rtc.turns-port`, `rtc.turns-enabled`, `rtc.turn-tcp-enabled`, `rtc.media-port`
 - `storage.endpoint` (the entrypoint always sets `http://127.0.0.1:9000`; `Storage__Endpoint` from Compose is overwritten)
 - `storage.bucket` (`RUSTFS_BUCKET`, default `stellarr-images`; `Storage__Bucket` from Compose is overwritten)
@@ -194,13 +196,21 @@ them from becoming new sessions.
 stellarr security show arkazz
 stellarr security methods arkazz
 stellarr security recover arkazz --reason "lost authenticator"
+stellarr security unlink arkazz 3f2a6c1e-0b7d-4f5e-9a2c-8d1e4b6f7a90
 ```
 
 `security show` reports the instance MFA requirement, confirmed and pending
 methods, trusted devices, active sessions, unused recovery-code count and recent
 account-global security events. `security methods` prints the same inspection
 focused on method metadata. Neither command can read a TOTP seed, recovery-code
-hash, cookie or trusted-device token.
+hash, cookie or trusted-device token. `security show` also lists the account's
+links to identity providers, each with its id, issuer and provider.
+
+`security unlink` removes one of those links after a confirmation, so that
+identity no longer signs in to the account. It records `security.unlink` in the
+operator audit and a security event. Sessions already open stay open; end them
+with `sessions revoke` when the provider account was compromised. A recovery
+keeps the links, so check them while cleaning up an account.
 
 `security recover` is the emergency path for an account that lost every second
 factor. It revokes all MFA methods, trusted devices, active sessions, approved

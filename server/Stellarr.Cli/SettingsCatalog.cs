@@ -148,6 +148,17 @@ internal static class SettingsCatalog
             "Set STELLARR_OIDC_CLIENT_ID in .env/Compose and recreate the container.",
             context => ContainerSettings.ConfigValue(
                 context, "Oidc:ClientId", "", "Oidc__ClientId", "STELLARR_OIDC_CLIENT_ID")),
+        new("oidc.trust-provider-mfa", "STELLARR_OIDC_TRUST_PROVIDER_MFA / Oidc__TrustProviderMfa",
+            "Set STELLARR_OIDC_TRUST_PROVIDER_MFA in .env/Compose and recreate the container. Off unless the provider reports a real second factor in amr.",
+            context => ContainerSettings.ConfigValue(
+                context, "Oidc:TrustProviderMfa", "false", "Oidc__TrustProviderMfa", "STELLARR_OIDC_TRUST_PROVIDER_MFA")),
+        new("oidc.provider-mfa-amr", "STELLARR_OIDC_PROVIDER_MFA_AMR / Oidc__ProviderMfaAmr",
+            "Set STELLARR_OIDC_PROVIDER_MFA_AMR in .env/Compose and recreate the container.",
+            context => ContainerSettings.ConfigValue(
+                context, "Oidc:ProviderMfaAmr", "mfa", "Oidc__ProviderMfaAmr", "STELLARR_OIDC_PROVIDER_MFA_AMR")),
+        new("oidc.providers", "Oidc__Providers__<id>__*",
+            "Add or remove Oidc__Providers__<id>__Authority, __ClientId, __ClientSecret(File), __DisplayName and the optional __TrustProviderMfa and __ProviderMfaAmr in Compose, then recreate the container.",
+            ContainerSettings.OidcProviders),
         new("oidc.callback-path", "Oidc__CallbackPath",
             "Set Oidc__CallbackPath in Compose and recreate the container. The normal value is /api/auth/oidc/callback.",
             context => ContainerSettings.ConfigValue(

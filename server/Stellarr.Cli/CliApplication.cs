@@ -303,7 +303,7 @@ public static class CliApplication
         var positions = invocation.Positionals;
         if (positions.Count < 2)
         {
-            throw Usage("security needs a subcommand: show, methods or recover.");
+            throw Usage("security needs a subcommand: show, methods, recover or unlink.");
         }
 
         var action = positions[1].ToLowerInvariant();
@@ -332,8 +332,23 @@ public static class CliApplication
                 return await SecurityCommands.RecoverAsync(
                     runtime, positions[2], invocation.Reason, cancellationToken);
 
+            case "unlink":
+                if (positions.Count != 4)
+                {
+                    throw Usage("security unlink <id-or-username> <identity-id> [--yes]");
+                }
+
+                EnsureMutation(
+                    invocation,
+                    "security unlink <id-or-username> <identity-id>",
+                    exact: 4,
+                    allowStdin: false,
+                    allowAll: false);
+                return await SecurityCommands.UnlinkAsync(
+                    runtime, positions[2], positions[3], cancellationToken);
+
             default:
-                throw Usage($"Unknown security subcommand '{action}'. Use show, methods or recover.");
+                throw Usage($"Unknown security subcommand '{action}'. Use show, methods, recover or unlink.");
         }
     }
 

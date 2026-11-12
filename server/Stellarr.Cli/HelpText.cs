@@ -38,6 +38,8 @@ internal static class HelpText
                                          List security-method metadata only.
           security recover <id-or-username> --reason <text>
                                          Revoke security and issue one enrollment-only recovery credential.
+          security unlink <id-or-username> <identity-id>
+                                         Remove one identity-provider link from an account.
 
         Global options:
           --data-root <path>   Data root holding db/stellarr.db and keys/.
@@ -130,13 +132,15 @@ internal static class HelpText
               stellarr security show <id-or-username> [--json]
               stellarr security methods <id-or-username> [--json]
               stellarr security recover <id-or-username> --reason <text> [--yes] [--json]
+              stellarr security unlink <id-or-username> <identity-id> [--yes] [--json]
 
             `show` inspects methods, trusted devices, active sessions and recent events
             without printing seeds, hashes or codes. `recover` atomically revokes methods,
             trust, sessions and approved handoffs, then prints one short-lived recovery
             credential once. That credential can only enroll replacement security through
             POST /api/auth/recovery/redeem; it never grants an ordinary session or disables
-            an enforced policy. Disabled accounts stay disabled.
+            an enforced policy. Disabled accounts stay disabled. A recovery keeps the
+            account's identity-provider links; `show` lists them and `unlink` removes one.
             """,
         _ => Full,
     };

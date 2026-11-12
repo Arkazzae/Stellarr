@@ -229,6 +229,86 @@ public sealed class AccountSecurityCliTests
     }
 
     [Fact]
+    public async Task OperatorSeesAndRemovesAnIdentityLinkThatARecoveryKeeps()
+    {
+        using var fixture = await CliFixture.StartAsync();
+        Guid identityId;
+        await using (var scope = fixture.Factory.Services.CreateAsyncScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var user = await db.Users.SingleAsync(x => x.Username == "jo");
+            identityId = Guid.NewGuid();
+            db.ExternalIdentities.Add(new ExternalIdentity
+            {
+                Id = identityId,
+                UserId = user.Id,
+                Issuer = "https://id.example.test",
+                Subject = "jo-at-provider",
+                ProviderId = "work",
+                CreatedAt = DateTime.UtcNow,
+            });
+            await db.SaveChangesAsync();
+        }
+
+        var show = await fixture.RunAsync("--json", "security", "show", "jo");
+        using (var json = JsonDocument.Parse(show.Output))
+        {
+            var identity = json.RootElement.GetProperty("data").GetProperty("identities").EnumerateArray().Single();
+            Assert.Equal(identityId.ToString(), identity.GetProperty("id").GetString());
+            Assert.Equal("https://id.example.test", identity.GetProperty("issuer").GetString());
+            Assert.Equal("work", identity.GetProperty("providerId").GetString());
+        }
+
+        var unknown = await fixture.RunAsync("--json", "security", "unlink", "jo", Guid.NewGuid().ToString(), "--yes");
+        var unlink = await fixture.RunAsync("--json", "security", "unlink", "jo", identityId.ToString(), "--yes");
+
+        Assert.NotEqual(0, unknown.ExitCode);
+        Assert.Equal(0, unlink.ExitCode);
+        await using var check = fixture.OpenDb();
+        Assert.False(await check.ExternalIdentities.AnyAsync(x => x.Id == identityId));
+        Assert.True(await check.SecurityEvents.AnyAsync(x => x.Kind == SecurityEventKinds.IdentityUnlinked));
+        Assert.True(await check.OperatorAuditEntries.AnyAsync(x => x.Operation == "security.unlink"));
+    }
+
+    [Fact]
+    public async Task ConfigListsTheIdentityProvidersWithoutTheirSecrets()
+    {
+        using var fixture = await CliFixture.StartAsync();
+        fixture.Stop();
+        var environment = new Dictionary<string, string?>
+        {
+            ["Oidc__Providers__work__Authority"] = "https://work.example.test",
+            ["Oidc__Providers__work__ClientSecret"] = "work-secret-value",
+            ["Oidc__Providers__work__TrustProviderMfa"] = "true",
+            ["Oidc__Providers__lab__Authority"] = "https://lab.example.test",
+            ["STELLARR_OIDC_TRUST_PROVIDER_MFA"] = "false",
+            ["Oidc__TrustProviderMfa"] = "false",
+        };
+
+        var providers = await fixture.RunWithEnvironmentAsync(environment, "--json", "config", "get", "oidc.providers");
+        var trust = await fixture.RunWithEnvironmentAsync(environment, "--json", "config", "get", "oidc.trust-provider-mfa");
+        var amr = await fixture.RunAsync("--json", "config", "get", "oidc.provider-mfa-amr");
+
+        using (var json = JsonDocument.Parse(providers.Output))
+        {
+            var data = json.RootElement.GetProperty("data");
+            Assert.Equal("lab, work (trusts provider MFA)", data.GetProperty("value").GetString());
+            Assert.Equal("environment", data.GetProperty("source").GetString());
+        }
+
+        Assert.DoesNotContain("work-secret-value", providers.Output, StringComparison.Ordinal);
+        using (var json = JsonDocument.Parse(trust.Output))
+        {
+            Assert.Equal("false", json.RootElement.GetProperty("data").GetProperty("value").GetString());
+        }
+
+        using (var json = JsonDocument.Parse(amr.Output))
+        {
+            Assert.Equal("mfa", json.RootElement.GetProperty("data").GetProperty("value").GetString());
+        }
+    }
+
+    [Fact]
     public async Task DisabledAccountsCannotBeRecovered()
     {
         using var fixture = await CliFixture.StartAsync();
