@@ -217,6 +217,7 @@ public enum MessageKey
     SecurityDeliveryFailed,
     SecurityPasswordRequired,
     SecurityFreshMfaRequired,
+    CockpitSecondStepRequired,
     SecurityRecoveryCredentialInvalid,
     SecurityAlertSubject,
     SecurityAlertGreeting,

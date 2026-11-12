@@ -332,6 +332,9 @@ public sealed class AccountSecurityFlowTests
         await SetRequirementAsync(factory, MfaRequirements.Cockpit);
         using var cockpit = await ownerClient.GetAsync("/api/cockpit/bootstrap");
         Assert.Equal(HttpStatusCode.Forbidden, cockpit.StatusCode);
+        Assert.Equal(
+            "cockpit-mfa-required",
+            (await cockpit.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString());
         Assert.Equal(JsonValueKind.Object,
             (await ownerClient.GetFromJsonAsync<JsonElement>("/api/session")).GetProperty("user").ValueKind);
     }

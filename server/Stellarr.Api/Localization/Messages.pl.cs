@@ -216,6 +216,7 @@ public sealed partial class Messages
         MessageKey.SecurityDeliveryFailed => "Nie udało się wysłać kodu. Spróbuj później.",
         MessageKey.SecurityPasswordRequired => "Potwierdź obecne hasło.",
         MessageKey.SecurityFreshMfaRequired => "Przed zmianą ustawień zabezpieczeń potwierdź bieżący drugi składnik.",
+        MessageKey.CockpitSecondStepRequired => "Cockpit wymaga sesji potwierdzonej drugim krokiem.",
         MessageKey.SecurityRecoveryCredentialInvalid => "Poświadczenie odzyskiwania jest nieprawidłowe lub wygasło.",
         MessageKey.SecurityAlertSubject => "Aktywność zabezpieczeń w {instance}",
         MessageKey.SecurityAlertGreeting => "Cześć {name},",

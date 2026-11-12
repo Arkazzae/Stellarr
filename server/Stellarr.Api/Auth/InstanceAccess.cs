@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using Stellarr.Api.Auth.Security;
 using Stellarr.Api.Data;
 using Stellarr.Api.Domain;
+using Stellarr.Api.Localization;
 
 namespace Stellarr.Api.Auth;
 
@@ -43,6 +44,9 @@ public static class InstanceAccess
 /// </summary>
 public sealed class InstanceOwnerFilter : IEndpointFilter
 {
+    /// <summary>The problem code of an owner refused only for a missing second step.</summary>
+    public const string CockpitMfaRequired = "cockpit-mfa-required";
+
     public async ValueTask<object?> InvokeAsync(
         EndpointFilterInvocationContext context,
         EndpointFilterDelegate next)
@@ -72,7 +76,14 @@ public sealed class InstanceOwnerFilter : IEndpointFilter
                 http.RequestAborted);
             if (!fresh)
             {
-                return Results.Forbid();
+                // The owner, refused only for the missing second step. The
+                // code lets Cockpit send them to confirm it instead of saying
+                // they are not the owner.
+                return Results.Problem(
+                    statusCode: StatusCodes.Status403Forbidden,
+                    title: http.RequestServices.GetRequiredService<Messages>()
+                        .Get(MessageKey.CockpitSecondStepRequired),
+                    extensions: new Dictionary<string, object?> { ["code"] = CockpitMfaRequired });
             }
         }
 
