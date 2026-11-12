@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { Icon } from "@/components/icons/Icon";
+import { Icon } from "@stellarr/ui/icons";
 import { formatShortDate } from "@/components/settings/panes/paneFormat";
 import type { InterfaceLocale, Translator } from "@/i18n";
 import { formatTime, isSameDay } from "@/lib/format";

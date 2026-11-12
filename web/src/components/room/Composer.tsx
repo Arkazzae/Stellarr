@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 
-import { Icon } from "@/components/icons/Icon";
+import { Icon } from "@stellarr/ui/icons";
 import { type InterfaceLocale, type Translator } from "@/i18n";
 import { documentLocale, translateForDocument } from "@/i18n/defaultLocale";
 import type { CustomEmoji, OpenVoiceMessageCapture } from "@/ports";

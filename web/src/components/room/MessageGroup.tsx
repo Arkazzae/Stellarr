@@ -3,7 +3,7 @@
 import { documentLocale, translateForDocument } from "@/i18n/defaultLocale";
 import { useState, type MouseEvent } from "react";
 
-import { Icon } from "@/components/icons/Icon";
+import { Icon } from "@stellarr/ui/icons";
 import { Avatar } from "@/components/primitives/Avatar";
 import { useConfirm } from "@/components/primitives/ConfirmDialog";
 import { ContextMenu, useContextMenu } from "@/components/primitives/ContextMenu";

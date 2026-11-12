@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type MouseEvent } from "react";
 
-import { Icon, type IconName } from "@/components/icons/Icon";
+import { Icon, type IconName } from "@stellarr/ui/icons";
 import type { CallVM } from "@/components/view-models";
 import { SoundboardPopover } from "@/components/voice/SoundboardPopover";
 import type { MessageKey } from "@/i18n";

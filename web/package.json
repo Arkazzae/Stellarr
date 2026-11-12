@@ -13,7 +13,6 @@
     "test:watch": "vitest",
     "test:translation-runtime": "node scripts/verify-bergamot-runtime.mjs",
     "fonts:sync": "node scripts/sync-theme-fonts.mjs",
-    "icons:export": "node scripts/export-brand-icons.mjs",
     "predev": "node scripts/copy-audio-assets.mjs",
     "prebuild": "node scripts/copy-audio-assets.mjs",
     "pretest": "node scripts/copy-audio-assets.mjs"

@@ -9,17 +9,18 @@ File names match the app's icon names converted to kebab case:
 `micSlash` → [`mic-slash.svg`](mic-slash.svg),
 `noiseGtcrn` → [`noise-gtcrn.svg`](noise-gtcrn.svg).
 
-The source is [`web/src/components/icons/paths.ts`](../../web/src/components/icons/paths.ts).
-Edit the source and regenerate these assets from `web/`:
+The source is [`packages/stellarr-ui/src/icons/paths.ts`](../../packages/stellarr-ui/src/icons/paths.ts),
+which the web client and Cockpit both render. Edit the source and regenerate
+these assets from the repository root:
 
 ```sh
-npm run icons:export
+npm run icons:export -w @stellarr/ui
 ```
 
 Verify that all exported SVGs match the app:
 
 ```sh
-npm run icons:export -- --check
+npm run icons:export -w @stellarr/ui -- --check
 ```
 
 Use an accessible label on the containing control and hide decorative inline

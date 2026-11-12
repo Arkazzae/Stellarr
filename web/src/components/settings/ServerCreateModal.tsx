@@ -2,7 +2,7 @@
 
 import { useId, useState, type ReactNode } from "react";
 
-import { Icon, type IconName } from "@/components/icons/Icon";
+import { Icon, type IconName } from "@stellarr/ui/icons";
 import { Modal } from "@/components/primitives/Modal";
 import { Segmented } from "@/components/primitives/Segmented";
 import { Switch } from "@/components/primitives/Switch";

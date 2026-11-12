@@ -8,7 +8,7 @@ import {
   type PointerEvent,
 } from "react";
 
-import { Icon } from "@/components/icons/Icon";
+import { Icon } from "@stellarr/ui/icons";
 import { formatBytes } from "@/lib/format";
 import { useLanguage } from "@/state/hooks";
 

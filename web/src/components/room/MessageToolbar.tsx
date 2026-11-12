@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 
 import { deleteMessageConfirmation } from "@/components/confirmations";
-import { Icon, type IconName } from "@/components/icons/Icon";
+import { Icon, type IconName } from "@stellarr/ui/icons";
 import { useConfirm } from "@/components/primitives/ConfirmDialog";
 import { type MessageKey, type Translator } from "@/i18n";
 import { translateForDocument } from "@/i18n/defaultLocale";

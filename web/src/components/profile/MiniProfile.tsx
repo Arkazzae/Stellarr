@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 
-import { Icon, type IconName } from "@/components/icons/Icon";
+import { Icon, type IconName } from "@stellarr/ui/icons";
 import { AnchoredCard } from "@/components/primitives/AnchoredCard";
 import { Avatar } from "@/components/primitives/Avatar";
 import {

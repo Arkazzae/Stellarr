@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useId, useRef, useState } from "react";
 
-import { Icon, type IconName } from "@/components/icons/Icon";
+import { Icon, type IconName } from "@stellarr/ui/icons";
 import { Modal } from "@/components/primitives/Modal";
 import { AuditPane, type AuditPaneProps } from "@/components/settings/panes/AuditPane";
 import { BansPane, type BansPaneProps } from "@/components/settings/panes/BansPane";
