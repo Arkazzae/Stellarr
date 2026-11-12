@@ -45,7 +45,7 @@ describe("InvitePage", () => {
     await renderInvite("abc123");
 
     expect(window.sessionStorage.getItem(PENDING_INVITE_STORAGE_KEY)).toBe("abc123");
-    expect(mocks.router.replace).toHaveBeenCalledExactlyOnceWith("/rejestracja");
+    expect(mocks.router.replace).toHaveBeenCalledExactlyOnceWith("/register");
     expect(mocks.ports.directory.joinInvite).not.toHaveBeenCalled();
   });
 

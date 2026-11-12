@@ -150,10 +150,10 @@ export function LoginScreen({
           </form>
 
           <nav className={styles.links} aria-label={t("auth.login.options")}>
-            <Link className={styles.textLink} href="/zapomniane-haslo">
+            <Link className={styles.textLink} href="/forgot-password">
               {t("auth.login.forgot")}
             </Link>
-            <Link className={styles.textLink} href="/rejestracja">
+            <Link className={styles.textLink} href="/register">
               {t("auth.login.register")}
             </Link>
           </nav>

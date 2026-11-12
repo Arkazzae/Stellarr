@@ -184,6 +184,6 @@ public sealed partial class AuthRecoveryFlowTests : IClassFixture<StellarrWebApp
         return url[(url.LastIndexOf('/') + 1)..];
     }
 
-    [GeneratedRegex(@"reset-hasla\?token=([^\s]+)")]
+    [GeneratedRegex(@"reset-password\?token=([^\s]+)")]
     private static partial Regex TokenPattern();
 }
