@@ -23,43 +23,43 @@ function clock(at: number): string {
 
 interface ServiceUptimeProps {
   name: string;
-  detail: string;
+  /** A line under the bars about what is checked; left out where space is short. */
+  detail?: string;
   states: readonly SlotState[];
   /** When the last minute ends. */
   end: number;
   /** The service's state now, as a badge. */
   badge: ReactNode;
-  /** The bars' height; they grow into the space given unless fixed. */
-  barsClassName?: string;
 }
 
 /** A service's last hour as a bar per minute, with its share of uptime and its state now beside its name. */
-export function ServiceUptime({ name, detail, states, end, badge, barsClassName }: ServiceUptimeProps) {
+export function ServiceUptime({ name, detail, states, end, badge }: ServiceUptimeProps) {
   const share = uptimeShare(states);
   const label =
     share === null
       ? t("dashboard.uptime.noData")
       : t("dashboard.uptime.percent", { value: formatNumber(share, { maximumFractionDigits: 1 }) });
   return (
-    <div role="group" aria-label={name} className="flex min-h-0 flex-1 flex-col gap-1.5">
+    <div role="group" aria-label={name} className="flex min-h-0 flex-1 flex-col justify-center gap-1">
       <div className="flex items-center gap-2">
         <p className="min-w-0 flex-1 truncate text-sm font-medium">{name}</p>
         <span className="shrink-0 text-xs text-muted-foreground tabular-nums">{label}</span>
         {badge}
       </div>
-      <div className={cn("flex min-h-4 flex-1 gap-px", barsClassName)} aria-hidden="true">
+      {/* A segment per minute at a fixed height: the room a card gives its services goes between them, not into the bars. */}
+      <div className="flex h-5 gap-0.5" aria-hidden="true">
         {states.map((state, index) => {
           const at = end - (SLOTS - 1 - index) * MINUTE_MS;
           return (
             <span
               key={index}
               title={t(SLOT_LABEL[state], { time: clock(at) })}
-              className={cn("min-w-0 flex-1 rounded-[2px]", SLOT_CLASS[state])}
+              className={cn("min-w-0 flex-1 rounded-xs", SLOT_CLASS[state])}
             />
           );
         })}
       </div>
-      <p className="truncate text-xs text-muted-foreground">{detail}</p>
+      {detail ? <p className="truncate text-xs text-muted-foreground">{detail}</p> : null}
     </div>
   );
 }

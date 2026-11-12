@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 
-import type { IconName } from "@/components/icons/Icon";
+import type { IconName } from "@stellarr/ui/icons";
 import { Switch } from "@/components/primitives/Switch";
 import type { UserPreferences } from "@/ports";
 import { useLanguage } from "@/state/hooks";

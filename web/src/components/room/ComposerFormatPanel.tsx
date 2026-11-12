@@ -2,7 +2,7 @@
 
 import type { Ref } from "react";
 
-import { Icon, type IconName } from "@/components/icons/Icon";
+import { Icon, type IconName } from "@stellarr/ui/icons";
 import type { MessageKey, Translator } from "@/i18n";
 
 const FORMATS: readonly {

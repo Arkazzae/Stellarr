@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import { Icon } from "@/components/icons/Icon";
+import { Icon } from "@stellarr/ui/icons";
 import type { DesktopRelease } from "@/lib/desktopRelease";
 import { formatBytes } from "@/lib/format";
 import { useLanguage } from "@/state/hooks";

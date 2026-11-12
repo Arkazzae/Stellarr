@@ -170,7 +170,7 @@ export function LogsPage() {
             onChange={(event) => setSearchText(event.target.value)}
             placeholder={t("logs.search")}
             aria-label={t("logs.search")}
-            className="pl-9"
+            className="rounded-full pl-9"
           />
         </div>
         <div role="group" aria-label={t("logs.levels")} className="flex flex-wrap gap-1.5">
@@ -200,7 +200,7 @@ export function LogsPage() {
             id="log-source"
             value={source}
             onChange={(event) => setSource(event.target.value)}
-            className="h-9 max-w-72 rounded-md border border-input bg-background px-3 text-sm"
+            className="h-9 max-w-72 rounded-full border border-input bg-background px-4 text-sm"
           >
             <option value="">{t("logs.source.all")}</option>
             {knownSource ? null : <option value={source}>{source}</option>}

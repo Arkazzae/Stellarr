@@ -26,4 +26,51 @@ export default tseslint.config(
       ],
     },
   },
+  {
+    // Icons come from src/components/icons, not direct Lucide imports.
+    files: ["src/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "lucide-react",
+              message: "icons come from src/components/icons.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // Radix and CVA stay behind the wrappers in src/components/ui/, so replacing
+    // them later touches only that folder. This block overrides the one above
+    // for the files it matches, so it repeats the Lucide entry.
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/components/ui/**"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "lucide-react",
+              message: "icons come from src/components/icons.",
+            },
+            {
+              name: "class-variance-authority",
+              message: "use the wrappers in src/components/ui.",
+            },
+          ],
+          patterns: [
+            {
+              group: ["@radix-ui/*"],
+              message: "use the wrappers in src/components/ui.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 );

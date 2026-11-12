@@ -64,7 +64,7 @@ export function AccountsTab({ users, roles, filter, onFilterChange, perform }: A
             <Input
               value={filter.query}
               onChange={(event) => onFilterChange({ ...filter, query: event.target.value })}
-              className="pl-9"
+              className="rounded-full pl-9"
               placeholder={t("accounts.search")}
               aria-label={t("accounts.search")}
             />
@@ -73,7 +73,7 @@ export function AccountsTab({ users, roles, filter, onFilterChange, perform }: A
             value={filter.roleId}
             onChange={(event) => onFilterChange({ ...filter, roleId: event.target.value })}
             aria-label={t("accounts.roleFilter")}
-            className="h-9 rounded-md border border-input bg-background px-3 text-sm"
+            className="h-9 rounded-full border border-input bg-background px-4 text-sm"
           >
             <option value="">{t("accounts.allRoles")}</option>
             {roles.map((role) => (

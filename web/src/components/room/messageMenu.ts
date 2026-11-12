@@ -1,5 +1,5 @@
 import { deleteMessageConfirmation } from "@/components/confirmations";
-import type { IconName } from "@/components/icons/Icon";
+import type { IconName } from "@stellarr/ui/icons";
 import type { MenuEntry } from "@/components/primitives/ContextMenu";
 import type { Confirm } from "@/components/primitives/ConfirmDialog";
 import type { MessageKey, Translator } from "@/i18n";

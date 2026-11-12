@@ -1,6 +1,6 @@
 "use client";
 
-import type { IconName } from "@/components/icons/Icon";
+import type { IconName } from "@stellarr/ui/icons";
 import { ErrorNotice, type ErrorNoticeAction } from "@/components/primitives/ErrorNotice";
 import { useLanguage, useUi, useVoice, type VoiceValue } from "@/state/hooks";
 

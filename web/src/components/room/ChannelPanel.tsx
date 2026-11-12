@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, type KeyboardEvent } from "react";
 
-import { Icon, type IconName } from "@/components/icons/Icon";
+import { Icon, type IconName } from "@stellarr/ui/icons";
 import { IconButton } from "@/components/primitives/IconButton";
 import type { MessageKey } from "@/i18n";
 import type { Message } from "@/ports";

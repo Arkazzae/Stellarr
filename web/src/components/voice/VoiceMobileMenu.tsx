@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { Icon, type IconName } from "@/components/icons/Icon";
+import { Icon, type IconName } from "@stellarr/ui/icons";
 import { Popover } from "@/components/primitives/Popover";
 import type { Sound } from "@/ports";
 import { useLanguage } from "@/state/LanguageProvider";

@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 
-import { Icon } from "@/components/icons/Icon";
+import { Icon } from "@stellarr/ui/icons";
 import { SettingsSection } from "@/components/settings/SettingsSection";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
 import type { InterfaceLocale, Translator } from "@/i18n";

@@ -2,7 +2,7 @@
 
 Stellarr Cockpit is the instance operator panel (`cockpit/`), built as a standalone React + Vite single-page application. It provides:
 
-- **Overview**: headline counts, 30-day activity in six series, and the last hour of the API's and the database's availability. It refreshes itself every 30 s.
+- **Overview**: headline counts with their trend and the change on the week before, 30-day activity in six series, the API's uptime and the last hour of its and the database's availability, the last hour of requests and connections, and the state of the other services. It refreshes itself every 30 s.
 - **Users**: account management, active sessions, and built-in roles.
 - **Servers**: list of servers on the instance with ownership transfer and deletion.
 - **Runtime**: the last hour of the process (requests, errors, CPU, memory, connections, database latency) and of every service's availability, a bar per minute.
@@ -15,9 +15,12 @@ Secrets set in Cockpit (the SMTP password, the Resend and GIPHY keys) are stored
 
 ## Development
 
+Cockpit is an npm workspace of the repository root, which holds the one `package-lock.json` and installs web, Cockpit and the shared `packages/stellarr-ui`:
+
 ```bash
+# from the repository root
 npm install
-npm run dev
+npm run dev -w stellarr-cockpit
 ```
 
 The dev server listens on `http://localhost:3001` and proxies `/api` and `/health` to `STELLARR_API_ORIGIN` (`http://127.0.0.1:5000` by default).
@@ -37,10 +40,11 @@ Catalogs live in `src/i18n/en.ts` and `src/i18n/pl.ts` and must define identical
 ## Verification
 
 ```bash
-npm run typecheck
-npm run lint
-npm test
-npm run build
+# from the repository root
+npm run typecheck:cockpit
+npm run lint:cockpit
+npm run test:cockpit
+npm run build:cockpit
 ```
 
-`npm run build` runs TypeScript validation and outputs the static bundle to `dist/`. `npm run preview` serves the production build locally on port `4174`.
+The build runs TypeScript validation and outputs the static bundle to `cockpit/dist/`. `npm run preview -w stellarr-cockpit` serves the production build locally on port `4174`.

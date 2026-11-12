@@ -64,6 +64,8 @@ Setting `STELLARR_LANGUAGE=pl` (or `en`) configures the instance default:
 
 ## Verification
 
+Install the dependencies once from the repository root with `npm ci`; `web/` and `cockpit/` are workspaces that share its lockfile.
+
 ```bash
 # Web client
 cd web

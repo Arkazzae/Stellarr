@@ -3,7 +3,7 @@
 import { useEffect, useEffectEvent, useId, useRef, type RefObject } from "react";
 import { createPortal } from "react-dom";
 
-import { Icon, type IconName } from "@/components/icons/Icon";
+import { Icon, type IconName } from "@stellarr/ui/icons";
 import { focusWithin, trapTab } from "@/components/primitives/focus";
 
 export interface SheetItem {

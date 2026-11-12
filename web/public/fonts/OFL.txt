@@ -2,15 +2,15 @@ Fonts bundled with Stellarr
 ===========================
 
 Every face is self-hosted so a LAN-only instance renders correctly with no
-outbound request. The pack contains Outfit, Inter, Geist, DM Sans, Plus Jakarta
-Sans, Manrope, Figtree, IBM Plex Sans, Source Sans 3, Noto Sans, Open Sans,
-Lato, Poppins, Montserrat, Raleway, Nunito, Rubik, Quicksand, Baloo 2, Varela
-Round, Comfortaa, Fira Code, JetBrains Mono, Source Code Pro, IBM Plex Mono,
-Space Grotesk, Sora and Lexend.
+outbound request. The pack contains the two faces of the interface: Outfit
+for text and JetBrains Mono for code.
+
+Copyright 2021 The Outfit Project Authors (https://github.com/Outfitio/Outfit-Fonts).
+Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono).
 
 The WOFF2 files are the upstream Google Fonts builds, subset to latin and
 latin-ext. Copyright notices and Reserved Font Names remain embedded in each
-font file. All families are distributed under the SIL Open Font License,
+font file. Both families are distributed under the SIL Open Font License,
 Version 1.1, whose full text follows.
 
 -------------------------------------------------------------------------------

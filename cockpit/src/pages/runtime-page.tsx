@@ -1,9 +1,10 @@
 import { useEffect } from "react";
 
 import { CardTitleRow } from "@/components/card-title-row";
+import { MiniCells, MiniLine, MiniStems } from "@/components/mini-charts";
+import { PageHeader } from "@/components/page-header";
 import { RequestChart } from "@/components/request-chart";
 import { ServiceUptime, UptimeAxis } from "@/components/service-uptime";
-import { Sparkbars } from "@/components/sparkbars";
 import { Spinner } from "@/components/spinner";
 import { StatTile } from "@/components/stat-tile";
 import { StatusBadge } from "@/components/status-badge";
@@ -43,12 +44,38 @@ interface TrendProps {
   pick: (sample: CockpitRuntimeSample) => number;
   combine: "sum" | "last";
   format: (value: number) => string;
+  /** Counts as cells lit from the bottom, a level as a dotted line, or a level as stems. */
+  form: "cells" | "line" | "stems";
   tone?: "accent" | "danger";
 }
 
-/** A tile's last hour, in two-minute bars. */
-function Trend({ history, pick, combine, format, tone }: TrendProps) {
-  return <Sparkbars points={bucketize(history, pick, combine)} format={format} tone={tone} />;
+/**
+ * A tile's last hour in the overview's small charts: counts in two-minute
+ * buckets, the last ten minutes lit; levels as the last value of each bucket,
+ * buckets without a sample left out.
+ */
+function Trend({ history, pick, combine, format, form, tone }: TrendProps) {
+  const points = bucketize(history, pick, combine, form === "stems" ? 15 : 30)
+    .filter((point) => combine === "sum" || point.value !== null)
+    .map((point) => ({
+      key: String(point.end),
+      value: point.value ?? 0,
+      note:
+        point.value === null
+          ? formatClock(new Date(point.end).toISOString())
+          : `${formatClock(new Date(point.end).toISOString())}: ${format(point.value)}`,
+    }));
+  return (
+    <div className="h-12">
+      {form === "cells" ? (
+        <MiniCells points={points} recent={5} tone={tone} />
+      ) : form === "line" ? (
+        <MiniLine points={points} />
+      ) : (
+        <MiniStems points={points} />
+      )}
+    </div>
+  );
 }
 
 /** The six figures, each with its last hour, as tiles of one size; their grid places them. */
@@ -63,11 +90,11 @@ function MetricTiles({ data }: { data: CockpitRuntime }) {
   return (
     <>
       <StatTile
-        icon="signal"
+        icon="pulse"
         title={t("runtime.metric.requests")}
         value={formatNumber(requests)}
         caption={t("runtime.lastHour")}
-        trend={<Trend history={history} pick={(sample) => sample.requests} combine="sum" format={count} />}
+        trend={<Trend history={history} pick={(sample) => sample.requests} form="cells" combine="sum" format={count} />}
       />
       <StatTile
         icon="warning"
@@ -75,7 +102,7 @@ function MetricTiles({ data }: { data: CockpitRuntime }) {
         value={formatNumber(serverErrors)}
         caption={t("runtime.metric.clientErrors", { count: formatNumber(clientErrors) })}
         trend={
-          <Trend history={history} pick={(sample) => sample.serverErrors} combine="sum" format={count} tone="danger" />
+          <Trend history={history} pick={(sample) => sample.serverErrors} form="cells" combine="sum" format={count} tone="danger" />
         }
       />
       <StatTile
@@ -88,13 +115,14 @@ function MetricTiles({ data }: { data: CockpitRuntime }) {
           <Trend
             history={history}
             pick={(sample) => sample.cpuPercent}
+            form="line"
             combine="last"
             format={(percent) => `${formatNumber(percent, { maximumFractionDigits: 1 })}%`}
           />
         }
       />
       <StatTile
-        icon="sliders"
+        icon="memory"
         title={t("runtime.metric.memory")}
         value={value ?? ""}
         unit={unit}
@@ -102,17 +130,17 @@ function MetricTiles({ data }: { data: CockpitRuntime }) {
           heap: formatMemory(data.gcHeapBytes),
           threads: data.threadCount,
         })}
-        trend={<Trend history={history} pick={(sample) => sample.workingSetBytes} combine="last" format={formatMemory} />}
+        trend={<Trend history={history} pick={(sample) => sample.workingSetBytes} form="line" combine="last" format={formatMemory} />}
       />
       <StatTile
         icon="wifi"
         title={t("runtime.metric.realtime")}
         value={formatNumber(data.realtimeConnections)}
         caption={t("runtime.metric.voiceRooms", { count: data.voiceRooms })}
-        trend={<Trend history={history} pick={(sample) => sample.realtimeConnections} combine="last" format={count} />}
+        trend={<Trend history={history} pick={(sample) => sample.realtimeConnections} form="stems" combine="last" format={count} />}
       />
       <StatTile
-        icon="clipboard"
+        icon="database"
         title={t("runtime.metric.latency")}
         value={formatNumber(data.databaseLatencyMs, { maximumFractionDigits: 2 })}
         unit="ms"
@@ -121,6 +149,7 @@ function MetricTiles({ data }: { data: CockpitRuntime }) {
           <Trend
             history={history}
             pick={(sample) => sample.databaseLatencyMs}
+            form="line"
             combine="last"
             format={(ms) => `${formatNumber(ms, { maximumFractionDigits: 2 })} ms`}
           />
@@ -136,7 +165,7 @@ function RequestsChart({ data, className }: { data: CockpitRuntime; className?: 
   const scale = remPx / 16;
   return (
     <Card className={cn("gap-0 py-0", className)}>
-      <CardTitleRow icon="signal" title={t("runtime.chart.requests")}>
+      <CardTitleRow icon="chart" title={t("runtime.chart.requests")}>
         <span className="text-sm text-muted-foreground">{t("runtime.chart.perInterval", { seconds: data.sampleSeconds })}</span>
       </CardTitleRow>
       <div className="flex min-h-0 flex-1 flex-col px-5 pt-3 pb-3">
@@ -201,23 +230,20 @@ export function RuntimePage() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
-          <h1 className="text-2xl font-semibold tracking-[-0.01em]">{t("runtime.title")}</h1>
-          {data ? (
-            <p className="text-sm text-muted-foreground">
-              {t("runtime.since", {
-                uptime: formatUptime(data.uptimeSeconds),
-                startedAt: formatDateTime(data.startedAt),
-              })}
-            </p>
-          ) : null}
-        </div>
-        <Button variant="outline" onClick={() => void refresh()} disabled={loading}>
-          {loading ? <Spinner /> : null}
-          {t("runtime.refresh")}
-        </Button>
-      </div>
+      <PageHeader
+        title={t("runtime.title")}
+        description={
+          data
+            ? t("runtime.since", { uptime: formatUptime(data.uptimeSeconds), startedAt: formatDateTime(data.startedAt) })
+            : ""
+        }
+        actions={
+          <Button variant="outline" onClick={() => void refresh()} disabled={loading}>
+            {loading ? <Spinner /> : null}
+            {t("runtime.refresh")}
+          </Button>
+        }
+      />
 
       {error ? (
         <Alert variant="destructive">

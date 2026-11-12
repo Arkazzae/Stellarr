@@ -1,0 +1,35 @@
+{
+  "name": "stellarr-workspace",
+  "private": true,
+  "workspaces": [
+    "web",
+    "cockpit",
+    "packages/*"
+  ],
+  "scripts": {
+    "build:web": "npm run build -w stellarr-web",
+    "build:cockpit": "npm run build -w stellarr-cockpit",
+    "test:web": "npm run test -w stellarr-web",
+    "test:cockpit": "npm run test -w stellarr-cockpit",
+    "test:ui": "npm run test -w @stellarr/ui",
+    "lint:web": "npm run lint -w stellarr-web",
+    "lint:cockpit": "npm run lint -w stellarr-cockpit",
+    "typecheck:web": "npm run typecheck -w stellarr-web",
+    "typecheck:cockpit": "npm run typecheck -w stellarr-cockpit",
+    "typecheck:ui": "npm run typecheck -w @stellarr/ui"
+  },
+  "overrides": {
+    "@eslint/config-array": {
+      "minimatch": "^11.0.1"
+    },
+    "@typescript-eslint/typescript-estree": {
+      "minimatch": "^11.0.1"
+    },
+    "emscripten-wasm-loader": {
+      "nanoid": "^3.3.18"
+    },
+    "eslint": {
+      "minimatch": "^11.0.1"
+    }
+  }
+}

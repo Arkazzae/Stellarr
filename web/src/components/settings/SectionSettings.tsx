@@ -2,7 +2,7 @@
 
 import { Fragment, useId, useState } from "react";
 
-import { Icon, type IconName } from "@/components/icons/Icon";
+import { Icon, type IconName } from "@stellarr/ui/icons";
 import { Modal } from "@/components/primitives/Modal";
 import {
   PermissionOverrideEditor,

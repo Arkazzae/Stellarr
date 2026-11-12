@@ -57,7 +57,7 @@ export function SecretField({ title, secret, onChanged }: SecretFieldProps) {
     if (value.trim()) void run("save");
   }
 
-  const variable = secret ? <code className="rounded bg-muted px-1 py-0.5 text-xs">{secret.variable}</code> : null;
+  const variable = secret ? <code className="rounded bg-background px-1 py-0.5 text-xs">{secret.variable}</code> : null;
 
   return (
     <div className="space-y-3 border-t pt-5">

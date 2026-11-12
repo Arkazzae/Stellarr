@@ -61,10 +61,12 @@ jobs:
             fi
           }
           check server '^(server/|Stellarr\.slnx$|Directory\.Build\.props$|global\.json$|\.github/workflows/ci\.yml$)'
-          check web '^(web/|\.github/workflows/ci\.yml$)'
-          check cockpit '^(cockpit/|\.github/workflows/ci\.yml$)'
+          # web and cockpit are workspaces of one npm project: a change to the
+          # shared packages or to the root manifest or lockfile affects both.
+          check web '^(web/|packages/|package(-lock)?\.json$|branding/icons/|\.github/workflows/ci\.yml$)'
+          check cockpit '^(cockpit/|packages/|package(-lock)?\.json$|\.github/workflows/ci\.yml$)'
           check media '^(media/|\.github/workflows/ci\.yml$)'
-          check image '^(Dockerfile$|\.dockerignore$|infra/|server/.*\.csproj$|server/.*packages\.lock\.json$|(web|cockpit)/package(-lock)?\.json$|media/Cargo\.(toml|lock)$|global\.json$|Directory\.Build\.props$|\.github/workflows/ci\.yml$)'
+          check image '^(Dockerfile$|\.dockerignore$|infra/|server/.*\.csproj$|server/.*packages\.lock\.json$|packages/|package(-lock)?\.json$|\.npmrc$|(web|cockpit)/package\.json$|media/Cargo\.(toml|lock)$|global\.json$|Directory\.Build\.props$|\.github/workflows/ci\.yml$)'
 
   server:
     needs: changes
@@ -91,42 +93,42 @@ jobs:
     timeout-minutes: 20
     env:
       NEXT_TELEMETRY_DISABLED: "1"
-    defaults:
-      run:
-        working-directory: web
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: 26
           cache: npm
-          cache-dependency-path: web/package-lock.json
+          cache-dependency-path: package-lock.json
+      # One install at the repository root covers every workspace.
       - run: npm ci
-      - run: npm run lint
-      - run: npm run typecheck
-      - run: npm test
-      - run: npm run build
+      - run: npm run lint:web
+      - run: npm run typecheck:ui
+      - run: npm run typecheck:web
+      - run: npm run test:web
+      - run: npm run test:ui
+      # branding/icons/ is exported from the icon paths in @stellarr/ui; a
+      # glyph changed in one place only fails here.
+      - run: npm run icons:export -w @stellarr/ui -- --check
+      - run: npm run build:web
 
   cockpit:
     needs: changes
     if: needs.changes.outputs.cockpit == 'true'
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    defaults:
-      run:
-        working-directory: cockpit
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
           node-version: 26
           cache: npm
-          cache-dependency-path: cockpit/package-lock.json
+          cache-dependency-path: package-lock.json
       - run: npm ci
-      - run: npm run lint
-      - run: npm run typecheck
-      - run: npm test
-      - run: npm run build
+      - run: npm run lint:cockpit
+      - run: npm run typecheck:cockpit
+      - run: npm run test:cockpit
+      - run: npm run build:cockpit
 
   media:
     needs: changes
