@@ -52,6 +52,7 @@ export const pl = {
   "auth.login.missing": "Podaj login lub e-mail oraz hasło.",
   "auth.login.pending": "Logowanie…",
   "auth.login.submit": "Zaloguj się",
+  "auth.login.keepSignedIn": "Nie wylogowuj mnie",
   "auth.login.oidc": "Zaloguj przez {provider}",
   "auth.login.oidcProvider": "konto główne",
   "auth.login.orPassword": "albo użyj hasła",

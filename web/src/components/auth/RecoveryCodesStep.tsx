@@ -67,7 +67,7 @@ export function RecoveryCodesStep({
             {t("auth.codes.download")}
           </button>
         </div>
-        <label className={steps.check}>
+        <label className={styles.check}>
           <input type="checkbox" checked={saved} onChange={(event) => setSaved(event.target.checked)} />
           <span>{t("auth.codes.saved")}</span>
         </label>

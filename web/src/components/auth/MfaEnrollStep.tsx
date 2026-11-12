@@ -201,7 +201,7 @@ export function MfaEnrollStep({
               {...fieldState}
             />
 
-            <label className={steps.check}>
+            <label className={styles.check}>
               <input
                 type="checkbox"
                 checked={remember}

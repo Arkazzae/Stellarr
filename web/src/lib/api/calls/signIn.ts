@@ -84,7 +84,13 @@ export function signInCalls(): SignInCalls {
     confirmEmailEnrollment: (input, signal) =>
       sendJson("POST", "/api/auth/mfa/enroll/email/confirm", input, parseMfaCompletion, signal),
 
-    redeemRecoveryCredential: (credential, signal) =>
-      sendJson("POST", "/api/auth/recovery/redeem", { credential }, parseMfaChallenge, signal),
+    redeemRecoveryCredential: (credential, keepSignedIn, signal) =>
+      sendJson(
+        "POST",
+        "/api/auth/recovery/redeem",
+        { credential, ...(keepSignedIn === false ? { keepSignedIn: false } : {}) },
+        parseMfaChallenge,
+        signal,
+      ),
   };
 }

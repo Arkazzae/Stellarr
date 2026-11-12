@@ -30,7 +30,8 @@ export interface SignInFlow {
   error: string | null;
   /** Seconds left before another email code during enrollment; null before the first one. */
   enrollEmailWait: number | null;
-  submitPassword(username: string, password: string): Promise<void>;
+  /** `keepSignedIn` false asks for a session that ends with the browser. */
+  submitPassword(username: string, password: string, keepSignedIn?: boolean): Promise<void>;
   verify(input: { methodId?: string; code: string; rememberDevice: boolean }): void;
   continueOnTrustedDevice(): void;
   sendEmailCode(methodId: string): Promise<number | null>;
@@ -62,8 +63,14 @@ const NAME_KEY: Record<EnrollMode, MessageKey> = {
 export function useSignInFlow({
   recoveryRequired = false,
   confirm = false,
+  keepSignedIn = true,
 }: {
   recoveryRequired?: boolean;
+  /**
+   * The choice of the sign-in a recovery continues, when it started before
+   * this page (at the identity provider). A password sign-in brings its own.
+   */
+  keepSignedIn?: boolean;
   /**
    * A signed-in session must pass a real second step before it goes on, as
    * Cockpit requires. One that already did goes on at once.
@@ -81,6 +88,7 @@ export function useSignInFlow({
   const [now, setNow] = useState(() => Date.now());
   const resumed = useRef(false);
   const confirming = useRef(false);
+  const keep = useRef(keepSignedIn);
   const security = ports.security;
 
   const enter = useCallback((challenge: MfaChallenge) => {
@@ -245,9 +253,10 @@ export function useSignInFlow({
     enrollEmailWait:
       emailWaitUntil === null ? null : Math.max(0, Math.ceil((emailWaitUntil - now) / 1000)),
 
-    async submitPassword(username, password) {
+    async submitPassword(username, password, keepSignedIn = true) {
       setError(null);
-      follow(await login(username, password));
+      keep.current = keepSignedIn;
+      follow(await login(username, password, keepSignedIn));
     },
 
     verify(input) {
@@ -345,7 +354,11 @@ export function useSignInFlow({
     redeem(credential) {
       void run(async () => {
         try {
-          enter(await challengePort.redeemRecovery(credential));
+          enter(
+            await (keep.current
+              ? challengePort.redeemRecovery(credential)
+              : challengePort.redeemRecovery(credential, false)),
+          );
         } catch (cause) {
           if (cause instanceof ApiError && (cause.status === 401 || cause.status === 400)) {
             setError(t("auth.recover.invalid"));

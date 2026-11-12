@@ -29,6 +29,11 @@ export interface LoginScreenProps {
     pending?: boolean;
   };
   externalError?: string | null;
+  /**
+   * "Keep me signed in", shown when given. The page holds the choice so the
+   * identity provider's link carries it too.
+   */
+  keepSignedIn?: { checked: boolean; onChange: (checked: boolean) => void };
 }
 
 export function LoginScreen({
@@ -42,6 +47,7 @@ export function LoginScreen({
   headingAction,
   externalLogin,
   externalError = null,
+  keepSignedIn,
 }: LoginScreenProps) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -137,6 +143,19 @@ export function LoginScreen({
               disabled={pending}
               {...fieldState}
             />
+
+            {keepSignedIn ? (
+              <label className={styles.check}>
+                <input
+                  type="checkbox"
+                  name="keepSignedIn"
+                  checked={keepSignedIn.checked}
+                  onChange={(event) => keepSignedIn.onChange(event.target.checked)}
+                  disabled={pending}
+                />
+                <span>{t("auth.login.keepSignedIn")}</span>
+              </label>
+            ) : null}
 
             {message ? (
               <p className={styles.error} id={errorId} role="alert">

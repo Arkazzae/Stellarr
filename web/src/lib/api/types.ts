@@ -482,6 +482,8 @@ export interface Bootstrap {
 export interface LoginInput {
   username: string;
   password: string;
+  /** False asks for a session that ends with the browser; left out, it is kept. */
+  keepSignedIn?: boolean;
 }
 
 export interface RegisterInput {

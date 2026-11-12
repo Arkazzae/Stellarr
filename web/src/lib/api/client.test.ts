@@ -135,6 +135,33 @@ describe("http api client", () => {
     expect(init?.body).toBe(JSON.stringify({ username: "patryk", password: "x" }));
   });
 
+  it("sends a short-lived sign-in choice to the password login and the recovery", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ id: "u-1", username: "patryk", displayName: "Patryk", presence: "online" }),
+    );
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        status: "mfa_enrollment_required",
+        challengeId: "c-1",
+        purpose: "recovery",
+        expiresAt: "2026-11-12T17:10:00Z",
+        methods: [],
+        trustedDeviceAvailable: false,
+        emailCodeAvailable: false,
+        trustedDeviceDays: 14,
+      }),
+    );
+
+    await api.login({ username: "patryk", password: "x", keepSignedIn: false });
+    await api.redeemRecoveryCredential("abc", false);
+
+    expect(fetchMock.mock.calls[0]?.[1]?.body).toBe(
+      JSON.stringify({ username: "patryk", password: "x", keepSignedIn: false }),
+    );
+    expect(fetchMock.mock.calls[1]?.[0]).toBe("/api/auth/recovery/redeem");
+    expect(fetchMock.mock.calls[1]?.[1]?.body).toBe(JSON.stringify({ credential: "abc", keepSignedIn: false }));
+  });
+
   it("parses and mutates the private cursor-paged notification inbox", async () => {
     const item = {
       id: "notification-1",

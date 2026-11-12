@@ -110,7 +110,7 @@ export interface ApiClient {
     signal?: AbortSignal,
   ): Promise<MfaCompletion>;
   /** Trades an operator's one-time recovery credential for a replacement-enrollment challenge. */
-  redeemRecoveryCredential(credential: string, signal?: AbortSignal): Promise<MfaChallenge>;
+  redeemRecoveryCredential(credential: string, keepSignedIn?: boolean, signal?: AbortSignal): Promise<MfaChallenge>;
   getAccountSecurity(signal?: AbortSignal): Promise<AccountSecurity>;
   listSecurityEvents(signal?: AbortSignal): Promise<SecurityEvent[]>;
   /**

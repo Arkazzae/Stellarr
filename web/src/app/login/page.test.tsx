@@ -159,7 +159,42 @@ describe("LoginPage", () => {
     await user.type(screen.getByLabelText("Hasło"), "haslo123");
     await user.click(screen.getByRole("button", { name: "Zaloguj się" }));
 
-    expect(mocks.session.login).toHaveBeenCalledExactlyOnceWith("maja", "haslo123");
+    expect(mocks.session.login).toHaveBeenCalledExactlyOnceWith("maja", "haslo123", true);
+  });
+
+  it("asks for a session that ends with the browser when told not to keep it", async () => {
+    answerOidc(configuration({ enabled: true, displayName: "Keycloak" }));
+    const user = userEvent.setup();
+    render(<LoginPage />);
+
+    const keep = await screen.findByRole("checkbox", { name: t("auth.login.keepSignedIn") });
+    expect(keep).toBeChecked();
+    await user.click(keep);
+
+    // The provider's link carries the choice as well as the form.
+    expect(await screen.findByRole("link", { name: "Zaloguj przez Keycloak" })).toHaveAttribute(
+      "href",
+      "/api/auth/oidc/login?returnUrl=%2F&keepSignedIn=false",
+    );
+    await user.type(screen.getByRole("textbox", { name: "Login lub e-mail" }), "maja");
+    await user.type(screen.getByLabelText("Hasło"), "haslo123");
+    await user.click(screen.getByRole("button", { name: "Zaloguj się" }));
+    expect(mocks.session.login).toHaveBeenCalledExactlyOnceWith("maja", "haslo123", false);
+  });
+
+  it("keeps the choice through an operator's recovery after the password", async () => {
+    mocks.session.login = vi.fn(async (): Promise<AuthResult> => ({ kind: "recovery-required" }));
+    const user = userEvent.setup();
+    render(<LoginPage />);
+
+    await user.click(await screen.findByRole("checkbox", { name: t("auth.login.keepSignedIn") }));
+    await user.type(screen.getByRole("textbox", { name: "Login lub e-mail" }), "maja");
+    await user.type(screen.getByLabelText("Hasło"), "haslo123");
+    await user.click(screen.getByRole("button", { name: "Zaloguj się" }));
+    await user.type(await screen.findByRole("textbox", { name: t("auth.recover.credential") }), "abc");
+    await user.click(screen.getByRole("button", { name: t("auth.recover.submit") }));
+
+    expect(mocks.challenge.redeemRecovery).toHaveBeenCalledExactlyOnceWith("abc", false);
   });
 
   it("shows the sign-in failure the session reports", async () => {
@@ -399,6 +434,17 @@ describe("LoginPage second factor", () => {
 
     expect(mocks.challenge.redeemRecovery).toHaveBeenCalledExactlyOnceWith("abc");
     expect(await screen.findByRole("heading", { name: t("auth.enroll.recoveryTitle") })).toBeVisible();
+  });
+
+  it("finishes a recovery from the identity provider with the choice made before leaving", async () => {
+    mocks.search = "security_recovery_required=1&keep_signed_in=0";
+    const user = userEvent.setup();
+    render(<LoginPage />);
+
+    await user.type(screen.getByRole("textbox", { name: t("auth.recover.credential") }), "abc");
+    await user.click(screen.getByRole("button", { name: t("auth.recover.submit") }));
+
+    expect(mocks.challenge.redeemRecovery).toHaveBeenCalledExactlyOnceWith("abc", false);
   });
 
   it("says a spent recovery credential does not work", async () => {

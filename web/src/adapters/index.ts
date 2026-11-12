@@ -187,7 +187,7 @@ export function createRuntime(options: RuntimeOptions = {}): Runtime {
         confirmTotp: (input) => api.confirmTotpEnrollment(input),
         startEmail: (challengeId, name) => api.startEmailEnrollment(challengeId, name),
         confirmEmail: (input) => api.confirmEmailEnrollment(input),
-        redeemRecovery: (credential) => api.redeemRecoveryCredential(credential),
+        redeemRecovery: (credential, keepSignedIn) => api.redeemRecoveryCredential(credential, keepSignedIn),
       },
     },
     account,

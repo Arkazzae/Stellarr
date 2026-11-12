@@ -54,6 +54,7 @@ export const en = {
   "auth.login.missing": "Enter your username or email and password.",
   "auth.login.pending": "Logging in…",
   "auth.login.submit": "Log in",
+  "auth.login.keepSignedIn": "Keep me signed in",
   "auth.login.oidc": "Continue with {provider}",
   "auth.login.oidcProvider": "central account",
   "auth.login.orPassword": "or use a password",

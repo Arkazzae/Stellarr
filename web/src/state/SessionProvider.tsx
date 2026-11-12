@@ -45,7 +45,7 @@ export interface SessionValue {
    * a challenge or a pending recovery is handed back for the sign-in page to
    * finish, and null means the attempt failed and `loginError` says why.
    */
-  login: (username: string, password: string) => Promise<AuthResult | null>;
+  login: (username: string, password: string, keepSignedIn?: boolean) => Promise<AuthResult | null>;
   loginPending: boolean;
   loginError: string | null;
   logout: () => Promise<void>;
@@ -253,11 +253,15 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }, [ports, signedIn, connection, presence]);
 
   const login = useCallback(
-    async (username: string, password: string) => {
+    async (username: string, password: string, keepSignedIn = true) => {
       setLoginPending(true);
       setLoginError(null);
       try {
-        const result = await ports.session.login({ username, password });
+        const result = await ports.session.login({
+          username,
+          password,
+          ...(keepSignedIn ? {} : { keepSignedIn: false }),
+        });
         // A second factor is still due: nothing may boot, open the hub or
         // join voice until the challenge is answered.
         if (result.kind === "signed-in") reload();

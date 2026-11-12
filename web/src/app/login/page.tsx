@@ -36,9 +36,12 @@ export default function LoginPage() {
   const returnPath = safeReturnPath(params.get("returnUrl"));
   const [provider, setProvider] = useState<{ displayName: string } | null>(null);
   const confirm = params.get("confirm") === "1";
+  // A recovery after the identity provider says which choice it left with.
+  const [keepSignedIn, setKeepSignedIn] = useState(params.get("keep_signed_in") !== "0");
   const flow = useSignInFlow({
     recoveryRequired: params.get("security_recovery_required") === "1",
     confirm,
+    keepSignedIn,
   });
 
   // A confirmation leaves only once the second step is done, not as soon as
@@ -132,7 +135,8 @@ export default function LoginPage() {
       // A login that needs nothing more re-runs the session bootstrap, and the
       // redirect hook navigates once it reports ready. Any further step stays
       // on this page.
-      onSubmit={(username, password) => void flow.submitPassword(username, password)}
+      onSubmit={(username, password) => void flow.submitPassword(username, password, keepSignedIn)}
+      keepSignedIn={{ checked: keepSignedIn, onChange: setKeepSignedIn }}
       pending={loginPending}
       error={flow.error ?? loginError}
       checking={
@@ -145,7 +149,9 @@ export default function LoginPage() {
         provider === null
           ? undefined
           : {
-              href: `/api/auth/oidc/login?returnUrl=${encodeURIComponent(returnPath ?? "/")}`,
+              href: `/api/auth/oidc/login?returnUrl=${encodeURIComponent(returnPath ?? "/")}${
+                keepSignedIn ? "" : "&keepSignedIn=false"
+              }`,
               label: t("auth.login.oidc", {
                 provider: provider.displayName || t("auth.login.oidcProvider"),
               }),

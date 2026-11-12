@@ -195,7 +195,7 @@ export function MfaChallengeStep({
         />
 
         {offerTrust ? (
-          <label className={steps.check}>
+          <label className={styles.check}>
             <input
               type="checkbox"
               checked={remember}

@@ -62,7 +62,8 @@ export interface SignInChallengePort {
     rememberDevice?: boolean;
   }): Promise<MfaCompletion>;
   /** Trades an operator's recovery credential for the challenge that sets up new security. */
-  redeemRecovery(credential: string): Promise<MfaChallenge>;
+  /** `keepSignedIn` is the choice made on the sign-in form this recovery continues. */
+  redeemRecovery(credential: string, keepSignedIn?: boolean): Promise<MfaChallenge>;
 }
 
 /** Signing in and out, and the one payload the app boots from. */
