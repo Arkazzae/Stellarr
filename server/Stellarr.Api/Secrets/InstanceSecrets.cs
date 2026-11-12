@@ -49,6 +49,10 @@ public static class SecretNames
     ];
 
     public static SecretDefinition? Find(string name) => All.FirstOrDefault(x => x.Name == name);
+
+    /// <summary>The rule Cockpit and the operator CLI both apply before storing a value.</summary>
+    public static bool IsValidValue(string? value) =>
+        !string.IsNullOrWhiteSpace(value) && value.Length <= MaxLength;
 }
 
 /// <summary>Every secret Cockpit holds, resolved.</summary>
