@@ -11,6 +11,8 @@ Full documentation lives in [`docs/`](docs/README.md):
 
 - [Requirements](docs/install/requirements.md)
 - [Quick start](docs/install/quick-start.md)
+- [Platforms](docs/install/platforms.md)
+- [Unraid](docs/install/unraid.md)
 - [Configuration](docs/install/configuration.md)
 - [Operator CLI](docs/install/cli.md)
 - [Reverse proxy and TLS](docs/install/reverse-proxy-and-tls.md)
@@ -31,6 +33,7 @@ Full documentation lives in [`docs/`](docs/README.md):
 | `server/` | ASP.NET Core API, SignalR hub, operator CLI, and integration tests |
 | `media/` | [Stellarr Media](media/README.md), the Rust WebRTC SFU (`stellarr-media`) |
 | `infra/` | Container entrypoint, Nginx, coturn, supervisord, and TLS scripts |
+| `deploy/` | [Platform templates](deploy/README.md) for the production container, such as Unraid's |
 | `docs/` | VitePress documentation site |
 | `branding/` | [Logo, mascot, and brand guidelines](branding/README.md), and the [README film](branding/film/README.md) |
 
