@@ -211,10 +211,30 @@ public sealed class ExternalOidcProvider
         }
     }
 
-    /// <summary>Whether the provider says it asked for more than a password, and the instance trusts it to.</summary>
-    public bool PassedSecondStep(IEnumerable<string> amr)
+    /// <summary>
+    /// How recent the provider's own sign-in must be to count. The provider is
+    /// asked for it with <c>max_age</c>, and its <c>auth_time</c> must show it,
+    /// so a sign-in the provider waved through on an old session does not
+    /// count as a fresh second step here.
+    /// </summary>
+    public static readonly TimeSpan ProviderMfaMaxAge = Security.MfaPolicy.FreshMfaWindow;
+
+    private static readonly TimeSpan ClockSkew = TimeSpan.FromMinutes(1);
+
+    /// <summary>
+    /// Whether the provider says it asked for more than a password, recently
+    /// enough, and the instance trusts it to.
+    /// </summary>
+    public bool PassedSecondStep(IEnumerable<string> amr, string? authTime, DateTimeOffset now)
     {
-        if (!TrustProviderMfa)
+        if (!TrustProviderMfa ||
+            !long.TryParse(authTime, System.Globalization.NumberStyles.None, System.Globalization.CultureInfo.InvariantCulture, out var seconds))
+        {
+            return false;
+        }
+
+        var signedIn = DateTimeOffset.FromUnixTimeSeconds(Math.Clamp(seconds, 0, 253402300799));
+        if (signedIn > now + ClockSkew || signedIn < now - ProviderMfaMaxAge - ClockSkew)
         {
             return false;
         }

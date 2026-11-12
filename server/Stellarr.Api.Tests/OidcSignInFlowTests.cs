@@ -157,10 +157,17 @@ public sealed partial class OidcSignInFlowTests(StellarrWebApplicationFactory fa
         {
             foreach (var trusted in new[] { false, true })
             {
-                using var provider = new FakeProvider { Amr = ["pwd", "mfa"] };
+                using var provider = new FakeProvider { Amr = ["pwd", "mfa"], AuthTime = DateTimeOffset.UtcNow };
                 using var host = Host(provider, trustProviderMfa: trusted);
                 using var client = BrowserClient(host);
                 var account = await CreateLinkedAccountAsync(provider);
+
+                // Only a trusted provider is asked to sign the person in again when its session is older.
+                using (var redirect = await client.GetAsync("/api/auth/oidc/login?returnUrl=%2F"))
+                {
+                    var asked = QueryHelpers.ParseQuery(redirect.Headers.Location!.Query);
+                    Assert.Equal(trusted ? "300" : "", asked.TryGetValue("max_age", out var maxAge) ? maxAge.ToString() : "");
+                }
 
                 using var callback = await SignInThroughProviderAsync(client, provider, "/");
 
@@ -181,13 +188,22 @@ public sealed partial class OidcSignInFlowTests(StellarrWebApplicationFactory fa
                 Assert.NotNull(stored.MfaCompletedAt);
             }
 
-            // Trusted, a sign-in the provider did not confirm with more than a password still meets the instance's step.
-            using var plain = new FakeProvider { Amr = ["pwd"] };
-            using var plainHost = Host(plain, trustProviderMfa: true);
-            using var plainClient = BrowserClient(plainHost);
-            await CreateLinkedAccountAsync(plain);
-            using var plainCallback = await SignInThroughProviderAsync(plainClient, plain, "/");
-            Assert.StartsWith("/login?mfa_enrollment=1", plainCallback.Headers.Location!.OriginalString, StringComparison.Ordinal);
+            // Trusted, a sign-in the provider did not confirm with more than a
+            // password, or confirmed long ago, still meets the instance's step.
+            foreach (var (amr, authTime) in new (string[], DateTimeOffset?)[]
+                     {
+                         (["pwd"], DateTimeOffset.UtcNow),
+                         (["pwd", "mfa"], DateTimeOffset.UtcNow.AddHours(-3)),
+                         (["pwd", "mfa"], null),
+                     })
+            {
+                using var plain = new FakeProvider { Amr = amr, AuthTime = authTime };
+                using var plainHost = Host(plain, trustProviderMfa: true);
+                using var plainClient = BrowserClient(plainHost);
+                await CreateLinkedAccountAsync(plain);
+                using var plainCallback = await SignInThroughProviderAsync(plainClient, plain, "/");
+                Assert.StartsWith("/login?mfa_enrollment=1", plainCallback.Headers.Location!.OriginalString, StringComparison.Ordinal);
+            }
         }
         finally
         {
@@ -639,6 +655,9 @@ public sealed partial class OidcSignInFlowTests(StellarrWebApplicationFactory fa
         /// <summary>How the provider says the person signed in, as the <c>amr</c> claim; none when null.</summary>
         public string[]? Amr { get; set; }
 
+        /// <summary>When the provider says the person signed in, as <c>auth_time</c>; none when null.</summary>
+        public DateTimeOffset? AuthTime { get; set; }
+
         /// <summary>Who the identity token says is signing in. Unique per test, so linked accounts never collide.</summary>
         public string Subject { get; set; } = $"subject-{Guid.NewGuid():N}";
 
@@ -658,6 +677,11 @@ public sealed partial class OidcSignInFlowTests(StellarrWebApplicationFactory fa
             if (Amr is { } amr)
             {
                 claims["amr"] = amr;
+            }
+
+            if (AuthTime is { } authTime)
+            {
+                claims["auth_time"] = authTime.ToUnixTimeSeconds();
             }
 
             var idToken = new JsonWebTokenHandler().CreateToken(new SecurityTokenDescriptor

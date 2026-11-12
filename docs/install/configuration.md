@@ -105,8 +105,11 @@ By default the provider only proves who someone is, and the instance asks for
 its own second step after it, as after a password (see
 [Account security](account-security.md)). With `TrustProviderMfa` on, a
 sign-in whose ID token lists one of the configured `amr` values counts as the
-second step, Cockpit included. Turn it on only for a provider that really
-requires a second factor and reports it in `amr`.
+second step, Cockpit included. Such a provider is asked with `max_age=300` to
+sign the person in again when its own session is older than five minutes, and
+the token's `auth_time` must show a sign-in from the last five minutes; a
+token without it falls back to the instance's own step. Turn it on only for a
+provider that really requires a second factor and reports it in `amr`.
 
 ## Language
 

@@ -64,7 +64,24 @@ public sealed class ExternalOidcOptionsTests
         Assert.Equal(["default", "work"], providers.Select(x => x.Id));
         Assert.Equal(["/api/auth/oidc/callback", "/api/auth/oidc/work/callback"], providers.Select(x => x.CallbackPath));
         Assert.Equal(["external-oidc", "external-oidc-work"], providers.Select(x => x.Scheme));
-        Assert.False(providers[1].PassedSecondStep(["mfa"]));
+        var now = DateTimeOffset.UtcNow;
+        Assert.False(providers[1].PassedSecondStep(["mfa"], now.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture), now));
+    }
+
+    [Fact]
+    public void TrustedProviderSecondStepCountsOnlyWhenRecentAndReported()
+    {
+        var provider = new ExternalOidcProvider { TrustProviderMfa = true, ProviderMfaAmr = "mfa, hwk" };
+        var now = DateTimeOffset.UtcNow;
+        string At(TimeSpan ago) => (now - ago).ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture);
+
+        Assert.True(provider.PassedSecondStep(["pwd", "hwk"], At(TimeSpan.FromMinutes(1)), now));
+        Assert.False(provider.PassedSecondStep(["pwd"], At(TimeSpan.FromMinutes(1)), now));
+        // A sign-in the provider waved through on an old session, or that it did not date.
+        Assert.False(provider.PassedSecondStep(["mfa"], At(TimeSpan.FromHours(3)), now));
+        Assert.False(provider.PassedSecondStep(["mfa"], null, now));
+        Assert.False(provider.PassedSecondStep(["mfa"], "yesterday", now));
+        Assert.False(provider.PassedSecondStep(["mfa"], At(TimeSpan.FromHours(-2)), now));
     }
 
     [Fact]

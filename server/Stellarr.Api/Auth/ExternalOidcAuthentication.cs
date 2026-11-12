@@ -63,6 +63,18 @@ public static class ExternalOidcAuthentication
                 options.Events = new OpenIdConnectEvents
                 {
                     OnTokenValidated = context => SignInLinkedAccountAsync(context, provider),
+                    OnRedirectToIdentityProvider = context =>
+                    {
+                        // Only a provider whose second step counts here is asked
+                        // to sign the person in again when its session is older.
+                        if (provider.TrustProviderMfa)
+                        {
+                            context.ProtocolMessage.MaxAge = ((int)ExternalOidcProvider.ProviderMfaMaxAge.TotalSeconds)
+                                .ToString(System.Globalization.CultureInfo.InvariantCulture);
+                        }
+
+                        return Task.CompletedTask;
+                    },
                     OnRemoteFailure = RedirectToLoginAsync,
                 };
             });
@@ -113,7 +125,9 @@ public static class ExternalOidcAuthentication
         var shortLived = IsShortLived(context.Properties);
         // Off unless the operator trusts this provider's own second step.
         var secondStepAtProvider = provider.PassedSecondStep(
-            context.Principal?.FindAll("amr").Select(claim => claim.Value) ?? []);
+            context.Principal?.FindAll("amr").Select(claim => claim.Value) ?? [],
+            context.Principal?.FindFirst("auth_time")?.Value,
+            DateTimeOffset.UtcNow);
         var start = await AuthenticationFlow.StartAsync(
             db, context.HttpContext, user, "oidc", policy, messages, cancellationToken,
             shortLived: shortLived, secondStepAtProvider: secondStepAtProvider);
