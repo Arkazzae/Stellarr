@@ -62,9 +62,35 @@ public sealed class ExternalOidcOptions
     public static string SafeReturnUrl(string? returnUrl)
     {
         var candidate = returnUrl?.Trim() ?? "";
-        var staysHere = candidate.StartsWith('/') &&
-            !candidate.StartsWith("//", StringComparison.Ordinal) &&
-            !candidate.StartsWith("/\\", StringComparison.Ordinal);
-        return staysHere ? candidate : "/";
+        string decoded;
+        try
+        {
+            decoded = Uri.UnescapeDataString(candidate);
+        }
+        catch (UriFormatException)
+        {
+            return "/";
+        }
+
+        return LeadsHere(candidate) && LeadsHere(decoded) ? candidate : "/";
+    }
+
+    /// <summary>
+    /// A rooted path no browser reads as another host. "." and ".." segments
+    /// are refused too: a URL parser folds them, so <c>/.//host</c> would
+    /// become <c>//host</c> on the page that follows the path.
+    /// </summary>
+    private static bool LeadsHere(string path)
+    {
+        if (!path.StartsWith('/') ||
+            path.StartsWith("//", StringComparison.Ordinal) ||
+            path.Contains('\\', StringComparison.Ordinal) ||
+            path.Any(char.IsControl))
+        {
+            return false;
+        }
+
+        var route = path.Split('?', '#')[0];
+        return !route.Split('/').Any(segment => segment is "." or "..");
     }
 }

@@ -12,6 +12,11 @@ public sealed class ExternalOidcOptionsTests
     [InlineData("https://evil.example/", "/")]
     [InlineData("//evil.example/", "/")]
     [InlineData("/\\evil.example/", "/")]
+    [InlineData("/.//evil.example", "/")]
+    [InlineData("/%2e//evil.example", "/")]
+    [InlineData("/a/..//evil.example", "/")]
+    [InlineData("/%2F%2Fevil.example", "/")]
+    [InlineData("/invite/v1.2", "/invite/v1.2")]
     public void ReturnUrlMustStayOnTheCurrentOrigin(string? value, string expected)
     {
         Assert.Equal(expected, ExternalOidcOptions.SafeReturnUrl(value));
