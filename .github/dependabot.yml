@@ -21,28 +21,10 @@ updates:
     commit-message:
       prefix: build(deps)
 
+  # web, cockpit and packages/* are workspaces of the root package.json, which
+  # has the one lockfile, so a single entry updates all of them.
   - package-ecosystem: npm
-    directory: /web
-    schedule:
-      interval: weekly
-      day: monday
-    open-pull-requests-limit: 5
-    groups:
-      minor-and-patch:
-        patterns: ["*"]
-        update-types: [minor, patch]
-    cooldown:
-      default-days: 5
-    commit-message:
-      prefix: build(deps)
-    # typescript-eslint, which the lint runs on, supports TypeScript below 6.1
-    # only, and TypeScript 7 fails the lint job. Lift this once it supports 7.
-    ignore:
-      - dependency-name: typescript
-        versions: [">=7"]
-
-  - package-ecosystem: npm
-    directory: /cockpit
+    directory: /
     schedule:
       interval: weekly
       day: monday

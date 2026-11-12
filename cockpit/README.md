@@ -15,9 +15,12 @@ Secrets set in Cockpit (the SMTP password, the Resend and GIPHY keys) are stored
 
 ## Development
 
+Cockpit is an npm workspace of the repository root, which holds the one `package-lock.json` and installs web, Cockpit and the shared `packages/stellarr-ui`:
+
 ```bash
+# from the repository root
 npm install
-npm run dev
+npm run dev -w stellarr-cockpit
 ```
 
 The dev server listens on `http://localhost:3001` and proxies `/api` and `/health` to `STELLARR_API_ORIGIN` (`http://127.0.0.1:5000` by default).
@@ -37,10 +40,11 @@ Catalogs live in `src/i18n/en.ts` and `src/i18n/pl.ts` and must define identical
 ## Verification
 
 ```bash
-npm run typecheck
-npm run lint
-npm test
-npm run build
+# from the repository root
+npm run typecheck:cockpit
+npm run lint:cockpit
+npm run test:cockpit
+npm run build:cockpit
 ```
 
-`npm run build` runs TypeScript validation and outputs the static bundle to `dist/`. `npm run preview` serves the production build locally on port `4174`.
+The build runs TypeScript validation and outputs the static bundle to `cockpit/dist/`. `npm run preview -w stellarr-cockpit` serves the production build locally on port `4174`.
