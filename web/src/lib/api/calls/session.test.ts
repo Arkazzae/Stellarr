@@ -18,6 +18,14 @@ const BOOTSTRAP = {
 };
 
 describe("signing in and out", () => {
+  it("checks whether the instance needs its first server", async () => {
+    fetchMock.mockResolvedValue(jsonResponse({ needsServerSetup: true }));
+    await expect(calls.needsServerSetup()).resolves.toBe(true);
+    expect(sentRequest(fetchMock).url).toBe("/api/auth/registration");
+    fetchMock.mockResolvedValue(jsonResponse({ needsServerSetup: "yes" }));
+    await expect(calls.needsServerSetup()).rejects.toMatchObject({ kind: "malformed" });
+  });
+
   it("posts the credentials and reads the user from an envelope", async () => {
     fetchMock.mockResolvedValue(jsonResponse({ user: USER }));
 

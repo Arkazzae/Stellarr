@@ -7,6 +7,7 @@ import { type Translator } from "@/i18n";
 import { translateForDocument } from "@/i18n/defaultLocale";
 import type { RegistrationInput } from "@/ports";
 
+import { InitialServerSetup, type InitialServer } from "./InitialServerSetup";
 import { AuthField } from "./AuthField";
 import { AuthFrame, authStyles as styles } from "./AuthFrame";
 
@@ -55,12 +56,18 @@ function focusField(form: HTMLFormElement, field: Field): void {
 
 export function RegisterScreen({
   onSubmit,
+  needsServerSetup = false,
   t = translateForDocument,
 }: {
   /** Resolves to whether the account was created. */
   onSubmit: (input: RegistrationInput) => Promise<boolean>;
   t?: Translator;
+  needsServerSetup?: boolean;
 }) {
+  const [showSetup, setShowSetup] = useState(needsServerSetup);
+  const [initialServer, setInitialServer] = useState<InitialServer>({
+    name: "", description: "", textChannelName: t("auth.setup.defaultText"), voiceChannelName: t("auth.setup.defaultVoice"),
+  });
   const errorId = useId();
   const [values, setValues] = useState<Values>(EMPTY);
   const [pending, setPending] = useState(false);
@@ -97,13 +104,19 @@ export function RegisterScreen({
       displayName: values.displayName.trim(),
       email: values.email.trim(),
       password: values.password,
+      ...(needsServerSetup ? { initialServer } : {}),
     }).catch(() => false);
     if (!created) setIssue({ field: null, message: t("auth.register.failed") });
     setPending(false);
   }
 
+  if (showSetup) return <InitialServerSetup value={initialServer} onChange={setInitialServer}
+    onContinue={() => setShowSetup(false)} t={t} />;
+
   return (
-    <AuthFrame title={t("auth.register.title")} description={t("auth.register.description")}>
+    <AuthFrame title={t("auth.register.title")}
+      description={needsServerSetup ? t("auth.setup.accountDescription", { name: initialServer.name }) : t("auth.register.description")}
+      headingAction={needsServerSetup ? <p className={styles.fieldHint}>{t("auth.setup.accountStep")}</p> : undefined}>
       <form className={styles.form} onSubmit={submit} noValidate>
         <AuthField
           label={t("auth.register.displayName")}
@@ -171,8 +184,10 @@ export function RegisterScreen({
           </p>
         ) : null}
         <button className={styles.submit} type="submit" disabled={pending}>
-          {pending ? t("auth.register.pending") : t("auth.register.submit")}
+          {pending ? t(needsServerSetup ? "auth.setup.pending" : "auth.register.pending") : t(needsServerSetup ? "auth.setup.create" : "auth.register.submit")}
         </button>
+        {needsServerSetup ? <button className={styles.externalLogin} type="button" disabled={pending}
+          onClick={() => setShowSetup(true)}>{t("auth.setup.back")}</button> : null}
       </form>
       <nav className={styles.links} aria-label={t("auth.register.returnLabel")}>
         <span>{t("auth.register.haveAccount")}</span>

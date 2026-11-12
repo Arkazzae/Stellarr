@@ -8,7 +8,8 @@ public sealed record RegisterRequest(
     string DisplayName,
     string Email,
     string Password,
-    string? InviteCode = null);
+    string? InviteCode = null,
+    CreateServerRequest? InitialServer = null);
 
 public sealed record ServerDto(
     string Id,

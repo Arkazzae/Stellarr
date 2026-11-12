@@ -19,6 +19,55 @@ public sealed class RegistrationFlowTests
     private const string InviteRequired = "Do utworzenia konta na istniejącej instancji wymagane jest zaproszenie.";
     private const string InviteUnusable = "Zaproszenie wygasło, osiągnęło limit użyć albo jest nieprawidłowe.";
 
+    [Theory]
+    [InlineData("spotkania", 2)]
+    [InlineData("", 1)]
+    public async Task FirstRegistrationUsesTheWizardConfiguration(string voice, int channelCount)
+    {
+        using var factory = new StellarrWebApplicationFactory(loadTestData: false);
+        using var client = NewClient(factory);
+        using var status = await client.GetAsync("/api/auth/registration");
+        Assert.Equal("no-store", status.Headers.CacheControl?.ToString());
+        Assert.True((await status.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("needsServerSetup").GetBoolean());
+
+        using var response = await client.PostAsJsonAsync("/api/auth/register", new
+        {
+            username = "owner", displayName = "Owner", email = "owner@example.test", password = Password,
+            initialServer = new { name = "  Nocna ekipa  ", description = "  Wspólne gry  ", textChannelName = "  GRY  ", voiceChannelName = voice },
+        });
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        await using var scope = factory.OpenScope(out var db);
+        var server = await db.Servers.SingleAsync();
+        Assert.Equal("Nocna ekipa", server.Name);
+        Assert.Equal("Wspólne gry", server.Description);
+        Assert.False(server.IsPublic);
+        Assert.Equal(channelCount, await db.Channels.CountAsync());
+        Assert.Equal("gry", (await db.Channels.SingleAsync(x => x.Kind == ChannelKind.Text)).Name);
+        Assert.Equal(1, (await db.ServerMembers.SingleAsync()).OwnerSlot);
+        var configured = await client.GetFromJsonAsync<JsonElement>("/api/auth/registration");
+        Assert.False(configured.GetProperty("needsServerSetup").GetBoolean());
+    }
+
+    [Theory]
+    [InlineData(" ", "gry", "rozmowa")]
+    [InlineData("Ekipa", "ze spacją", "rozmowa")]
+    [InlineData("Ekipa", "gry", "GRY")]
+    public async Task InvalidInitialServerDoesNotCreateAnAccountOrInstance(string name, string text, string voice)
+    {
+        using var factory = new StellarrWebApplicationFactory(loadTestData: false);
+        using var client = NewClient(factory);
+        using var response = await client.PostAsJsonAsync("/api/auth/register", new
+        {
+            username = "owner", displayName = "Owner", email = "owner@example.test", password = Password,
+            initialServer = new { name, textChannelName = text, voiceChannelName = voice },
+        });
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await using var scope = factory.OpenScope(out var db);
+        Assert.False(await db.Users.AnyAsync());
+        Assert.False(await db.Servers.AnyAsync());
+        Assert.False(await db.UserSessions.AnyAsync());
+    }
+
     [Fact]
     public async Task FirstRegistrationFoundsTheInstanceAndSignsTheCallerIn()
     {

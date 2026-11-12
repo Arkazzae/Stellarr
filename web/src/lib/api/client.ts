@@ -73,6 +73,7 @@ export {
  * last argument, except `logout`.
  */
 export interface ApiClient {
+  needsServerSetup(signal?: AbortSignal): Promise<boolean>;
   login(input: LoginInput, signal?: AbortSignal): Promise<User>;
   register(input: RegisterInput, signal?: AbortSignal): Promise<User>;
   requestPasswordReset(email: string, signal?: AbortSignal): Promise<void>;
