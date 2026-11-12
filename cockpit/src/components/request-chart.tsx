@@ -26,9 +26,9 @@ interface RequestChartProps {
 }
 
 /**
- * Responses per interval as stacked columns: the ones that went well in the
+ * Responses per interval as stacked capsules: the ones that went well in the
  * series colour and server errors above them in the error colour, split by a
- * 2 px gap. The latest interval sits at the right edge.
+ * small gap. The latest interval sits at the right edge.
  */
 export function RequestChart({
   points,
@@ -72,11 +72,11 @@ export function RequestChart({
     <figure className="m-0">
       <div className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
         <span className="flex items-center gap-1.5">
-          <span aria-hidden="true" className="size-2.5 rounded-[2px] bg-chart-1" />
+          <span aria-hidden="true" className="size-2 rounded-full bg-chart-1" />
           {okLabel}
         </span>
         <span className="flex items-center gap-1.5">
-          <span aria-hidden="true" className="size-2.5 rounded-[2px] bg-chart-2" />
+          <span aria-hidden="true" className="size-2 rounded-full bg-chart-2" />
           {errorLabel}
         </span>
       </div>
@@ -101,7 +101,7 @@ export function RequestChart({
             onFocus={() => setActive((value) => value ?? (last >= 0 ? last : null))}
             onBlur={() => setActive(null)}
             onPointerLeave={() => setActive(null)}
-            className="grid items-end gap-x-px rounded-sm border-b outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            className="grid items-end gap-x-px rounded-sm border-b border-dotted outline-none focus-visible:ring-2 focus-visible:ring-ring"
             style={{ height, gridTemplateColumns: `repeat(${slots}, minmax(0, 1fr))` }}
           >
             {Array.from({ length: padding }, (_, index) => (
@@ -114,13 +114,12 @@ export function RequestChart({
                 <div
                   key={point.at}
                   onPointerEnter={() => setActive(index)}
-                  className="flex h-full flex-col-reverse items-center gap-[2px]"
+                  className="flex h-full flex-col-reverse items-center gap-0.5"
                 >
                   {point.ok > 0 ? (
                     <span
                       className={cn(
-                        "w-full max-w-6 bg-chart-1 transition-opacity",
-                        point.serverErrors === 0 && "rounded-t-[2px]",
+                        "w-full max-w-1.5 rounded-full bg-chart-1 transition-opacity",
                         active !== null && active !== index && "opacity-55",
                       )}
                       style={{ height: `${okHeight}%` }}
@@ -129,7 +128,7 @@ export function RequestChart({
                   {point.serverErrors > 0 ? (
                     <span
                       className={cn(
-                        "w-full max-w-6 rounded-t-[2px] bg-chart-2 transition-opacity",
+                        "w-full max-w-1.5 rounded-full bg-chart-2 transition-opacity",
                         active !== null && active !== index && "opacity-55",
                       )}
                       style={{ height: `${errorHeight}%` }}
