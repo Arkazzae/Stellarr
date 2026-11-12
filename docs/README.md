@@ -8,6 +8,7 @@ Stellarr is a self-hosted text, voice, and video chat for small groups, deployed
 - [Quick start](install/quick-start.md): start a local instance with Docker Compose, create accounts, and test voice.
 - [Configuration](install/configuration.md): environment variables for production and development stacks.
 - [Operator CLI](install/cli.md): status, settings, secrets, users and sessions from `docker exec`, including stopped-instance use.
+- [Account security](install/account-security.md): second-step sign-in, the instance policy, trusted devices, and recovering a locked-out account.
 - [Reverse proxy and TLS](install/reverse-proxy-and-tls.md): custom TLS certificates, reverse proxy configuration, and non-HTTP RTC ports.
 - [Upgrading](install/upgrading.md): backups, image upgrades, rollbacks, and version migrations.
 
