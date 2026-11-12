@@ -228,6 +228,7 @@ app.MapAndroidReleaseEndpoints();
 app.MapDesktopUpdateEndpoints();
 app.MapAuthEndpoints();
 app.MapMfaEndpoints();
+app.MapPasskeySignInEndpoints();
 app.MapCliRecoveryEndpoints();
 app.MapPasswordRecoveryEndpoints();
 app.MapRegistrationEndpoints();

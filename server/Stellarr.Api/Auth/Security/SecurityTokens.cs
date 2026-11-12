@@ -101,6 +101,8 @@ public static class SecurityCookies
     private const string PreauthDev = "stellarr-dev-preauth";
     private const string TrustHost = "__Host-stellarr-trust";
     private const string TrustDev = "stellarr-dev-trust";
+    private const string PasskeyHost = "__Host-stellarr-passkey";
+    private const string PasskeyDev = "stellarr-dev-passkey";
 
     public static void SetPreauth(HttpContext context, Guid challengeId, string secret, DateTime expiresAt)
     {
@@ -110,9 +112,11 @@ public static class SecurityCookies
             CookieOptions(context, expiresAt));
     }
 
-    public static (Guid Id, string Secret)? ReadPreauth(HttpContext context)
+    public static (Guid Id, string Secret)? ReadPreauth(HttpContext context) =>
+        Split(context.Request.Cookies[PreauthName(context)]);
+
+    private static (Guid Id, string Secret)? Split(string? value)
     {
-        var value = context.Request.Cookies[PreauthName(context)];
         if (string.IsNullOrWhiteSpace(value))
         {
             return null;
@@ -129,6 +133,19 @@ public static class SecurityCookies
     public static void ClearPreauth(HttpContext context) =>
         context.Response.Cookies.Delete(PreauthName(context), CookieOptions(context, DateTime.UnixEpoch));
 
+    /// <summary>Binds a passkey sign-in, between its options and its answer, to this browser.</summary>
+    public static void SetPasskey(HttpContext context, Guid signInId, string secret, DateTime expiresAt) =>
+        context.Response.Cookies.Append(
+            PasskeyName(context),
+            $"{signInId:N}.{secret}",
+            CookieOptions(context, expiresAt));
+
+    public static (Guid Id, string Secret)? ReadPasskey(HttpContext context) =>
+        Split(context.Request.Cookies[PasskeyName(context)]);
+
+    public static void ClearPasskey(HttpContext context) =>
+        context.Response.Cookies.Delete(PasskeyName(context), CookieOptions(context, DateTime.UnixEpoch));
+
     public static void SetTrustedDevice(HttpContext context, string token, DateTime expiresAt) =>
         context.Response.Cookies.Append(TrustName(context), token, CookieOptions(context, expiresAt));
 
@@ -141,6 +158,8 @@ public static class SecurityCookies
     private static string PreauthName(HttpContext context) => context.Request.IsHttps ? PreauthHost : PreauthDev;
 
     private static string TrustName(HttpContext context) => context.Request.IsHttps ? TrustHost : TrustDev;
+
+    private static string PasskeyName(HttpContext context) => context.Request.IsHttps ? PasskeyHost : PasskeyDev;
 
     private static CookieOptions CookieOptions(HttpContext context, DateTime expiresAt) => new()
     {

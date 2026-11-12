@@ -46,7 +46,7 @@ public sealed class UserSession
     /// <summary>The hard end of the session, which sliding renewal cannot pass.</summary>
     public DateTime? AbsoluteExpiresAt { get; set; }
 
-    /// <summary>How the account proved itself first: password, oidc, desktop or registration.</summary>
+    /// <summary>How the account proved itself first: password, oidc, passkey, desktop or registration.</summary>
     public string PrimarySource { get; set; } = "password";
 
     public DateTime? AuthenticatedAt { get; set; }
