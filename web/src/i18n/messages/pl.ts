@@ -508,6 +508,7 @@ export const pl = {
   "account.profileSaveFailed": "Nie udało się zapisać profilu. Spróbuj ponownie.",
   "account.imageUploadFailed": "Nie udało się przesłać obrazu. Sprawdź format i rozmiar pliku.",
   "account.passwordChangeFailed": "Nie udało się zmienić hasła. Spróbuj ponownie.",
+  "account.passwordSecondStep": "Zmiana hasła wymaga potwierdzenia drugim krokiem. Spróbuj ponownie i potwierdź.",
   "account.passwordChanged": "Hasło zostało zmienione.",
   "account.passwordWrongCurrent": "Obecne hasło się nie zgadza.",
   "account.passwordTooShort": "Nowe hasło musi mieć co najmniej 8 znaków.",

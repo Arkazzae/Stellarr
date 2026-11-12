@@ -62,6 +62,8 @@ export function useAccountSecurity(open: boolean) {
   const [error, setError] = useState<string | null>(null);
   const [emailWait, setEmailWait] = useState<number | null>(null);
   const change = useRef<Change | null>(null);
+  /** Waits for a proof asked for on its own, outside any change here. */
+  const proof = useRef<((passed: boolean) => void) | null>(null);
   const passkeysSupported = useSyncExternalStore(
     noSubscription,
     () => ports.session.passkeysSupported(),
@@ -231,6 +233,13 @@ export function useAccountSecurity(open: boolean) {
           : challengeErrorMessage(cause, t, t("security.actionFailed"));
 
   const completed = async (completion: MfaCompletion, afterProof: boolean) => {
+    if (afterProof && proof.current !== null) {
+      const passed = proof.current;
+      proof.current = null;
+      setStep(null);
+      passed(true);
+      return;
+    }
     if (afterProof) {
       // The proof is fresh now; the change it was for goes through.
       setStep(null);
@@ -240,7 +249,28 @@ export function useAccountSecurity(open: boolean) {
     await finish(completion.recoveryCodes);
   };
 
+  /**
+   * A fresh second step for a change made elsewhere, such as the password.
+   * Resolves true once it is passed and false when the dialog is closed.
+   */
+  const confirmSecondStep = () =>
+    new Promise<boolean>((resolve) => {
+      proof.current?.(false);
+      proof.current = resolve;
+      change.current = null;
+      setError(null);
+      security.startReverification().then(
+        (challenge) => setStep({ kind: "reverify", challenge }),
+        (cause: unknown) => {
+          proof.current = null;
+          setActionError(challengeErrorMessage(cause, t, t("security.actionFailed")));
+          resolve(false);
+        },
+      );
+    });
+
   return {
+    confirmSecondStep,
     sections: {
       security: state,
       loadError,
@@ -395,6 +425,8 @@ export function useAccountSecurity(open: boolean) {
         });
       },
       onClose: () => {
+        proof.current?.(false);
+        proof.current = null;
         if (step?.kind === "enroll" || step?.kind === "reverify") {
           void challenges.cancel().catch(() => undefined);
         }

@@ -180,6 +180,35 @@ describe("useAccountSecurity", () => {
     expect(result.current.dialog.step).toBeNull();
   });
 
+  it("asks for a fresh step for a change made elsewhere and says when it is passed", async () => {
+    const { result } = await mounted();
+
+    let passed: Promise<boolean> | undefined;
+    act(() => {
+      passed = result.current.confirmSecondStep();
+    });
+    await waitFor(() => expect(result.current.dialog.step?.kind).toBe("reverify"));
+    act(() => result.current.dialog.onVerify({ methodId: "m-app", code: "123456", rememberDevice: false }));
+
+    await expect(passed).resolves.toBe(true);
+    await waitFor(() => expect(result.current.dialog.step).toBeNull());
+    // Nothing else was changed on the way.
+    expect(mocks.security.startEnrollment).not.toHaveBeenCalled();
+  });
+
+  it("answers false when the fresh step is closed instead", async () => {
+    const { result } = await mounted();
+
+    let passed: Promise<boolean> | undefined;
+    act(() => {
+      passed = result.current.confirmSecondStep();
+    });
+    await waitFor(() => expect(result.current.dialog.step?.kind).toBe("reverify"));
+    act(() => result.current.dialog.onClose());
+
+    await expect(passed).resolves.toBe(false);
+  });
+
   it("asks for the password before the first method, and says so when it is wrong", async () => {
     vi.mocked(mocks.security.get).mockResolvedValue(state({ methods: [] }));
     vi.mocked(mocks.security.startEnrollment)

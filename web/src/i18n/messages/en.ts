@@ -510,6 +510,7 @@ export const en = {
   "account.profileSaveFailed": "The profile could not be saved. Try again.",
   "account.imageUploadFailed": "The image could not be uploaded. Check the file format and size.",
   "account.passwordChangeFailed": "The password could not be changed. Try again.",
+  "account.passwordSecondStep": "Changing the password needs a second step. Try again and confirm it.",
   "account.passwordChanged": "Your password has been changed.",
   "account.passwordWrongCurrent": "The current password is incorrect.",
   "account.passwordTooShort": "The new password must be at least 8 characters.",

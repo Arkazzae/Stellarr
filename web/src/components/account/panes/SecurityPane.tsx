@@ -23,6 +23,11 @@ export interface SecurityPaneProps {
   twoStep?: AccountSecuritySectionsProps;
   onChangeEmail(email: string): Promise<void> | void;
   onChangePassword(current: string, next: string): Promise<PasswordChangeResult>;
+  /**
+   * Asks for a fresh second step; true once it is passed, false when the
+   * person closes it. The password change is then tried again.
+   */
+  onConfirmSecondStep?(): Promise<boolean>;
 }
 
 /** What the last finished save said; a save in flight is tracked apart from it. */
@@ -39,6 +44,8 @@ function passwordAnswerText(t: Translator, answer: PasswordAnswer): string {
       return t("account.passwordTooShort");
     case "same-as-current":
       return t("account.passwordSame");
+    case "second-step-required":
+      return t("account.passwordSecondStep");
     case "failed":
       return t("account.passwordChangeFailed");
   }
@@ -212,8 +219,10 @@ const NO_PASSWORDS = { current: "", next: "", confirm: "" };
 
 function PasswordSection({
   onChangePassword,
+  onConfirmSecondStep,
 }: {
   onChangePassword: SecurityPaneProps["onChangePassword"];
+  onConfirmSecondStep: SecurityPaneProps["onConfirmSecondStep"];
 }) {
   const { t } = useLanguage();
   const titleId = useId();
@@ -252,7 +261,11 @@ function PasswordSection({
     setSaving(true);
     setAnswer(null);
     try {
-      const result = await onChangePassword(fields.current, fields.next);
+      let result = await onChangePassword(fields.current, fields.next);
+      // The server wants a recent second step first: ask for it, then try again once.
+      if (result === "second-step-required" && onConfirmSecondStep !== undefined && (await onConfirmSecondStep())) {
+        result = await onChangePassword(fields.current, fields.next);
+      }
       setAnswer(result);
       if (result === "changed") {
         setOpen(false);
@@ -342,6 +355,7 @@ export function SecurityPane({
   twoStep,
   onChangeEmail,
   onChangePassword,
+  onConfirmSecondStep,
 }: SecurityPaneProps) {
   const { t } = useLanguage();
   return (
@@ -359,7 +373,7 @@ export function SecurityPane({
             supported={emailSupported}
             onChangeEmail={onChangeEmail}
           />
-          <PasswordSection onChangePassword={onChangePassword} />
+          <PasswordSection onChangePassword={onChangePassword} onConfirmSecondStep={onConfirmSecondStep} />
         </div>
       </section>
       {twoStep ? <AccountSecuritySections {...twoStep} /> : null}

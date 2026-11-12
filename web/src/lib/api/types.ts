@@ -117,7 +117,8 @@ export type PasswordChangeAnswer =
   | "changed"
   | "wrong-current"
   | "too-short"
-  | "same-as-current";
+  | "same-as-current"
+  | "second-step-required";
 
 export interface Server {
   id: string;

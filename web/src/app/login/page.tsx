@@ -69,6 +69,7 @@ export default function LoginPage() {
   const flow = useSignInFlow({
     recoveryRequired: params.get("security_recovery_required") === "1",
     confirm,
+    fresh: params.get("fresh") === "1",
     keepSignedIn,
   });
 

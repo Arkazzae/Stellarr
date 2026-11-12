@@ -173,6 +173,36 @@ describe("SecurityPane password", () => {
     expect(screen.getByLabelText(/Obecne hasło/)).toHaveValue("staraaaa1");
   });
 
+  it("asks for a fresh second step when the server wants one, then changes the password", async () => {
+    const user = userEvent.setup();
+    const onChangePassword = vi
+      .fn<SecurityPaneProps["onChangePassword"]>()
+      .mockResolvedValueOnce("second-step-required")
+      .mockResolvedValueOnce("changed");
+    const onConfirmSecondStep = vi.fn(async () => true);
+    setup({ onChangePassword, onConfirmSecondStep });
+
+    await fillPasswords(user);
+    await user.click(screen.getByRole("button", { name: "Zmień hasło" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent("Hasło zostało zmienione.");
+    expect(onConfirmSecondStep).toHaveBeenCalledOnce();
+    expect(onChangePassword).toHaveBeenCalledTimes(2);
+  });
+
+  it("keeps the form and says why when the second step is not given", async () => {
+    const user = userEvent.setup();
+    const onChangePassword = vi.fn(async (): Promise<PasswordChangeResult> => "second-step-required");
+    setup({ onChangePassword, onConfirmSecondStep: vi.fn(async () => false) });
+
+    await fillPasswords(user);
+    await user.click(screen.getByRole("button", { name: "Zmień hasło" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Zmiana hasła wymaga potwierdzenia drugim krokiem.");
+    expect(onChangePassword).toHaveBeenCalledOnce();
+    expect(screen.getByLabelText(/Obecne hasło/)).toHaveValue("staraaaa1");
+  });
+
   it("reports a request that failed outright", async () => {
     const user = userEvent.setup();
     setup({ onChangePassword: vi.fn(async () => { throw new Error("down"); }) });

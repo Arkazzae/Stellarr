@@ -112,7 +112,8 @@ export function parsePasswordAnswer(value: unknown, path: string): PasswordChang
     result === "changed" ||
     result === "wrong-current" ||
     result === "too-short" ||
-    result === "same-as-current"
+    result === "same-as-current" ||
+    result === "second-step-required"
   ) {
     return result;
   }

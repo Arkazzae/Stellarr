@@ -558,6 +558,34 @@ describe("LoginPage confirming a signed-in session", () => {
     expect(mocks.security.startReverification).not.toHaveBeenCalled();
   });
 
+  it("asks for a step from the last minutes when Cockpit wants a fresh one", async () => {
+    mocks.search = "confirm=1&fresh=1&returnUrl=%2Fcockpit%2Fsettings";
+    mocks.security = fakeSecurityPort({
+      get: vi.fn(async () => ({
+        ...SECURE,
+        mfaEvidence: "totp",
+        mfaCompletedAt: "2026-11-12T17:00:00Z",
+        freshMfa: false,
+      })),
+    });
+    render(<LoginPage />);
+
+    expect(await screen.findByRole("heading", { name: t("auth.mfa.totpTitle") })).toBeVisible();
+    expect(mocks.security.startReverification).toHaveBeenCalledOnce();
+    expect(mocks.leaveFor).not.toHaveBeenCalled();
+  });
+
+  it("goes back at once when the step is already fresh", async () => {
+    mocks.search = "confirm=1&fresh=1&returnUrl=%2Fcockpit%2Fsettings";
+    mocks.security = fakeSecurityPort({
+      get: vi.fn(async () => ({ ...SECURE, mfaEvidence: "totp", mfaCompletedAt: "2026-11-12T17:00:00Z", freshMfa: true })),
+    });
+    render(<LoginPage />);
+
+    await waitFor(() => expect(mocks.leaveFor).toHaveBeenCalledExactlyOnceWith("/cockpit/settings"));
+    expect(mocks.security.startReverification).not.toHaveBeenCalled();
+  });
+
   it("asks a trusted-device session for a fresh code, without offering trust, then goes back", async () => {
     mocks.security = fakeSecurityPort({
       get: vi.fn(async () => ({ ...SECURE, mfaEvidence: "trusted_device", mfaCompletedAt: "2026-11-12T17:00:00Z" })),

@@ -75,9 +75,15 @@ const noSubscription = () => () => undefined;
 export function useSignInFlow({
   recoveryRequired = false,
   confirm = false,
+  fresh = false,
   keepSignedIn = true,
 }: {
   recoveryRequired?: boolean;
+  /**
+   * With `confirm`: the step must be from the last few minutes, as a
+   * sensitive change in Cockpit asks, not merely passed by this session.
+   */
+  fresh?: boolean;
   /**
    * The choice of the sign-in a recovery continues, when it started before
    * this page (at the identity provider). A password sign-in brings its own.
@@ -174,11 +180,15 @@ export function useSignInFlow({
     void (async () => {
       try {
         const state = await security.get();
-        if (state.mfaCompletedAt !== undefined && state.mfaEvidence !== "trusted_device") {
+        const hasMethod = state.methods.some((method) => !method.pending);
+        const passed = fresh
+          ? state.freshMfa || !hasMethod
+          : state.mfaCompletedAt !== undefined && state.mfaEvidence !== "trusted_device";
+        if (passed) {
           setStep({ kind: "done" });
           return;
         }
-        if (state.methods.some((method) => !method.pending)) {
+        if (hasMethod) {
           enter(await security.startReverification());
           return;
         }
@@ -193,7 +203,7 @@ export function useSignInFlow({
         setError(challengeErrorMessage(cause, t, t("auth.mfa.failed")));
       }
     })();
-  }, [confirm, enter, phase, security, t]);
+  }, [confirm, enter, fresh, phase, security, t]);
 
   // A setup by authenticator app needs its key before anything can be typed.
   const enrollChallengeId =

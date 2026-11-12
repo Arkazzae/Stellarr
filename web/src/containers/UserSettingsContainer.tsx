@@ -125,6 +125,7 @@ export function UserSettingsContainer() {
           twoStep: accountSecurity.sections,
           onChangeEmail: (email) => account.update({ email }),
           onChangePassword: account.changePassword,
+          onConfirmSecondStep: accountSecurity.confirmSecondStep,
         }}
         preferences={{
           preferences: account.preferences,

@@ -45,7 +45,9 @@ export type PasswordChangeResult =
   | "changed"
   | "wrong-current"
   | "too-short"
-  | "same-as-current";
+  | "same-as-current"
+  /** The account has a second step and the session has not passed it in the last minutes. */
+  | "second-step-required";
 
 /** Which picture an upload is for; the two have different size limits. */
 export type ImageKind = "avatar" | "banner";
