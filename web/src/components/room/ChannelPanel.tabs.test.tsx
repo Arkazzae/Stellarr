@@ -18,7 +18,6 @@ describe("ChannelPanel tabs", () => {
         media={[]}
         links={[]}
         pinned={[]}
-        pinsSupported
       />,
     );
 
