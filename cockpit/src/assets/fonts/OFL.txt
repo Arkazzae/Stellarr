@@ -1,12 +1,13 @@
-Outfit, the typeface of the panel
-=================================
+Outfit and JetBrains Mono, the typefaces of the panel
+=====================================================
 
 Copyright 2021 The Outfit Project Authors (https://github.com/Outfitio/Outfit-Fonts).
+Copyright 2020 The JetBrains Mono Project Authors (https://github.com/JetBrains/JetBrainsMono).
 
-The two WOFF2 files are the upstream Google Fonts build of Outfit, subset to
-latin and latin-ext, the same files as branding/guidelines/fonts/ and
-web/public/fonts/. Outfit is distributed under the SIL Open Font License,
-Version 1.1, whose full text follows.
+The WOFF2 files are the upstream Google Fonts builds of Outfit and JetBrains
+Mono, subset to latin and latin-ext, the same files as web/public/fonts/.
+Both families are distributed under the SIL Open Font License, Version 1.1,
+whose full text follows.
 
 -----------------------------------------------------------
 SIL OPEN FONT LICENSE Version 1.1 - 26 February 2007
