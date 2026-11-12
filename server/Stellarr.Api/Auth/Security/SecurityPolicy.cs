@@ -56,6 +56,12 @@ public static class MfaPolicy
     /// <summary>The bounded window in which an actual MFA proof may authorize a factor change.</summary>
     public static readonly TimeSpan FreshMfaWindow = TimeSpan.FromMinutes(5);
 
+    /// <summary>Failed second-factor proofs an account may collect inside <see cref="FailureWindow"/>.</summary>
+    public const int FailureBudget = 10;
+
+    /// <summary>The window the account-wide failure budget counts over.</summary>
+    public static readonly TimeSpan FailureWindow = TimeSpan.FromMinutes(15);
+
     public static async Task<SecurityPolicy> LoadAsync(AppDbContext db, CancellationToken cancellationToken)
     {
         var instanceServerId = await db.Servers.AsNoTracking()

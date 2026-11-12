@@ -99,13 +99,9 @@ public static class MfaEndpoints
             return ChallengeProblem(ChallengeStatus.SecurityChanged, messages);
         }
 
-        var recentFailures = await SecurityEvents.RecentMfaFailuresAsync(
-            db, challenge.UserId, DateTime.UtcNow.AddMinutes(-15), cancellationToken);
-        if (recentFailures >= 10)
+        if (await FailureBudgetSpentAsync(db, challenge.UserId, messages, cancellationToken) is { } spent)
         {
-            return Results.Problem(
-                statusCode: StatusCodes.Status429TooManyRequests,
-                title: messages.Get(MessageKey.SecurityTooManyAttempts));
+            return spent;
         }
 
         if (request.UseTrustedDevice)
@@ -247,6 +243,27 @@ public static class MfaEndpoints
             consumeProof: consumeProof);
     }
 
+    /// <summary>
+    /// The account-wide throttle: once an account has collected
+    /// <see cref="MfaPolicy.FailureBudget"/> failed proofs inside
+    /// <see cref="MfaPolicy.FailureWindow"/>, across every challenge, further
+    /// attempts are refused.
+    /// </summary>
+    private static async Task<IResult?> FailureBudgetSpentAsync(
+        AppDbContext db,
+        Guid userId,
+        Messages messages,
+        CancellationToken cancellationToken)
+    {
+        var recentFailures = await SecurityEvents.RecentMfaFailuresAsync(
+            db, userId, DateTime.UtcNow - MfaPolicy.FailureWindow, cancellationToken);
+        return recentFailures >= MfaPolicy.FailureBudget
+            ? Results.Problem(
+                statusCode: StatusCodes.Status429TooManyRequests,
+                title: messages.Get(MessageKey.SecurityTooManyAttempts))
+            : null;
+    }
+
     private static async Task<IResult> FailedProofAsync(
         AppDbContext db,
         AuthChallenge challenge,
@@ -362,7 +379,6 @@ public static class MfaEndpoints
         HttpContext context,
         CancellationToken cancellationToken)
     {
-        var policy = await MfaPolicy.LoadAsync(db, cancellationToken);
         var check = await AuthenticationFlow.ValidateAsync(
             db, context, request.ChallengeId, purpose: null, cancellationToken);
         if (check.Challenge is not { } challenge || !IsEnrollmentPurpose(challenge.Purpose))
@@ -393,13 +409,9 @@ public static class MfaEndpoints
             return InvalidName(messages);
         }
 
-        var recentFailures = await SecurityEvents.RecentMfaFailuresAsync(
-            db, challenge.UserId, DateTime.UtcNow.AddMinutes(-15), cancellationToken);
-        if (recentFailures >= 10)
+        if (await FailureBudgetSpentAsync(db, challenge.UserId, messages, cancellationToken) is { } spent)
         {
-            return Results.Problem(
-                statusCode: StatusCodes.Status429TooManyRequests,
-                title: messages.Get(MessageKey.SecurityTooManyAttempts));
+            return spent;
         }
 
         if (!MfaVerifier.TryVerifyTotpProof(protection, method, request.Code ?? "", out var step))
@@ -491,7 +503,6 @@ public static class MfaEndpoints
         HttpContext context,
         CancellationToken cancellationToken)
     {
-        var policy = await MfaPolicy.LoadAsync(db, cancellationToken);
         var check = await AuthenticationFlow.ValidateAsync(
             db, context, request.ChallengeId, purpose: null, cancellationToken);
         if (check.Challenge is not { } challenge || !IsEnrollmentPurpose(challenge.Purpose))
@@ -505,13 +516,9 @@ public static class MfaEndpoints
             return MethodUnavailable(messages);
         }
 
-        var recentFailures = await SecurityEvents.RecentMfaFailuresAsync(
-            db, challenge.UserId, DateTime.UtcNow.AddMinutes(-15), cancellationToken);
-        if (recentFailures >= 10)
+        if (await FailureBudgetSpentAsync(db, challenge.UserId, messages, cancellationToken) is { } spent)
         {
-            return Results.Problem(
-                statusCode: StatusCodes.Status429TooManyRequests,
-                title: messages.Get(MessageKey.SecurityTooManyAttempts));
+            return spent;
         }
 
         var proof = await EmailCodes.CheckAsync(
@@ -728,13 +735,9 @@ public static class MfaEndpoints
             return ChallengeProblem(ChallengeStatus.SecurityChanged, messages);
         }
 
-        var recentFailures = await SecurityEvents.RecentMfaFailuresAsync(
-            db, user.Id, DateTime.UtcNow.AddMinutes(-15), cancellationToken);
-        if (recentFailures >= 10)
+        if (await FailureBudgetSpentAsync(db, user.Id, messages, cancellationToken) is { } spent)
         {
-            return Results.Problem(
-                statusCode: StatusCodes.Status429TooManyRequests,
-                title: messages.Get(MessageKey.SecurityTooManyAttempts));
+            return spent;
         }
 
         if (consumeProof is not null && !await consumeProof(user))
