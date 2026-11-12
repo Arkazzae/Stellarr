@@ -118,10 +118,11 @@ public static class AuthenticationFlow
             status,
             challenge.Id.ToString(),
             challenge.Purpose,
-            challenge.ExpiresAt,
+            challenge.ExpiresAt.AsUtc(),
             methods.Select(x => x.ToDto()).ToArray(),
             trusted,
-            methods.Any(x => x.Type == MfaMethodTypes.Email));
+            methods.Any(x => x.Type == MfaMethodTypes.Email),
+            (int)policy.TrustedDeviceLifetime.TotalDays);
     }
 
     public static async Task<ChallengeCheck> ValidateAsync(

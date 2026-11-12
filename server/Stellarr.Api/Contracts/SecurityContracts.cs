@@ -18,7 +18,8 @@ public sealed record MfaChallengeDto(
     DateTime ExpiresAt,
     IReadOnlyList<MfaMethodDto> Methods,
     bool TrustedDeviceAvailable,
-    bool EmailCodeAvailable);
+    bool EmailCodeAvailable,
+    int TrustedDeviceDays = 14);
 
 public sealed record MfaVerifyRequest(
     string ChallengeId,
@@ -105,8 +106,8 @@ public static class SecurityContractMappings
         method.Id.ToString(),
         method.Type,
         method.Name,
-        method.CreatedAt,
-        method.LastUsedAt,
+        method.CreatedAt.AsUtc(),
+        method.LastUsedAt.AsUtc(),
         method.Type == MfaMethodTypes.Email ? method.EmailAddress : null,
         method.ConfirmedAt is null);
 
@@ -114,9 +115,9 @@ public static class SecurityContractMappings
         device.Id.ToString(),
         device.Name,
         device.Device,
-        device.CreatedAt,
-        device.ExpiresAt,
-        device.LastUsedAt);
+        device.CreatedAt.AsUtc(),
+        device.ExpiresAt.AsUtc(),
+        device.LastUsedAt.AsUtc());
 
     public static SecurityEventDto ToDto(this SecurityEvent securityEvent) => new(
         securityEvent.Id.ToString(),
@@ -124,5 +125,5 @@ public static class SecurityContractMappings
         securityEvent.Detail,
         securityEvent.IpAddress,
         securityEvent.Device,
-        securityEvent.CreatedAt);
+        securityEvent.CreatedAt.AsUtc());
 }

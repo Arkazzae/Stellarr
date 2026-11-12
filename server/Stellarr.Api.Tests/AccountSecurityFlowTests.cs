@@ -72,11 +72,16 @@ public sealed class AccountSecurityFlowTests
         Assert.True(security.GetProperty("freshMfa").GetBoolean());
         Assert.Equal("totp", security.GetProperty("mfaEvidence").GetString());
         Assert.Equal(1, security.GetProperty("methods").GetArrayLength());
+        Assert.EndsWith("Z", security.GetProperty("mfaCompletedAt").GetString());
+        Assert.EndsWith("Z", security.GetProperty("methods")[0].GetProperty("createdAt").GetString());
+        Assert.EndsWith("Z", security.GetProperty("trustedDevices")[0].GetProperty("expiresAt").GetString());
+        Assert.EndsWith("Z", security.GetProperty("recentEvents")[0].GetProperty("createdAt").GetString());
 
         (await client.PostAsync("/api/auth/logout", null)).EnsureSuccessStatusCode();
         var second = await LoginAsync(client, account.Username);
         Assert.Equal("mfa_required", second.GetProperty("status").GetString());
         Assert.True(second.GetProperty("trustedDeviceAvailable").GetBoolean());
+        Assert.Equal(14, second.GetProperty("trustedDeviceDays").GetInt32());
 
         var code = TotpService.ComputeAt(secret, NextStepStart());
         var verified = await client.PostAsJsonAsync(
@@ -387,6 +392,12 @@ public sealed class AccountSecurityFlowTests
         var resumed = await pending.Content.ReadFromJsonAsync<JsonElement>();
         Assert.Equal(challengeId, resumed.GetProperty("challengeId").GetString());
         Assert.Equal("mfa_enrollment_required", resumed.GetProperty("status").GetString());
+        // Read back from SQLite the expiry has no kind; the wire must still say UTC,
+        // as it does in the answer that started the challenge.
+        Assert.Equal(
+            started.GetProperty("expiresAt").GetString(),
+            resumed.GetProperty("expiresAt").GetString());
+        Assert.EndsWith("Z", resumed.GetProperty("expiresAt").GetString());
         Assert.DoesNotContain("secret", await pending.Content.ReadAsStringAsync(), StringComparison.OrdinalIgnoreCase);
 
         Assert.Equal(HttpStatusCode.NoContent, (await client.PostAsync("/api/auth/mfa/cancel", null)).StatusCode);
