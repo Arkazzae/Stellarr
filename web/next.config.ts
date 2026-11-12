@@ -37,6 +37,13 @@ const nextConfig: NextConfig = {
     // media limit still arrives as one complete multipart request.
     proxyClientMaxBodySize: "128mb",
   },
+  async redirects() {
+    return [
+      { source: "/rejestracja", destination: "/register", permanent: true },
+      { source: "/zapomniane-haslo", destination: "/forgot-password", permanent: true },
+      { source: "/reset-hasla", destination: "/reset-password", permanent: true },
+    ];
+  },
   /**
    * `next dev` serves the UI on :3000 and the API runs on :5000, so the
    * same-origin paths the client uses in production are proxied here. Nginx

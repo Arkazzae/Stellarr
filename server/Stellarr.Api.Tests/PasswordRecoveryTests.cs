@@ -44,8 +44,8 @@ public sealed partial class PasswordRecoveryTests
 
         var message = Assert.Single(factory.EmailDelivery.Messages);
         Assert.Equal(Email, message.To);
-        Assert.Contains($"https://chat.test/reset-hasla?token={token}", message.Text, StringComparison.Ordinal);
-        Assert.Contains($"https://chat.test/reset-hasla?token={token}", message.Html, StringComparison.Ordinal);
+        Assert.Contains($"https://chat.test/reset-password?token={token}", message.Text, StringComparison.Ordinal);
+        Assert.Contains($"https://chat.test/reset-password?token={token}", message.Html, StringComparison.Ordinal);
         await using var scope = factory.OpenScope(out var db);
         var stored = await db.PasswordResetTokens.SingleAsync();
         Assert.Equal(Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(token))), stored.TokenHash);
@@ -212,6 +212,6 @@ public sealed partial class PasswordRecoveryTests
         return document.RootElement.Clone();
     }
 
-    [GeneratedRegex(@"reset-hasla\?token=(\S+)")]
+    [GeneratedRegex(@"reset-password\?token=(\S+)")]
     private static partial Regex TokenPattern();
 }

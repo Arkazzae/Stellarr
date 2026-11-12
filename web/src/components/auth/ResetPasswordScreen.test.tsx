@@ -75,7 +75,7 @@ describe("ResetPasswordScreen", () => {
     expect(screen.queryByLabelText("Nowe hasło")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Wyślij nowy link" })).toHaveAttribute(
       "href",
-      "/zapomniane-haslo",
+      "/forgot-password",
     );
   });
 });

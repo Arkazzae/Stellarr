@@ -21,7 +21,7 @@ export default function InvitePage({ params }: { params: Promise<{ code: string 
     if (phase === "anonymous") {
       // Registering comes first; the redirect after it brings the visitor back.
       rememberPendingInvite(code);
-      router.replace("/rejestracja");
+      router.replace("/register");
       return;
     }
     if (phase !== "ready") return;
