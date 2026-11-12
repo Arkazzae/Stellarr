@@ -1,8 +1,9 @@
 # Operator CLI
 
 `stellarr` is the operator command inside the Stellarr container. It checks an
-installation, edits the settings Cockpit stores, manages encrypted secrets and
-revokes sessions without signing in to Cockpit or starting a second API.
+installation, edits the settings Cockpit stores, manages encrypted secrets,
+inspects account security and revokes sessions without signing in to Cockpit or
+starting a second API.
 
 It runs against the data volume, not through the HTTP API. The permission is
 therefore access to the container and its volume: anyone who can run
@@ -104,6 +105,14 @@ Database-backed keys:
 | `retention.logs-days` | integer, 1–3650 |
 | `retention.orphans-days` | integer, 1–3650 |
 | `cleanup.enabled` | boolean |
+| `mfa.requirement` | `optional`, `admins`, `everyone` or `cockpit` |
+| `mfa.trusted-device-days` | integer, 1–365 |
+| `mfa.challenge-minutes` | integer, 1–60 |
+| `mfa.email-code-minutes` | integer, 1–60 |
+| `mfa.email-cooldown-seconds` | integer, 0–600 |
+| `mfa.email-attempts` | integer, 1–10 |
+| `mfa.email-sends-per-hour` | integer, 1–60 |
+| `mfa.cli-recovery-minutes` | integer, 1–60 |
 
 Booleans accept `true`/`false` (also `1`/`0`, `yes`/`no`, `on`/`off`).
 
@@ -172,14 +181,56 @@ show administrative metadata only; password hashes, cookies and token values are
 never read back.
 
 Revocation updates the durable `UserSessions` rows, so the existing
-authentication check rejects the cookie on its next request. Revoking all
-sessions of an account also marks approved desktop browser handoffs that have
-not yet been redeemed, preventing them from becoming new sessions.
+authentication check rejects the cookie on its next request. The running API
+checks the database for revoked sessions at most once per second and aborts the
+matching WebSocket connections; their normal disconnect lifecycle closes any
+voice or media session they held. Revoking all sessions of an account also marks
+approved desktop browser handoffs that have not yet been redeemed, preventing
+them from becoming new sessions.
 
-**Limitation:** an already-open WebSocket is not disconnected immediately by a
-revoke. The database and HTTP authentication are invalidated, but realtime
-teardown is deferred to a later release. `sessions revoke` says so in both text
-and JSON output.
+### Account security and MFA recovery
+
+```sh
+stellarr security show arkazz
+stellarr security methods arkazz
+stellarr security recover arkazz --reason "lost authenticator"
+```
+
+`security show` reports the instance MFA requirement, confirmed and pending
+methods, trusted devices, active sessions, unused recovery-code count and recent
+account-global security events. `security methods` prints the same inspection
+focused on method metadata. Neither command can read a TOTP seed, recovery-code
+hash, cookie or trusted-device token.
+
+`security recover` is the emergency path for an account that lost every second
+factor. It revokes all MFA methods, trusted devices, active sessions, approved
+desktop handoffs, unused recovery codes and earlier CLI recovery credentials,
+then increments the account's session version so older cookies fail. In the
+same transaction it issues one random recovery credential, prints it once and
+records `security.recover` as `local-cli` in the operator audit. The credential
+expires after `mfa.cli-recovery-minutes` (10 by default) and can be exchanged at
+`POST /api/auth/recovery/redeem` only for enrollment-only access. It cannot
+create an ordinary session, grant API or hub access, or disable an enforced MFA
+policy. A disabled account stays disabled and is refused by this command.
+
+Recovery sets a durable recovery-required state. Password, OIDC, registration
+and desktop sign-in cannot issue a session or an ordinary enrollment grant while
+it is set. Only the current CLI credential can start replacement enrollment, and
+the state clears only after a replacement factor is confirmed. The credential is
+stamped with the security version at issue: expiry, deletion, a password reset or
+any other security-version change makes it stale, and an old credential never
+silently adopts the newer version. A second reset therefore invalidates a
+pending replacement flow from the first.
+
+Verified addresses can receive an account security alert. That mail is sent only
+when mailing is operational and the operator enabled `mail.alerts.enabled`; the
+event itself and the in-app history are recorded regardless. The CLI records the
+reset event and alert recipient in the same transaction as the recovery, before
+the credential can expire.
+
+The recovery credential is the only secret-like value the CLI prints, and it is
+printed only when it is newly issued. Store it only long enough to complete
+enrollment.
 
 ### Emergency use with a stopped instance
 
@@ -265,14 +316,16 @@ Stable error codes include `usage`, `database_not_found`,
 
 Every successful mutation adds an `OperatorAuditEntries` row with actor
 `local-cli`, the operation (`config.set`, `secrets.set`, `secrets.clear`,
-`sessions.revoke`, `sessions.revoke-all`), its target and a UTC timestamp. The
-row and the change commit together. The normal API startup creates or upgrades
-that table; the CLI only verifies it and refuses to write when it is missing.
+`sessions.revoke`, `sessions.revoke-all`, `security.recover`), its target and a
+UTC timestamp. The row and the change commit together. The normal API startup
+creates or upgrades that table; the CLI only verifies it and refuses to write
+when it is missing.
 
 Read commands leave instance settings, the database schema and key files
 unchanged. The CLI opens an existing database and never initializes or migrates
 one. Secret values are excluded from command output and audit records.
 
 The available commands cover diagnostics, configuration, secrets, account
-inspection and session revocation. MFA recovery, password resets, OIDC linking,
-backup and restore, database repair and service control are not available.
+inspection, session revocation and emergency MFA recovery. Password resets, OIDC
+linking, backup and restore, database repair and service control are not
+available.

@@ -36,6 +36,31 @@ Browser <---- WebRTC :49000/udp ----> Stellarr Media
 - **coturn**: Provides STUN and HMAC-authenticated TURN relay. It contains no room or application logic. TURN allocations relay media to the container's local `stellarr-media` UDP socket.
 - **Stellarr Media (`media/`, Rust)**: Selective Forwarding Unit (SFU) that carries all call media; browsers never send media to each other directly. Runs ICE-lite on a single UDP port (`49000/udp`), terminates DTLS/SRTP per client, and forwards microphone, camera, and screen-share RTP packets without transcoding or mixing, while handling RTCP feedback (NACK, RTX, TWCC, PLI/FIR) per leg. Because SRTP ends at the media server, call media is decrypted in its memory and is not end-to-end encrypted between browsers. Controlled exclusively by the API over `127.0.0.1:5200`.
 
+## Account security
+
+Password, registration, OIDC and desktop-browser sign-in all pass through one
+authentication decision. A completed primary proof either creates an ordinary
+revocable session or a short-lived, browser-bound pre-authentication challenge
+for MFA or enrollment; only the former can authorize APIs or hubs. Sessions record
+their primary source, authentication time, real MFA time and evidence, security
+version and an absolute end that cookie renewal cannot pass. TOTP seeds are
+encrypted with the instance data-protection key ring; e-mail codes are protected
+the same way; recovery codes and trusted-device tokens are high-entropy secrets
+stored only as digests. Recovery codes are single-use, and one accepted TOTP
+timestep is persisted so it cannot be replayed.
+
+The MFA policy is optional by default and can require a second factor from
+instance owners/admins, everyone, or Cockpit access. A remembered trusted device
+is recorded separately and never becomes fresh MFA. Factor lifecycle changes
+require a recent actual MFA proof; an already signed-in account starts a
+server-backed reverification challenge for that purpose, and the challenge is
+bound to the exact parent session so logging out or revoking it ends the flow. Revoked sessions and policy
+or role changes are picked up from the database by the API at most once per
+second, which aborts matching WebSocket connections and lets the normal presence
+lifecycle close their voice and media sessions. Security events are
+account-global; verified addresses can receive an alert through the configured
+mail transport, with durable retry kept separate from the revocation itself.
+
 ## Single-container deployment model
 
 All runtime services—RustFS, Stellarr Media, ASP.NET Core, Next.js, `coturn`, Nginx, and `stellarr-tls-maintenance`—are supervised by `supervisord` (`infra/supervisord.conf`) inside a single container image backed by one persistent volume (`/data/stellarr`). Nginx provides a single HTTP/HTTPS origin on the outside.
