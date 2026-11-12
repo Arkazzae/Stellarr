@@ -124,7 +124,9 @@
 
   --background: #ffffff;
   --foreground: #3c3c43;
-  --card: #ffffff;
+  /* Cards sit a step off the page, as the documentation's soft background
+     (--vp-c-bg-soft), so tiles and panels read as laid on it. */
+  --card: #f6f6f7;
   --card-foreground: #3c3c43;
   --popover: #ffffff;
   --popover-foreground: #3c3c43;
@@ -152,12 +154,17 @@
   --danger: #b8272c;
   --danger-soft: rgba(244, 63, 94, 0.14);
 
-  /* The one data series: the accent, validated against both surfaces
-     (dataviz validate_palette.js). The track is the empty cell behind it. */
+  /* The one data series: the accent, validated (dataviz validate_palette.js)
+     against both card surfaces the charts sit on, #f6f6f7 and #202127. The
+     track is the empty cell behind it. */
   --chart-1: #6f65d1;
   /* Server errors beside the series colour; the pair passes the validator on both surfaces. */
   --chart-2: #b8272c;
   --chart-track: #ebebef;
+  /* The accent's light behind a chart: the wash in a corner of the overview's
+     main card, and the column under the day picked on a line. */
+  --chart-glow: rgba(111, 101, 209, 0.12);
+  --chart-band: rgba(111, 101, 209, 0.22);
 
   --sidebar: #f6f6f7;
   --sidebar-foreground: #3c3c43;
@@ -174,9 +181,10 @@
   :root {
     --background: #1b1b1f;
     --foreground: #dfdfd6;
-    --card: #1b1b1f;
+    --card: #202127;
     --card-foreground: #dfdfd6;
-    --popover: #202127;
+    /* A step above the cards, so a menu or a note opened over one stands off it. */
+    --popover: #2a2b32;
     --popover-foreground: #dfdfd6;
     --secondary: #202127;
     --secondary-foreground: #dfdfd6;
@@ -198,7 +206,9 @@
     --danger-soft: rgba(244, 63, 94, 0.16);
 
     --chart-2: #e5484d;
-    --chart-track: #2a2b31;
+    --chart-track: #2e2f36;
+    --chart-glow: rgba(111, 101, 209, 0.2);
+    --chart-band: rgba(111, 101, 209, 0.32);
 
     --sidebar: #161618;
     --sidebar-foreground: #dfdfd6;
@@ -270,4 +280,19 @@
   .tabular-nums {
     font-variant-numeric: tabular-nums;
   }
+}
+
+/* The accent's wash in the top left corner of a card. */
+@utility glow-chart {
+  background-image: radial-gradient(60% 90% at 0% 0%, var(--chart-glow), transparent 75%);
+}
+
+/* A column of the accent's light fading to the baseline, under a picked point. */
+@utility band-chart {
+  background-image: linear-gradient(to bottom, var(--chart-band), transparent);
+}
+
+/* A halo of the accent around a lit marker, outside its ring. */
+@utility marker-glow {
+  box-shadow: 0 0 0 0.375rem var(--chart-band);
 }

@@ -31,7 +31,7 @@ function TabsList({
         unstyled
           ? className
           : cn(
-              "inline-flex h-9 w-fit items-center justify-center rounded-lg bg-muted p-[3px] text-muted-foreground",
+              "inline-flex w-fit flex-wrap items-center gap-1 text-muted-foreground",
               className,
             )
       }
@@ -52,7 +52,7 @@ function TabsTrigger({
         unstyled
           ? className
           : cn(
-              "inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent px-3 py-1 text-sm font-medium whitespace-nowrap text-foreground transition-colors focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-input data-[state=active]:bg-background data-[state=active]:shadow-sm",
+              "inline-flex items-center justify-center gap-1.5 rounded-full border border-transparent px-3.5 py-1.5 text-sm font-medium whitespace-nowrap text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none disabled:pointer-events-none disabled:opacity-50 data-[state=active]:border-border data-[state=active]:bg-card data-[state=active]:text-foreground",
               className,
             )
       }

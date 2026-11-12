@@ -11,7 +11,7 @@ export function UserAvatar({ displayName, className }: UserAvatarProps) {
   return (
     <span
       className={cn(
-        "grid shrink-0 place-items-center rounded-full bg-muted text-xs font-semibold",
+        "grid shrink-0 place-items-center rounded-full bg-accent text-xs font-semibold",
         className,
       )}
       aria-hidden="true"
