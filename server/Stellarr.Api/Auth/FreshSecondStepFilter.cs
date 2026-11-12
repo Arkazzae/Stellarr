@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using Stellarr.Api.Auth.Security;
 using Stellarr.Api.Data;
 using Stellarr.Api.Localization;
@@ -32,5 +33,29 @@ public sealed class FreshSecondStepFilter : IEndpointFilter
             statusCode: StatusCodes.Status403Forbidden,
             title: http.RequestServices.GetRequiredService<Messages>().Get(MessageKey.FreshSecondStepRequired),
             extensions: new Dictionary<string, object?> { ["code"] = Code });
+    }
+}
+
+/// <summary>
+/// <see cref="FreshSecondStepFilter"/> for the instance server only: the one
+/// whose roles reach Cockpit's equivalents, which already ask for the step.
+/// Other servers keep their ordinary role management.
+/// </summary>
+public sealed class InstanceServerFreshSecondStepFilter : IEndpointFilter
+{
+    public async ValueTask<object?> InvokeAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
+    {
+        var http = context.HttpContext;
+        var db = http.RequestServices.GetRequiredService<AppDbContext>();
+        var instanceId = await db.Servers.AsNoTracking()
+            .OrderBy(x => x.CreatedAt).ThenBy(x => x.Id)
+            .Select(x => (Guid?)x.Id)
+            .FirstOrDefaultAsync(http.RequestAborted);
+        if (instanceId != http.RequireActiveServerId())
+        {
+            return await next(context);
+        }
+
+        return await FreshSecondStepFilter.RefusalAsync(http) ?? await next(context);
     }
 }

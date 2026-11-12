@@ -100,6 +100,93 @@ public sealed partial class AccountSecurityFlowTests
         Assert.NotEqual(HttpStatusCode.Forbidden, missing.StatusCode);
     }
 
+    [Fact]
+    public async Task HandingOverTheInstanceInTheAppNeedsAFreshSecondStep()
+    {
+        using var factory = new StellarrWebApplicationFactory();
+        using var owner = Client(factory);
+        await LoginAsync(owner, "maja", "Aurora!2026");
+        Guid ownerId, adaId, instanceId, memberRoleId;
+        await using (var scope = factory.OpenScope(out var db))
+        {
+            ownerId = await db.Users.Where(x => x.Username == "maja").Select(x => x.Id).SingleAsync();
+            adaId = await db.Users.Where(x => x.Username == "ada").Select(x => x.Id).SingleAsync();
+            instanceId = await db.Servers.OrderBy(x => x.CreatedAt).ThenBy(x => x.Id).Select(x => x.Id).FirstAsync();
+            memberRoleId = await db.ServerMembers
+                .Where(x => x.ServerId == instanceId && x.UserId == adaId).Select(x => x.RoleId).SingleAsync();
+        }
+
+        await AddConfirmedTotpAsync(factory, await FindUserAsync(factory, ownerId));
+        owner.DefaultRequestHeaders.Add("X-Stellarr-Server", instanceId.ToString());
+
+        using var transfer = await owner.PostAsJsonAsync("/api/admin/server/transfer", new { userId = adaId });
+        using var role = await owner.PatchAsJsonAsync($"/api/admin/members/{adaId}/role", new { roleId = memberRoleId });
+        foreach (var refused in new[] { transfer, role })
+        {
+            Assert.Equal(HttpStatusCode.Forbidden, refused.StatusCode);
+            Assert.Equal(
+                FreshSecondStepFilter.Code,
+                (await refused.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString());
+        }
+
+        await using (var scope = factory.OpenScope(out var db))
+        {
+            var instanceOwner = await db.ServerMembers.Include(x => x.Role)
+                .SingleAsync(x => x.ServerId == instanceId && x.Role.IsOwner);
+            Assert.Equal(ownerId, instanceOwner.UserId);
+        }
+
+        await SetSessionMfaTimeAsync(factory, ownerId, DateTime.UtcNow);
+        using var confirmed = await owner.PostAsJsonAsync("/api/admin/server/transfer", new { userId = adaId });
+        Assert.Equal(HttpStatusCode.NoContent, confirmed.StatusCode);
+    }
+
+    [Fact]
+    public async Task PointingAccountMailElsewhereNeedsAFreshSecondStep()
+    {
+        using var factory = new StellarrWebApplicationFactory();
+        using var owner = Client(factory);
+        await LoginAsync(owner, "maja", "Aurora!2026");
+        Guid ownerId;
+        await using (var scope = factory.OpenScope(out var db))
+        {
+            ownerId = await db.Users.Where(x => x.Username == "maja").Select(x => x.Id).SingleAsync();
+        }
+
+        var settings = new Dictionary<string, object?>
+        {
+            ["instanceName"] = "Orbit",
+            ["timeZone"] = "UTC",
+            ["mailingEnabled"] = false,
+            ["mailFromAddress"] = "stellarr@example.net",
+            ["inviteMailEnabled"] = true,
+            ["recoveryMailEnabled"] = true,
+            ["alertMailEnabled"] = false,
+            ["backupRetentionDays"] = 14,
+            ["logRetentionDays"] = 30,
+            ["orphanObjectRetentionDays"] = 1,
+            ["automaticCleanupEnabled"] = true,
+            ["smtpHost"] = "smtp.example.net",
+            ["smtpPort"] = 587,
+            ["smtpSecurity"] = "starttls",
+            ["smtpUsername"] = "mailer",
+        };
+        // Set while the owner has no method: nothing to ask for yet.
+        (await owner.PutAsJsonAsync("/api/cockpit/settings", settings)).EnsureSuccessStatusCode();
+        await AddConfirmedTotpAsync(factory, await FindUserAsync(factory, ownerId));
+
+        using var same = await owner.PutAsJsonAsync("/api/cockpit/settings", settings);
+        using var elsewhere = await owner.PutAsJsonAsync(
+            "/api/cockpit/settings",
+            new Dictionary<string, object?>(settings) { ["smtpHost"] = "mail.attacker.example" });
+
+        Assert.Equal(HttpStatusCode.OK, same.StatusCode);
+        Assert.Equal(HttpStatusCode.Forbidden, elsewhere.StatusCode);
+        Assert.Equal(
+            FreshSecondStepFilter.Code,
+            (await elsewhere.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("code").GetString());
+    }
+
     private static async Task<Domain.User> FindUserAsync(StellarrWebApplicationFactory factory, Guid id)
     {
         await using var scope = factory.OpenScope(out var db);

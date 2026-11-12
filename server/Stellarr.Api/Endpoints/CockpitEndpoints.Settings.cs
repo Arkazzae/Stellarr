@@ -42,13 +42,6 @@ public static partial class CockpitEndpoints
         CancellationToken cancellationToken)
     {
         var server = http.RequireInstanceServer();
-        // The account security card changes who may skip a second step; the
-        // rest of the page does not need a fresh one.
-        if (ChangesAccountSecurity(request) && await FreshSecondStepFilter.RefusalAsync(http) is { } refusal)
-        {
-            return refusal;
-        }
-
         var problems = InstanceSettingsService.Validate(request, messages);
         if (problems.Count > 0)
         {
@@ -56,6 +49,14 @@ public static partial class CockpitEndpoints
         }
 
         var settings = await InstanceSettingsService.LoadAsync(db, server, configuration, cancellationToken);
+        // Who may skip a second step, and where the mail with codes and reset
+        // links goes, need a fresh one; the rest of the page does not.
+        if ((ChangesAccountSecurity(request) || ChangesMailTransport(request, settings)) &&
+            await FreshSecondStepFilter.RefusalAsync(http) is { } refusal)
+        {
+            return refusal;
+        }
+
         InstanceSettingsService.Apply(settings, server, request);
         await StageAuditAsync(
             db,
@@ -249,4 +250,13 @@ public static partial class CockpitEndpoints
         request.EmailCodeMaxAttempts is not null ||
         request.EmailCodeSendsPerHour is not null ||
         request.CliRecoveryMinutes is not null;
+
+    /// <summary>A change of the server that sends every account mail, which a stolen session could point elsewhere.</summary>
+    private static bool ChangesMailTransport(UpdateCockpitSettingsRequest request, OperationsSettings settings) =>
+        (request.SmtpHost is { } host && host.Trim() != settings.MailSmtpHost) ||
+        (request.SmtpPort is { } port && port != settings.MailSmtpPort) ||
+        (request.SmtpSecurity is { } security &&
+            !string.Equals(security.Trim(), settings.MailSmtpSecurity, StringComparison.OrdinalIgnoreCase)) ||
+        (request.SmtpUsername is { } username && username.Trim() != settings.MailSmtpUsername) ||
+        (request.ResendEnabled is { } resend && resend != settings.MailResendEnabled);
 }

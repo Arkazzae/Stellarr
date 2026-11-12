@@ -126,8 +126,12 @@ Once the owner's account has a method, the changes in Cockpit that could hand
 the instance or an account to someone else need a second step from the last
 five minutes, whatever the policy: creating accounts, changing roles and
 account status, transferring or deleting servers, secrets, desktop releases,
-the account security settings, and downloading a backup. Cockpit then offers
-to confirm it in the web client and comes back to the same page.
+the account security settings, changes to the mail server that sends account
+mail, and downloading a backup. Cockpit then offers to confirm it in the web
+client and comes back to the same page. The same rule covers the equivalents
+in the app's server settings: transferring or deleting a server, and creating,
+editing or assigning roles on the instance's first server, whose roles reach
+Cockpit.
 
 The other limits (challenge lifetime, email code lifetime, resend wait,
 attempts and hourly sends, CLI recovery lifetime) are listed with their ranges
