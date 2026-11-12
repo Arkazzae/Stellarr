@@ -9,6 +9,8 @@ Stellarr is a self-hosted text, voice, and video chat for small groups, packaged
 
 - [Requirements](install/requirements.md): host resources, published ports, and NAT forwarding for voice calls.
 - [Quick start](install/quick-start.md): start a local instance with Docker Compose, create the owner account, and test voice.
+- [Platforms](install/platforms.md): what any installation gives the container, and the platforms with a template of their own.
+  - [Unraid](install/unraid.md): install from the Unraid template and keep its port variables in step with the port mappings.
 - [Configuration](install/configuration.md): environment variables for production and development stacks.
 - [Operator CLI](install/cli.md): inspect health, edit settings, rotate secrets, and manage accounts and sessions via `docker exec` or on a stopped volume.
 - [Account security](install/account-security.md): second steps and passkeys, the instance policy, trusted devices, identity providers, and recovering a locked-out account.

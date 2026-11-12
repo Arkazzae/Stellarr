@@ -1,0 +1,82 @@
+<?xml version="1.0"?>
+<!--
+  Unraid template for the production container. It follows the rules every
+  platform template keeps (deploy/README.md); installation is described in
+  docs/install/unraid.md.
+-->
+<Container version="2">
+  <Name>Stellarr</Name>
+  <Repository>ghcr.io/arkazzae/stellarr:latest</Repository>
+  <Registry>https://github.com/Arkazzae/Stellarr/pkgs/container/stellarr</Registry>
+  <Network>bridge</Network>
+  <Shell>bash</Shell>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/Arkazzae/Stellarr/issues</Support>
+  <Project>https://github.com/Arkazzae/Stellarr</Project>
+  <ReadMe>https://github.com/Arkazzae/Stellarr/blob/main/docs/install/unraid.md</ReadMe>
+  <Overview>Self-hosted text, voice and video chat for a group of friends. One container runs the web client, the API, object storage, a TURN server and the media server that carries every call.
+
+Open the Web UI and create the first account: it becomes the instance owner and gets a server of its own. Later accounts join through invite links. The owner's panel, Cockpit, is at /cockpit/.
+
+On first start the container creates a self-signed certificate, so the browser shows a warning once. For a trusted certificate or a reverse proxy, see the documentation.</Overview>
+  <Requires>Voice from any device other than the Unraid server itself needs PUBLIC_IP. Calls from outside your network also need UDP port 49000 forwarded from the router to this server on the same external port.</Requires>
+  <Category>Network:Messenger Network:Voip Social:</Category>
+  <WebUI>https://[IP]:[PORT:443]/</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/Arkazzae/Stellarr/main/deploy/unraid/stellarr.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/Arkazzae/Stellarr/main/branding/logo/tile.png</Icon>
+  <ExtraParams>--memory=4g --cpus=4 --pids-limit=512 --security-opt=no-new-privileges:true</ExtraParams>
+  <PostArgs/>
+  <CPUset/>
+  <DateInstalled/>
+  <DonateText/>
+  <DonateLink/>
+
+  <Config Name="Data" Target="/data/stellarr" Default="/mnt/user/appdata/stellarr" Mode="rw" Description="Database, uploads, encryption keys, generated secrets and TLS certificates. Keep it on a pool (cache) drive and back up the whole folder." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/stellarr</Config>
+
+  <Config Name="HTTPS port" Target="443" Default="8443" Mode="tcp" Description="The web client and Cockpit. Set PUBLIC_HTTPS_PORT below to the same number." Type="Port" Display="always" Required="true" Mask="false">8443</Config>
+  <Config Name="HTTP port" Target="80" Default="8888" Mode="tcp" Description="Redirects to HTTPS." Type="Port" Display="always" Required="false" Mask="false">8888</Config>
+  <Config Name="Voice media port" Target="49000" Default="49000" Mode="udp" Description="Every call goes through this port. Set Rtc__MediaPort below to the same number, and forward the same external port on the router for calls from outside your network." Type="Port" Display="always" Required="true" Mask="false">49000</Config>
+  <Config Name="TURN port (UDP)" Target="3478" Default="3478" Mode="udp" Description="TURN for browsers that cannot reach the voice media port directly. Set Rtc__TurnPort below to the same number." Type="Port" Display="always" Required="false" Mask="false">3478</Config>
+  <Config Name="TURN relay ports" Target="49160-49200" Default="49160-49200" Mode="udp" Description="Ports TURN relays calls through. Keep the host range the same as the container range." Type="Port" Display="always" Required="false" Mask="false">49160-49200</Config>
+  <Config Name="TURN port (TCP)" Target="3478" Default="3478" Mode="tcp" Description="Used only when Rtc__TurnTcpEnabled is true." Type="Port" Display="advanced" Required="false" Mask="false">3478</Config>
+  <Config Name="TURNS port (TCP)" Target="5349" Default="5349" Mode="tcp" Description="TURN over TLS, used only when Rtc__TurnsEnabled is true. Set Rtc__TurnsPort to the same number." Type="Port" Display="advanced" Required="false" Mask="false">5349</Config>
+  <Config Name="TURNS port (UDP)" Target="5349" Default="5349" Mode="udp" Description="TURN over DTLS, used only when Rtc__TurnsEnabled is true." Type="Port" Display="advanced" Required="false" Mask="false">5349</Config>
+
+  <Config Name="Domain" Target="STELLARR_DOMAIN" Default="" Mode="" Description="The name or IPv4 address people open Stellarr at, for example chat.example.com or 192.168.1.10. The certificate and TURN use it. Empty means localhost, which only the Unraid server itself can use." Type="Variable" Display="always" Required="false" Mask="false"></Config>
+  <Config Name="Public IP" Target="PUBLIC_IP" Default="" Mode="" Description="The IPv4 address browsers reach this server at: its LAN address for calls at home, your public address for calls over the internet, or auto to resolve the domain. Empty means voice works only through TURN." Type="Variable" Display="always" Required="false" Mask="false"></Config>
+  <Config Name="HTTPS host port" Target="PUBLIC_HTTPS_PORT" Default="8443" Mode="" Description="The host side of the HTTPS port mapping above. The redirect from HTTP and the instance's public address use it." Type="Variable" Display="always" Required="true" Mask="false">8443</Config>
+  <Config Name="Voice media host port" Target="Rtc__MediaPort" Default="49000" Mode="" Description="The host side of the voice media port mapping above. The media server tells browsers this port." Type="Variable" Display="always" Required="true" Mask="false">49000</Config>
+  <Config Name="Interface language" Target="STELLARR_LANGUAGE" Default="en" Mode="" Description="en or pl. The web client's default language. Set Server language to the same value." Type="Variable" Display="always" Required="true" Mask="false">en</Config>
+  <Config Name="Server language" Target="Stellarr__Language" Default="en" Mode="" Description="en or pl. The language of server messages, mail and the names of a new server's roles and channels." Type="Variable" Display="always" Required="true" Mask="false">en</Config>
+  <Config Name="Instance name" Target="Stellarr__InstanceName" Default="Stellarr" Mode="" Description="The name desktop clients show for this instance." Type="Variable" Display="always" Required="false" Mask="false">Stellarr</Config>
+
+  <Config Name="Public HTTPS port" Target="STELLARR_PUBLIC_PORT" Default="" Mode="" Description="The HTTPS port browsers use, when it differs from the host port: 443 behind a reverse proxy. Empty means PUBLIC_HTTPS_PORT." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="Public URL" Target="STELLARR_PUBLIC_URL" Default="" Mode="" Description="The full address for mail links and desktop clients, for example https://chat.example.com. Overrides the address built from the domain and port." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="TURN host port" Target="Rtc__TurnPort" Default="3478" Mode="" Description="The host side of the TURN port mappings." Type="Variable" Display="advanced" Required="false" Mask="false">3478</Config>
+  <Config Name="TURNS host port" Target="Rtc__TurnsPort" Default="5349" Mode="" Description="The host side of the TURNS port mappings." Type="Variable" Display="advanced" Required="false" Mask="false">5349</Config>
+  <Config Name="TURN over TCP" Target="Rtc__TurnTcpEnabled" Default="false" Mode="" Description="true or false." Type="Variable" Display="advanced" Required="false" Mask="false">false</Config>
+  <Config Name="TURN over TLS" Target="Rtc__TurnsEnabled" Default="false" Mode="" Description="true or false. Needs a certificate browsers trust." Type="Variable" Display="advanced" Required="false" Mask="false">false</Config>
+
+  <Config Name="GIPHY key" Target="GIPHY_API_KEY" Default="" Mode="" Description="Public GIPHY web key for GIF search. It can also be set in Cockpit under Integrations, which wins over this one." Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+
+  <Config Name="Mail" Target="Mail__Enabled" Default="true" Mode="" Description="true or false. The SMTP server, port and login are set in Cockpit." Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>
+  <Config Name="SMTP password" Target="Mail__SmtpPassword" Default="" Mode="" Description="Can also be set in Cockpit, which wins over this one." Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
+  <Config Name="Resend API key" Target="Mail__ResendApiKey" Default="" Mode="" Description="Replaces SMTP when Resend is turned on in Cockpit under Integrations." Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
+  <Config Name="Mail sender address" Target="Mail__FromAddress" Default="" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="Mail sender name" Target="Mail__FromName" Default="Stellarr" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="false">Stellarr</Config>
+
+  <Config Name="OIDC sign-in" Target="Oidc__Enabled" Default="false" Mode="" Description="true or false. Sign-in through an identity provider such as Pocket ID. Password sign-in stays available." Type="Variable" Display="advanced" Required="false" Mask="false">false</Config>
+  <Config Name="OIDC issuer" Target="Oidc__Authority" Default="" Mode="" Description="For example https://auth.example.com" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="OIDC client ID" Target="Oidc__ClientId" Default="" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="false"></Config>
+  <Config Name="OIDC client secret" Target="Oidc__ClientSecret" Default="" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="true"></Config>
+  <Config Name="OIDC button label" Target="Oidc__DisplayName" Default="Main account" Mode="" Description="The label of the sign-in button." Type="Variable" Display="advanced" Required="false" Mask="false">Main account</Config>
+  <Config Name="Trust the provider's second step" Target="Oidc__TrustProviderMfa" Default="false" Mode="" Description="true or false. When true, a sign-in the provider confirmed with a second step counts as Stellarr's own." Type="Variable" Display="advanced" Required="false" Mask="false">false</Config>
+  <Config Name="Provider second-step amr values" Target="Oidc__ProviderMfaAmr" Default="mfa" Mode="" Description="The amr values that count as a second step when the setting above is true." Type="Variable" Display="advanced" Required="false" Mask="false">mfa</Config>
+
+  <Config Name="Upload quota per user (bytes)" Target="Uploads__MaxStoredBytesPerUser" Default="2147483648" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="false">2147483648</Config>
+  <Config Name="Upload quota in total (bytes)" Target="Uploads__MaxStoredBytes" Default="21474836480" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="false">21474836480</Config>
+  <Config Name="Minimum free space (bytes)" Target="Uploads__MinimumFreeDataRootBytes" Default="1073741824" Mode="" Description="Uploads are refused when the data folder has less free space than this." Type="Variable" Display="advanced" Required="false" Mask="false">1073741824</Config>
+  <Config Name="Concurrent uploads" Target="Uploads__MaxConcurrentUploads" Default="4" Mode="" Description="" Type="Variable" Display="advanced" Required="false" Mask="false">4</Config>
+
+  <Config Name="Database command log level" Target="Logging__LogLevel__Microsoft.EntityFrameworkCore.Database.Command" Default="Warning" Mode="" Description="Information logs every SQL statement." Type="Variable" Display="advanced" Required="false" Mask="false">Warning</Config>
+</Container>

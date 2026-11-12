@@ -10,6 +10,7 @@ Logo, mascot, UI icons, color palette, typography, and usage rules for Stellarr.
 | `logo/small.svg` | Small-size mark (16–47 px): wider bars and fuller silhouette |
 | `logo/mono.svg` | Monochrome mark (`currentColor` fill with cut-out bars) |
 | `logo/tile.svg` | Application icon: primary mark centered on a rounded 512 px `#09090b` tile |
+| `logo/tile.png` | `tile.svg` rendered at 512 px, for places that do not take SVG, such as the Unraid template icon |
 | `mascot/` | Astronaut mascot in `mark.svg`, `small.svg`, `mono.svg`, and `tile.svg` variants |
 | `mascot/expressions/` | Eight state expressions: `speaking`, `idle`, `listening`, `happy`, `muted`, `away`, `connecting`, `failed` |
 | [`icons/`](icons/) | 92 standalone UI icons, including formatting and noise-suppression modes; 24 × 24 SVGs with a 1.5 px `currentColor` stroke |
