@@ -64,6 +64,9 @@ beforeEach(() => {
     removeMethod: vi.fn(async () => {}),
     regenerateRecoveryCodes: vi.fn(async () => ["AAAA-BBBB"]),
     revokeTrustedDevice: vi.fn(async () => {}),
+    listSessions: vi.fn(async () => []),
+    revokeSession: vi.fn(async () => {}),
+    revokeOtherSessions: vi.fn(async () => {}),
   };
   mocks.challenge = {
     pending: vi.fn(async () => null),

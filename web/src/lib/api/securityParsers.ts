@@ -18,6 +18,7 @@ import type {
   MfaMethod,
   MfaMethodType,
   MfaPurpose,
+  OwnSession,
   SecurityEvent,
   TrustedDevice,
 } from "./types";
@@ -193,4 +194,17 @@ export function parseRecoveryCodes(value: unknown, path: string): string[] {
     }
     return code;
   });
+}
+
+export function parseOwnSession(value: unknown, path: string): OwnSession {
+  const record = expectRecord(value, path);
+  return {
+    id: expectString(record, "id", path),
+    device: expectString(record, "device", path),
+    ipAddress: expectString(record, "ipAddress", path),
+    createdAt: expectString(record, "createdAt", path),
+    lastSeenAt: expectString(record, "lastSeenAt", path),
+    expiresAt: expectString(record, "expiresAt", path),
+    current: expectBoolean(record, "current", path),
+  };
 }

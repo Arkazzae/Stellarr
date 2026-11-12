@@ -168,6 +168,7 @@ export function createRuntime(options: RuntimeOptions = {}): Runtime {
       requestPasswordReset: (email) => api.requestPasswordReset(email),
       resetPassword: (token, newPassword) => api.resetPassword(token, newPassword),
       logout: () => api.logout(),
+      check: async () => (await api.session()) !== null,
       challenge: {
         async pending() {
           try {
@@ -196,6 +197,9 @@ export function createRuntime(options: RuntimeOptions = {}): Runtime {
       removeMethod: (methodId, password) => api.removeMfaMethod(methodId, password),
       regenerateRecoveryCodes: (password) => api.regenerateRecoveryCodes(password),
       revokeTrustedDevice: (deviceId) => api.revokeTrustedDevice(deviceId),
+      listSessions: () => api.listOwnSessions(),
+      revokeSession: (sessionId) => api.revokeOwnSession(sessionId),
+      revokeOtherSessions: () => api.revokeOtherSessions(),
     },
     chat,
     messageActions,

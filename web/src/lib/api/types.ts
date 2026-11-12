@@ -654,3 +654,16 @@ export interface AccountSecurity {
   trustedDeviceDays: number;
   emailCodeAvailable: boolean;
 }
+
+/** One of the account's signed-in devices. */
+export interface OwnSession {
+  id: string;
+  /** The user agent the session signed in with. */
+  device: string;
+  ipAddress: string;
+  createdAt: string;
+  lastSeenAt: string;
+  expiresAt: string;
+  /** This browser's own session, which ends through signing out instead. */
+  current: boolean;
+}

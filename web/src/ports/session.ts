@@ -67,5 +67,7 @@ export interface SessionPort {
   requestPasswordReset(email: string): Promise<void>;
   resetPassword(token: string, newPassword: string): Promise<void>;
   logout(): Promise<void>;
+  /** Whether the server still knows this browser's session. */
+  check(): Promise<boolean>;
   challenge: SignInChallengePort;
 }

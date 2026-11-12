@@ -34,6 +34,7 @@ import type {
   MfaCompletion,
   MfaEnrollment,
   MfaVerifyInput,
+  OwnSession,
   MessageHistoryPage,
   MessageId,
   MessageIndexKind,
@@ -121,6 +122,10 @@ export interface ApiClient {
   removeMfaMethod(methodId: string, password?: string): Promise<void>;
   regenerateRecoveryCodes(password?: string, signal?: AbortSignal): Promise<string[]>;
   revokeTrustedDevice(deviceId: string): Promise<void>;
+  listOwnSessions(signal?: AbortSignal): Promise<OwnSession[]>;
+  /** Refused with 409 for the current session, which ends through logout. */
+  revokeOwnSession(sessionId: string): Promise<void>;
+  revokeOtherSessions(): Promise<void>;
   requestPasswordReset(email: string, signal?: AbortSignal): Promise<void>;
   resetPassword(token: string, newPassword: string, signal?: AbortSignal): Promise<void>;
   logout(): Promise<void>;

@@ -112,6 +112,9 @@ export function fakeApi(overrides: Partial<ApiClient> = {}): ApiClient {
     removeMfaMethod: vi.fn(async () => {}),
     regenerateRecoveryCodes: vi.fn(async () => []),
     revokeTrustedDevice: vi.fn(async () => {}),
+    listOwnSessions: vi.fn(async () => []),
+    revokeOwnSession: vi.fn(async () => {}),
+    revokeOtherSessions: vi.fn(async () => {}),
     requestPasswordReset: vi.fn(async () => {}),
     resetPassword: vi.fn(async () => {}),
     logout: vi.fn(async () => {}),
@@ -316,6 +319,11 @@ export class FakeRealtimeClient implements RealtimeClient {
 
   async getRtcClock(): Promise<number> {
     return Date.now();
+  }
+
+  /** The server closed the hub, as it does when it revokes the session. */
+  drop(): void {
+    this.setStatus("reconnecting");
   }
 
   private setStatus(status: RealtimeStatus): void {

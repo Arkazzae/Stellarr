@@ -160,6 +160,34 @@ describe("SessionProvider boot", () => {
   });
 });
 
+describe("SessionProvider when the hub drops", () => {
+  it("leaves for the sign-in page when the server no longer knows the session", async () => {
+    const api = fullApi({ session: vi.fn(async () => null) });
+    const { realtime } = mount(api);
+    await waitFor(() => expect(phase()).toHaveTextContent("ready"));
+    await waitFor(() => expect(realtime.getStatus()).toBe("connected"));
+
+    act(() => realtime.drop());
+
+    await waitFor(() => expect(phase()).toHaveTextContent("anonymous"));
+    expect(screen.getByLabelText("login-error")).toHaveTextContent(polish("session.unauthorized"));
+    expect(realtime.getStatus()).not.toBe("connected");
+  });
+
+  it("rides out a drop while the session is still valid", async () => {
+    const api = fullApi({
+      session: vi.fn(async () => ({ id: "u-1", username: "maja", displayName: "Maja", presence: "online" as const })),
+    });
+    const { realtime } = mount(api);
+    await waitFor(() => expect(realtime.getStatus()).toBe("connected"));
+
+    act(() => realtime.drop());
+
+    await waitFor(() => expect(api.session).toHaveBeenCalledOnce());
+    expect(phase()).toHaveTextContent("ready");
+  });
+});
+
 describe("SessionProvider login", () => {
   it("takes an anonymous visitor to ready after a successful login", async () => {
     const user = userEvent.setup();

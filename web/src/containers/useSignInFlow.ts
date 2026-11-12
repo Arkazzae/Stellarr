@@ -95,15 +95,22 @@ export function useSignInFlow({
 
   useEffect(() => {
     if (resumed.current || recoveryRequired || phase === "loading" || phase === "ready") return;
-    resumed.current = true;
     let active = true;
+    // Marked only once an answer is applied: if this effect is replaced first,
+    // for instance by new ports after a sign-out, the next run asks again
+    // instead of leaving the page waiting for an answer it threw away.
     challengePort.pending().then(
       (challenge) => {
         if (!active) return;
+        resumed.current = true;
         if (challenge === null) setStep({ kind: "password" });
         else enter(challenge);
       },
-      () => active && setStep({ kind: "password" }),
+      () => {
+        if (!active) return;
+        resumed.current = true;
+        setStep({ kind: "password" });
+      },
     );
     return () => {
       active = false;

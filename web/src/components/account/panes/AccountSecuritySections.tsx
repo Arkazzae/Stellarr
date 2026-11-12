@@ -5,7 +5,7 @@ import { useConfirm } from "@/components/primitives/ConfirmDialog";
 import { formatShortDate } from "@/components/settings/panes/paneFormat";
 import type { MessageKey } from "@/i18n";
 import { describeUserAgent } from "@/lib/userAgent";
-import type { AccountSecurity, MfaMethod, SecurityEvent, TrustedDevice } from "@/ports";
+import type { AccountSecurity, MfaMethod, OwnSession, SecurityEvent, TrustedDevice } from "@/ports";
 import { useLanguage } from "@/state/hooks";
 
 export interface AccountSecuritySectionsProps {
@@ -18,6 +18,10 @@ export interface AccountSecuritySectionsProps {
   onRemoveMethod(method: MfaMethod): void;
   onRegenerateCodes(): void;
   onRevokeDevice(device: TrustedDevice): void;
+  /** The account's signed-in devices; null while loading. */
+  sessions: OwnSession[] | null;
+  onRevokeSession(session: OwnSession): void;
+  onRevokeOtherSessions(): void;
 }
 
 const EVENT_LABEL: Record<string, MessageKey> = {
@@ -52,6 +56,9 @@ export function AccountSecuritySections({
   onRemoveMethod,
   onRegenerateCodes,
   onRevokeDevice,
+  sessions,
+  onRevokeSession,
+  onRevokeOtherSessions,
 }: AccountSecuritySectionsProps) {
   const { t, locale } = useLanguage();
   const confirm = useConfirm();
@@ -88,6 +95,17 @@ export function AccountSecuritySections({
       confirmLabel: t("security.codes.regenerate"),
     });
     if (confirmed) onRegenerateCodes();
+  };
+
+  const signOutOthers = async () => {
+    const confirmed = await confirm({
+      title: t("security.sessions.signOutOthersTitle"),
+      description: t("security.sessions.signOutOthersDetail"),
+      confirmLabel: t("security.sessions.signOutOthers"),
+      danger: true,
+      icon: "signout",
+    });
+    if (confirmed) onRevokeOtherSessions();
   };
 
   const eventLabel = (event: SecurityEvent) => {
@@ -221,6 +239,58 @@ export function AccountSecuritySections({
                 </div>
               ))
             )}
+          </div>
+        </section>
+      ) : null}
+
+      {sessions !== null && sessions.length > 0 ? (
+        <section className="sc acc-security">
+          <header className="sc-h">
+            <span className="sc-ico" aria-hidden="true">
+              <Icon name="server" size={17} />
+            </span>
+            {t("security.sessions.title")}
+          </header>
+          <div className="sc-b acc-security-list">
+            {sessions.map((session) => (
+              <div className="acc-security-item" key={session.id}>
+                <div className="acc-security-summary">
+                  <span className="acc-security-copy">
+                    <b>{deviceLabel(session.device)}</b>
+                    <small>
+                      {session.current
+                        ? t("security.sessions.current", { ip: session.ipAddress })
+                        : t("security.sessions.lastSeen", {
+                            date: date(session.lastSeenAt),
+                            ip: session.ipAddress,
+                          })}
+                    </small>
+                  </span>
+                  {session.current ? null : (
+                    <button
+                      type="button"
+                      className="btn-ghost sm"
+                      onClick={() => onRevokeSession(session)}
+                      disabled={busy}
+                    >
+                      {t("security.sessions.signOut")}
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+            {sessions.some((session) => !session.current) ? (
+              <div className="acc-security-item">
+                <button
+                  type="button"
+                  className="btn-ghost sm"
+                  onClick={() => void signOutOthers()}
+                  disabled={busy}
+                >
+                  {t("security.sessions.signOutOthers")}
+                </button>
+              </div>
+            ) : null}
           </div>
         </section>
       ) : null}

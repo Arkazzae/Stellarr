@@ -276,6 +276,29 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     [ports, t],
   );
 
+  // A dropped hub is usually a network blip, which the client rides out. It
+  // can also be the server ending this session: signed out on another
+  // device, by an operator, or by a security change. Asking once per drop
+  // tells the two apart; a session the server no longer knows stops the
+  // reconnecting and leaves for the sign-in page, which unmounts voice.
+  useEffect(() => {
+    if (!signedIn || (connection !== "reconnecting" && connection !== "disconnected")) return;
+    let active = true;
+    ports.session.check().then(
+      (alive) => {
+        if (!active || alive) return;
+        void runtime.realtime.stop().catch(() => undefined);
+        setLoginError(t("session.unauthorized"));
+        setBoot(ANONYMOUS);
+      },
+      // Unreachable is not signed out; the reconnect keeps trying.
+      () => undefined,
+    );
+    return () => {
+      active = false;
+    };
+  }, [connection, ports, runtime, signedIn, t]);
+
   const logout = useCallback(async () => {
     try {
       await ports.session.logout();

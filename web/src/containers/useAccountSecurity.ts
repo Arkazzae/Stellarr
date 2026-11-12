@@ -6,7 +6,14 @@ import type { EnrollMode } from "@/components/auth/MfaEnrollStep";
 import type { SecurityDialogStep } from "@/components/account/panes/SecurityStepDialog";
 import type { MessageKey } from "@/i18n";
 import { ApiError } from "@/lib/api/errors";
-import type { AccountSecurity, MfaChallenge, MfaCompletion, MfaMethod, TrustedDevice } from "@/ports";
+import type {
+  AccountSecurity,
+  MfaChallenge,
+  MfaCompletion,
+  MfaMethod,
+  OwnSession,
+  TrustedDevice,
+} from "@/ports";
 import { useLanguage, usePorts } from "@/state/hooks";
 
 import { challengeErrorMessage } from "./challengeErrors";
@@ -36,6 +43,7 @@ export function useAccountSecurity(open: boolean) {
   const security = ports.security;
   const challenges = ports.session.challenge;
   const [state, setState] = useState<AccountSecurity | null>(null);
+  const [sessions, setSessions] = useState<OwnSession[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -47,7 +55,9 @@ export function useAccountSecurity(open: boolean) {
 
   const refresh = useCallback(async () => {
     try {
-      setState(await security.get());
+      const [next, devices] = await Promise.all([security.get(), security.listSessions()]);
+      setState(next);
+      setSessions(devices);
       setLoadError(null);
     } catch {
       setLoadError(t("security.loadFailed"));
@@ -57,10 +67,11 @@ export function useAccountSecurity(open: boolean) {
   useEffect(() => {
     if (!open) return;
     let active = true;
-    security.get().then(
-      (next) => {
+    Promise.all([security.get(), security.listSessions()]).then(
+      ([next, devices]) => {
         if (!active) return;
         setState(next);
+        setSessions(devices);
         setLoadError(null);
       },
       () => active && setLoadError(t("security.loadFailed")),
@@ -201,6 +212,23 @@ export function useAccountSecurity(open: boolean) {
       onAddMethod: () => start({ kind: "enroll" }),
       onRemoveMethod: (method: MfaMethod) => start({ kind: "remove", methodId: method.id }),
       onRegenerateCodes: () => start({ kind: "regenerate" }),
+      sessions,
+      onRevokeSession: (session: OwnSession) => {
+        setBusy(true);
+        setActionError(null);
+        security
+          .revokeSession(session.id)
+          .then(refresh, () => setActionError(t("security.actionFailed")))
+          .finally(() => setBusy(false));
+      },
+      onRevokeOtherSessions: () => {
+        setBusy(true);
+        setActionError(null);
+        security
+          .revokeOtherSessions()
+          .then(refresh, () => setActionError(t("security.actionFailed")))
+          .finally(() => setBusy(false));
+      },
       onRevokeDevice: (device: TrustedDevice) => {
         setBusy(true);
         setActionError(null);

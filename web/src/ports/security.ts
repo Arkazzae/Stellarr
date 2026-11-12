@@ -1,6 +1,6 @@
-import type { AccountSecurity, MfaChallenge } from "@/lib/api/types";
+import type { AccountSecurity, MfaChallenge, OwnSession } from "@/lib/api/types";
 
-export type { AccountSecurity, SecurityEvent, TrustedDevice } from "@/lib/api/types";
+export type { AccountSecurity, OwnSession, SecurityEvent, TrustedDevice } from "@/lib/api/types";
 
 /**
  * The signed-in account's second factor. A change to it needs proof: a recent
@@ -18,4 +18,9 @@ export interface AccountSecurityPort {
   /** The new codes, shown once; the old ones stop working. */
   regenerateRecoveryCodes(password?: string): Promise<string[]>;
   revokeTrustedDevice(deviceId: string): Promise<void>;
+  /** The account's signed-in devices, newest activity first. */
+  listSessions(): Promise<OwnSession[]>;
+  /** Signs another device out at once, live connections included. */
+  revokeSession(sessionId: string): Promise<void>;
+  revokeOtherSessions(): Promise<void>;
 }

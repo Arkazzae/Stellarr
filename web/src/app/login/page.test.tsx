@@ -125,6 +125,9 @@ function fakeSecurityPort(overrides: Partial<AccountSecurityPort> = {}): Account
     removeMethod: vi.fn(async () => {}),
     regenerateRecoveryCodes: vi.fn(async () => []),
     revokeTrustedDevice: vi.fn(async () => {}),
+    listSessions: vi.fn(async () => []),
+    revokeSession: vi.fn(async () => {}),
+    revokeOtherSessions: vi.fn(async () => {}),
     ...overrides,
   };
 }
@@ -328,6 +331,20 @@ describe("LoginPage second factor", () => {
       code: "AAAA-BBBB",
       rememberDevice: false,
     });
+  });
+
+  it("asks again when the ports are replaced before the first answer comes", async () => {
+    let answerFirst: (challenge: MfaChallenge | null) => void = () => undefined;
+    mocks.challenge = fakeChallengePort({
+      pending: vi.fn(() => new Promise<MfaChallenge | null>((resolve) => (answerFirst = resolve))),
+    });
+    const view = render(<LoginPage />);
+    // A sign-out elsewhere hands the page new ports while it is still asking.
+    mocks.challenge = fakeChallengePort();
+    view.rerender(<LoginPage />);
+    answerFirst(null);
+
+    expect(await screen.findByLabelText("Hasło")).toBeInTheDocument();
   });
 
   it("resumes a challenge this browser left unfinished", async () => {
