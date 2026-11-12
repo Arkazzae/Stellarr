@@ -147,14 +147,13 @@ export function UserSecuritySheet({ user, open, onOpenChange }: UserSecurityShee
                 {security.methods.length === 0 ? (
                   <p className="text-muted-foreground">{t("userSecurity.noMethods")}</p>
                 ) : (
-                  <ul className="space-y-1">
+                  <ul className="space-y-2">
                     {security.methods.map((method) => (
                       <li key={method.id}>
-                        <span className="font-medium">{method.name}</span>
-                        <span className="text-muted-foreground">
-                          {" · "}
+                        <span className="block font-medium">{method.name}</span>
+                        <span className="block text-xs text-muted-foreground">
                           {METHOD_LABEL[method.type] ? t(METHOD_LABEL[method.type]!) : method.type}
-                          {" · "}
+                          {", "}
                           {!method.confirmed
                             ? t("userSecurity.pending")
                             : method.lastUsedAt
@@ -224,9 +223,9 @@ export function UserSecuritySheet({ user, open, onOpenChange }: UserSecurityShee
           )}
 
           {recovery !== null ? (
-            <section className="space-y-2 rounded-md border p-3">
+            <section className="space-y-2 rounded-2xl border border-border/70 bg-card p-4">
               <h3 className="font-medium">{t("userSecurity.credential")}</h3>
-              <code className="block break-all rounded bg-muted px-2 py-1.5 font-mono text-xs">{recovery.credential}</code>
+              <code className="block break-all rounded-xl bg-background px-3 py-2 font-mono text-xs">{recovery.credential}</code>
               <p className="text-muted-foreground">
                 {t("userSecurity.credentialDetail", { date: formatDateTime(recovery.expiresAt) })}
                 <br />
@@ -241,7 +240,7 @@ export function UserSecuritySheet({ user, open, onOpenChange }: UserSecurityShee
               </Button>
             </section>
           ) : (
-            <form className="space-y-2 rounded-md border p-3" onSubmit={recover}>
+            <form className="space-y-2 rounded-2xl border border-border/70 bg-card p-4" onSubmit={recover}>
               <h3 className="font-medium">{t("userSecurity.recover")}</h3>
               <p className="text-muted-foreground">{t("userSecurity.recoverDetail")}</p>
               <Label htmlFor={reasonId}>{t("userSecurity.reason")}</Label>
