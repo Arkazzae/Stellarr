@@ -222,6 +222,7 @@ public sealed partial class Messages
         MessageKey.SecurityPasswordRequired => "Confirm your current password.",
         MessageKey.SecurityFreshMfaRequired => "Confirm a current second factor before changing security settings.",
         MessageKey.CockpitSecondStepRequired => "Cockpit needs a session confirmed with a second step.",
+        MessageKey.FreshSecondStepRequired => "This needs a second step from the last 5 minutes. Confirm it and try again.",
         MessageKey.SecurityRecoveryCredentialInvalid => "The recovery credential is invalid or has expired.",
         MessageKey.SecurityAlertSubject => "Security activity on {instance}",
         MessageKey.SecurityAlertGreeting => "Hi {name},",

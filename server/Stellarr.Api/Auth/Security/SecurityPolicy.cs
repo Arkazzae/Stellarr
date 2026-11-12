@@ -131,6 +131,32 @@ public static class MfaPolicy
     public static bool IsSatisfied(bool freshMfa, string? evidence, string requirement) =>
         freshMfa || (evidence == "trusted_device" && requirement != MfaRequirements.Cockpit);
 
+    /// <summary>
+    /// Whether this session may make a sensitive change now: the account has
+    /// no second step to ask for, or the session passed a real one (not a
+    /// trusted device) within <see cref="FreshMfaWindow"/>.
+    /// </summary>
+    public static async Task<bool> HasFreshSecondStepAsync(
+        AppDbContext db,
+        Guid userId,
+        Guid? sessionId,
+        CancellationToken cancellationToken)
+    {
+        if (!await HasConfirmedMethodAsync(db, userId, cancellationToken))
+        {
+            return true;
+        }
+
+        var since = DateTime.UtcNow - FreshMfaWindow;
+        return sessionId is { } id && await db.UserSessions.AsNoTracking().AnyAsync(
+            x => x.Id == id &&
+                x.UserId == userId &&
+                x.RevokedAt == null &&
+                x.MfaCompletedAt != null &&
+                x.MfaCompletedAt >= since,
+            cancellationToken);
+    }
+
     public static async Task<bool> HasConfirmedMethodAsync(
         AppDbContext db,
         Guid userId,

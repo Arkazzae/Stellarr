@@ -220,6 +220,7 @@ public sealed partial class Messages
         MessageKey.SecurityPasswordRequired => "Potwierdź obecne hasło.",
         MessageKey.SecurityFreshMfaRequired => "Przed zmianą ustawień zabezpieczeń potwierdź bieżący drugi składnik.",
         MessageKey.CockpitSecondStepRequired => "Cockpit wymaga sesji potwierdzonej drugim krokiem.",
+        MessageKey.FreshSecondStepRequired => "Ta operacja wymaga drugiego kroku sprzed najwyżej 5 minut. Potwierdź go i ponów operację.",
         MessageKey.SecurityRecoveryCredentialInvalid => "Poświadczenie odzyskiwania jest nieprawidłowe lub wygasło.",
         MessageKey.SecurityAlertSubject => "Aktywność zabezpieczeń w {instance}",
         MessageKey.SecurityAlertGreeting => "Cześć {name},",

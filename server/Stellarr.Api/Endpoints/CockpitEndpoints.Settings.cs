@@ -42,6 +42,13 @@ public static partial class CockpitEndpoints
         CancellationToken cancellationToken)
     {
         var server = http.RequireInstanceServer();
+        // The account security card changes who may skip a second step; the
+        // rest of the page does not need a fresh one.
+        if (ChangesAccountSecurity(request) && await FreshSecondStepFilter.RefusalAsync(http) is { } refusal)
+        {
+            return refusal;
+        }
+
         var problems = InstanceSettingsService.Validate(request, messages);
         if (problems.Count > 0)
         {
@@ -232,4 +239,14 @@ public static partial class CockpitEndpoints
     /// </summary>
     internal static string PublicUrlOf(IConfiguration configuration) =>
         (configuration["Operations:PublicUrl"] ?? "").Trim().TrimEnd('/');
+
+    private static bool ChangesAccountSecurity(UpdateCockpitSettingsRequest request) =>
+        request.MfaRequirement is not null ||
+        request.TrustedDeviceDays is not null ||
+        request.AuthChallengeMinutes is not null ||
+        request.EmailCodeMinutes is not null ||
+        request.EmailCodeCooldownSeconds is not null ||
+        request.EmailCodeMaxAttempts is not null ||
+        request.EmailCodeSendsPerHour is not null ||
+        request.CliRecoveryMinutes is not null;
 }

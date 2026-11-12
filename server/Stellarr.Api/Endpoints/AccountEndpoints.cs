@@ -232,6 +232,13 @@ public static class AccountEndpoints
         }
 
         var user = await FindCurrentAsync(principal, db, cancellationToken);
+        // Checked before the password, so a stolen session cannot use this
+        // form to try passwords on an account that has a second step.
+        if (!await MfaPolicy.HasFreshSecondStepAsync(db, user.Id, principal.FindSessionId(), cancellationToken))
+        {
+            return Outcome("second-step-required");
+        }
+
         if (request.CurrentPassword is null || !passwords.Verify(request.CurrentPassword, user.PasswordHash))
         {
             return Outcome("wrong-current");

@@ -30,9 +30,11 @@ device, sign out one of their other sessions, or sign out every session but
 the current one. A signed-out session's live connections close at once and
 its browser returns to the sign-in page.
 
-Adding or removing a method and replacing the recovery codes need proof: a
+Adding or removing a method, replacing the recovery codes, linking or
+unlinking an identity provider and changing the password need proof: a
 second step completed in the last five minutes, or the password when the
-account has no method yet. The pane asks for it when needed. One address can
+account has no method yet. The pane asks for it when needed and then makes
+the change. One address can
 make 30 of these requests, the steps of a setup included, in 15 minutes.
 Sending an email code falls under the stricter limit shared with registration
 and password reset: five requests per 15 minutes.
@@ -108,6 +110,13 @@ completed a real second step; a trusted device is not enough. An owner whose
 session does not qualify is sent to confirm it in the web client and then
 returned to Cockpit. **Set up a method on the owner's account before changing
 the policy**, so the confirmation has something to ask for.
+
+Once the owner's account has a method, the changes in Cockpit that could hand
+the instance or an account to someone else need a second step from the last
+five minutes, whatever the policy: creating accounts, changing roles and
+account status, transferring or deleting servers, secrets, desktop releases,
+the account security settings, and downloading a backup. Cockpit then offers
+to confirm it in the web client and comes back to the same page.
 
 The other limits (challenge lifetime, email code lifetime, resend wait,
 attempts and hourly sends, CLI recovery lifetime) are listed with their ranges
