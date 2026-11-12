@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 
-import { Icon } from "@/components/icons/Icon";
+import { Icon } from "@stellarr/ui/icons";
 import { ProfileBioText } from "@/components/profile/ProfileBio";
 import { EmojiPicker } from "@/components/room/EmojiPicker";
 import type { CustomEmoji } from "@/ports";

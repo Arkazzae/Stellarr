@@ -1,4 +1,4 @@
-import type { IconName } from "@/components/icons/Icon";
+import type { IconName } from "@stellarr/ui/icons";
 import type { Translator } from "@/i18n";
 import type { ChannelKind, OpusProfileId } from "@/ports";
 

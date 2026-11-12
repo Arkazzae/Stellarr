@@ -2,7 +2,7 @@
 
 import { useId, useState, type ReactNode } from "react";
 
-import { Icon } from "@/components/icons/Icon";
+import { Icon } from "@stellarr/ui/icons";
 import type { FriendRequestVM, FriendsTab, FriendVM } from "@/components/view-models";
 import type { AddFriendResult } from "@/ports";
 import { useLanguage } from "@/state/LanguageProvider";

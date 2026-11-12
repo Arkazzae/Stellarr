@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useRef } from "react";
 
-import { Icon } from "@/components/icons/Icon";
+import { Icon } from "@stellarr/ui/icons";
 import { ErrorNotice } from "@/components/primitives/ErrorNotice";
 import type { CameraTest, VoiceSettings } from "@/ports";
 import { useLanguage } from "@/state/hooks";

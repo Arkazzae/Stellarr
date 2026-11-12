@@ -9,7 +9,7 @@ import {
 } from "react";
 import { Virtuoso, type VirtuosoHandle } from "react-virtuoso";
 
-import { Icon } from "@/components/icons/Icon";
+import { Icon } from "@stellarr/ui/icons";
 import type { OpenProfile } from "@/components/view-models";
 import type { CustomEmoji, MessageActionSupport } from "@/ports";
 

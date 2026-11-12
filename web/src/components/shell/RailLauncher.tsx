@@ -9,7 +9,7 @@ import {
   type CSSProperties,
 } from "react";
 
-import { Icon, type IconName } from "@/components/icons/Icon";
+import { Icon, type IconName } from "@stellarr/ui/icons";
 import { useLanguage } from "@/state/hooks";
 
 export interface RailLauncherItem {

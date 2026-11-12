@@ -11,6 +11,7 @@
     "build:cockpit": "npm run build -w stellarr-cockpit",
     "test:web": "npm run test -w stellarr-web",
     "test:cockpit": "npm run test -w stellarr-cockpit",
+    "test:ui": "npm run test -w @stellarr/ui",
     "lint:web": "npm run lint -w stellarr-web",
     "lint:cockpit": "npm run lint -w stellarr-cockpit",
     "typecheck:web": "npm run typecheck -w stellarr-web",

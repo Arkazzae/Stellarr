@@ -3,7 +3,8 @@
 The app uses one local SVG family, drawn for Stellarr with the soft geometry
 and segmented contours of Iconsax Linear / Broken as its visual reference.
 `paths.ts` is the single source, including formatting and noise-suppression
-icons. `Icon` renders it everywhere in the web and desktop clients.
+icons. `Icon` renders it everywhere in the web and desktop clients and in
+Cockpit; import both from `@stellarr/ui/icons`.
 
 - Use a 24 × 24 canvas, a 1.5 px stroke, round caps and round joins.
 - Keep optical padding around the silhouette; verify at 16, 20 and 24 px.
@@ -16,5 +17,5 @@ icons. `Icon` renders it everywhere in the web and desktop clients.
 Brand marks, avatars, emoji content and waveform data are separate assets.
 
 Standalone SVG exports live in [`branding/icons/`](../../../../branding/icons/).
-Regenerate them with `npm run icons:export` from `web/`, or verify them with
-`npm run icons:export -- --check`.
+Regenerate them from the repository root with
+`npm run icons:export -w @stellarr/ui`, or verify them by adding `-- --check`.

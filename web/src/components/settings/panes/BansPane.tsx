@@ -1,6 +1,6 @@
 "use client";
 
-import { Icon } from "@/components/icons/Icon";
+import { Icon } from "@stellarr/ui/icons";
 import { Avatar } from "@/components/primitives/Avatar";
 import { formatShortDate } from "@/components/settings/panes/paneFormat";
 import { useAsyncAction } from "@/hooks/useAsyncAction";

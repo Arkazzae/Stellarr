@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 
-import { Icon } from "@/components/icons/Icon";
+import { Icon } from "@stellarr/ui/icons";
 import { IconButton } from "@/components/primitives/IconButton";
 import { Modal } from "@/components/primitives/Modal";
 import { useLanguage } from "@/state/hooks";

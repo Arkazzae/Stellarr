@@ -1,6 +1,6 @@
 "use client";
 
-import { Icon, type IconName } from "@/components/icons/Icon";
+import { Icon, type IconName } from "@stellarr/ui/icons";
 import { Segmented, type SegmentedOption } from "@/components/primitives/Segmented";
 import type { MessageKey } from "@/i18n";
 import { useLanguage } from "@/state/hooks";

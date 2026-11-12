@@ -2,7 +2,7 @@
 
 import { useId } from "react";
 
-import { Icon } from "@/components/icons/Icon";
+import { Icon } from "@stellarr/ui/icons";
 import { ErrorNotice } from "@/components/primitives/ErrorNotice";
 import { PLAYBACK_TUNING_PRESETS } from "@/ports";
 import type { OutputTest, PlaybackProfileId, PlaybackTuning, VoiceSettings } from "@/ports";
