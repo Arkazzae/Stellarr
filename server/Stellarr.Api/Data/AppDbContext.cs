@@ -25,6 +25,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<ServerBan> ServerBans => Set<ServerBan>();
     public DbSet<ServerInvite> ServerInvites => Set<ServerInvite>();
     public DbSet<ServerAuditEntry> ServerAuditEntries => Set<ServerAuditEntry>();
+    public DbSet<OperatorAuditEntry> OperatorAuditEntries => Set<OperatorAuditEntry>();
     public DbSet<ServerAdminSettings> ServerAdminSettings => Set<ServerAdminSettings>();
     public DbSet<Channel> Channels => Set<Channel>();
     public DbSet<ChannelRead> ChannelReads => Set<ChannelRead>();

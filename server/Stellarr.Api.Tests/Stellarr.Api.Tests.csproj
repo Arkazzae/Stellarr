@@ -16,5 +16,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../Stellarr.Api/Stellarr.Api.csproj" />
+    <ProjectReference Include="../Stellarr.Cli/Stellarr.Cli.csproj" />
   </ItemGroup>
 </Project>

@@ -681,6 +681,12 @@
           "Microsoft.EntityFrameworkCore.Sqlite": "[10.0.14, )",
           "SQLitePCLRaw.lib.e_sqlite3": "[3.53.3, )"
         }
+      },
+      "stellarr.cli": {
+        "type": "Project",
+        "dependencies": {
+          "Stellarr.Api": "[1.0.0, )"
+        }
       }
     }
   }
