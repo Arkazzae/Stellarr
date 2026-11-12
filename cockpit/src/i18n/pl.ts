@@ -324,6 +324,40 @@ export const pl = {
   "settings.delivery.description": "Test idzie tym samym transportem co reszta poczty.",
   "settings.test.hint": "Wiadomość pójdzie przez {provider}.",
   "settings.test.accepted": "{provider} przyjął wiadomość. ID: {id}",
+  "settings.security.title": "Bezpieczeństwo kont",
+  "settings.security.description":
+    "Kto potwierdza logowanie drugim krokiem i jak długo działają kody oraz zaufane urządzenia. Te ustawienia zapisuje przycisk na dole karty, osobno od reszty.",
+  "settings.security.requirement": "Drugi krok przy logowaniu",
+  "settings.security.requirement.optional": "Opcjonalny",
+  "settings.security.requirement.optionalDescription":
+    "Każde konto decyduje samo. Konto z dodaną metodą potwierdza nią logowanie.",
+  "settings.security.requirement.admins": "Administratorzy",
+  "settings.security.requirement.adminsDescription":
+    "Wymagany od właściciela instancji i ról z uprawnieniem „Zarządzanie serwerem”. Konta bez metody dodają ją przy następnym logowaniu.",
+  "settings.security.requirement.everyone": "Wszyscy",
+  "settings.security.requirement.everyoneDescription":
+    "Wymagany od każdego konta. Konta bez metody dodają ją przy następnym logowaniu.",
+  "settings.security.requirement.cockpit": "Tylko Cockpit",
+  "settings.security.requirement.cockpitDescription":
+    "Logowanie zostaje bez zmian. Drugiego kroku wymaga tylko Cockpit.",
+  "settings.security.cockpitNote":
+    "Każda opcja poza „Opcjonalny” wpuszcza do Cockpitu tylko sesję potwierdzoną drugim krokiem. Zaufane urządzenie tu nie wystarcza.",
+  "settings.security.sessionsNote":
+    "Przy „Administratorzy” i „Wszyscy” sesje tych kont otwarte bez drugiego kroku i bez zaufanego urządzenia się kończą.",
+  "settings.security.warning.title": "Cockpit poprosi o drugi krok",
+  "settings.security.warning.description":
+    "Po zapisaniu Cockpit działa tylko w sesji potwierdzonej drugim krokiem. Najpierw włącz logowanie dwuetapowe na swoim koncie w Stellarr (Ustawienia, Logowanie i bezpieczeństwo). Bez tego można stracić dostęp do Cockpitu.",
+  "settings.security.trustedDeviceDays": "Zaufane urządzenie, dni",
+  "settings.security.challengeMinutes": "Czas na drugi krok, minuty",
+  "settings.security.emailCodeMinutes": "Ważność kodu z maila, minuty",
+  "settings.security.emailCooldownSeconds": "Odstęp między kodami z maila, sekundy",
+  "settings.security.emailAttempts": "Próby na jeden kod z maila",
+  "settings.security.emailSendsPerHour": "Kody z maila na godzinę",
+  "settings.security.cliRecoveryMinutes": "Kod odzyskiwania z CLI, minuty",
+  "settings.security.range": "Od {min} do {max}.",
+  "settings.security.outOfRange": "Wpisz liczbę całkowitą od {min} do {max}.",
+  "settings.security.save": "Zapisz ustawienia bezpieczeństwa",
+  "settings.security.saved": "Zapisano ustawienia bezpieczeństwa kont.",
   "secret.source.panel": "Ustawiony tutaj",
   "secret.source.environment": "Ze środowiska",
   "secret.source.none": "Nie ustawiony",

@@ -57,6 +57,14 @@ const stored: CockpitSettings = {
   orphanObjectRetentionDays: 7,
   automaticCleanupEnabled: true,
   updatedAt: "2025-03-01T10:00:00Z",
+  mfaRequirement: "optional",
+  trustedDeviceDays: 14,
+  authChallengeMinutes: 5,
+  emailCodeMinutes: 8,
+  emailCodeCooldownSeconds: 45,
+  emailCodeMaxAttempts: 5,
+  emailCodeSendsPerHour: 10,
+  cliRecoveryMinutes: 10,
 };
 
 beforeEach(() => {

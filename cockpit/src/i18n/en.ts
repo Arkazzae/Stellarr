@@ -329,6 +329,40 @@ export const en = {
   "settings.delivery.description": "The test goes through the same transport as the rest of the mail.",
   "settings.test.hint": "The message goes through {provider}.",
   "settings.test.accepted": "{provider} accepted the message. ID: {id}",
+  "settings.security.title": "Account security",
+  "settings.security.description":
+    "Who confirms sign-in with a second step, and how long codes and trusted devices last. The button at the bottom of this card saves these settings, apart from the rest.",
+  "settings.security.requirement": "Second step at sign-in",
+  "settings.security.requirement.optional": "Optional",
+  "settings.security.requirement.optionalDescription":
+    "Each account decides. An account with a method added confirms sign-in with it.",
+  "settings.security.requirement.admins": "Admins",
+  "settings.security.requirement.adminsDescription":
+    "Required from the instance owner and roles with the “Manage server” permission. Accounts without a method add one at their next sign-in.",
+  "settings.security.requirement.everyone": "Everyone",
+  "settings.security.requirement.everyoneDescription":
+    "Required from every account. Accounts without a method add one at their next sign-in.",
+  "settings.security.requirement.cockpit": "Cockpit only",
+  "settings.security.requirement.cockpitDescription":
+    "Sign-in stays as it is. Only Cockpit needs the second step.",
+  "settings.security.cockpitNote":
+    "Every option except “Optional” lets only a session confirmed with a second step into Cockpit. A trusted device is not enough there.",
+  "settings.security.sessionsNote":
+    "With “Admins” and “Everyone”, sessions of those accounts opened without a second step or a trusted device end.",
+  "settings.security.warning.title": "Cockpit will ask for a second step",
+  "settings.security.warning.description":
+    "Once saved, Cockpit works only in a session confirmed with a second step. First turn on two-step sign-in for your own account in Stellarr (Settings, Login and security). Without it you can lock yourself out of Cockpit.",
+  "settings.security.trustedDeviceDays": "Trusted device, days",
+  "settings.security.challengeMinutes": "Time for the second step, minutes",
+  "settings.security.emailCodeMinutes": "Email code lifetime, minutes",
+  "settings.security.emailCooldownSeconds": "Wait between email codes, seconds",
+  "settings.security.emailAttempts": "Attempts per email code",
+  "settings.security.emailSendsPerHour": "Email codes per hour",
+  "settings.security.cliRecoveryMinutes": "CLI recovery code, minutes",
+  "settings.security.range": "From {min} to {max}.",
+  "settings.security.outOfRange": "Enter a whole number from {min} to {max}.",
+  "settings.security.save": "Save security settings",
+  "settings.security.saved": "Account security settings saved.",
   "secret.source.panel": "Set here",
   "secret.source.environment": "From the environment",
   "secret.source.none": "Not set",

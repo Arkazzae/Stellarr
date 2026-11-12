@@ -262,7 +262,27 @@ export interface CockpitSecret {
 /** An integration switch the operator flipped; one left out stays as stored. */
 export type CockpitIntegrationSwitches = Partial<Pick<CockpitSettings, "resendEnabled" | "giphyEnabled">>;
 
+export type CockpitSecurityKey =
+  | "mfaRequirement"
+  | "trustedDeviceDays"
+  | "authChallengeMinutes"
+  | "emailCodeMinutes"
+  | "emailCodeCooldownSeconds"
+  | "emailCodeMaxAttempts"
+  | "emailCodeSendsPerHour"
+  | "cliRecoveryMinutes";
+
+/** A sign-in security setting the operator changed; one left out stays as stored. */
+export type CockpitSecurityChanges = Partial<Pick<CockpitSettings, CockpitSecurityKey>>;
+
 export type CockpitSmtpSecurity = "starttls" | "tls" | "none";
+
+/**
+ * Who has to confirm sign-in with a second factor. Anything but `optional`
+ * also lets only a session confirmed with an actual second factor into
+ * Cockpit; a trusted device is not enough there.
+ */
+export type CockpitMfaRequirement = "optional" | "admins" | "everyone" | "cockpit";
 
 export interface CockpitSettings {
   instanceName: string;
@@ -293,6 +313,19 @@ export interface CockpitSettings {
   orphanObjectRetentionDays: number;
   automaticCleanupEnabled: boolean;
   updatedAt: string;
+  mfaRequirement: CockpitMfaRequirement;
+  /** How long a device remembered at sign-in skips the second factor. */
+  trustedDeviceDays: number;
+  /** How long a sign-in waits for its second factor. */
+  authChallengeMinutes: number;
+  emailCodeMinutes: number;
+  /** The wait before another email code can be sent; 0 means none. */
+  emailCodeCooldownSeconds: number;
+  /** Wrong entries one email code allows. */
+  emailCodeMaxAttempts: number;
+  emailCodeSendsPerHour: number;
+  /** How long a recovery credential printed by the operator CLI works. */
+  cliRecoveryMinutes: number;
 }
 
 interface ProblemDetails {
@@ -436,7 +469,13 @@ export const cockpitApi = {
   // The integration switches go only when the operator flips one. The settings
   // carry their effective state, and sending that back would turn "never
   // chosen" (on as soon as a key exists) into an explicit "off".
-  updateSettings: (settings: CockpitSettings, switches: CockpitIntegrationSwitches = {}, signal?: AbortSignal) =>
+  // The sign-in security settings go only when the operator changed one, so a
+  // save of the other settings leaves them as they are stored.
+  updateSettings: (
+    settings: CockpitSettings,
+    changes: CockpitIntegrationSwitches & CockpitSecurityChanges = {},
+    signal?: AbortSignal,
+  ) =>
     request<CockpitSettings>(
       "/api/cockpit/settings",
       {
@@ -457,7 +496,7 @@ export const cockpitApi = {
           smtpPort: settings.smtpPort,
           smtpSecurity: settings.smtpSecurity,
           smtpUsername: settings.smtpUsername,
-          ...switches,
+          ...changes,
         },
       },
       signal,

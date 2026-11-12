@@ -70,6 +70,14 @@ const stored: CockpitSettings = {
   orphanObjectRetentionDays: 7,
   automaticCleanupEnabled: true,
   updatedAt: "2025-03-01T10:00:00Z",
+  mfaRequirement: "optional",
+  trustedDeviceDays: 14,
+  authChallengeMinutes: 5,
+  emailCodeMinutes: 8,
+  emailCodeCooldownSeconds: 45,
+  emailCodeMaxAttempts: 5,
+  emailCodeSendsPerHour: 10,
+  cliRecoveryMinutes: 10,
 };
 
 function deferred<T>() {
@@ -458,5 +466,236 @@ describe("SettingsPage SMTP password", () => {
     expect(await screen.findByText("Ustawiony tutaj")).toBeTruthy();
     // Whether mail is ready depends on the password, so the settings are read again.
     expect(settingsMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("SettingsPage account security", () => {
+  const radio = (name: string) => screen.getByRole("radio", { name: new RegExp(`^${name}`) }) as HTMLInputElement;
+  const saveSecurity = () => button("Zapisz ustawienia bezpieczeństwa");
+  const warning = () => screen.queryByText("Cockpit poprosi o drugi krok");
+
+  it("shows the stored requirement and limits with nothing to save", async () => {
+    await renderLoaded({
+      ...stored,
+      mfaRequirement: "cockpit",
+      trustedDeviceDays: 30,
+      authChallengeMinutes: 7,
+      emailCodeMinutes: 12,
+      emailCodeCooldownSeconds: 0,
+      emailCodeMaxAttempts: 3,
+      emailCodeSendsPerHour: 20,
+      cliRecoveryMinutes: 15,
+    });
+
+    expect(radio("Tylko Cockpit").checked).toBe(true);
+    for (const name of ["Opcjonalny", "Administratorzy", "Wszyscy"]) expect(radio(name).checked).toBe(false);
+    expect(input("Zaufane urządzenie, dni").value).toBe("30");
+    expect(input("Czas na drugi krok, minuty").value).toBe("7");
+    expect(input("Ważność kodu z maila, minuty").value).toBe("12");
+    expect(input("Odstęp między kodami z maila, sekundy").value).toBe("0");
+    expect(input("Próby na jeden kod z maila").value).toBe("3");
+    expect(input("Kody z maila na godzinę").value).toBe("20");
+    expect(input("Kod odzyskiwania z CLI, minuty").value).toBe("15");
+    // The stored requirement left as it is changes nothing, so it does not warn.
+    expect(warning()).toBeNull();
+    expect(saveSecurity().disabled).toBe(true);
+  });
+
+  it("warns when one requirement other than optional replaces another", async () => {
+    await renderLoaded({ ...stored, mfaRequirement: "admins" });
+    expect(warning()).toBeNull();
+
+    await userEvent.click(radio("Wszyscy"));
+    expect(warning()).toBeTruthy();
+
+    await userEvent.click(radio("Administratorzy"));
+    expect(warning()).toBeNull();
+
+    await userEvent.click(radio("Opcjonalny"));
+    expect(warning()).toBeNull();
+    expect(saveSecurity().disabled).toBe(false);
+  });
+
+  it("describes each requirement in one line", async () => {
+    await renderLoaded();
+
+    expect(radio("Opcjonalny").checked).toBe(true);
+    expect(radio("Administratorzy").closest("label")?.textContent).toContain("uprawnieniem „Zarządzanie serwerem”");
+    expect(radio("Wszyscy").closest("label")?.textContent).toContain("Wymagany od każdego konta.");
+    expect(radio("Tylko Cockpit").closest("label")?.textContent).toContain("Logowanie zostaje bez zmian.");
+  });
+
+  it("warns while a requirement other than optional is picked", async () => {
+    await renderLoaded();
+    expect(warning()).toBeNull();
+
+    await userEvent.click(radio("Administratorzy"));
+    expect(warning()).toBeTruthy();
+    expect(screen.getByText(/Ustawienia, Logowanie i bezpieczeństwo/).textContent).toContain(
+      "można stracić dostęp do Cockpitu",
+    );
+
+    await userEvent.click(radio("Wszyscy"));
+    expect(warning()).toBeTruthy();
+    await userEvent.click(radio("Tylko Cockpit"));
+    expect(warning()).toBeTruthy();
+
+    await userEvent.click(radio("Opcjonalny"));
+    expect(warning()).toBeNull();
+    expect(saveSecurity().disabled).toBe(true);
+  });
+
+  it("limits every field to the range the server accepts", async () => {
+    await renderLoaded();
+
+    for (const [label, min, max] of [
+      ["Zaufane urządzenie, dni", "1", "365"],
+      ["Czas na drugi krok, minuty", "1", "60"],
+      ["Ważność kodu z maila, minuty", "1", "60"],
+      ["Odstęp między kodami z maila, sekundy", "0", "600"],
+      ["Próby na jeden kod z maila", "1", "10"],
+      ["Kody z maila na godzinę", "1", "60"],
+      ["Kod odzyskiwania z CLI, minuty", "1", "60"],
+    ] as const) {
+      expect(input(label).min, label).toBe(min);
+      expect(input(label).max, label).toBe(max);
+      expect(input(label).parentElement?.textContent, label).toContain(`Od ${min} do ${max}.`);
+    }
+
+    await replaceText("Zaufane urządzenie, dni", "366");
+    expect(input("Zaufane urządzenie, dni").getAttribute("aria-invalid")).toBe("true");
+    expect(input("Zaufane urządzenie, dni").parentElement?.textContent).toContain(
+      "Wpisz liczbę całkowitą od 1 do 365.",
+    );
+    expect(saveSecurity().disabled).toBe(true);
+
+    await replaceText("Zaufane urządzenie, dni", "365");
+    expect(input("Zaufane urządzenie, dni").getAttribute("aria-invalid")).toBe("false");
+    expect(saveSecurity().disabled).toBe(false);
+
+    await replaceText("Próby na jeden kod z maila", "11");
+    expect(saveSecurity().disabled).toBe(true);
+    await replaceText("Próby na jeden kod z maila", "10");
+
+    // No wait between email codes is allowed; a zero elsewhere is not.
+    await replaceText("Odstęp między kodami z maila, sekundy", "0");
+    expect(input("Odstęp między kodami z maila, sekundy").getAttribute("aria-invalid")).toBe("false");
+    expect(saveSecurity().disabled).toBe(false);
+    await replaceText("Czas na drugi krok, minuty", "0");
+    expect(input("Czas na drugi krok, minuty").getAttribute("aria-invalid")).toBe("true");
+    expect(saveSecurity().disabled).toBe(true);
+
+    await userEvent.click(saveSecurity());
+    expect(updateMock).not.toHaveBeenCalled();
+  });
+
+  it("saves only the security settings that changed, on the stored rest, without reloading the panel", async () => {
+    const context = await renderLoaded();
+    const reply = deferred<CockpitSettings>();
+    updateMock.mockReturnValue(reply.promise);
+    await replaceText("Nazwa instancji", "Nowy dom");
+    await userEvent.click(radio("Administratorzy"));
+    await replaceText("Zaufane urządzenie, dni", "30");
+    // Changed and set back: not a change.
+    await replaceText("Próby na jeden kod z maila", "3");
+    await replaceText("Próby na jeden kod z maila", "5");
+
+    await userEvent.click(saveSecurity());
+
+    expect(updateMock).toHaveBeenCalledExactlyOnceWith(stored, { mfaRequirement: "admins", trustedDeviceDays: 30 });
+    expect(button("Zapisywanie").disabled).toBe(true);
+    expect(button("Zapisz ustawienia").disabled).toBe(true);
+
+    reply.resolve({ ...stored, mfaRequirement: "admins", trustedDeviceDays: 30 });
+
+    expect((await screen.findByRole("status")).textContent).toBe("Zapisano ustawienia bezpieczeństwa kont.");
+    expect(radio("Administratorzy").checked).toBe(true);
+    expect(input("Zaufane urządzenie, dni").value).toBe("30");
+    // The other card's edit is still an edit, and the saved requirement no longer warns.
+    expect(input("Nazwa instancji").value).toBe("Nowy dom");
+    expect(warning()).toBeNull();
+    expect(saveSecurity().disabled).toBe(true);
+    expect(context.reload).not.toHaveBeenCalled();
+    expect(screen.queryByText("Ustawienia zapisane")).toBeNull();
+
+    updateMock.mockResolvedValue({ ...stored, mfaRequirement: "admins", trustedDeviceDays: 30, instanceName: "Nowy dom" });
+    await userEvent.click(button("Zapisz ustawienia"));
+
+    expect(updateMock).toHaveBeenLastCalledWith({
+      ...stored,
+      mfaRequirement: "admins",
+      trustedDeviceDays: 30,
+      instanceName: "Nowy dom",
+    });
+  });
+
+  it("keeps the security settings out of the page's save and keeps their edits", async () => {
+    await renderLoaded();
+    updateMock.mockResolvedValue({ ...stored, instanceName: "Nowy dom" });
+    await userEvent.click(radio("Wszyscy"));
+    await replaceText("Kody z maila na godzinę", "20");
+    await replaceText("Nazwa instancji", "Nowy dom");
+
+    await userEvent.click(button("Zapisz ustawienia"));
+
+    expect(updateMock).toHaveBeenCalledExactlyOnceWith({ ...stored, instanceName: "Nowy dom" });
+    expect(await screen.findByText("Ustawienia zapisane")).toBeTruthy();
+    expect(radio("Wszyscy").checked).toBe(true);
+    expect(input("Kody z maila na godzinę").value).toBe("20");
+    expect(warning()).toBeTruthy();
+    expect(saveSecurity().disabled).toBe(false);
+  });
+
+  it("saves the card on Enter in one of its fields, not the rest of the page", async () => {
+    await renderLoaded();
+    updateMock.mockResolvedValue({ ...stored, cliRecoveryMinutes: 20 });
+    await replaceText("Nazwa instancji", "Nowy dom");
+    await replaceText("Kod odzyskiwania z CLI, minuty", "20");
+
+    await userEvent.type(input("Kod odzyskiwania z CLI, minuty"), "{Enter}");
+
+    expect(updateMock).toHaveBeenCalledExactlyOnceWith(stored, { cliRecoveryMinutes: 20 });
+    expect(await screen.findByText("Zapisano ustawienia bezpieczeństwa kont.")).toBeTruthy();
+  });
+
+  it("shows the server's messages in the card and keeps the edits", async () => {
+    const context = await renderLoaded();
+    updateMock.mockRejectedValue(
+      new CockpitApiError(400, "Ustawienia są niepoprawne.", {
+        mfaRequirement: ["Nieznany wymóg."],
+        emailCodeMinutes: ["Kod e-mail musi być ważny od 1 do 60 minut.", "Druga uwaga."],
+      }),
+    );
+    await userEvent.click(radio("Wszyscy"));
+    await replaceText("Ważność kodu z maila, minuty", "9");
+
+    await userEvent.click(saveSecurity());
+
+    expect((await screen.findByText("Ustawienia są niepoprawne.")).getAttribute("role")).toBe("alert");
+    expect(screen.getByText("Nieznany wymóg.")).toBeTruthy();
+    const field = input("Ważność kodu z maila, minuty");
+    expect(field.getAttribute("aria-invalid")).toBe("true");
+    expect(field.parentElement?.textContent).toContain("Kod e-mail musi być ważny od 1 do 60 minut.");
+    expect(screen.queryByText("Druga uwaga.")).toBeNull();
+    // The page's own save notices stay for the page's save.
+    expect(screen.queryByText("Ustawienia nie zostały zapisane")).toBeNull();
+    expect(radio("Wszyscy").checked).toBe(true);
+    expect(field.value).toBe("9");
+    expect(context.reload).not.toHaveBeenCalled();
+
+    await userEvent.type(field, "0");
+
+    expect(screen.queryByText("Ustawienia są niepoprawne.")).toBeNull();
+    expect(screen.queryByText("Nieznany wymóg.")).toBeNull();
+  });
+
+  it("explains a security save failure that carries no message", async () => {
+    await renderLoaded();
+    updateMock.mockRejectedValue("boom");
+    await userEvent.click(radio("Administratorzy"));
+
+    await userEvent.click(saveSecurity());
+
+    expect(await screen.findByText("Nie udało się zapisać ustawień.")).toBeTruthy();
   });
 });
