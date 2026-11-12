@@ -1,4 +1,3 @@
-import * as TabsPrimitive from "@radix-ui/react-tabs";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { ActivityChart } from "@/components/activity-chart";
@@ -9,6 +8,7 @@ import { AvailabilityCard } from "@/components/availability-card";
 import { StatTile } from "@/components/stat-tile";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { t, type MessageKey } from "@/i18n";
 import { formatClock, formatDateTime, formatNumber } from "@/i18n/format";
@@ -87,17 +87,20 @@ function ActivityCard({ activity, error, className }: ActivityCardProps) {
         ) : null}
       </CardTitleRow>
       {activity ? (
-        <TabsPrimitive.Root
+        <Tabs
+          unstyled
           value={series}
           onValueChange={(value) => setSeries(value as Series)}
           className="flex flex-1 flex-col"
         >
-          <TabsPrimitive.List
+          <TabsList
+            unstyled
             aria-label={t("dashboard.activity.series")}
             className="flex shrink-0 overflow-x-auto border-b"
           >
             {SERIES.map(({ key, label }) => (
-              <TabsPrimitive.Trigger
+              <TabsTrigger
+                unstyled
                 key={key}
                 value={key}
                 className={cn(
@@ -110,11 +113,12 @@ function ActivityCard({ activity, error, className }: ActivityCardProps) {
                 <span className="text-xl leading-none font-semibold text-foreground tabular-nums">
                   {formatNumber(windowTotal(activity, key))}
                 </span>
-              </TabsPrimitive.Trigger>
+              </TabsTrigger>
             ))}
-          </TabsPrimitive.List>
+          </TabsList>
           {SERIES.map(({ key, label, hint }) => (
-            <TabsPrimitive.Content
+            <TabsContent
+              unstyled
               key={key}
               value={key}
               className="flex flex-1 flex-col gap-4 px-5 pt-3 pb-4 outline-none"
@@ -126,9 +130,9 @@ function ActivityCard({ activity, error, className }: ActivityCardProps) {
                 tableCaption={t("dashboard.activity.table")}
                 dateHeading={t("dashboard.activity.date")}
               />
-            </TabsPrimitive.Content>
+            </TabsContent>
           ))}
-        </TabsPrimitive.Root>
+        </Tabs>
       ) : error ? (
         <p role="alert" className="px-5 py-10 text-center text-sm text-danger">
           {error}
