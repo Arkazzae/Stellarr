@@ -28,6 +28,7 @@ function LoginScreen() {
   const { login } = useCockpit();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
+  const [keepSignedIn, setKeepSignedIn] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,7 +37,7 @@ function LoginScreen() {
     setSubmitting(true);
     setError(null);
     try {
-      await login(username, password);
+      await login(username, password, keepSignedIn);
       // Success replaces this screen, so the button stays disabled until it goes.
     } catch (cause) {
       setError(loginFailureMessage(cause));
@@ -76,6 +77,15 @@ function LoginScreen() {
                 required
               />
             </div>
+            <label className="flex cursor-pointer items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={keepSignedIn}
+                onChange={(event) => setKeepSignedIn(event.target.checked)}
+                className="size-4 accent-[var(--primary)]"
+              />
+              {t("gate.login.keepSignedIn")}
+            </label>
             {error ? (
               <Alert variant="destructive">
                 <AlertDescription>{error}</AlertDescription>

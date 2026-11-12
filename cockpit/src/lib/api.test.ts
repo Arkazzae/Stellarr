@@ -318,6 +318,13 @@ describe("routes", () => {
       { email: "a@b.c" },
     ],
     ["login", () => cockpitApi.login("ada", "pw"), "POST", "/api/auth/login", { username: "ada", password: "pw" }],
+    [
+      "login for this browser only",
+      () => cockpitApi.login("ada", "pw", false),
+      "POST",
+      "/api/auth/login",
+      { username: "ada", password: "pw", keepSignedIn: false },
+    ],
     ["logout", () => cockpitApi.logout(), "POST", "/api/auth/logout", undefined],
   ])("%s calls %s %s", async (_name, call, method, path, body) => {
     fetchMock.mockImplementation(async () => jsonResponse({}));

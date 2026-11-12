@@ -186,7 +186,7 @@ describe("login", () => {
       signIn = result.current.login("owner", "sekret");
     });
     await waitFor(() => expect(result.current.phase).toBe("loading"));
-    expect(loginMock).toHaveBeenCalledWith("owner", "sekret");
+    expect(loginMock).toHaveBeenCalledWith("owner", "sekret", true);
 
     await act(async () => {
       reloaded.resolve(bootstrapFor("Domek"));
@@ -212,6 +212,20 @@ describe("login", () => {
     expect(leaveForMock).toHaveBeenCalledExactlyOnceWith(target);
     expect(result.current.phase).toBe("anonymous");
     expect(bootstrapMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("tells the web client's recovery that the sign-in was not to be kept", async () => {
+    bootstrapMock.mockRejectedValueOnce(new CockpitApiError(401, "Brak sesji."));
+    const { result } = renderOps();
+    await waitFor(() => expect(result.current.phase).toBe("anonymous"));
+    loginMock.mockResolvedValue("security_recovery_required");
+
+    await act(async () => result.current.login("owner", "sekret", false));
+
+    expect(loginMock).toHaveBeenCalledWith("owner", "sekret", false);
+    expect(leaveForMock).toHaveBeenCalledExactlyOnceWith(
+      "/login?returnUrl=%2Fcockpit%2F&security_recovery_required=1&keep_signed_in=0",
+    );
   });
 
   it("rejects a failed login to the caller and leaves the phase alone", async () => {

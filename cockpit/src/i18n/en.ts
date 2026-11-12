@@ -34,6 +34,7 @@ export const en = {
   "gate.login.description": "This panel is available only to the instance owner.",
   "gate.login.username": "Username",
   "gate.login.password": "Password",
+  "gate.login.keepSignedIn": "Keep me signed in",
   "gate.login.submit": "Log in",
   "gate.login.submitting": "Logging in",
   "gate.checking": "Checking access to Cockpit",

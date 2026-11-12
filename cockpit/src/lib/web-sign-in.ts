@@ -7,11 +7,15 @@ import type { CockpitLoginStep } from "@/lib/api";
  */
 const BACK_TO_COCKPIT = `returnUrl=${encodeURIComponent("/cockpit/")}`;
 
-/** Where a sign-in the password did not finish goes on; the page resumes the pending step. */
-export function webSignInUrl(step: CockpitLoginStep): string {
-  return step === "security_recovery_required"
-    ? `/login?${BACK_TO_COCKPIT}&security_recovery_required=1`
-    : `/login?${BACK_TO_COCKPIT}`;
+/**
+ * Where a sign-in the password did not finish goes on; the page resumes the
+ * pending step. A challenge already holds the keep-signed-in choice on the
+ * server; an operator's recovery has none yet, so the address carries it.
+ */
+export function webSignInUrl(step: CockpitLoginStep, keepSignedIn = true): string {
+  if (step !== "security_recovery_required") return `/login?${BACK_TO_COCKPIT}`;
+  const recovery = `/login?${BACK_TO_COCKPIT}&security_recovery_required=1`;
+  return keepSignedIn ? recovery : `${recovery}&keep_signed_in=0`;
 }
 
 /** Where a signed-in owner confirms a second step, or sets up a first method, for Cockpit. */

@@ -544,9 +544,14 @@ export const cockpitApi = {
   requestPasswordReset: (email: string, signal?: AbortSignal) =>
     request<void>("/api/auth/password/forgot", { method: "POST", body: { email } }, signal),
   /** Resolves to null once signed in, or to the step the web client's sign-in page has to finish. */
-  login: async (username: string, password: string, signal?: AbortSignal) =>
+  /** `keepSignedIn` false asks for a session that ends with the browser. */
+  login: async (username: string, password: string, keepSignedIn = true, signal?: AbortSignal) =>
     pendingLoginStep(
-      await request<unknown>("/api/auth/login", { method: "POST", body: { username, password } }, signal),
+      await request<unknown>(
+        "/api/auth/login",
+        { method: "POST", body: { username, password, ...(keepSignedIn ? {} : { keepSignedIn: false }) } },
+        signal,
+      ),
     ),
   logout: (signal?: AbortSignal) => request<void>("/api/auth/logout", { method: "POST" }, signal),
 };

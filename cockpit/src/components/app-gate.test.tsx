@@ -96,9 +96,20 @@ describe("AppGate sign-in form", () => {
 
     await fillAndSubmit(user);
 
-    expect(value.login).toHaveBeenCalledWith("owner", "sekret");
+    expect(value.login).toHaveBeenCalledWith("owner", "sekret", true);
     const submit = screen.getByRole("button", { name: "Logowanie" });
     expect((submit as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("signs in for this browser only when the box is cleared", async () => {
+    const user = userEvent.setup();
+    const value = cockpitValue({ ...anonymous, login: vi.fn(() => new Promise<void>(() => {})) });
+    renderGate(value);
+
+    await user.click(screen.getByRole("checkbox", { name: "Nie wylogowuj mnie" }));
+    await fillAndSubmit(user);
+
+    expect(value.login).toHaveBeenCalledWith("owner", "sekret", false);
   });
 
   it("maps HTTP 429 to the too-many-attempts message and re-enables the button", async () => {

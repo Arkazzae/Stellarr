@@ -29,6 +29,7 @@ export const pl = {
   "gate.login.description": "Panel jest dostępny wyłącznie dla właściciela instancji.",
   "gate.login.username": "Login",
   "gate.login.password": "Hasło",
+  "gate.login.keepSignedIn": "Nie wylogowuj mnie",
   "gate.login.submit": "Zaloguj się",
   "gate.login.submitting": "Logowanie",
   "gate.checking": "Sprawdzanie dostępu do Cockpitu",

@@ -16,7 +16,7 @@ export interface CockpitContextValue {
    * When the password is not enough, leaves for the web client's sign-in page
    * to finish the step there.
    */
-  login: (username: string, password: string) => Promise<void>;
+  login: (username: string, password: string, keepSignedIn?: boolean) => Promise<void>;
   logout: () => Promise<void>;
 }
 

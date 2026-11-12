@@ -68,11 +68,11 @@ export function CockpitProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(
-    async (username: string, password: string) => {
-      const step = await cockpitApi.login(username, password);
+    async (username: string, password: string, keepSignedIn = true) => {
+      const step = await cockpitApi.login(username, password, keepSignedIn);
       if (step !== null) {
         // No session yet: the web client's sign-in page finishes the step and comes back.
-        leaveFor(webSignInUrl(step));
+        leaveFor(webSignInUrl(step, keepSignedIn));
         return;
       }
       setSession(LOADING);
