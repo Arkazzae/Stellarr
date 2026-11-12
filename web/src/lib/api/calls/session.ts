@@ -2,6 +2,7 @@ import type { ApiClient } from "../client";
 import { ApiError, isUnauthorized } from "../errors";
 import { unwrap } from "../expect";
 import { parseBootstrap, parseUser } from "../parsers";
+import { parseAuthResult } from "../securityParsers";
 import {
   forgetActiveServerId,
   readActiveServerId,
@@ -23,10 +24,6 @@ type SessionCalls = Pick<
 >;
 
 const BOOTSTRAP_PATH = "/api/bootstrap";
-
-/** Sign-in answers with the user, bare or in a `{ user }` envelope. */
-const parseUserAnswer: Parse<User> = (value, path) =>
-  parseUser(unwrap(value, "user"), path);
 
 /** An explicit null user, bare or enveloped, is an anonymous visitor. */
 const parseSessionAnswer: Parse<User | null> = (value, path) => {
@@ -57,10 +54,10 @@ async function fetchBootstrap(signal?: AbortSignal): Promise<Bootstrap> {
 export function sessionCalls(): SessionCalls {
   return {
     login: (input, signal) =>
-      sendJson("POST", "/api/auth/login", input, parseUserAnswer, signal),
+      sendJson("POST", "/api/auth/login", input, parseAuthResult, signal),
 
     register: (input, signal) =>
-      sendJson("POST", "/api/auth/register", input, parseUserAnswer, signal),
+      sendJson("POST", "/api/auth/register", input, parseAuthResult, signal),
 
     requestPasswordReset: (email, signal) =>
       sendVoid("POST", "/api/auth/password/forgot", { email }, signal),

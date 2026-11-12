@@ -175,6 +175,37 @@ describe("SessionProvider login", () => {
     await waitFor(() => expect(realtime.getStatus()).toBe("connected"));
   });
 
+  it("boots nothing while a second factor is still due", async () => {
+    const user = userEvent.setup();
+    const api = fullApi({
+      bootstrap: bootstrapped().mockRejectedValueOnce(unauthorized()),
+      login: vi.fn(async () => ({
+        kind: "challenge" as const,
+        challenge: {
+          enrollment: false,
+          challengeId: "c-1",
+          purpose: "mfa" as const,
+          expiresAt: "2026-11-12T17:12:30Z",
+          methods: [],
+          trustedDeviceAvailable: false,
+          emailCodeAvailable: false,
+          trustedDeviceDays: 14,
+        },
+      })),
+    });
+    const { realtime } = mount(api);
+    await waitFor(() => expect(phase()).toHaveTextContent("anonymous"));
+
+    await user.click(screen.getByRole("button", { name: "Log in" }));
+
+    await waitFor(() => expect(api.login).toHaveBeenCalledOnce());
+    // One bootstrap, the anonymous one from mounting; the challenge started none.
+    expect(api.bootstrap).toHaveBeenCalledOnce();
+    expect(phase()).toHaveTextContent("anonymous");
+    expect(screen.getByLabelText("login-error")).toHaveTextContent("none");
+    expect(realtime.getStatus()).not.toBe("connected");
+  });
+
   it("says the credentials are wrong when the server answers 401", async () => {
     const user = userEvent.setup();
     const api = fullApi({

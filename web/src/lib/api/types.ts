@@ -536,3 +536,80 @@ export type FriendRequestAnswer =
   | "already-sent"
   | "self"
   | "blocked";
+
+// ---- Sign-in with a second factor -----------------------------------------
+
+/** How a second-factor method proves who is signing in. */
+export type MfaMethodType = "totp" | "email";
+
+export interface MfaMethod {
+  id: string;
+  type: MfaMethodType;
+  name: string;
+  createdAt: string;
+  lastUsedAt?: string;
+  /** Only an email method names the address its codes go to. */
+  emailAddress?: string;
+  /** Started but not yet confirmed with a first code. */
+  pending: boolean;
+}
+
+/**
+ * Why a challenge exists: an ordinary sign-in, a required first method, a
+ * replacement after an operator recovery, or a fresh proof before a change to
+ * the account's security.
+ */
+export type MfaPurpose = "mfa" | "enrollment" | "recovery" | "reverify";
+
+/**
+ * A sign-in that has passed its first step and waits for a second factor, or
+ * for a first method to be set up. The server keeps the secret half in an
+ * HttpOnly cookie; `challengeId` only names it.
+ */
+export interface MfaChallenge {
+  /** True when there is no method yet and one has to be set up first. */
+  enrollment: boolean;
+  challengeId: string;
+  purpose: MfaPurpose;
+  expiresAt: string;
+  methods: MfaMethod[];
+  /** This browser holds a trusted-device token the server will accept. */
+  trustedDeviceAvailable: boolean;
+  /** The account has a confirmed email method and mail can be sent. */
+  emailCodeAvailable: boolean;
+  /** How long "remember this device" lasts, as the instance sets it. */
+  trustedDeviceDays: number;
+}
+
+/** What the first step of a sign-in or a registration led to. */
+export type AuthResult =
+  | { kind: "signed-in"; user: User }
+  | { kind: "challenge"; challenge: MfaChallenge }
+  /** An operator reset the account's security; only a recovery credential gets back in. */
+  | { kind: "recovery-required" };
+
+export interface MfaVerifyInput {
+  challengeId: string;
+  /** Absent with a recovery code, which belongs to no method. */
+  methodId?: string;
+  code?: string;
+  rememberDevice?: boolean;
+  useTrustedDevice?: boolean;
+}
+
+/** The end of a challenge: a full session, and recovery codes when new ones were issued. */
+export interface MfaCompletion {
+  user: User;
+  /** Shown once. Present only when this step issued them. */
+  recoveryCodes?: string[];
+  /** When this browser stops being trusted, if it just became so. */
+  trustedDeviceExpiresAt?: string;
+}
+
+/** A method being set up. The secret is shown once and never stored by the client. */
+export interface MfaEnrollment {
+  methodId: string;
+  type: MfaMethodType;
+  secret?: string;
+  otpAuthUri?: string;
+}

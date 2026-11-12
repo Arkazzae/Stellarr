@@ -13,6 +13,7 @@ import {
   type ApiClient,
   type SocialApiClient,
 } from "@/lib/api/client";
+import { isUnauthorized } from "@/lib/api/errors";
 import type { Bootstrap, RtcConfig } from "@/lib/api/types";
 import { iceServers } from "@/lib/env";
 import { SignalRRealtimeClient } from "@/lib/realtime/signalr";
@@ -167,6 +168,25 @@ export function createRuntime(options: RuntimeOptions = {}): Runtime {
       requestPasswordReset: (email) => api.requestPasswordReset(email),
       resetPassword: (token, newPassword) => api.resetPassword(token, newPassword),
       logout: () => api.logout(),
+      challenge: {
+        async pending() {
+          try {
+            return await api.pendingChallenge();
+          } catch (error) {
+            // Nothing pending, or it expired: the visitor starts over.
+            if (isUnauthorized(error)) return null;
+            throw error;
+          }
+        },
+        cancel: () => api.cancelChallenge(),
+        verify: (input) => api.verifyChallenge(input),
+        sendEmailCode: (challengeId, methodId) => api.sendChallengeEmailCode(challengeId, methodId),
+        startTotp: (challengeId, name) => api.startTotpEnrollment(challengeId, name),
+        confirmTotp: (input) => api.confirmTotpEnrollment(input),
+        startEmail: (challengeId, name) => api.startEmailEnrollment(challengeId, name),
+        confirmEmail: (input) => api.confirmEmailEnrollment(input),
+        redeemRecovery: (credential) => api.redeemRecoveryCredential(credential),
+      },
     },
     account,
     chat,

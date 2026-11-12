@@ -13,7 +13,7 @@ import {
 } from "react";
 
 import type { MessageKey, Translator } from "@/i18n";
-import type { Account, ConnectionStatus, Presence, User } from "@/ports";
+import type { Account, AuthResult, ConnectionStatus, Presence, User } from "@/ports";
 
 import { useLanguage } from "./LanguageProvider";
 import { usePorts, useRuntime } from "./PortsProvider";
@@ -40,7 +40,12 @@ export interface SessionValue {
   setPresence: (presence: Presence) => void;
   /** Retries the bootstrap. */
   reload: () => void;
-  login: (username: string, password: string) => Promise<boolean>;
+  /**
+   * The first step of a sign-in. The app boots only when that was enough;
+   * a challenge or a pending recovery is handed back for the sign-in page to
+   * finish, and null means the attempt failed and `loginError` says why.
+   */
+  login: (username: string, password: string) => Promise<AuthResult | null>;
   loginPending: boolean;
   loginError: string | null;
   logout: () => Promise<void>;
@@ -252,16 +257,18 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setLoginPending(true);
       setLoginError(null);
       try {
-        await ports.session.login({ username, password });
-        reload();
-        return true;
+        const result = await ports.session.login({ username, password });
+        // A second factor is still due: nothing may boot, open the hub or
+        // join voice until the challenge is answered.
+        if (result.kind === "signed-in") reload();
+        return result;
       } catch (cause) {
         setLoginError(
           isUnauthorized(cause)
             ? t("session.loginInvalid")
             : messageFor(cause, t, "session.loginFailed"),
         );
-        return false;
+        return null;
       } finally {
         setLoginPending(false);
       }

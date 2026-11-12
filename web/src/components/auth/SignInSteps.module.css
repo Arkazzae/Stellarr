@@ -1,0 +1,139 @@
+/* The steps after a password: a second factor, a first method, the recovery
+   codes it issues and an operator's recovery credential. They sit inside
+   AuthFrame and reuse its field, button and link styles; this file holds only
+   what those screens have and the login form does not. */
+
+.check {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: start;
+  gap: 10px;
+  color: var(--text-muted);
+  font-size: var(--text-13);
+  line-height: 1.5;
+  cursor: pointer;
+}
+
+.check input {
+  width: 16px;
+  height: 16px;
+  margin: 2px 0 0;
+  accent-color: var(--accent);
+}
+
+.select {
+  width: 100%;
+  height: 44px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-field);
+  color: var(--text);
+  font: inherit;
+}
+
+.select:focus-visible {
+  border-color: var(--accent);
+  outline: 2px solid var(--accent-quiet);
+  outline-offset: 2px;
+}
+
+.key {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.keyLabel {
+  color: var(--text-muted);
+  font-size: var(--text-13);
+  font-weight: 500;
+}
+
+.keyRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.keyValue {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-field);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--text-13);
+  letter-spacing: 0.04em;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.copy {
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: var(--text-13);
+  font-weight: 600;
+}
+
+.copy:hover {
+  border-color: var(--accent);
+}
+
+.copy:focus-visible {
+  outline: 2px solid var(--accent-quiet);
+  outline-offset: 2px;
+}
+
+.qr {
+  align-self: center;
+  width: 176px;
+  height: 176px;
+  border-radius: var(--radius-sm);
+  /* A scanner needs dark modules on light paper whatever the theme is. */
+  background: #fff;
+  color: #000;
+}
+
+.qr svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* One code to a line: they are long, and a code broken across two lines is
+   easy to copy wrong. */
+.codes {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--surface-field);
+  list-style: none;
+  font-family: var(--font-mono);
+  font-size: var(--text-13);
+  letter-spacing: 0.02em;
+}
+
+.actions {
+  display: flex;
+  gap: 8px;
+}
+
+.actions > * {
+  flex: 1;
+}
+
+.note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: var(--text-13);
+  line-height: 1.55;
+}

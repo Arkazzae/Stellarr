@@ -126,9 +126,9 @@ describe("http api client", () => {
       }),
     );
 
-    const user = await api.login({ username: "patryk", password: "x" });
+    const result = await api.login({ username: "patryk", password: "x" });
 
-    expect(user.displayName).toBe("Patryk");
+    expect(result).toMatchObject({ kind: "signed-in", user: { displayName: "Patryk" } });
     const [url, init] = fetchMock.mock.calls[0] ?? [];
     expect(url).toBe("/api/auth/login");
     expect(init?.credentials).toBe("same-origin");

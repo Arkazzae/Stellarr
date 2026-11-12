@@ -22,7 +22,7 @@ describe("signing in and out", () => {
     fetchMock.mockResolvedValue(jsonResponse({ user: USER }));
 
     await expect(calls.register({ username: "patryk", email: "p@example.org", password: "pw", displayName: "P" }))
-      .resolves.toMatchObject({ id: "u-1" });
+      .resolves.toMatchObject({ kind: "signed-in", user: { id: "u-1" } });
 
     const sent = sentRequest(fetchMock);
     expect([sent.method, sent.url]).toEqual(["POST", "/api/auth/register"]);

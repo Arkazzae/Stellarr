@@ -3,8 +3,15 @@
 import { useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { MfaChallengeStep } from "@/components/auth/MfaChallengeStep";
+import { MfaEnrollStep } from "@/components/auth/MfaEnrollStep";
+import { QrCode } from "@/components/auth/QrCode";
+import { RecoveryCodesStep } from "@/components/auth/RecoveryCodesStep";
+import { RecoveryRedeemStep } from "@/components/auth/RecoveryRedeemStep";
 import { LoginScreen } from "@/components/login/LoginScreen";
+import { useSignInFlow } from "@/containers/useSignInFlow";
 import { useRedirectWhenSignedIn } from "@/hooks/useRedirectWhenSignedIn";
+import { safeReturnPath } from "@/lib/returnPath";
 import { useLanguage, useSession } from "@/state/hooks";
 
 interface OidcConfiguration {
@@ -21,12 +28,15 @@ async function fetchExternalProvider(signal: AbortSignal): Promise<{ displayName
 }
 
 export default function LoginPage() {
-  const { phase, login, loginPending, loginError } = useSession();
+  const { phase, loginPending, loginError } = useSession();
   const { t } = useLanguage();
-  const oidcError = useSearchParams().get("oidc_error");
+  const params = useSearchParams();
+  const oidcError = params.get("oidc_error");
+  const returnPath = safeReturnPath(params.get("returnUrl"));
   const [provider, setProvider] = useState<{ displayName: string } | null>(null);
+  const flow = useSignInFlow({ recoveryRequired: params.get("security_recovery_required") === "1" });
 
-  useRedirectWhenSignedIn(phase);
+  useRedirectWhenSignedIn(phase, returnPath);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -42,20 +52,75 @@ export default function LoginPage() {
         ? t("auth.login.oidcFailed")
         : null;
 
+  const { step } = flow;
+  if (step.kind === "challenge") {
+    return (
+      <MfaChallengeStep
+        challenge={step.challenge}
+        t={t}
+        pending={flow.pending}
+        error={flow.error}
+        onVerify={flow.verify}
+        onUseTrustedDevice={flow.continueOnTrustedDevice}
+        onSendEmailCode={flow.sendEmailCode}
+        onCancel={flow.cancel}
+      />
+    );
+  }
+  if (step.kind === "enroll") {
+    return (
+      <MfaEnrollStep
+        challenge={step.challenge}
+        t={t}
+        mode={step.mode}
+        enrollment={step.enrollment}
+        emailRetryAfter={flow.enrollEmailWait}
+        pending={flow.pending}
+        error={flow.error}
+        qr={
+          step.enrollment?.otpAuthUri === undefined ? undefined : (
+            <QrCode value={step.enrollment.otpAuthUri} label={t("auth.enroll.qrLabel")} />
+          )
+        }
+        onModeChange={flow.setEnrollMode}
+        onSendEmailCode={flow.sendEnrollEmailCode}
+        onConfirm={flow.confirmEnrollment}
+        onCancel={flow.cancel}
+      />
+    );
+  }
+  if (step.kind === "codes") {
+    return (
+      <RecoveryCodesStep codes={step.codes} username={step.username} t={t} onDone={flow.finishCodes} />
+    );
+  }
+  if (step.kind === "redeem") {
+    return (
+      <RecoveryRedeemStep
+        t={t}
+        pending={flow.pending}
+        error={flow.error}
+        onSubmit={flow.redeem}
+        onBack={flow.cancel}
+      />
+    );
+  }
+
   return (
     <LoginScreen
       t={t}
-      // A successful login re-runs the session bootstrap, and the redirect hook
-      // navigates once it reports ready.
-      onSubmit={(username, password) => void login(username, password)}
+      // A login that needs nothing more re-runs the session bootstrap, and the
+      // redirect hook navigates once it reports ready. Any further step stays
+      // on this page.
+      onSubmit={(username, password) => void flow.submitPassword(username, password)}
       pending={loginPending}
-      error={loginError}
-      checking={phase === "loading"}
+      error={flow.error ?? loginError}
+      checking={phase === "loading" || step.kind === "resuming"}
       externalLogin={
         provider === null
           ? undefined
           : {
-              href: "/api/auth/oidc/login?returnUrl=%2F",
+              href: `/api/auth/oidc/login?returnUrl=${encodeURIComponent(returnPath ?? "/")}`,
               label: t("auth.login.oidc", {
                 provider: provider.displayName || t("auth.login.oidcProvider"),
               }),

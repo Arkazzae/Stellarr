@@ -9,9 +9,11 @@ import { messageCalls } from "./calls/messages";
 import { notificationCalls } from "./calls/notifications";
 import { serverCalls } from "./calls/server";
 import { sessionCalls } from "./calls/session";
+import { signInCalls } from "./calls/signIn";
 import { socialCalls } from "./calls/social";
 import type {
   AccountDetails,
+  AuthResult,
   AccountImageKind,
   AccountPreferences,
   AccountUpdateInput,
@@ -26,6 +28,10 @@ import type {
   JoinSoundLibrary,
   LoginInput,
   Message,
+  MfaChallenge,
+  MfaCompletion,
+  MfaEnrollment,
+  MfaVerifyInput,
   MessageHistoryPage,
   MessageId,
   MessageIndexKind,
@@ -73,8 +79,33 @@ export {
  * last argument, except `logout`.
  */
 export interface ApiClient {
-  login(input: LoginInput, signal?: AbortSignal): Promise<User>;
-  register(input: RegisterInput, signal?: AbortSignal): Promise<User>;
+  login(input: LoginInput, signal?: AbortSignal): Promise<AuthResult>;
+  register(input: RegisterInput, signal?: AbortSignal): Promise<AuthResult>;
+  /** The challenge this browser left unfinished, after a reload or an OIDC redirect. */
+  pendingChallenge(signal?: AbortSignal): Promise<MfaChallenge>;
+  cancelChallenge(): Promise<void>;
+  verifyChallenge(input: MfaVerifyInput, signal?: AbortSignal): Promise<MfaCompletion>;
+  sendChallengeEmailCode(
+    challengeId: string,
+    methodId?: string,
+    signal?: AbortSignal,
+  ): Promise<{ retryAfterSeconds: number }>;
+  startTotpEnrollment(challengeId: string, name: string, signal?: AbortSignal): Promise<MfaEnrollment>;
+  confirmTotpEnrollment(
+    input: { challengeId: string; methodId: string; code: string; name: string; rememberDevice?: boolean },
+    signal?: AbortSignal,
+  ): Promise<MfaCompletion>;
+  startEmailEnrollment(
+    challengeId: string,
+    name: string,
+    signal?: AbortSignal,
+  ): Promise<{ retryAfterSeconds: number }>;
+  confirmEmailEnrollment(
+    input: { challengeId: string; code: string; name: string; rememberDevice?: boolean },
+    signal?: AbortSignal,
+  ): Promise<MfaCompletion>;
+  /** Trades an operator's one-time recovery credential for a replacement-enrollment challenge. */
+  redeemRecoveryCredential(credential: string, signal?: AbortSignal): Promise<MfaChallenge>;
   requestPasswordReset(email: string, signal?: AbortSignal): Promise<void>;
   resetPassword(token: string, newPassword: string, signal?: AbortSignal): Promise<void>;
   logout(): Promise<void>;
@@ -410,6 +441,7 @@ export interface ApiNotificationSettings {
 export function createHttpApiClient(): ApiClient & SocialApiClient & AdminApiClient {
   return {
     ...sessionCalls(),
+    ...signInCalls(),
     ...serverCalls(),
     ...memberCalls(),
     ...channelCalls(),

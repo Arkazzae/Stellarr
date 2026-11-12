@@ -1,5 +1,6 @@
 import { vi } from "vitest";
 import type { ApiClient } from "@/lib/api/client";
+import { ApiError } from "@/lib/api/errors";
 import type { Bootstrap, Channel, Presence, Server, User } from "@/lib/api/types";
 import { ChangeNotifier, Emitter } from "@/lib/realtime/emitter";
 import type {
@@ -75,8 +76,21 @@ const ACCOUNT = {
 
 export function fakeApi(overrides: Partial<ApiClient> = {}): ApiClient {
   return {
-    login: vi.fn(async () => SELF),
-    register: vi.fn(async () => SELF),
+    login: vi.fn(async () => ({ kind: "signed-in" as const, user: SELF })),
+    register: vi.fn(async () => ({ kind: "signed-in" as const, user: SELF })),
+    pendingChallenge: vi.fn(async () => {
+      throw new ApiError("unauthorized", "Nothing is pending.", 401);
+    }),
+    cancelChallenge: vi.fn(async () => {}),
+    verifyChallenge: vi.fn(async () => ({ user: SELF })),
+    sendChallengeEmailCode: vi.fn(async () => ({ retryAfterSeconds: 45 })),
+    startTotpEnrollment: vi.fn(async () => ({ methodId: "m-totp", type: "totp" as const })),
+    confirmTotpEnrollment: vi.fn(async () => ({ user: SELF })),
+    startEmailEnrollment: vi.fn(async () => ({ retryAfterSeconds: 45 })),
+    confirmEmailEnrollment: vi.fn(async () => ({ user: SELF })),
+    redeemRecoveryCredential: vi.fn(async () => {
+      throw new ApiError("unauthorized", "The credential is not valid.", 401);
+    }),
     requestPasswordReset: vi.fn(async () => {}),
     resetPassword: vi.fn(async () => {}),
     logout: vi.fn(async () => {}),
