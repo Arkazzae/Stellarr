@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { Button } from "@stellarr/ui";
 import { Icon, type IconName } from "@stellarr/ui/icons";
 import { Avatar } from "@/components/primitives/Avatar";
+import { Segmented } from "@/components/primitives/Segmented";
 import { Switch } from "@/components/primitives/Switch";
 import type { UserPreferences } from "@/ports";
 import { useLanguage } from "@/state/hooks";
@@ -123,6 +124,35 @@ export function UserNotificationsPane({
           checked={preferences.messageSound}
           onChange={(messageSound) => onChange({ messageSound })}
         />
+        {/* What the sound is for, so it waits on the switch above: with the
+            sound off there is nothing for the choice to change. A mention
+            always sounds, even in the channel being read. */}
+        <div className="frm-row">
+          <span className="frm-lab">
+            {t("preference.messageSoundFor")}
+            <span>{t("preference.messageSoundForDetail")}</span>
+          </span>
+          <div className="frm-ctl">
+            <Segmented
+              label={t("preference.messageSoundFor")}
+              value={preferences.mentionsOnly ? "mentions" : "all"}
+              disabled={!preferences.messageSound}
+              onChange={(value) => onChange({ mentionsOnly: value === "mentions" })}
+              options={[
+                {
+                  value: "mentions",
+                  label: t("preference.soundMentions"),
+                  detail: t("preference.soundMentionsDetail"),
+                },
+                {
+                  value: "all",
+                  label: t("preference.soundAll"),
+                  detail: t("preference.soundAllDetail"),
+                },
+              ]}
+            />
+          </div>
+        </div>
         {/* One switch covers both halves of a comings-and-goings sound: the
             shared chime and the clip someone chose for their own arrival
             announce the same event, so "do I want to hear that" has one answer. */}
