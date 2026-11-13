@@ -53,7 +53,7 @@ describe("ModalsContainer: invite", () => {
 
     openInvite();
 
-    expect(await screen.findByText(INVITE.url)).toBeVisible();
+    expect(await screen.findByDisplayValue(INVITE.url)).toBeVisible();
   });
 
   it("puts a created invite in the dialog", async () => {
@@ -70,7 +70,7 @@ describe("ModalsContainer: invite", () => {
 
     await user.click(await screen.findByRole("button", { name: t("settings.newInvite") }));
 
-    expect(await screen.findByText(INVITE.url)).toBeVisible();
+    expect(await screen.findByDisplayValue(INVITE.url)).toBeVisible();
   });
 
   it("says so when the link cannot be created", async () => {
@@ -108,7 +108,7 @@ describe("ModalsContainer: invite", () => {
 
     openInvite();
 
-    await screen.findByText(INVITE.url);
+    await screen.findByDisplayValue(INVITE.url);
     const rows = [...document.querySelectorAll(".dlg-row")];
     expect(rows.map((row) => row.querySelector("b")?.textContent)).toEqual([
       "Ewa",

@@ -24,7 +24,8 @@ const PRESENCE_KEY: Record<InvitePersonVM["presence"], MessageKey> = {
 };
 
 /**
- * The server invite dialog: the link to copy, then the people to send it to.
+ * The server invite dialog: the friends to send an invitation to, then the
+ * link for everyone else.
  *
  * Those people are the friends. Listing the server's own members would offer
  * every row an invitation to a server it is already on; the friends who are
@@ -65,6 +66,7 @@ export function InviteDialog({ open, data, reload }: ServerAdmin & { open: boole
       serverName={directory.server.name}
       people={people}
       inviteUrl={invite?.url ?? ""}
+      {...(invite === undefined ? {} : { inviteExpiresAt: invite.expiresAt })}
       {...(admin.supported.invites
         ? {
             onCreateInvite: async () => {

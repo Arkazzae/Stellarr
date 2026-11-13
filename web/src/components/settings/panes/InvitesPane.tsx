@@ -6,28 +6,17 @@ import { Icon } from "@stellarr/ui/icons";
 import { SettingsSection } from "@/components/settings/SettingsSection";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
 import type { InterfaceLocale, Translator } from "@/i18n";
+import { inviteExpiry } from "@/lib/invites";
 import type { Invite } from "@/ports";
 import { useLanguage } from "@/state/hooks";
 
-const MINUTE = 60_000;
-const HOUR = 60 * MINUTE;
-const DAY = 24 * HOUR;
-
 /** "never expires", "expired", "expires in 6 days": counts in the coarsest unit that fits. */
 function expiry(expiresAt: string | null, now: number, t: Translator, locale: InterfaceLocale): string {
-  if (expiresAt === null) return t("settings.expiresNever");
-  const remaining = new Date(expiresAt).getTime() - now;
-  if (Number.isNaN(remaining)) return t("settings.expiresNever");
-  if (remaining <= 0) return t("settings.expired");
-
-  const [unitMs, unit] =
-    remaining < HOUR
-      ? ([MINUTE, "minute"] as const)
-      : remaining < DAY
-        ? ([HOUR, "hour"] as const)
-        : ([DAY, "day"] as const);
+  const left = inviteExpiry(expiresAt, now);
+  if (left.state === "never") return t("settings.expiresNever");
+  if (left.state === "expired") return t("settings.expired");
   const relative = new Intl.RelativeTimeFormat(locale, { numeric: "always", style: "short" });
-  return t("settings.expires", { time: relative.format(Math.round(remaining / unitMs), unit) });
+  return t("settings.expires", { time: relative.format(left.value, left.unit) });
 }
 
 export interface InvitesPaneProps {
