@@ -1,6 +1,7 @@
 import { useState } from "react";
 
 import { CardTitleRow } from "@/components/card-title-row";
+import { CloudflareSettings } from "@/components/cloudflare-settings";
 import { PageHeader } from "@/components/page-header";
 import { SecretField } from "@/components/secret-field";
 import { Spinner } from "@/components/spinner";
@@ -236,6 +237,7 @@ export function IntegrationsPage() {
               }
               onSecretChanged={secretChanged}
             />
+            <CloudflareSettings secrets={secrets.data ?? []} onSecretChanged={secretChanged} />
           </div>
         </div>
       ) : null}

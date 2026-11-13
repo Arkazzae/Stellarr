@@ -248,13 +248,18 @@ export interface CockpitBackupSettings {
   intervalHours: number;
   retryMinutes: number;
   initialDelayMinutes: number;
-  remoteEnabled: boolean;
+  retentionDays: number;
+  cleanupEnabled: boolean;
+  source: "environment" | "panel";
+}
+
+/** The optional Cloudflare R2 destination; credentials are separate secrets. */
+export interface CockpitCloudflareR2Settings {
+  enabled: boolean;
   endpoint: string;
   region: string;
   bucket: string;
   prefix: string;
-  retentionDays: number;
-  cleanupEnabled: boolean;
   source: "environment" | "panel";
 }
 
@@ -290,7 +295,12 @@ export interface CockpitRecovery {
   sessionsRevoked: number;
 }
 
-export type CockpitSecretName = "mail.resend-api-key" | "mail.smtp-password" | "giphy.api-key" | "backups.access-key" | "backups.secret-key";
+export type CockpitSecretName =
+  | "mail.resend-api-key"
+  | "mail.smtp-password"
+  | "giphy.api-key"
+  | "cloudflare.r2.access-key"
+  | "cloudflare.r2.secret-key";
 
 /**
  * Whether a secret is set and where from. The value never comes back: the
@@ -565,6 +575,12 @@ export const cockpitApi = {
   updateBackupSettings: (settings: CockpitBackupSettings) =>
     request<CockpitBackupSettings>("/api/cockpit/backups/settings", { method: "PUT", body: settings }),
   resetBackupSettings: () => request<CockpitBackupSettings>("/api/cockpit/backups/settings", { method: "DELETE" }),
+  cloudflareR2: (signal?: AbortSignal) =>
+    request<CockpitCloudflareR2Settings>("/api/cockpit/integrations/cloudflare/r2", {}, signal),
+  updateCloudflareR2: (settings: CockpitCloudflareR2Settings) =>
+    request<CockpitCloudflareR2Settings>("/api/cockpit/integrations/cloudflare/r2", { method: "PUT", body: settings }),
+  resetCloudflareR2: () =>
+    request<CockpitCloudflareR2Settings>("/api/cockpit/integrations/cloudflare/r2", { method: "DELETE" }),
   /**
    * The database alone comes back at once as a plain SQLite file; anything
    * more starts an archive in the background and comes back as its job.

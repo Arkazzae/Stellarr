@@ -2,12 +2,18 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { CockpitApiError, cockpitApi, type CockpitSettings } from "@/lib/api";
+import { CockpitApiError, cockpitApi, type CockpitCloudflareR2Settings, type CockpitSettings } from "@/lib/api";
 import { IntegrationsPage } from "@/pages/integrations-page";
 import { selectPolish } from "@/test/locale";
 import { secret, secrets } from "@/test/secrets";
 
 selectPolish();
+// Radix switches measure themselves with a ResizeObserver, which jsdom lacks.
+vi.stubGlobal("ResizeObserver", class {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+});
 
 vi.mock("@/lib/api", async (importOriginal) => {
   const original = await importOriginal<typeof import("@/lib/api")>();
@@ -21,6 +27,9 @@ vi.mock("@/lib/api", async (importOriginal) => {
       setSecret: vi.fn(),
       clearSecret: vi.fn(),
       testGiphy: vi.fn(),
+      cloudflareR2: vi.fn(),
+      updateCloudflareR2: vi.fn(),
+      resetCloudflareR2: vi.fn(),
     },
   };
 });
@@ -31,6 +40,12 @@ const secretsMock = vi.mocked(cockpitApi.secrets);
 const setSecretMock = vi.mocked(cockpitApi.setSecret);
 const clearSecretMock = vi.mocked(cockpitApi.clearSecret);
 const testGiphyMock = vi.mocked(cockpitApi.testGiphy);
+const cloudflareMock = vi.mocked(cockpitApi.cloudflareR2);
+const updateCloudflareMock = vi.mocked(cockpitApi.updateCloudflareR2);
+
+const cloudflare: CockpitCloudflareR2Settings = {
+  enabled: false, endpoint: "", region: "auto", bucket: "", prefix: "stellarr", source: "environment",
+};
 
 const stored: CockpitSettings = {
   instanceName: "Domek",
@@ -76,6 +91,10 @@ beforeEach(() => {
   setSecretMock.mockReset();
   clearSecretMock.mockReset();
   testGiphyMock.mockReset();
+  cloudflareMock.mockReset();
+  cloudflareMock.mockResolvedValue(cloudflare);
+  updateCloudflareMock.mockReset();
+  vi.mocked(cockpitApi.resetCloudflareR2).mockReset();
 });
 
 describe("IntegrationsPage", () => {
@@ -231,5 +250,20 @@ describe("IntegrationsPage GIPHY", () => {
     await user.click(screen.getByRole("button", { name: "Sprawdź połączenie" }));
 
     expect((await screen.findByRole("alert")).textContent).toBe("GIPHY odrzuciło klucz (HTTP 403).");
+  });
+});
+
+describe("IntegrationsPage Cloudflare R2", () => {
+  it("keeps the offsite connection on the integrations page and saves it there", async () => {
+    const user = userEvent.setup();
+    updateCloudflareMock.mockImplementation(async (value) => ({ ...value, source: "panel" }));
+    render(<IntegrationsPage />);
+
+    const card = (await screen.findByText("Cloudflare R2")).closest("[data-slot=card]") as HTMLElement;
+    await user.type(within(card).getByLabelText("Nazwa bucketu"), "private-backups");
+    await user.click(within(card).getByRole("button", { name: "Zapisz połączenie" }));
+
+    expect(updateCloudflareMock).toHaveBeenCalledWith({ ...cloudflare, bucket: "private-backups" });
+    expect(await within(card).findByText("Zapisano. Następna wysyłka kopii użyje tego połączenia.")).toBeTruthy();
   });
 });

@@ -5,6 +5,7 @@ using Amazon.S3;
 using Amazon.S3.Model;
 using Microsoft.Extensions.Options;
 using Stellarr.Api.Backups;
+using Stellarr.Api.Integrations.Cloudflare;
 
 namespace Stellarr.Api.Tests;
 
@@ -53,12 +54,9 @@ public sealed class BackupDestinationTests
         finally { File.Delete(path); }
     }
 
-    private static BackupDestination Create(RecordingS3 client) => new(Options.Create(new AutomaticBackupOptions
+    private static R2BackupDestination Create(RecordingS3 client) => new(Options.Create(new CloudflareR2Options
     {
-        Destination = new BackupDestinationOptions
-        {
-            Enabled = true, Bucket = "private-backups", Endpoint = "https://r2.invalid", AccessKey = "key", SecretKey = "secret",
-        },
+        Enabled = true, Bucket = "private-backups", Endpoint = "https://r2.invalid", AccessKey = "key", SecretKey = "secret",
     }), _ => client);
 
     private sealed class RecordingS3() : AmazonS3Client(new AnonymousAWSCredentials(), new AmazonS3Config

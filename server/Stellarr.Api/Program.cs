@@ -13,6 +13,7 @@ using Stellarr.Api.Data;
 using Stellarr.Api.Embeds;
 using Stellarr.Api.Endpoints;
 using Stellarr.Api.Integrations;
+using Stellarr.Api.Integrations.Cloudflare;
 using Stellarr.Api.Localization;
 using Stellarr.Api.Logging;
 using Stellarr.Api.Mail;
@@ -117,9 +118,14 @@ builder.Services.AddSingleton<BackupJobs>();
 builder.Services.AddOptions<AutomaticBackupOptions>()
     .Bind(builder.Configuration.GetSection(AutomaticBackupOptions.SectionName))
     .ValidateDataAnnotations()
-    .Validate(settings => settings.Destination.IsValid(requireCredentials: false), "Backups destination requires HTTPS, bucket, region and a safe prefix.")
     .ValidateOnStart();
-builder.Services.AddSingleton<IBackupDestination, BackupDestination>();
+builder.Services.AddOptions<CloudflareR2Options>()
+    .Bind(builder.Configuration.GetSection(CloudflareR2Options.SectionName))
+    .Validate(settings => settings.IsValid(requireCredentials: false),
+        "Cloudflare R2 requires HTTPS, bucket, region and a safe prefix.")
+    .ValidateOnStart();
+builder.Services.AddSingleton<IBackupDestination, R2BackupDestination>();
+builder.Services.AddSingleton<CloudflareR2PolicyStore>();
 builder.Services.AddSingleton<BackupPolicyStore>();
 builder.Services.AddSingleton<AutomaticBackupWorker>();
 builder.Services.AddHostedService(services => services.GetRequiredService<AutomaticBackupWorker>());
@@ -287,6 +293,7 @@ static async Task InitializeApplicationAsync(WebApplication app)
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         await DatabaseSchema.UpgradeAsync(db, stopping);
         await app.Services.GetRequiredService<BackupPolicyStore>().LoadAsync(db, stopping);
+        await app.Services.GetRequiredService<CloudflareR2PolicyStore>().LoadAsync(db, stopping);
         // A backup cut short by the last stop left a partial file; it is no backup.
         BackupJobs.RemoveLeftovers(BackupJobs.Directory(app.Configuration));
         await EmbedRecovery.EnqueueStaleYouTubeAsync(db, app.Services.GetRequiredService<EmbedInbox>(), stopping);

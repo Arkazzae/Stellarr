@@ -27,6 +27,7 @@ When a default in `docker-compose.yml` changes, change it in every template here
 2. Start the container with exactly the template's settings: its ports, variables and extra arguments, and a scratch volume. Check that it becomes healthy, that `http://localhost:8888/` redirects to the HTTPS host port, and that `docker exec <container> stellarr doctor` passes.
 3. Write the guide in `docs/install/<platform>.md`, covering only what is specific to the platform, and link it from [`docs/README.md`](../docs/README.md), the table in [Platforms](../docs/install/platforms.md) and the table above.
 
-Automatic full backups and optional Cloudflare R2 offsite storage are described in
-[the backup and recovery guide](../docs/backups.md). Production Compose enables
+Automatic full backups are described in [the backup and recovery guide](../docs/admin/backups.md);
+optional Cloudflare R2 offsite storage is an integration described in
+[the R2 guide](../docs/admin/cloudflare-r2.md). Production Compose enables
 daily local copies by default; R2 requires separate bucket credentials.
