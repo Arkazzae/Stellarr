@@ -96,12 +96,12 @@ export function SecretField({ title, secret, onChanged }: SecretFieldProps) {
           aria-invalid={Boolean(error)}
           className="min-w-0 flex-1"
         />
-        <Button type="button" variant="outline" disabled={!secret || !value.trim() || busy !== null} onClick={() => void run("save")}>
+        <Button type="button" variant="secondary" disabled={!secret || !value.trim() || busy !== null} onClick={() => void run("save")}>
           {busy === "save" ? <Spinner /> : null}
           {secret?.configured ? t("secret.replace") : t("secret.save")}
         </Button>
         {secret?.source === "panel" ? (
-          <Button type="button" variant="ghost" disabled={busy !== null} onClick={() => void run("clear")}>
+          <Button type="button" variant="quiet" disabled={busy !== null} onClick={() => void run("clear")}>
             {busy === "clear" ? <Spinner /> : null}
             {t("secret.remove")}
           </Button>

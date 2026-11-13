@@ -40,7 +40,7 @@ export function UserActions({ user, roles, perform }: UserActionsProps) {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
-          variant="ghost"
+          variant="quiet"
           size="icon-sm"
           aria-label={t("accountActions.menu", { name: user.displayName })}
           disabled={pending}

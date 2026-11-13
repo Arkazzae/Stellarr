@@ -135,7 +135,7 @@ export function AppGate() {
               <CardDescription>{t("gate.forbidden.description")}</CardDescription>
             </CardHeader>
             <CardContent>
-              <Button variant="outline" onClick={() => void logout()}>
+              <Button variant="secondary" onClick={() => void logout()}>
                 {t("gate.forbidden.logout")}
               </Button>
             </CardContent>

@@ -31,7 +31,7 @@ export function RolesTab({ roles, onCreate, onEdit }: RolesTabProps) {
           <CardTitle>{t("roles.title")}</CardTitle>
           <CardDescription className="mt-1.5">{t("roles.description")}</CardDescription>
         </div>
-        <Button variant="outline" size="sm" onClick={onCreate}>
+        <Button variant="secondary" size="sm" onClick={onCreate}>
           {t("roles.add")}
         </Button>
       </CardHeader>
@@ -71,7 +71,7 @@ export function RolesTab({ roles, onCreate, onEdit }: RolesTabProps) {
                 </TableCell>
                 <TableCell className="text-right">
                   {role.isOwner ? null : (
-                    <Button variant="ghost" size="sm" onClick={() => onEdit(role)}>
+                    <Button variant="quiet" size="sm" onClick={() => onEdit(role)}>
                       {t("roles.edit")}
                     </Button>
                   )}

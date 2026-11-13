@@ -234,7 +234,7 @@ export function RuntimePage() {
             : ""
         }
         actions={
-          <Button variant="outline" onClick={() => void refresh()} disabled={loading}>
+          <Button variant="secondary" onClick={() => void refresh()} disabled={loading}>
             {loading ? <Spinner /> : null}
             {t("runtime.refresh")}
           </Button>

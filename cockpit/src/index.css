@@ -1,6 +1,6 @@
 @import "tailwindcss";
-/* After Tailwind, so the components join its components layer and a utility
-   in className overrides them. */
+/* After Tailwind, so the components join the components.ui layer inside its
+   components layer and a utility in className overrides them. */
 @import "@stellarr/ui/styles.css";
 
 /*
@@ -234,8 +234,10 @@
   --ui-hover: var(--accent);
   --ui-text: var(--foreground);
   --ui-text-muted: var(--muted-foreground);
+  --ui-text-faint: var(--faint);
   --ui-line: var(--border);
   --ui-line-field: var(--input);
+  --ui-line-strong: var(--input);
   --ui-ring: var(--ring);
   --ui-ring-offset: #ffffff;
   --ui-accent: var(--primary);
@@ -262,6 +264,67 @@
   --ui-radius-xl: 1rem;
 
   --ui-ease: cubic-bezier(0.4, 0, 0.2, 1);
+  --ui-dur-fast: 150ms;
+  --ui-dur-base: 150ms;
+
+  /* One design pixel. Cockpit scales its root font size with the window (see
+     the html rule below), so the unit is a sixteenth of it. */
+  --ui-unit: calc(1rem / 16);
+}
+
+/*
+ * The button and the switch fall back to the web client's look, so these
+ * tokens are what keeps them Cockpit's. They are listed in
+ * packages/stellarr-ui/README.md.
+ */
+:root {
+  /* Focus is a ring: the border takes the ring colour and a soft shadow
+     surrounds it. The web client draws an outline instead. */
+  --ui-focus-outline: none;
+  --ui-focus-border: var(--ui-ring);
+  --ui-focus-shadow: 0 0 0 3px color-mix(in oklab, var(--ui-ring) 50%, transparent);
+
+  --ui-button-white-space: nowrap;
+  --ui-button-gap: calc(8 * var(--ui-unit));
+  --ui-button-sm-gap: calc(6 * var(--ui-unit));
+  --ui-button-icon-size: calc(16 * var(--ui-unit));
+  --ui-button-font-size: calc(14 * var(--ui-unit));
+  --ui-button-line-height: calc(1.25 / 0.875);
+  --ui-button-font-weight: 500;
+  --ui-button-padding-x: calc(16 * var(--ui-unit));
+  --ui-button-sm-font-size: calc(12 * var(--ui-unit));
+  --ui-button-sm-line-height: calc(1 / 0.75);
+  --ui-button-sm-padding-x: calc(12 * var(--ui-unit));
+  --ui-button-disabled-opacity: 0.5;
+
+  /* The outlined button sits on the page, takes its text colour from the
+     surroundings and washes on hover. An unpressed toggle is muted. */
+  --ui-button-secondary-bg: var(--ui-page);
+  --ui-button-secondary-text: currentColor;
+  --ui-button-secondary-unpressed-text: var(--ui-text-muted);
+  --ui-button-secondary-pressed-text: currentColor;
+  --ui-button-secondary-hover-bg: var(--ui-hover);
+  --ui-button-secondary-hover-border: var(--ui-line);
+
+  --ui-button-danger-solid-border-width: 0px;
+  --ui-button-danger-solid-hover-bg: color-mix(in oklab, var(--ui-danger) 90%, transparent);
+  --ui-button-danger-solid-focus-shadow: 0 0 0 3px color-mix(in oklab, var(--ui-danger) 20%, transparent);
+
+  --ui-switch-w: calc(36 * var(--ui-unit));
+  --ui-switch-h: calc(20 * var(--ui-unit));
+  --ui-switch-bg: var(--ui-line-field);
+  --ui-switch-border: transparent;
+  --ui-switch-on-bg: var(--ui-text);
+  --ui-switch-on-border: transparent;
+  --ui-switch-thumb-size: calc(16 * var(--ui-unit));
+  --ui-switch-thumb-bg: var(--ui-page);
+  --ui-switch-thumb-on-bg: var(--ui-page);
+  --ui-switch-thumb-align: center;
+  --ui-switch-thumb-y: 0px;
+  --ui-switch-thumb-shadow: var(--ui-elevation-low);
+  --ui-switch-thumb-x: 0px;
+  --ui-switch-thumb-on-x: calc(16 * var(--ui-unit));
+  --ui-switch-disabled-opacity: 0.5;
 }
 
 @layer base {

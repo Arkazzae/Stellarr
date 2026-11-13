@@ -193,11 +193,11 @@ function DeleteDialog({
           </div>
           <DialogFooter>
             <DialogClose asChild>
-              <Button type="button" variant="outline">
+              <Button type="button" variant="secondary">
                 {t("servers.delete.cancel")}
               </Button>
             </DialogClose>
-            <Button type="submit" variant="destructive" disabled={!matches || pending}>
+            <Button type="submit" variant="danger-solid" disabled={!matches || pending}>
               {pending ? <Spinner /> : null}
               {t("servers.delete.submit")}
             </Button>
@@ -220,7 +220,7 @@ function ServerActions({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon-sm" aria-label={t("servers.actions", { name: server.name })}>
+        <Button variant="quiet" size="icon-sm" aria-label={t("servers.actions", { name: server.name })}>
           <Icon name="dots" />
         </Button>
       </DropdownMenuTrigger>

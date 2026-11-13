@@ -181,7 +181,7 @@ function ConnectionForm({ initial, secrets, onSecretChanged }: {
         {saved ? <p role="status" className="text-sm text-success">{t("integrations.cloudflare.saved")}</p> : null}
         <p className="text-xs leading-5 text-muted-foreground">{t("integrations.cloudflare.resetHint")}</p>
         <div className="flex flex-wrap justify-between gap-3 border-t pt-4">
-          <Button type="button" variant="ghost" disabled={busy || form.source !== "panel"} onClick={() => void reset()}>
+          <Button type="button" variant="quiet" disabled={busy || form.source !== "panel"} onClick={() => void reset()}>
             {t("integrations.cloudflare.reset")}
           </Button>
           <Button type="submit" disabled={busy}>

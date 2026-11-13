@@ -78,7 +78,7 @@ function PolicyForm({ initial, onSaved }: { initial: CockpitBackupSettings; onSa
       {saved ? <p role="status" className="text-sm text-success">{t("backups.settings.saved")}</p> : null}
       <p className="text-xs leading-5 text-muted-foreground">{t("backups.settings.resetHint")}</p>
       <div className="flex flex-wrap justify-between gap-3 border-t pt-4">
-        <Button type="button" variant="ghost" disabled={busy || form.source !== "panel"} onClick={() => void reset()}>{t("backups.settings.reset")}</Button>
+        <Button type="button" variant="quiet" disabled={busy || form.source !== "panel"} onClick={() => void reset()}>{t("backups.settings.reset")}</Button>
         <Button type="submit" disabled={busy}>{busy ? <Spinner /> : null}{t("backups.settings.save")}</Button>
       </div>
     </form>

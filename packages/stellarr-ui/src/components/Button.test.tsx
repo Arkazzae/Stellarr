@@ -1,26 +1,35 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { Button } from "./Button";
+import { Button, type ButtonVariant } from "./Button";
 
 describe("Button", () => {
   it("publishes its variant and size for the stylesheet", () => {
     render(
-      <Button variant="outline" size="sm" className="w-full">
+      <Button variant="secondary" size="sm" className="w-full">
         Refresh
       </Button>,
     );
 
     const button = screen.getByRole("button", { name: "Refresh" });
     expect(button).toHaveClass("ui-button", "w-full");
-    expect(button).toHaveAttribute("data-variant", "outline");
+    expect(button).toHaveAttribute("data-variant", "secondary");
     expect(button).toHaveAttribute("data-size", "sm");
   });
+
+  it.each<ButtonVariant>(["primary", "secondary", "quiet", "danger", "danger-solid"])(
+    "publishes the %s variant for the stylesheet",
+    (variant) => {
+      render(<Button variant={variant}>Go</Button>);
+
+      expect(screen.getByRole("button")).toHaveAttribute("data-variant", variant);
+    },
+  );
 
   it("defaults to the accent fill at the regular size", () => {
     render(<Button>Save</Button>);
 
-    expect(screen.getByRole("button")).toHaveAttribute("data-variant", "default");
+    expect(screen.getByRole("button")).toHaveAttribute("data-variant", "primary");
     expect(screen.getByRole("button")).toHaveAttribute("data-size", "default");
   });
 
@@ -35,7 +44,7 @@ describe("Button", () => {
 
     const link = screen.getByRole("link", { name: "Home" });
     expect(link).toHaveClass("ui-button", "mt-6", "own");
-    expect(link).toHaveAttribute("data-variant", "default");
+    expect(link).toHaveAttribute("data-variant", "primary");
     expect(screen.queryByRole("button")).toBeNull();
   });
 

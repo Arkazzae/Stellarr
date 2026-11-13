@@ -33,9 +33,9 @@ function DeleteServer() {
           <input aria-label="Name" defaultValue="Nook" />
           <DialogFooter>
             <DialogClose asChild>
-              <Button variant="outline">Cancel</Button>
+              <Button variant="secondary">Cancel</Button>
             </DialogClose>
-            <Button variant="destructive">Delete</Button>
+            <Button variant="danger-solid">Delete</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
