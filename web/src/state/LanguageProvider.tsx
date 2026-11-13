@@ -12,6 +12,7 @@ import {
 } from "react";
 
 import {
+  TRANSLATION_DEFAULTS,
   isSupportedLocale,
   translateMessage,
   type InterfaceLocale,
@@ -40,12 +41,7 @@ export interface LanguageValue extends LanguageSettings {
 const STORAGE_KEY = "stellarr_language_settings";
 const ONE_YEAR_SECONDS = 365 * 24 * 60 * 60;
 
-/** Everything but the locale, which comes from the request and not from a default. */
-const DEFAULTS = {
-  chatTranslationEnabled: false,
-  chatAutoTranslateEnabled: false,
-  chatTranslationTargetLanguage: "en",
-} as const satisfies Omit<LanguageSettings, "locale">;
+const DEFAULTS = TRANSLATION_DEFAULTS;
 
 function readStored(fallbackLocale: InterfaceLocale): LanguageSettings {
   try {

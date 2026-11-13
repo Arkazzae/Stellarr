@@ -1,7 +1,23 @@
-import { normaliseTheme, type ThemePreference } from "@/design/themes";
-import { isSupportedLocale, type InterfaceLocale, type LanguageSettings } from "@/i18n";
-import { KEYBIND_STORAGE_VERSION, parseKeybindings, type Keybindings } from "@/lib/keybinds";
-import { SETTINGS_VERSION, parseVoiceSettings, type VoiceSettings } from "@/lib/voice/settings";
+import { DEFAULT_THEME, normaliseTheme, type ThemePreference } from "@/design/themes";
+import {
+  TRANSLATION_DEFAULTS,
+  isSupportedLocale,
+  type InterfaceLocale,
+  type LanguageSettings,
+} from "@/i18n";
+import {
+  DEFAULT_KEYBINDINGS,
+  KEYBIND_STORAGE_VERSION,
+  parseKeybindings,
+  type Keybindings,
+} from "@/lib/keybinds";
+import {
+  DEFAULT_SETTINGS,
+  SETTINGS_VERSION,
+  parseVoiceSettings,
+  type VoiceSettings,
+} from "@/lib/voice/settings";
+import type { ClientSettingsSection } from "@/lib/api/types";
 
 /**
  * How each of the client's own settings travels to the account and back.
@@ -91,4 +107,22 @@ export function voiceFromWire(value: Wire, current: VoiceSettings): Partial<Voic
   for (const key of VOICE_DEVICE_ONLY) local[key] = current[key];
   const { version: _version, ...merged } = parseVoiceSettings({ ...value, ...local });
   return merged;
+}
+
+/**
+ * A section as it reads on a device nobody has touched. A device showing just
+ * this has nothing to give an account that has no value yet: sending it would
+ * let a phone signed in once overwrite what was set up on another computer.
+ */
+export function defaultWire(section: ClientSettingsSection): Wire {
+  switch (section) {
+    case "appearance":
+      return appearanceToWire(DEFAULT_THEME);
+    case "language":
+      return languageToWire(TRANSLATION_DEFAULTS, undefined);
+    case "keybinds":
+      return keybindsToWire(DEFAULT_KEYBINDINGS);
+    case "voice":
+      return voiceToWire(DEFAULT_SETTINGS);
+  }
 }
