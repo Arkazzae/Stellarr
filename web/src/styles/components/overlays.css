@@ -475,9 +475,11 @@
   .cf-field{margin-top:15px}
   .cf-field .fld-lab{margin-bottom:7px}
   /* The answers share the row at equal widths, like the short dialogs'
-     `.ch-foot`; the harmless one is a filled neutral, never an outline. */
-  .cf-foot{
-    display:flex;gap:12px;margin-top:24px;
+     `.ch-foot`; the harmless one is a filled neutral, never an outline. The
+     short dialogs' footers (`.ch-foot`, `.dlg-foot`) answer the same way, so
+     the three share the neutral look. */
+  .cf-foot{display:flex;gap:12px;margin-top:24px}
+  .cf-foot,.ch-foot,.dlg-foot{
     --ui-button-secondary-border:transparent;
     --ui-button-secondary-bg:var(--surface-overlay);
     --ui-button-secondary-text:var(--text);

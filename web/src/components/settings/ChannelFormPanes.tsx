@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 
+import { Button } from "@stellarr/ui";
 import { Icon } from "@stellarr/ui/icons";
 import { SettingsSection } from "@/components/settings/SettingsSection";
 import {
@@ -314,9 +315,9 @@ export function ChannelOverviewPane({ channel, supported, onSave }: ChannelOverv
             {t("channel.settingsSaveFailed")}
           </p>
         ) : null}
-        <button
+        <Button
           type="button"
-          className="btn-primary"
+          variant="primary"
           disabled={!supported || !dirty || saveAction.pending}
           onClick={() => void save()}
         >
@@ -330,7 +331,7 @@ export function ChannelOverviewPane({ channel, supported, onSave }: ChannelOverv
             : saved
               ? t("common.saved")
               : t("common.saveChanges")}
-        </button>
+        </Button>
       </div>
     </SettingsSection>
   );

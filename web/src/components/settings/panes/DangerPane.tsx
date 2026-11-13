@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@stellarr/ui";
 import { SettingsSection } from "@/components/settings/SettingsSection";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
 import { useLanguage } from "@/state/hooks";
@@ -32,14 +33,14 @@ export function DangerPane({ supported, serverName, onTransfer, onDelete }: Dang
             <span>{t("settings.transferServerDetail")}</span>
           </span>
           <span className="set-ctl">
-            <button
+            <Button
               type="button"
-              className="btn-ghost"
+              variant="secondary"
               disabled={locked}
               onClick={() => void action.run(onTransfer)}
             >
               {t("settings.transfer")}
-            </button>
+            </Button>
           </span>
         </div>
         <div className="set-row danger">
@@ -48,14 +49,14 @@ export function DangerPane({ supported, serverName, onTransfer, onDelete }: Dang
             <span>{t("settings.deleteServerDetail")}</span>
           </span>
           <span className="set-ctl">
-            <button
+            <Button
               type="button"
-              className="btn-danger"
+              variant="danger"
               disabled={locked}
               onClick={() => void action.run(onDelete)}
             >
               {t("settings.deleteNamedServer", { name: serverName })}
-            </button>
+            </Button>
           </span>
         </div>
       </SettingsSection>

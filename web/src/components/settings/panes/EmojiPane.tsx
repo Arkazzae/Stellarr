@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 
+import { Button } from "@stellarr/ui";
 import { Icon } from "@stellarr/ui/icons";
 import { useConfirm } from "@/components/primitives/ConfirmDialog";
 import { SettingsSection } from "@/components/settings/SettingsSection";
@@ -102,17 +103,19 @@ function UploadEditor({
         </p>
         <div className="emoji-editor-actions">
           <span />
-          <button type="button" className="btn-ghost sm" disabled={busy} onClick={onCancel}>
+          <Button type="button" variant="secondary" size="sm" disabled={busy} onClick={onCancel}>
             {t("common.cancel")}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
-            className="btn-primary sm"
+            variant="primary"
+            size="sm"
+            className="emoji-save"
             disabled={busy || !valid}
             onClick={onSubmit}
           >
             {busy ? `${t("common.add")}…` : `${t("common.save")} emoji`}
-          </button>
+          </Button>
         </div>
       </div>
     </section>
@@ -219,16 +222,18 @@ export function EmojiPane({ supported, emoji, onUpload, onDelete }: EmojiPanePro
         countLabel={t("settings.emojiCount", { count: emoji.length, max: MAX_EMOJI })}
         action={
           <>
-            <button
+            <Button
               type="button"
-              className="btn-primary sm"
+              variant="primary"
+              size="sm"
+              className="asset-add"
               disabled={!supported || uploading || deletingId !== null || atLimit}
               title={atLimit ? t("settings.emojiLimitTitle") : undefined}
               onClick={() => picker.current?.click()}
             >
               <Icon name="plus" size={15} />
               {t("settings.addEmoji")}
-            </button>
+            </Button>
             <input
               ref={picker}
               type="file"

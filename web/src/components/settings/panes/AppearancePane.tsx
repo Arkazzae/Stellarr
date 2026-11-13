@@ -2,6 +2,7 @@
 
 import type { CSSProperties, ReactNode } from "react";
 
+import { Button } from "@stellarr/ui";
 import { Icon, type IconName } from "@stellarr/ui/icons";
 import { Avatar } from "@/components/primitives/Avatar";
 import { Segmented, type SegmentedOption } from "@/components/primitives/Segmented";
@@ -163,14 +164,16 @@ export function AppearancePane({
     <>
       <div className="ap-intro">
         <p className="set-note">{t("theme.appearanceNote")}</p>
-        <button
+        <Button
           type="button"
-          className="btn-ghost sm ap-reset"
+          variant="secondary"
+          size="sm"
+          className="ap-reset"
           disabled={isDefault}
           onClick={onReset}
         >
           {t("common.resetDefaults")}
-        </button>
+        </Button>
       </div>
 
       <Card icon="sparkle" title={t("theme.theme")}>
@@ -227,14 +230,15 @@ export function AppearancePane({
               onChange={(event) => onChange({ accent: event.currentTarget.value })}
             />
             <output htmlFor="theme-accent">{theme.accent}</output>
-            <button
+            <Button
               type="button"
-              className="btn-ghost sm"
+              variant="secondary"
+              size="sm"
               disabled={accentIsPreset}
               onClick={() => onChange({ accent: preset.colors.accent })}
             >
               {t("theme.themeColor")}
-            </button>
+            </Button>
           </div>
         </div>
 

@@ -155,6 +155,9 @@
     opacity: var(--ui-button-disabled-opacity, 1);
   }
 
+  /* A read-only view is full of outlined buttons, such as an edit button on
+     something nobody may edit. They have to look unavailable, not merely refuse
+     to work when pressed. */
   .ui-button[data-variant="secondary"]:disabled {
     opacity: var(--ui-button-disabled-opacity, 0.4);
   }

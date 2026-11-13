@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { Button } from "@stellarr/ui";
 import { Icon } from "@stellarr/ui/icons";
 import { Switch } from "@/components/primitives/Switch";
 import {
@@ -67,10 +68,16 @@ export function PermissionsPane({
       title={t("channel.channelPermissions")}
       icon="shield"
       action={
-        <button type="button" className="btn-ghost sm ch-roles-link" onClick={onOpenRoles}>
+        <Button
+          type="button"
+          variant="secondary"
+          size="sm"
+          className="ch-roles-link"
+          onClick={onOpenRoles}
+        >
           <Icon name="shield" size={14} />
           {t("channel.openServerRoles")}
-        </button>
+        </Button>
       }
     >
       <p className="fld-note">{t("channel.permissionsDetailText")}</p>
@@ -119,34 +126,34 @@ export function DangerPane({ channel, supported, onDelete }: DangerPaneProps) {
         <span className="set-ctl">
           {confirming ? (
             <>
-              <button
+              <Button
                 type="button"
-                className="btn-ghost"
+                variant="secondary"
                 disabled={action.pending}
                 onClick={() => setConfirming(false)}
               >
                 {t("common.cancel")}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className="btn-danger"
+                variant="danger"
                 disabled={!supported || action.pending}
                 onClick={() => void action.run(onDelete)}
               >
                 {t("settings.deleteNamedServer", {
                   name: channelLabel(channel.kind, channel.name),
                 })}
-              </button>
+              </Button>
             </>
           ) : (
-            <button
+            <Button
               type="button"
-              className="btn-danger"
+              variant="danger"
               disabled={!supported}
               onClick={() => setConfirming(true)}
             >
               {t("channel.delete")}
-            </button>
+            </Button>
           )}
         </span>
       </div>

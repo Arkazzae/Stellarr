@@ -2,6 +2,7 @@
 
 import { type CSSProperties, useState } from "react";
 
+import { Button } from "@stellarr/ui";
 import { Icon } from "@stellarr/ui/icons";
 import { Segmented } from "@/components/primitives/Segmented";
 import type { MessageKey } from "@/i18n";
@@ -97,16 +98,17 @@ function RoleRow({ role, override, open, disabled, onToggle }: RoleRowProps) {
           )}
         </span>
       </span>
-      <button
+      <Button
         type="button"
-        className="btn-ghost sm"
+        variant="secondary"
+        size="sm"
         disabled={disabled}
         aria-expanded={open}
         aria-label={t("settings.permission.editForRole", { name: role.name })}
         onClick={onToggle}
       >
         {open ? t("common.close") : t("settings.permission.edit")}
-      </button>
+      </Button>
     </div>
   );
 }
@@ -216,23 +218,25 @@ export function PermissionOverrideEditor({
                 {t("settings.permission.saveFailed")}
               </span>
             ) : null}
-            <button
+            <Button
               type="button"
-              className="btn-ghost sm"
+              variant="secondary"
+              size="sm"
               disabled={!supported || !dirty || saving}
               onClick={() => setDraft(null)}
             >
               {t("common.cancel")}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className="btn-primary sm"
+              variant="primary"
+              size="sm"
               disabled={!supported || !dirty || saving}
               onClick={() => void save(selected.id)}
             >
               <Icon name="tick" size={15} />
               {saving ? t("common.saving") : t("settings.save")}
-            </button>
+            </Button>
           </div>
         </div>
       ) : null}

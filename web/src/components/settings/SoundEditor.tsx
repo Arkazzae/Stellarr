@@ -2,6 +2,7 @@
 
 import { useId, useState } from "react";
 
+import { Button } from "@stellarr/ui";
 import { Icon } from "@stellarr/ui/icons";
 import { AnchoredCard } from "@/components/primitives/AnchoredCard";
 import { EmojiPicker } from "@/components/room/EmojiPicker";
@@ -154,9 +155,9 @@ export function SoundEditor({
             />
             <output>{soundboardVolume}%</output>
           </label>
-          <button type="button" className="btn-ghost sm" onClick={onPreview} disabled={busy}>
+          <Button type="button" variant="secondary" size="sm" onClick={onPreview} disabled={busy}>
             <Icon name="play" size={14} /> {t("settings.soundPreview")}
-          </button>
+          </Button>
         </div>
         <WaveformTrimmer
           duration={draft.duration}
@@ -168,17 +169,18 @@ export function SoundEditor({
         />
 
         <div className="sound-editor-actions">
-          <button type="button" className="btn-ghost sm" onClick={onClose} disabled={busy}>
+          <Button type="button" variant="secondary" size="sm" onClick={onClose} disabled={busy}>
             {t("common.cancel")}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
-            className="btn-primary sm"
+            variant="primary"
+            size="sm"
             onClick={onSave}
             disabled={busy || !canSaveSound(draft)}
           >
             {busy ? t("common.saving") : t("settings.soundSave")}
-          </button>
+          </Button>
         </div>
       </section>
 

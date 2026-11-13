@@ -2,6 +2,7 @@
 
 import { Fragment, useId, useState } from "react";
 
+import { Button } from "@stellarr/ui";
 import { Icon, type IconName } from "@stellarr/ui/icons";
 import { DialogClose } from "@/components/primitives/DialogClose";
 import { Modal } from "@/components/primitives/Modal";
@@ -201,10 +202,10 @@ export function SectionSettings({
                 onSave={onSavePermissionOverride}
               />
             )}
-            <button type="button" className="btn-ghost sm" onClick={onOpenRoles}>
+            <Button type="button" variant="secondary" size="sm" onClick={onOpenRoles}>
               <Icon name="shield" size={15} />
               {t("channel.openServerRoles")}
-            </button>
+            </Button>
           </SettingsSection>
         );
       case "danger":
@@ -218,9 +219,10 @@ export function SectionSettings({
             ) : null}
             {confirmingDelete ? (
               <div className="ch-confirm">
-                <button
+                <Button
                   type="button"
-                  className="btn-danger sm"
+                  variant="danger"
+                  size="sm"
                   disabled={!supported || busy}
                   onClick={() => void confirmDelete()}
                 >
@@ -228,26 +230,28 @@ export function SectionSettings({
                   {section === null
                     ? t("section.delete")
                     : t("settings.deleteNamedServer", { name: section.name })}
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
-                  className="btn-ghost sm"
+                  variant="secondary"
+                  size="sm"
                   onClick={() => setConfirmingDelete(false)}
                 >
                   <Icon name="x" size={14} />
                   {t("common.cancel")}
-                </button>
+                </Button>
               </div>
             ) : (
-              <button
+              <Button
                 type="button"
-                className="btn-danger sm"
+                variant="danger"
+                size="sm"
                 disabled={!supported}
                 onClick={() => setConfirmingDelete(true)}
               >
                 <Icon name="trash" size={15} />
                 {t("section.delete")}
-              </button>
+              </Button>
             )}
           </SettingsSection>
         );
@@ -318,19 +322,19 @@ export function SectionSettings({
                 {actionError}
               </span>
             )}
-            <button type="button" className="btn-ghost" onClick={onClose}>
+            <Button type="button" variant="secondary" onClick={onClose}>
               <Icon name="x" size={15} />
               {t("common.close")}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className="btn-primary"
+              variant="primary"
               disabled={!canSave}
               onClick={() => void save()}
             >
               <Icon name="tick" size={15} />
               {busy ? t("common.saving") : t("channel.settingsSave")}
-            </button>
+            </Button>
           </footer>
         </div>
       </div>

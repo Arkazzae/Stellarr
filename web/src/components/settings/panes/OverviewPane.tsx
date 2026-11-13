@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 
+import { Button } from "@stellarr/ui";
 import { Icon } from "@stellarr/ui/icons";
 import { Switch } from "@/components/primitives/Switch";
 import { countedNoun, formatShortDate } from "@/components/settings/panes/paneFormat";
@@ -199,9 +200,10 @@ export function OverviewPane({
             </span>
           </span>
           <span className="ov-icon-actions">
-            <button
+            <Button
               type="button"
-              className="btn-ghost sm"
+              variant="secondary"
+              size="sm"
               disabled={iconLocked}
               onClick={openPicker}
             >
@@ -211,16 +213,18 @@ export function OverviewPane({
                 : iconUrl === undefined
                   ? t("settings.serverIconAddShort")
                   : t("settings.serverIconChangeShort")}
-            </button>
+            </Button>
             {iconUrl === undefined ? null : (
-              <button
+              <Button
                 type="button"
-                className="btn-ghost sm danger"
+                variant="secondary"
+                size="sm"
+                className="danger"
                 disabled={iconLocked}
                 onClick={() => void icon.remove()}
               >
                 {t("settings.serverIconRemove")}
-              </button>
+              </Button>
             )}
           </span>
         </header>
@@ -293,9 +297,9 @@ export function OverviewPane({
               {t("settings.serverSaveFailed")}
             </p>
           ) : null}
-          <button
+          <Button
             type="button"
-            className="btn-primary"
+            variant="primary"
             disabled={!supported || !dirty || saveAction.pending}
             onClick={() => void save()}
           >
@@ -309,7 +313,7 @@ export function OverviewPane({
               : saved
                 ? t("common.saved")
                 : t("common.saveChanges")}
-          </button>
+          </Button>
         </div>
       </SettingsSection>
     </>
