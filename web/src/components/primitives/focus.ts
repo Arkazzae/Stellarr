@@ -1,11 +1,12 @@
+import { FOCUSABLE } from "@stellarr/ui/behavior";
+
 /**
- * What counts as a tab stop inside a dialog or an anchored card.
- *
- * `:not([disabled])` matters: a pane that is unsupported disables its
- * controls, and a trap that stopped on them would strand the keyboard.
+ * What counts as a tab stop inside a dialog or an anchored card. It is the
+ * shared package's list, so its overlays and the ones here agree on where Tab
+ * goes; a disabled control is not on it, or a trap would strand the keyboard
+ * on a pane that is unsupported and disables its controls.
  */
-export const FOCUSABLE =
-  'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
+export { FOCUSABLE };
 
 /** Focuses the first tab stop in `container`, or the container when it has none. */
 export function focusWithin(container: HTMLElement | null): void {
