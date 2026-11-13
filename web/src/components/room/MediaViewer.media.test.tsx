@@ -95,7 +95,10 @@ describe("MediaViewer", () => {
     );
 
     expect(screen.getByRole("dialog", { name: "Pies.webm" })).toBeInTheDocument();
-    expect(document.querySelector("video")).toHaveAttribute("src", "/files/pies.webm");
+    const video = document.querySelector("video");
+    expect(video).toHaveAttribute("src", "/files/pies.webm");
+    // Playback opens with its sound; only the in-message frame is a still.
+    expect(video).toHaveProperty("muted", false);
     expect(screen.getByRole("link", { name: "Pobierz" })).toHaveAttribute(
       "href",
       "/files/pies.webm",

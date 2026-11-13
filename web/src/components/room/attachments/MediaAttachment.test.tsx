@@ -85,4 +85,12 @@ describe("uploaded media attachments", () => {
     fireEvent.click(screen.getByRole("button", { name: "Odtwórz wideo" }));
     expect(onPlay).toHaveBeenCalledOnce();
   });
+
+  it("leaves the in-message video with its sound", () => {
+    const { container } = render(
+      <VideoAttachment part={{ kind: "video", name: "clip.mp4", url: "/assets/video" }} />,
+    );
+
+    expect(container.querySelector("video")).toHaveProperty("muted", false);
+  });
 });
