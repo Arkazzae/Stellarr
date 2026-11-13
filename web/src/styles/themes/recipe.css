@@ -276,6 +276,10 @@
   /* The persistent servers / DM column. */
   --servers-rail-w: 68px;
   --header-h: 52px;
+  /* The bottom band the server launcher, the account row and the composer
+     share. Each one centres in it, so the three sit on one line instead of
+     three different distances from the bottom edge. */
+  --dock-h: 78px;
 
   --dur-fast: 90ms;
   --dur-base: 140ms;
