@@ -124,4 +124,56 @@ describe("AccountPane", () => {
     );
     expect(onPickImage).toHaveBeenCalledWith("avatar", file);
   });
+
+  it("edits the pronouns with the rest of the profile and shows them on the card", async () => {
+    const user = userEvent.setup();
+    const onSave = vi.fn();
+    render(<AccountPane {...pane({ onSave })} />);
+
+    const field = screen.getByRole("textbox", { name: /^Zaimki/ });
+    expect(field).toHaveValue("on/jego");
+    expect(field).toHaveAttribute("maxLength", "32");
+
+    await user.clear(field);
+    await user.type(field, "  oni/ich ");
+    expect(screen.getByRole("region", { name: "Twoja karta profilu" })).toHaveTextContent("oni/ich");
+    await user.click(screen.getByRole("button", { name: "Zapisz zmiany" }));
+
+    expect(onSave).toHaveBeenCalledExactlyOnceWith({
+      displayName: "Patryk",
+      pronouns: "oni/ich",
+      bio: "",
+    });
+  });
+
+  it("offers to remove only the pictures that were uploaded", async () => {
+    const user = userEvent.setup();
+    const onRemoveImage = vi.fn();
+    const { rerender } = render(<AccountPane {...pane({ onRemoveImage })} />);
+
+    expect(screen.queryByRole("button", { name: "Usuń awatar" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Usuń tło" })).toBeNull();
+
+    rerender(<AccountPane {...pane({ onRemoveImage, account: { ...account, avatarUrl: "/assets/a" } })} />);
+    expect(screen.queryByRole("button", { name: "Usuń tło" })).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Usuń awatar" }));
+
+    expect(onRemoveImage).toHaveBeenCalledExactlyOnceWith("avatar");
+  });
+
+  it("reports a picture that could not be removed", async () => {
+    const user = userEvent.setup();
+    render(
+      <AccountPane
+        {...pane({
+          account: { ...account, bannerUrl: "/assets/b" },
+          onRemoveImage: vi.fn().mockRejectedValue(new Error("offline")),
+        })}
+      />,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Usuń tło" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Nie udało się usunąć obrazu.");
+  });
 });

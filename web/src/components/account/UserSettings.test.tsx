@@ -290,8 +290,7 @@ describe("UserSettings", () => {
     await user.type(screen.getByLabelText(/Nazwa wyświetlana/), "!");
     await user.click(save);
 
-    // The hidden pronouns value is retained when the visible profile fields
-    // are saved, so removing the field from this pane does not clear it.
+    // A save carries the whole profile, so an untouched field keeps its value.
     expect(props.accountPane.onSave).toHaveBeenCalledWith({
       displayName: "Maja!",
       pronouns: "ona/jej",
