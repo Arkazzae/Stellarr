@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useRef, type ReactNode, type Ref } from "react";
+import { useRef, type ReactNode, type Ref } from "react";
+
+import { useLayer } from "@stellarr/ui/behavior";
 
 export interface PopoverTriggerProps {
   ref: Ref<HTMLButtonElement>;
@@ -21,7 +23,8 @@ export interface PopoverProps {
 
 /**
  * A panel that hangs off a dock or a row and closes on a click elsewhere or on
- * Escape.
+ * Escape. While open it is a layer on the shared stack, so it answers only when
+ * no layer above it does.
  *
  * Trigger and panel render as siblings. The panel is positioned by CSS against
  * the region that contains the pair, so it lands in the same place wherever
@@ -38,34 +41,20 @@ export function Popover({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!open) return;
-
-    const onPointerDown = (event: PointerEvent) => {
-      const { target } = event;
-      if (!(target instanceof Node)) return;
-      if (panelRef.current?.contains(target)) return;
-      // The trigger toggles itself; closing here too would reopen the panel.
-      if (triggerRef.current?.contains(target)) return;
-      onOpenChange(false);
-    };
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      // The shell listens on `window`, one hop further along. Stopping here
-      // closes the popover without also closing the drawer behind it.
-      event.stopPropagation();
+  useLayer(open, {
+    node: () => panelRef.current,
+    // The trigger toggles itself; closing on a press there too would reopen the
+    // panel.
+    owns: (target) =>
+      panelRef.current?.contains(target) === true || triggerRef.current?.contains(target) === true,
+    onEscape: () => {
       onOpenChange(false);
       triggerRef.current?.focus();
-    };
-
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [open, onOpenChange]);
+    },
+    onPointerDownOutside: () => {
+      onOpenChange(false);
+    },
+  });
 
   return (
     <>

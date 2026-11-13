@@ -10,6 +10,8 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 
+import { useLayer } from "@stellarr/ui/behavior";
+
 import { focusWithin, trapTab } from "./focus";
 
 /** Between the anchor and the card. */
@@ -106,7 +108,8 @@ function cssPixels(style: CSSStyleDeclaration, property: string): number {
  * anchor's rectangle.
  *
  * It is a dialog for assistive tech: focus moves in, Escape and a click
- * elsewhere close it, and focus returns to the anchor. `aria-modal` is left off
+ * elsewhere close it (as a layer on the shared stack, when no layer above it
+ * takes them), and focus returns to the anchor. `aria-modal` is left off
  * on purpose, because nothing behind the card is inert.
  */
 export function AnchoredCard({
@@ -188,35 +191,21 @@ export function AnchoredCard({
     };
   }, [anchor, autoFocus]);
 
-  useEffect(() => {
-    const onPointerDown = (event: PointerEvent) => {
-      const { target } = event;
-      if (!(target instanceof Node)) return;
-      if (cardRef.current?.contains(target) === true) return;
-      // The anchor toggles the card itself; closing here too would make a
-      // second click on it reopen what the click meant to dismiss.
-      if (anchor.contains(target)) return;
+  useLayer(true, {
+    node: () => cardRef.current,
+    // The anchor toggles the card itself; closing on a press there too would
+    // make a second click on it reopen what the click meant to dismiss.
+    owns: (target) => cardRef.current?.contains(target) === true || anchor.contains(target),
+    onEscape: () => {
       onClose();
-    };
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        // The shell listens on `window`, one hop further along. Stopping here
-        // closes the card without also closing a drawer.
-        event.stopPropagation();
-        onClose();
-      } else if (event.key === "Tab" && cardRef.current !== null) {
-        trapTab(event, cardRef.current);
-      }
-    };
-
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [anchor, onClose]);
+    },
+    onTab: (event) => {
+      if (cardRef.current !== null) trapTab(event, cardRef.current);
+    },
+    onPointerDownOutside: () => {
+      onClose();
+    },
+  });
 
   return createPortal(
     <div

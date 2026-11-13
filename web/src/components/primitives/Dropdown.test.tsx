@@ -93,33 +93,26 @@ describe("Dropdown", () => {
     expect(onChange).toHaveBeenCalledWith("premium");
   });
 
-  it("closes on Escape without choosing, and keeps the dialog around it open", async () => {
+  it("closes on Escape without choosing, and keeps the key from the page behind it", async () => {
     const user = userEvent.setup();
-    const outer = vi.fn();
+    // Stands in for whatever is behind the list: a dialog beneath it on the
+    // stack, or the shell's own Escape handler on `window`.
+    const page = vi.fn();
     const onChange = vi.fn();
-    render(
-      <div onKeyDown={outer}>
-        <Dropdown
-          options={PROFILES}
-          value="voice"
-          onChange={onChange}
-          label="Jakość"
-        />
-      </div>,
-    );
+    window.addEventListener("keydown", page);
+    render(<Dropdown options={PROFILES} value="voice" onChange={onChange} label="Jakość" />);
 
     const field = screen.getByRole("combobox", { name: "Jakość" });
     field.focus();
     await user.keyboard("{ArrowDown}");
-    outer.mockClear();
+    page.mockClear();
 
     await user.keyboard("{Escape}");
+    window.removeEventListener("keydown", page);
 
     expect(screen.queryByRole("listbox")).toBeNull();
+    expect(page).not.toHaveBeenCalled();
     expect(onChange).not.toHaveBeenCalled();
-    // Escape belongs to the list while the list is open; the dialog behind it
-    // must not close with it.
-    expect(outer).not.toHaveBeenCalled();
   });
 
   it("jumps to an option by typing its first letters", async () => {

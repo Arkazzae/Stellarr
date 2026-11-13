@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -102,6 +102,29 @@ describe("Modal", () => {
 
     await user.click(dialog);
     expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it("does not close on a click on the backdrop that no press began", async () => {
+    const onClose = vi.fn();
+    render(<Harness onClose={onClose} />);
+    const { dialog } = await openDialog();
+
+    fireEvent.click(dialog);
+
+    expect(onClose).not.toHaveBeenCalled();
+    expect(dialog).toBeInTheDocument();
+  });
+
+  it("does not close when a press began inside the dialog and its click landed on the backdrop", async () => {
+    const onClose = vi.fn();
+    render(<Harness onClose={onClose} />);
+    const { dialog } = await openDialog();
+
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Second" }));
+    fireEvent.click(dialog);
+
+    expect(onClose).not.toHaveBeenCalled();
+    expect(dialog).toBeInTheDocument();
   });
 
   it("locks page scrolling while mounted and restores what was there", async () => {

@@ -11,6 +11,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 
+import { useLayer } from "@stellarr/ui/behavior";
 import { Icon, type IconName } from "@stellarr/ui/icons";
 import { useLanguage } from "@/state/hooks";
 
@@ -165,26 +166,30 @@ export function Dropdown<T extends string>({
   useEffect(() => {
     if (!open) return;
 
-    const onPointerDown = (event: PointerEvent) => {
-      const { target } = event;
-      if (!(target instanceof Node)) return;
-      if (listRef.current?.contains(target)) return;
-      // The field toggles itself; closing here too would reopen the list.
-      if (fieldRef.current?.contains(target)) return;
-      setOpen(false);
-    };
-
     // The list belongs to a form row, not to a pointer position, so it follows
     // the field when something scrolls.
     window.addEventListener("scroll", reposition, { capture: true, passive: true });
     window.addEventListener("resize", reposition);
-    document.addEventListener("pointerdown", onPointerDown);
     return () => {
       window.removeEventListener("scroll", reposition, { capture: true });
       window.removeEventListener("resize", reposition);
-      document.removeEventListener("pointerdown", onPointerDown);
     };
   }, [open, reposition]);
+
+  useLayer(open, {
+    node: () => listRef.current,
+    // The field toggles itself; closing on a press there too would reopen the
+    // list.
+    owns: (target) =>
+      listRef.current?.contains(target) === true || fieldRef.current?.contains(target) === true,
+    onEscape: (event) => {
+      event.preventDefault();
+      setOpen(false);
+    },
+    onPointerDownOutside: () => {
+      setOpen(false);
+    },
+  });
 
   // Keep the cursor row in view: opening twenty devices at the top when the
   // fifteenth is in use would make the current value the one thing to hunt for.
@@ -244,15 +249,6 @@ export function Dropdown<T extends string>({
   const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
     if (disabled === true) return;
     const { key } = event;
-
-    if (key === "Escape") {
-      if (!open) return;
-      event.preventDefault();
-      // A dropdown inside a dialog must not close the dialog with it.
-      event.stopPropagation();
-      setOpen(false);
-      return;
-    }
 
     if (!open) {
       if (key === "ArrowDown" || key === "ArrowUp" || key === "Enter" || key === " ") {
