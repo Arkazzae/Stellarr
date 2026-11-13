@@ -906,21 +906,6 @@
   .ch-modal .am-card{width:min(680px, 100%)}
   .ch-body{flex:1;min-height:0;overflow-y:auto;padding:24px 34px 6px}
   .ch-body .frm-row:first-child{border-top:none;padding-top:0}
-  .ch-sect{margin-top:22px;border-top:1px solid var(--line-subtle);padding-top:18px}
-  .ch-sect-h{
-    display:flex;align-items:center;gap:9px;
-    font-size:var(--text-15);font-weight:600;margin-bottom:8px;
-  }
-  .ch-sect.danger .sc-ico{color:var(--danger-text)}
-  .ch-roles{display:flex;flex-direction:column;gap:2px;margin:10px 0 12px}
-  .ch-role{
-    display:flex;align-items:center;gap:9px;
-    padding:7px 8px;border-radius:var(--radius-md);
-    font-size:var(--text-13);color:var(--text-muted);background:var(--surface-base);
-  }
-  .ch-role.empty{color:var(--text-faint);background:none;padding-left:0}
-  .ch-role-dot{width:8px;height:8px;border-radius:50%;flex:none}
-  .ch-role-state{margin-left:auto;font-size:var(--text-12);color:var(--text-faint)}
   .ch-confirm{display:flex;align-items:center;gap:8px}
   .ch-foot{
     flex:none;display:flex;align-items:center;justify-content:flex-end;gap:10px;
@@ -966,6 +951,95 @@
     padding:14px 34px 16px;border-top:1px solid var(--line-subtle);
     background:var(--surface-base);
   }
+  /* ---------- NOWY KANAŁ ---------- */
+  /*
+   * A slice of the rail. The new channel is typed into a row of it, in the
+   * group it will join, so the dialog shows what a form could only describe:
+   * where the channel ends up and how the rail will write it. The slice uses
+   * the rail's own surface, captions and row sizes; the new row is the rail's
+   * active row, ringed with the accent while it is being named.
+   */
+  .ch-place-modal .am-card{width:min(460px, 100%)}
+  .ch-place-modal .am-head{padding:14px 24px}
+  .ch-place-body{flex:1;min-height:0;overflow-y:auto;padding:20px 24px 4px}
+  .ch-place{
+    background:var(--surface-sidebar);border:1px solid var(--line-subtle);border-radius:14px;
+    padding:0 8px 10px;max-height:min(380px, 52vh);overflow-y:auto;overscroll-behavior:contain;
+  }
+  .ch-place-server{
+    position:sticky;top:0;z-index:1;margin:0 -8px 8px;padding:12px 16px 11px;
+    background:var(--surface-sidebar);border-bottom:1px solid var(--line-subtle);
+    font-size:var(--text-16);font-weight:600;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  }
+  .ch-place-group + .ch-place-group{margin-top:12px}
+  .ch-place-group.section{padding-top:10px;border-top:1px solid var(--line-subtle)}
+  .ch-place-cap{display:flex;align-items:center;gap:7px;min-height:26px;padding:0 4px 0 8px}
+  .ch-place-caption{
+    flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    font-size:var(--text-11);font-weight:600;letter-spacing:0.08em;text-transform:uppercase;
+    color:var(--text-faint);
+  }
+  .ch-place-group.section .ch-place-caption{
+    font-size:var(--text-12);letter-spacing:0;text-transform:none;color:var(--text-muted);
+  }
+  .ch-place-folder{display:inline-flex;flex:none;color:var(--text-faint)}
+  .ch-place-move{
+    width:24px;height:24px;border-radius:var(--radius-sm);flex:none;
+    display:inline-flex;align-items:center;justify-content:center;color:var(--text-faint);
+    transition:background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+  }
+  .ch-place-move:hover:not(:disabled){background:var(--surface-overlay);color:var(--text)}
+  .ch-place-row{
+    display:flex;align-items:center;gap:8px;height:32px;padding:0 8px;
+    border-radius:var(--radius-sm);font-size:var(--text-13);color:var(--text-faint);
+  }
+  .ch-place-mark{width:16px;flex:none;display:inline-flex;justify-content:center}
+  .ch-place-name{min-width:0;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ch-place-row.new{
+    height:40px;margin:3px 0;padding:0 8px 0 5px;gap:9px;
+    color:var(--text);background:var(--surface-base);
+    box-shadow:inset 0 0 0 1px var(--accent);
+    animation:viewIn var(--dur-base) var(--ease-standard);
+  }
+  .ch-place-row.new:focus-within{box-shadow:inset 0 0 0 1px var(--accent), 0 0 0 3px var(--accent-soft)}
+  .ch-place-row.new[data-locked]{opacity:0.6}
+  /* The mark is the row's own glyph, so it is also the switch between kinds. */
+  .ch-place-glyph{
+    width:30px;height:30px;border-radius:var(--radius-sm);flex:none;
+    display:inline-flex;align-items:center;justify-content:center;
+    font-size:var(--text-16);font-weight:600;
+    color:var(--accent-text);background:var(--accent-soft);
+    transition:background var(--dur-fast) var(--ease-standard);
+  }
+  .ch-place-glyph:hover:not(:disabled){background:color-mix(in oklab, var(--accent) 28%, transparent)}
+  .ch-place-input{
+    flex:1;min-width:0;height:100%;background:none;border:0;
+    font-size:var(--text-15);font-weight:550;color:var(--text);
+  }
+  .ch-place-input:focus-visible{outline:none}
+  .ch-place-input::placeholder{font-weight:400}
+  .ch-place-foot{flex:none;display:flex;align-items:center;gap:16px;padding:16px 24px 20px}
+  .ch-place-notes{flex:1;min-width:0}
+  .ch-place-hint{font-size:var(--text-13);color:var(--text-faint);line-height:1.45}
+  .ch-place-error{margin-top:2px;font-size:var(--text-13);color:var(--danger-text);line-height:1.45}
+  .ch-place-foot .btn-primary:disabled{opacity:0.45;cursor:default}
+  .ch-place-foot .btn-primary:disabled:hover{background:var(--accent)}
+
+  /* ---------- PROFIL KANAŁU ---------- */
+  /* The server overview's identity row, with the channel's mark for an icon. */
+  .ch-id-ico{
+    width:44px;height:44px;border-radius:14px;flex:none;
+    display:inline-flex;align-items:center;justify-content:center;
+    background:var(--accent);color:var(--on-accent);
+  }
+  .ch-id .ov-id-txt b{overflow-wrap:anywhere}
+  /* A form that is the whole card: no rules against the card's own edges. */
+  .ch-frm-flush{border-top:0}
+  .ch-frm-flush > .frm-row:first-child{padding-top:0}
+  .ch-frm-flush > .frm-row:last-child{padding-bottom:0;border-bottom:0}
+  .ch-roles-link{margin-left:auto;gap:6px}
+
   /* A touch screen does not become precise just because it is wider than the
      phone breakpoint. Keep compact mouse controls visually restrained on
      desktop, but give their tablet and hybrid-laptop variants a 44px target. */
@@ -1128,7 +1202,7 @@
     .am-head{padding:10px 16px;border-radius:0}
     .am-title h2{font-size:var(--text-20);overflow-wrap:anywhere}
     .am-title p{font-size:var(--text-12);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-    .ch-body{padding:4px 16px 10px;overscroll-behavior:contain}
+    .ch-body{padding:16px 16px 10px;overscroll-behavior:contain}
     .ch-foot{
       padding:12px 16px max(14px, env(safe-area-inset-bottom));
       margin-top:0;flex-wrap:nowrap;
@@ -1154,6 +1228,17 @@
     }
     .dlg-foot .btn-ghost{min-height:44px}
     .inv-btn,.inv-copy,.find-join{height:44px;padding-inline:13px}
+    .ch-place-modal .am-head{padding:10px 16px}
+    .ch-place-body{padding:16px 16px 4px}
+    .ch-place{max-height:none}
+    .ch-place-move{width:44px;height:44px}
+    .ch-place-glyph{width:36px;height:36px}
+    .ch-place-row.new{height:48px}
+    .ch-place-foot{
+      flex-wrap:wrap;gap:10px;padding:12px 16px max(14px, env(safe-area-inset-bottom));
+      border-top:1px solid var(--line-subtle);background:var(--surface-base);
+    }
+    .ch-place-foot .btn-primary{flex:1 0 100%;min-height:44px;justify-content:center}
   }
 
   @media (max-width:479px){

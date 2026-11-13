@@ -76,7 +76,7 @@ describe("ChannelSettings", () => {
     expect(screen.getByRole("heading", { name: "Powiadomienia" })).toBeVisible();
   });
 
-  it("uses the shared settings shell with icon-led channel navigation", async () => {
+  it("uses the server settings' shell, groups and words", async () => {
     const user = userEvent.setup();
     const p = props();
     const { container } = render(<ChannelSettings {...p} />);
@@ -85,11 +85,12 @@ describe("ChannelSettings", () => {
       screen.getByRole("dialog", { name: "Ustawienia kanału: #ogolny" }),
     ).toBeInTheDocument();
     expect(container.querySelector(".sv.ch-settings")).toBeInTheDocument();
+    expect(screen.getByText("OGÓLNE")).toBeVisible();
+    expect(screen.getByText("ZARZĄDZANIE")).toBeVisible();
 
-    for (const name of ["Ogólne", "Powiadomienia", "Uprawnienia", "Usuń kanał"]) {
+    for (const name of ["Przegląd", "Powiadomienia", "Uprawnienia", "Strefa zagrożenia"]) {
       expect(screen.getByRole("button", { name }).querySelector("svg")).not.toBeNull();
     }
-    expect(screen.queryByRole("button", { name: "Głos i wideo" })).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Uprawnienia" }));
     expect(screen.getByRole("region", { name: "Uprawnienia kanału" })).toBeVisible();
@@ -97,6 +98,17 @@ describe("ChannelSettings", () => {
 
     await user.click(screen.getByRole("button", { name: "Otwórz role serwera" }));
     expect(p.onOpenRoles).toHaveBeenCalledOnce();
+  });
+
+  it("keeps a save only on the pane that has something to save", async () => {
+    const user = userEvent.setup();
+    render(<ChannelSettings {...props()} />);
+
+    expect(screen.getByRole("button", { name: "Zapisz zmiany" })).toBeDisabled();
+    for (const pane of ["Powiadomienia", "Uprawnienia", "Strefa zagrożenia"]) {
+      await user.click(screen.getByRole("button", { name: pane }));
+      expect(screen.queryByRole("button", { name: "Zapisz zmiany" })).toBeNull();
+    }
   });
 
   it("changes this user's text-channel notification mute immediately", async () => {
@@ -140,25 +152,20 @@ describe("ChannelSettings", () => {
     expect(screen.queryByText(/Nie masz uprawnienia/)).toBeNull();
   });
 
-  it("adds a dedicated voice and video pane for voice channels", async () => {
-    const user = userEvent.setup();
+  it("keeps a voice channel's person limit on its overview", () => {
     render(<ChannelSettings {...props({ channel: voiceChannel })} />);
 
-    const voiceTab = screen.getByRole("button", { name: "Głos i wideo" });
-    expect(voiceTab.querySelector("svg")).not.toBeNull();
-    await user.click(voiceTab);
-
+    expect(screen.queryByRole("button", { name: "Głos i wideo" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Powiadomienia" })).toBeNull();
     expect(screen.getByRole("combobox", { name: /Limit osób/ })).toBeVisible();
   });
 
-  it("saves a voice-channel patch from the fixed action bar", async () => {
+  it("saves a voice-channel patch from the profile card", async () => {
     const user = userEvent.setup();
     const p = props({ channel: voiceChannel });
     render(<ChannelSettings {...p} />);
 
-    await user.click(screen.getByRole("button", { name: "Głos i wideo" }));
-    const limit = screen.getByRole("combobox", { name: /Limit osób/ });
-    await user.selectOptions(limit, "10");
+    await user.selectOptions(screen.getByRole("combobox", { name: /Limit osób/ }), "10");
 
     const save = screen.getByRole("button", { name: "Zapisz zmiany" });
     expect(save).toBeEnabled();
@@ -171,7 +178,7 @@ describe("ChannelSettings", () => {
     });
   });
 
-  it("saves a trimmed text-channel patch from the fixed action bar", async () => {
+  it("saves a trimmed text-channel patch from the profile card", async () => {
     const user = userEvent.setup();
     const p = props();
     render(<ChannelSettings {...p} />);

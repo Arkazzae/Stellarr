@@ -56,8 +56,7 @@ const goTo = (user: User, pane: string) =>
     ),
   );
 
-// The nav item and the pane's own button share the name, so look inside the pane.
-const inDeletePane = () => within(screen.getByRole("region", { name: "Usuń kanał" }));
+const inDeletePane = () => within(screen.getByRole("region", { name: "Strefa zagrożenia" }));
 
 describe("ChannelSettings editing", () => {
   it("saves the topic and slow mode of a text channel", async () => {
@@ -153,17 +152,17 @@ describe("ChannelSettings pane that is not available", () => {
     rendered.rerender(<ChannelSettings {...props({ channel: null, canManageChannel: true })} />);
 
     expect(navItem("Powiadomienia")).toHaveAttribute("aria-current", "page");
-    expect(navItem("Ogólne")).not.toHaveAttribute("aria-current");
+    expect(navItem("Przegląd")).not.toHaveAttribute("aria-current");
   });
 });
 
 describe("ChannelSettings for members who cannot manage the channel", () => {
-  it("still shows a voice channel's voice and access panes", () => {
+  it("still shows a voice channel's overview and access panes", () => {
     render(
       <ChannelSettings {...props({ channel: voiceChannel, canManageChannel: false })} />,
     );
 
-    expect(screen.getByRole("button", { name: "Głos i wideo" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Przegląd" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Uprawnienia" })).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Powiadomienia" })).toBeNull();
   });
@@ -175,7 +174,7 @@ describe("ChannelSettings deletion", () => {
     const p = props();
     render(<ChannelSettings {...p} />);
 
-    await goTo(user, "Usuń kanał");
+    await goTo(user, "Strefa zagrożenia");
     await user.click(inDeletePane().getByRole("button", { name: "Usuń kanał" }));
     expect(p.onDelete).not.toHaveBeenCalled();
 
@@ -187,7 +186,7 @@ describe("ChannelSettings deletion", () => {
     const user = userEvent.setup();
     render(<ChannelSettings {...props({ channel: voiceChannel })} />);
 
-    await goTo(user, "Usuń kanał");
+    await goTo(user, "Strefa zagrożenia");
     await user.click(inDeletePane().getByRole("button", { name: "Usuń kanał" }));
 
     expect(inDeletePane().getByRole("button", { name: "Usuń Salon" })).toBeVisible();
@@ -198,7 +197,7 @@ describe("ChannelSettings deletion", () => {
     const p = props();
     render(<ChannelSettings {...p} />);
 
-    await goTo(user, "Usuń kanał");
+    await goTo(user, "Strefa zagrożenia");
     await user.click(inDeletePane().getByRole("button", { name: "Usuń kanał" }));
     await user.click(inDeletePane().getByRole("button", { name: "Anuluj" }));
 
@@ -211,7 +210,7 @@ describe("ChannelSettings deletion", () => {
     const onDelete = vi.fn().mockRejectedValue(new Error("forbidden"));
     render(<ChannelSettings {...props({ onDelete })} />);
 
-    await goTo(user, "Usuń kanał");
+    await goTo(user, "Strefa zagrożenia");
     await user.click(inDeletePane().getByRole("button", { name: "Usuń kanał" }));
     await user.click(inDeletePane().getByRole("button", { name: "Usuń #ogolny" }));
 

@@ -44,8 +44,9 @@ export function ChannelSettingsDialog({ roles }: { roles: readonly Role[] }) {
       hideAfterInactivityHours: found.hideAfterInactivityHours ?? 0,
       audioProfile: found.audioProfile ?? DEFAULT_CHANNEL_AUDIO,
       userLimit: found.userLimit ?? 0,
+      sectionName: directory.sections.find((section) => section.id === found.sectionId)?.name,
     };
-  }, [directory.channels, channelId]);
+  }, [directory.channels, directory.sections, channelId]);
 
   const setMuted = (muted: boolean) => {
     if (channelId === null) return;
@@ -96,8 +97,10 @@ export function ChannelCreateDialog() {
       open={ui.modal === "channel-new"}
       onClose={ui.closeModal}
       kind={ui.newChannelKind ?? "text"}
+      serverName={directory.server.name}
       supported={admin.supported.channels}
       sections={directory.sections}
+      channels={directory.channels}
       onCreate={async (input) => {
         try {
           await admin.createChannel(input);

@@ -2,7 +2,37 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
-import { ChannelCreate } from "./ChannelCreate";
+import { ChannelCreate, type ChannelCreateProps } from "./ChannelCreate";
+
+type User = ReturnType<typeof userEvent.setup>;
+
+function props(overrides: Partial<ChannelCreateProps> = {}): ChannelCreateProps {
+  return {
+    open: true,
+    onClose: vi.fn(),
+    kind: "text",
+    serverName: "Orbit",
+    supported: true,
+    sections: [],
+    channels: [
+      { id: "general", name: "general", kind: "text" },
+      { id: "lounge", name: "lounge", kind: "voice" },
+    ],
+    onCreate: vi.fn(() => Promise.resolve()),
+    ...overrides,
+  };
+}
+
+const nameField = () => screen.getByRole("textbox", { name: "Nazwa" });
+const create = (user: User) => user.click(screen.getByRole("button", { name: "Utwórz kanał" }));
+const moveTo = (user: User, group: string) =>
+  user.click(screen.getByRole("button", { name: `Przenieś nowy kanał do grupy ${group}` }));
+/** The group of the rail slice the new row sits in. */
+const rowGroup = () => nameField().closest(".ch-place-group") as HTMLElement;
+const rowNames = (group: HTMLElement) =>
+  [...group.querySelectorAll(".ch-place-row")].map(
+    (row) => row.querySelector("input")?.value ?? row.querySelector(".ch-place-name")?.textContent,
+  );
 
 describe("ChannelCreate", () => {
   it("waits for persistence before closing and prevents duplicate submissions", async () => {
@@ -14,23 +44,14 @@ describe("ChannelCreate", () => {
       }),
     );
     const onClose = vi.fn();
-    render(
-      <ChannelCreate
-        open
-        kind="text"
-        supported
-        sections={[]}
-        onCreate={onCreate}
-        onClose={onClose}
-      />,
-    );
+    render(<ChannelCreate {...props({ onCreate, onClose })} />);
 
-    expect(screen.queryByRole("combobox", { name: /Sekcja/ })).toBeNull();
-    await user.type(screen.getByRole("textbox", { name: /Nazwa/ }), "Nowy Kanał");
-    await user.click(screen.getByRole("button", { name: "Dodaj kanał" }));
+    await user.type(nameField(), "Nowy Kanał");
+    await create(user);
 
     expect(onCreate).toHaveBeenCalledWith({ name: "nowy-kanał", kind: "text" });
     expect(screen.getByRole("button", { name: "Tworzenie…" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Zamknij" })).toBeDisabled();
     expect(onClose).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole("button", { name: "Tworzenie…" }));
@@ -40,55 +61,71 @@ describe("ChannelCreate", () => {
     await vi.waitFor(() => expect(onClose).toHaveBeenCalledOnce());
   });
 
-  it("keeps the form open and explains a duplicate name", async () => {
+  it("creates with Enter and keeps the row open to explain a refusal", async () => {
     const user = userEvent.setup();
-    const onCreate = vi.fn().mockRejectedValue(
-      new Error("Kanał o tej nazwie już istnieje."),
-    );
+    const onCreate = vi.fn().mockRejectedValue(new Error("Kanał o tej nazwie już istnieje."));
     const onClose = vi.fn();
-    render(
-      <ChannelCreate
-        open
-        kind="voice"
-        supported
-        sections={[]}
-        onCreate={onCreate}
-        onClose={onClose}
-      />,
-    );
+    render(<ChannelCreate {...props({ kind: "voice", onCreate, onClose })} />);
 
-    const name = screen.getByRole("textbox", { name: /Nazwa/ });
-    await user.type(name, "Salon");
-    await user.keyboard("{Enter}");
+    await user.type(nameField(), "Salon{Enter}");
 
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "Kanał o tej nazwie już istnieje.",
-    );
-    expect(name).toHaveValue("Salon");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Kanał o tej nazwie już istnieje.");
+    expect(nameField()).toHaveValue("Salon");
+    expect(nameField()).toHaveAttribute("aria-invalid", "true");
+    expect(nameField()).toHaveFocus();
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it("offers an optional section and includes it in the created channel", async () => {
+  it("switches the kind with the row's own mark, which moves it to the other group", async () => {
+    const user = userEvent.setup();
+    const onCreate = vi.fn(() => Promise.resolve());
+    render(<ChannelCreate {...props({ onCreate })} />);
+    expect(rowGroup()).toHaveTextContent("Tekstowe");
+
+    await user.click(screen.getByRole("button", { name: "Zmień na kanał głosowy" }));
+
+    expect(rowGroup()).toHaveTextContent("Głosowe");
+    expect(screen.getByRole("button", { name: "Zmień na kanał tekstowy" })).toHaveFocus();
+    await user.type(nameField(), "Salon");
+    await create(user);
+    expect(onCreate).toHaveBeenCalledWith({ name: "salon", kind: "voice" });
+  });
+
+  it("takes the kind of the group the + carries it to", async () => {
+    const user = userEvent.setup();
+    const onCreate = vi.fn(() => Promise.resolve());
+    render(<ChannelCreate {...props({ onCreate })} />);
+
+    await moveTo(user, "Głosowe");
+
+    expect(rowGroup()).toHaveTextContent("Głosowe");
+    expect(nameField()).toHaveFocus();
+    await user.keyboard("radio{Enter}");
+    expect(onCreate).toHaveBeenCalledWith({ name: "radio", kind: "voice" });
+  });
+
+  it("joins a section after its text channels and keeps its kind there", async () => {
     const user = userEvent.setup();
     const onCreate = vi.fn(() => Promise.resolve());
     render(
       <ChannelCreate
-        open
-        kind="text"
-        supported
-        sections={[{ id: "sec-1", name: "Ogłoszenia" }]}
-        onCreate={onCreate}
-        onClose={vi.fn()}
+        {...props({
+          onCreate,
+          sections: [{ id: "sec-1", name: "Ogłoszenia" }],
+          channels: [
+            { id: "general", name: "general", kind: "text" },
+            { id: "radio", name: "radio", kind: "voice", sectionId: "sec-1" },
+            { id: "plan", name: "plan", kind: "text", sectionId: "sec-1" },
+          ],
+        })}
       />,
     );
 
-    await user.type(screen.getByRole("textbox", { name: /Nazwa/ }), "Ważne");
-    await user.selectOptions(
-      screen.getByRole("combobox", { name: /Sekcja/ }),
-      "Ogłoszenia",
-    );
-    await user.click(screen.getByRole("button", { name: "Dodaj kanał" }));
+    await moveTo(user, "Ogłoszenia");
+    await user.type(nameField(), "ważne");
 
+    expect(rowNames(rowGroup())).toEqual(["plan", "ważne", "radio"]);
+    await create(user);
     expect(onCreate).toHaveBeenCalledWith({ name: "ważne", kind: "text", sectionId: "sec-1" });
   });
 });

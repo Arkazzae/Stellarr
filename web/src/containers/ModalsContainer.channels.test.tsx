@@ -71,8 +71,8 @@ describe("ModalsContainer: channel settings", () => {
     const user = userEvent.setup();
     openChannelSettings(TEXT_CHANNEL.id);
 
-    await user.click(screen.getByRole("button", { name: t("channel.delete") }));
-    const pane = document.querySelector<HTMLElement>('[data-pane="danger"]')!;
+    await user.click(screen.getByRole("button", { name: t("server.danger") }));
+    const pane = screen.getByRole("region", { name: t("server.danger") });
     await user.click(within(pane).getByRole("button", { name: t("channel.delete") }));
     await user.click(
       within(pane).getByRole("button", { name: t("settings.deleteNamedServer", { name: "#general" }) }),
@@ -91,8 +91,8 @@ describe("ModalsContainer: channel settings", () => {
     });
     openChannelSettings(TEXT_CHANNEL.id);
 
-    await user.click(screen.getByRole("button", { name: t("channel.delete") }));
-    const pane = document.querySelector<HTMLElement>('[data-pane="danger"]')!;
+    await user.click(screen.getByRole("button", { name: t("server.danger") }));
+    const pane = screen.getByRole("region", { name: t("server.danger") });
     await user.click(within(pane).getByRole("button", { name: t("channel.delete") }));
     await user.click(
       within(pane).getByRole("button", { name: t("settings.deleteNamedServer", { name: "#general" }) }),
@@ -147,13 +147,18 @@ describe("ModalsContainer: channel settings", () => {
 });
 
 describe("ModalsContainer: new channel", () => {
-  async function createChannel(name: string) {
+  /** Opens the dialog from the voice caption, names the channel and creates it. */
+  async function createChannel(
+    name: string,
+    place?: (user: ReturnType<typeof userEvent.setup>) => Promise<void>,
+  ) {
     const user = userEvent.setup();
     harness.ui.modal = "channel-new";
     harness.ui.newChannelKind = "voice";
     render(<ModalsContainer />);
+    await place?.(user);
     await user.type(nameField(), name);
-    await user.click(screen.getByRole("button", { name: t("settings.addChannel") }));
+    await user.click(screen.getByRole("button", { name: t("channel.create") }));
   }
 
   it("creates the channel of the kind whose caption was pressed and closes", async () => {
@@ -163,6 +168,25 @@ describe("ModalsContainer: new channel", () => {
     expect(harness.ports.admin.createChannel).toHaveBeenCalledExactlyOnceWith({
       name: "game-night",
       kind: "voice",
+    });
+  });
+
+  it("draws the server's own rail and creates where the row was put", async () => {
+    await createChannel("Game Night", async (user) => {
+      const slice = screen.getByRole("group", { name: t("channel.placement") });
+      expect(within(slice).getByText(harness.directory.server.name)).toBeVisible();
+      expect(within(slice).getByText(TEXT_CHANNEL.name)).toBeVisible();
+      await user.click(
+        screen.getByRole("button", {
+          name: t("channel.moveTo", { group: t("shell.textChannels") }),
+        }),
+      );
+    });
+
+    await waitFor(() => expect(harness.ui.closeModal).toHaveBeenCalledOnce());
+    expect(harness.ports.admin.createChannel).toHaveBeenCalledExactlyOnceWith({
+      name: "game-night",
+      kind: "text",
     });
   });
 
