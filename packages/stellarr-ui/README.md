@@ -188,17 +188,17 @@ A custom property fails silently, so `npm run tokens:check -w @stellarr/ui` guar
 
 ## Behaviour
 
-`@stellarr/ui/behavior` exports the helpers the components are built from. An overlay an app draws itself (a modal, a popover, a context menu) uses them to share one layer stack with the package's: Escape and a press outside reach only the topmost layer, and the page behind is hidden and locked once, however many layers are open. Like the components, these are for the client: the hooks need `"use client"`.
+`@stellarr/ui/behavior` exports the helpers the components are built from. An overlay an app draws itself (a modal, a popover, a context menu) uses them to share one layer stack with the package's: one Escape closes one layer, a press outside reaches one layer, and the page behind is hidden and locked once, however many layers are open. Like the components, these are for the client: the hooks need `"use client"`.
 
 | Export | What it does |
 | --- | --- |
-| `useLayer(active, layer)` | Puts a layer on the stack while `active`. `layer` has `node` (its element) and optionally `onEscape`, `onTab` and `onPointerDownOutside`, which only the topmost layer that has the handler hears. The `Layer` type |
+| `useLayer(active, layer)` | Puts a layer on the stack while `active`. `layer` has `node` (its element) and optionally `owns`, `onEscape`, `onTab` and `onPointerDownOutside`. The `Layer` type |
 | `hideOthers(keep)` | Hides every other child of `<body>` from assistive tech, counted per element, and returns the undo. The overlay has to be rendered into `<body>` |
 | `lockScroll(areas)` | Stops the page from scrolling except inside `areas()`, and returns the undo. Locks nest |
 | `lockPointer()` | Makes the page ignore the pointer, so a press beside a menu only closes it, and returns the undo. Locks nest |
 | `usePresence(open)` | Keeps an element mounted while its exit animation runs. Returns `present` and a `ref` |
 | `focusFirst(container)` | Focuses the first tab stop that is not a link, or the container |
-| `trapTab(event, container)` | Wraps a Tab press at both ends of the container |
+| `trapTab(event, container, options)` | Wraps a Tab press at both ends of the container, and brings a Tab from outside back to its first stop unless `options.reclaim` is `false` |
 | `FOCUSABLE` | The selector for a tab stop |
 | `place(anchor, size, view, options)` | Where a floating element goes beside its anchor: the asked side, flipped when only the other has room, kept inside the window. `options` is a `PlaceOptions` of `side`, `align` and `offset`; `Side` and `Align` are its types. Returns a `Placement` |
 | `measure(element)` | The element's laid-out size, unaffected by a transform |
@@ -206,6 +206,12 @@ A custom property fails silently, so `npm run tokens:check -w @stellarr/ui` guar
 | `useControllableState(options)` | A value the parent may own or leave to the component |
 | `Slot` | Renders its one child with its own props merged in, for `asChild` |
 | `composeRefs(...refs)`, `useComposedRefs(...refs)` | Points several refs at one node; the hook keeps the callback stable between renders |
+
+Escape and Tab go to the topmost layer that has a handler for them. They are heard in the bubble phase, so a control inside a layer that handles Escape itself (an inline editor that cancels, a search field that clears) keeps the key by calling `stopPropagation()`, and the layer stays open. When a layer takes an Escape, the stack stops the event, so a `window` handler does not also act on it. An `onEscape` that returns `false` passes: the next layer down that has `onEscape` is asked, and when every layer passes the key goes on to the page. A side panel that stays open under a dialog passes whenever a dialog is in front of it, even if the panel joined the stack later.
+
+A press goes to the topmost layer that has `onPointerDownOutside`, and to that layer alone. A layer above it with no such handler, such as a tooltip, is skipped. A press is outside when it lands beyond `node()`. A layer whose element is not the whole answer gives `owns(target)` instead, and it decides alone: a dialog whose wrapper is also its backdrop, or a panel whose trigger toggles it. A layer that hears no presses returns `null` from `node`.
+
+`trapTab` suits a modal layer, where the focus never leaves. For a panel beside which the page still works, pass `{ reclaim: false }`: a Tab pressed while the focus is outside the panel is left to the browser, and the panel still wraps at its ends.
 
 A popover joins the stack with `useLayer`, and the layers below it stay quiet while it is open:
 

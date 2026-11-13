@@ -37,8 +37,18 @@ export function focusFirst(container: HTMLElement | null): void {
  * Call it from a Tab key handler, such as a layer's `onTab`. It calls
  * `preventDefault()` only when it moves the focus itself; a Tab in the middle
  * of the container is left to the browser.
+ *
+ * A Tab pressed while the focus is outside the container brings it back to the
+ * first stop, as a modal layer wants. Pass `reclaim: false` for a layer beside
+ * which the page still works, such as a side panel: the Tab is then left to
+ * the browser, and only the ends and a container without stops are handled.
  */
-export function trapTab(event: KeyboardEvent, container: HTMLElement): void {
+export function trapTab(
+  event: KeyboardEvent,
+  container: HTMLElement,
+  options: { reclaim?: boolean } = {},
+): void {
+  const { reclaim = true } = options;
   const stops = tabStops(container);
   const first = stops[0];
   const last = stops[stops.length - 1];
@@ -52,7 +62,7 @@ export function trapTab(event: KeyboardEvent, container: HTMLElement): void {
   if (event.shiftKey && (active === first || active === container)) {
     event.preventDefault();
     last.focus();
-  } else if (!event.shiftKey && (active === last || !container.contains(active))) {
+  } else if (!event.shiftKey && (active === last || (reclaim && !container.contains(active)))) {
     event.preventDefault();
     first.focus();
   }
