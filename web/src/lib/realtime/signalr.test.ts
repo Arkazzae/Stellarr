@@ -1,4 +1,4 @@
-import { HubConnectionState, type HubConnection } from "@microsoft/signalr";
+import { HubConnectionState, LogLevel, type HubConnection } from "@microsoft/signalr";
 import { describe, expect, it, vi } from "vitest";
 import { RTC_PROTOCOL_VERSION } from "@/lib/rtc/protocol";
 import {
@@ -8,6 +8,7 @@ import {
   parseVoiceSignal,
   SignalRRealtimeClient,
   signalingHubPath,
+  signalRLogger,
   signalRRetryDelay,
 } from "./signalr";
 
@@ -128,6 +129,31 @@ describe("SignalR connection policy", () => {
     expect(changed).toHaveBeenCalledTimes(2);
     expect(changed.mock.calls.map(([event]) => event.sequence)).toEqual([8, 9]);
     expect(changed.mock.calls[1]?.[0].participants).toHaveLength(3);
+  });
+});
+
+describe("SignalR logging", () => {
+  it("drops the abort our own stop() causes and keeps every other problem", () => {
+    const error = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    try {
+      signalRLogger.log(LogLevel.Error, "Failed to start the HttpConnection before stop() was called.");
+      expect(error).not.toHaveBeenCalled();
+
+      signalRLogger.log(LogLevel.Error, "Failed to complete negotiation with the server: 503");
+      expect(error).toHaveBeenCalledOnce();
+      expect(error.mock.calls[0]?.[0]).toMatch(/\] Error: Failed to complete negotiation/);
+
+      signalRLogger.log(LogLevel.Warning, "Connection disconnected with error.");
+      expect(warn).toHaveBeenCalledOnce();
+
+      signalRLogger.log(LogLevel.Information, "WebSocket connected.");
+      expect(error).toHaveBeenCalledOnce();
+      expect(warn).toHaveBeenCalledOnce();
+    } finally {
+      error.mockRestore();
+      warn.mockRestore();
+    }
   });
 });
 
