@@ -19,56 +19,25 @@ export default tseslint.config(
     },
     rules: {
       ...reactHooks.configs.recommended.rules,
-      // shadcn components export their cva variants next to the component.
-      "react-refresh/only-export-components": [
-        "warn",
-        { allowConstantExport: true, allowExportNames: ["badgeVariants", "buttonVariants"] },
-      ],
+      "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
     },
   },
   {
-    // Icons come from src/components/icons, not direct Lucide imports.
+    // UI parts come from the shared @stellarr/ui package and icons from
+    // src/components/icons, which draws the package's set. These libraries
+    // were Cockpit's own copy of them; a new import would bring that back.
     files: ["src/**/*.{ts,tsx}"],
     rules: {
       "no-restricted-imports": [
         "error",
         {
           paths: [
-            {
-              name: "lucide-react",
-              message: "icons come from src/components/icons.",
-            },
+            { name: "lucide-react", message: "icons come from src/components/icons." },
+            { name: "class-variance-authority", message: "UI parts come from @stellarr/ui." },
+            { name: "clsx", message: "join class names with cx from @stellarr/ui." },
+            { name: "tailwind-merge", message: "join class names with cx from @stellarr/ui." },
           ],
-        },
-      ],
-    },
-  },
-  {
-    // Radix and CVA stay behind the wrappers in src/components/ui/, so replacing
-    // them later touches only that folder. This block overrides the one above
-    // for the files it matches, so it repeats the Lucide entry.
-    files: ["src/**/*.{ts,tsx}"],
-    ignores: ["src/components/ui/**"],
-    rules: {
-      "no-restricted-imports": [
-        "error",
-        {
-          paths: [
-            {
-              name: "lucide-react",
-              message: "icons come from src/components/icons.",
-            },
-            {
-              name: "class-variance-authority",
-              message: "use the wrappers in src/components/ui.",
-            },
-          ],
-          patterns: [
-            {
-              group: ["@radix-ui/*"],
-              message: "use the wrappers in src/components/ui.",
-            },
-          ],
+          patterns: [{ group: ["@radix-ui/*"], message: "UI parts come from @stellarr/ui." }],
         },
       ],
     },

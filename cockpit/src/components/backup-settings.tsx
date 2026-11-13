@@ -1,10 +1,6 @@
+import { Button, Input, Label, Spinner, Switch } from "@stellarr/ui";
 import { useState, type FormEvent } from "react";
 
-import { Spinner } from "@/components/spinner";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { t, type MessageKey } from "@/i18n";
 import { CockpitApiError, cockpitApi, type CockpitBackupSettings } from "@/lib/api";
 import { useCockpitResource } from "@/lib/use-cockpit-resource";

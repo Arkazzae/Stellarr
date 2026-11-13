@@ -9,7 +9,6 @@ import {
   type CockpitOverview,
   type CockpitRuntime,
 } from "@/lib/api";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { DashboardPage } from "@/pages/dashboard-page";
 import { CockpitContext, type CockpitContextValue } from "@/state/cockpit-context";
 import { selectPolish } from "@/test/locale";
@@ -110,9 +109,7 @@ function sessionWith(overview: Partial<CockpitOverview>): CockpitContextValue {
 function renderDashboard(value: CockpitContextValue = cockpitValue()) {
   return render(
     <CockpitContext.Provider value={value}>
-      <TooltipProvider>
-        <DashboardPage />
-      </TooltipProvider>
+      <DashboardPage />
     </CockpitContext.Provider>,
   );
 }

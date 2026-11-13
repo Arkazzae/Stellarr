@@ -1,6 +1,5 @@
+import { cx } from "@stellarr/ui";
 import type { ReactNode } from "react";
-
-import { cn } from "@/lib/utils";
 
 /** A row of figures read together, each its own tile as on the overview. */
 export function StatGrid({
@@ -13,7 +12,7 @@ export function StatGrid({
   children: ReactNode;
 }) {
   return (
-    <section aria-label={label} className={cn("grid gap-3", className)}>
+    <section aria-label={label} className={cx("grid gap-3", className)}>
       {children}
     </section>
   );

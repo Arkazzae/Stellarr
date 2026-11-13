@@ -1,7 +1,5 @@
-import { useEffect, useState } from "react";
-
-import { Button } from "@/components/ui/button";
 import {
+  Button,
   Dialog,
   DialogClose,
   DialogContent,
@@ -9,7 +7,9 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
+} from "@stellarr/ui";
+import { useEffect, useState } from "react";
+
 import { t } from "@/i18n";
 import { onFreshSecondStepRequired } from "@/lib/api";
 import { webFreshConfirmUrl } from "@/lib/web-sign-in";
@@ -29,7 +29,7 @@ export function FreshSecondStepDialog() {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent>
+      <DialogContent closeLabel={t("common.close")}>
         <DialogHeader>
           <DialogTitle>{t("fresh.title")}</DialogTitle>
           <DialogDescription>{t("fresh.description")}</DialogDescription>

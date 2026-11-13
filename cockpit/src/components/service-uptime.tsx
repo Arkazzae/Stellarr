@@ -1,9 +1,9 @@
+import { cx } from "@stellarr/ui";
 import type { ReactNode } from "react";
 
 import { getLocale, t, type MessageKey } from "@/i18n";
 import { formatNumber } from "@/i18n/format";
 import { MINUTE_MS, SLOTS, uptimeShare, type SlotState } from "@/lib/uptime";
-import { cn } from "@/lib/utils";
 
 const SLOT_CLASS: Record<SlotState, string> = {
   up: "bg-success",
@@ -54,7 +54,7 @@ export function ServiceUptime({ name, detail, states, end, badge }: ServiceUptim
             <span
               key={index}
               title={t(SLOT_LABEL[state], { time: clock(at) })}
-              className={cn("min-w-0 flex-1 rounded-xs", SLOT_CLASS[state])}
+              className={cx("min-w-0 flex-1 rounded-xs", SLOT_CLASS[state])}
             />
           );
         })}

@@ -1,30 +1,28 @@
-import { Fragment, useState } from "react";
-import { NavLink, Outlet, useLocation } from "react-router-dom";
-
-import { BrandMark } from "@/components/brand-mark";
-import { FreshSecondStepDialog } from "@/components/fresh-second-step-dialog";
-import { Icon, type IconName } from "@/components/icons/icon";
-import { Button } from "@/components/ui/button";
 import {
+  Button,
+  cx,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
   SheetTrigger,
-} from "@/components/ui/sheet";
+} from "@stellarr/ui";
+import { Fragment, useState } from "react";
+import { NavLink, Outlet, useLocation } from "react-router-dom";
+
+import { BrandMark } from "@/components/brand-mark";
+import { FreshSecondStepDialog } from "@/components/fresh-second-step-dialog";
+import { Icon, type IconName } from "@/components/icons/icon";
 import { UserAvatar } from "@/components/user-avatar";
 import { t, type MessageKey } from "@/i18n";
 import type { CockpitOperator } from "@/lib/api";
-import { cn } from "@/lib/utils";
 import { useCockpit } from "@/state/cockpit-context";
 
 const DOCUMENTATION_URL = "https://arkazzae.github.io/Stellarr/";
@@ -90,9 +88,9 @@ function NavigationLinks({ onNavigate }: { onNavigate?: () => void }) {
               to={href}
               onClick={onNavigate}
               className={({ isActive }) =>
-                cn(
-                  "flex h-9 items-center gap-3 rounded-md px-3 text-sm font-medium text-muted-foreground outline-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring",
-                  isActive && "bg-sidebar-accent text-sidebar-foreground",
+                cx(
+                  "flex h-9 items-center gap-3 rounded-md px-3 text-sm font-medium outline-none transition-colors hover:bg-sidebar-accent hover:text-sidebar-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring",
+                  isActive ? "bg-sidebar-accent text-sidebar-foreground" : "text-muted-foreground",
                 )
               }
             >
@@ -197,7 +195,7 @@ export function AppShell() {
                   <Icon name="sidebar" size={18} />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="left" className="w-68 gap-0 border-r-0 p-0">
+              <SheetContent closeLabel={t("common.close")} side="left" className="w-68 gap-0 border-r-0 p-0">
                 <SheetHeader className="sr-only">
                   <SheetTitle>{t("shell.navigationTitle")}</SheetTitle>
                   <SheetDescription>{t("shell.navigationDescription")}</SheetDescription>

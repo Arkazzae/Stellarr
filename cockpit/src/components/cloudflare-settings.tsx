@@ -1,15 +1,8 @@
+import { Badge, Button, Card, Input, Label, Spinner, Switch } from "@stellarr/ui";
 import { useState, type FormEvent } from "react";
 
 import { CardTitleRow } from "@/components/card-title-row";
 import { SecretField } from "@/components/secret-field";
-import { Spinner } from "@/components/spinner";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select } from "@/components/ui/select";
-import { Switch } from "@/components/ui/switch";
 import { t, type MessageKey } from "@/i18n";
 import { CockpitApiError, cockpitApi, type CockpitCloudflareR2Settings, type CockpitSecret } from "@/lib/api";
 import { useCockpitResource } from "@/lib/use-cockpit-resource";
@@ -17,6 +10,11 @@ import { useCockpitResource } from "@/lib/use-cockpit-resource";
 const S3_FIELDS: { name: "region" | "bucket"; label: MessageKey; max: number }[] = [
   { name: "region", label: "integrations.cloudflare.region", max: 100 },
   { name: "bucket", label: "integrations.cloudflare.bucket", max: 255 },
+];
+
+const MODES: { value: CockpitCloudflareR2Settings["mode"]; labelKey: MessageKey }[] = [
+  { value: "s3", labelKey: "integrations.cloudflare.mode.s3" },
+  { value: "worker", labelKey: "integrations.cloudflare.mode.worker" },
 ];
 
 function failureMessage(cause: unknown): string {
@@ -82,14 +80,18 @@ function ConnectionForm({ initial, secrets, onSecretChanged }: {
         <fieldset disabled={busy} className="space-y-5">
           <div className="space-y-2">
             <Label htmlFor="cloudflare-r2-mode">{t("integrations.cloudflare.mode")}</Label>
-            <Select
+            <select
               id="cloudflare-r2-mode"
               value={form.mode}
               onChange={(event) => change("mode", event.target.value as CockpitCloudflareR2Settings["mode"])}
+              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
             >
-              <option value="s3">{t("integrations.cloudflare.mode.s3")}</option>
-              <option value="worker">{t("integrations.cloudflare.mode.worker")}</option>
-            </Select>
+              {MODES.map(({ value, labelKey }) => (
+                <option key={value} value={value}>
+                  {t(labelKey)}
+                </option>
+              ))}
+            </select>
             <p className="text-xs leading-5 text-muted-foreground">
               {t(worker ? "integrations.cloudflare.mode.workerHint" : "integrations.cloudflare.mode.s3Hint")}
             </p>

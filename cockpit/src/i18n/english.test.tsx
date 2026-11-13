@@ -5,7 +5,6 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { AppGate } from "@/components/app-gate";
 import { AppShell } from "@/components/app-shell";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { CockpitApiError, cockpitApi, type CockpitBackups, type CockpitRuntime, type CockpitUsers } from "@/lib/api";
 import { BackupsPage } from "@/pages/backups-page";
 import { DashboardPage } from "@/pages/dashboard-page";
@@ -47,7 +46,7 @@ function renderWithSession(ui: React.ReactNode, value: CockpitContextValue = coc
   return render(
     <MemoryRouter>
       <CockpitContext.Provider value={value}>
-        <TooltipProvider>{ui}</TooltipProvider>
+        {ui}
       </CockpitContext.Provider>
     </MemoryRouter>,
   );

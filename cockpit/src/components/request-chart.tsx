@@ -1,8 +1,8 @@
+import { cx } from "@stellarr/ui";
 import { useState, type KeyboardEvent } from "react";
 
 import { formatNumber } from "@/i18n/format";
 import { axisTop } from "@/lib/chart-scale";
-import { cn } from "@/lib/utils";
 
 export interface RequestPoint {
   /** ISO timestamp of the end of the interval. */
@@ -118,7 +118,7 @@ export function RequestChart({
                 >
                   {point.ok > 0 ? (
                     <span
-                      className={cn(
+                      className={cx(
                         "w-full max-w-1.5 rounded-full bg-chart-1 transition-opacity",
                         active !== null && active !== index && "opacity-55",
                       )}
@@ -127,7 +127,7 @@ export function RequestChart({
                   ) : null}
                   {point.serverErrors > 0 ? (
                     <span
-                      className={cn(
+                      className={cx(
                         "w-full max-w-1.5 rounded-full bg-chart-2 transition-opacity",
                         active !== null && active !== index && "opacity-55",
                       )}

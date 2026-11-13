@@ -1,7 +1,7 @@
+import { cx } from "@stellarr/ui";
 import { useId } from "react";
 
 import { useMeasuredBox } from "@/lib/use-measured-box";
-import { cn } from "@/lib/utils";
 
 /**
  * Small charts for the overview's tiles. The tile states its figure in text, so
@@ -173,7 +173,7 @@ export function MiniCells({
             {Array.from({ length: CELL_ROWS }, (_, row) => (
               <span
                 key={row}
-                className={cn(
+                className={cx(
                   "min-h-0 flex-1 rounded-xs",
                   row >= lit ? shades.unlit : isRecent ? shades.recent : shades.before,
                 )}
@@ -267,7 +267,7 @@ export function CapsuleBars({ points }: { points: readonly CapsulePoint[] }) {
             <span className="flex w-full min-h-0 flex-1 items-end justify-center">
               {share > 0 ? (
                 <span
-                  className={cn(
+                  className={cx(
                     "w-2.5 rounded-full bg-linear-to-b",
                     latest ? "from-foreground to-foreground/35" : "from-muted-foreground/70 to-muted-foreground/15",
                   )}
@@ -275,7 +275,7 @@ export function CapsuleBars({ points }: { points: readonly CapsulePoint[] }) {
                 />
               ) : null}
             </span>
-            <span className={cn("mt-2 size-1.5 shrink-0 rounded-full", latest ? "bg-foreground" : "bg-faint")} />
+            <span className={cx("mt-2 size-1.5 shrink-0 rounded-full", latest ? "bg-foreground" : "bg-faint")} />
             <span className="mt-1.5 text-xs whitespace-nowrap text-muted-foreground tabular-nums">{point.label}</span>
           </span>
         );

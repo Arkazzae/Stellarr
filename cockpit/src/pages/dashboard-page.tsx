@@ -1,3 +1,4 @@
+import { Badge, Card, cx, Spinner, Tabs, TabsContent, TabsList, TabsTrigger } from "@stellarr/ui";
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react";
 
 import { ActivityChart } from "@/components/activity-chart";
@@ -5,12 +6,8 @@ import { AvailabilityCard } from "@/components/availability-card";
 import { Icon, type IconName } from "@/components/icons/icon";
 import { LineChart } from "@/components/line-chart";
 import { ArcGauge, CapsuleBars, MiniCells, MiniLine, MiniStems, type MiniPoint } from "@/components/mini-charts";
-import { Spinner } from "@/components/spinner";
 import { StatTile, TileFigure, TileHeader } from "@/components/stat-tile";
 import { StatusBadge } from "@/components/status-badge";
-import { Badge } from "@/components/ui/badge";
-import { Card } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { t, type MessageKey } from "@/i18n";
 import { formatDay, formatNumber, formatTime } from "@/i18n/format";
 import {
@@ -24,7 +21,6 @@ import { readHealth, type HealthSnapshot } from "@/lib/health";
 import { bucketize } from "@/lib/sparkline";
 import { weekOverWeek } from "@/lib/trend";
 import { useCockpitResource } from "@/lib/use-cockpit-resource";
-import { cn } from "@/lib/utils";
 import { useCockpit } from "@/state/cockpit-context";
 
 type Health = Pick<HealthSnapshot, "api" | "database">;
@@ -138,7 +134,7 @@ function ActivityCard({ activity, error, className }: ActivityCardProps) {
   );
 
   return (
-    <Card className={cn("relative gap-0 overflow-hidden px-5 py-4", className)}>
+    <Card className={cx("relative gap-0 overflow-hidden px-5 py-4", className)}>
       <div className="pointer-events-none absolute inset-0 glow-chart" aria-hidden="true" />
       <div className="relative flex flex-1 flex-col">
         {activity ? (
@@ -160,7 +156,7 @@ function ActivityCard({ activity, error, className }: ActivityCardProps) {
                     unstyled
                     key={key}
                     value={key}
-                    className={cn(
+                    className={cx(
                       "flex shrink-0 items-baseline gap-1.5 rounded-full border border-transparent px-3 py-1.5 text-sm text-muted-foreground transition-colors outline-none",
                       "hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring",
                       "data-[state=active]:border-border data-[state=active]:bg-background data-[state=active]:text-foreground",
@@ -225,7 +221,7 @@ function RequestsCard({ runtime, className }: RuntimeCardProps) {
   const label = t("runtime.chart.requests");
 
   return (
-    <Card className={cn("gap-0 px-5 py-4", className)}>
+    <Card className={cx("gap-0 px-5 py-4", className)}>
       <TileHeader icon="pulse" title={t("runtime.metric.requests")}>
         <span className="text-xs">{t("runtime.lastHour")}</span>
       </TileHeader>
@@ -270,7 +266,7 @@ function ConnectionsCard({ runtime, className }: RuntimeCardProps) {
     : [];
 
   return (
-    <Card className={cn("gap-0 px-5 py-4", className)}>
+    <Card className={cx("gap-0 px-5 py-4", className)}>
       <TileHeader icon="wifi" title={t("runtime.metric.realtime")}>
         <span className="text-xs">{t("runtime.lastHour")}</span>
       </TileHeader>
@@ -302,7 +298,7 @@ function ServicesCard({ runtime, className }: RuntimeCardProps) {
   const services = (runtime?.services ?? []).filter((service) => service.id !== "api" && service.id !== "database");
 
   return (
-    <Card className={cn("gap-0 px-5 py-4", className)}>
+    <Card className={cx("gap-0 px-5 py-4", className)}>
       <TileHeader icon="server" title={t("dashboard.services.title")} />
       {services.length ? (
         <ul className="mt-2 flex flex-1 flex-col justify-center gap-1">

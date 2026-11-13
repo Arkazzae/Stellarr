@@ -7,11 +7,6 @@ import { CockpitApiError, cockpitApi, type CockpitBackupSettings } from "@/lib/a
 import { selectPolish } from "@/test/locale";
 
 selectPolish();
-vi.stubGlobal("ResizeObserver", class {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-});
 vi.mock("@/lib/api", async (importOriginal) => {
   const original = await importOriginal<typeof import("@/lib/api")>();
   return { ...original, cockpitApi: {

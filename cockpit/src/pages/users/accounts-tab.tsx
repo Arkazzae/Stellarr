@@ -1,16 +1,21 @@
-import { Icon } from "@/components/icons/icon";
-import { UserAvatar } from "@/components/user-avatar";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import {
+  Badge,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Input,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@stellarr/ui";
+
+import { Icon } from "@/components/icons/icon";
+import { UserAvatar } from "@/components/user-avatar";
 import { t } from "@/i18n";
 import { formatShortDateTime, lowerCase } from "@/i18n/format";
 import type { CockpitRole, CockpitUser } from "@/lib/api";

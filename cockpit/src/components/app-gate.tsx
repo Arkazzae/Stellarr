@@ -1,13 +1,20 @@
+import {
+  Alert,
+  AlertDescription,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Input,
+  Label,
+  Spinner,
+} from "@stellarr/ui";
 import { useState, type FormEvent, type ReactNode } from "react";
 
-import { Spinner } from "@/components/spinner";
 import { AppShell } from "@/components/app-shell";
 import { BrandMark } from "@/components/brand-mark";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { t } from "@/i18n";
 import { CockpitApiError } from "@/lib/api";
 import { WEB_CONFIRM_URL } from "@/lib/web-sign-in";

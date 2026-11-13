@@ -8,12 +8,6 @@ import { selectPolish } from "@/test/locale";
 import { secrets } from "@/test/secrets";
 
 selectPolish();
-// Radix switches measure themselves with a ResizeObserver, which jsdom lacks.
-vi.stubGlobal("ResizeObserver", class {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-});
 vi.mock("@/lib/api", async (importOriginal) => {
   const original = await importOriginal<typeof import("@/lib/api")>();
   return { ...original, cockpitApi: {
@@ -31,7 +25,7 @@ beforeEach(() => {
   vi.mocked(cockpitApi.resetCloudflareR2).mockReset().mockResolvedValue(settings);
 });
 
-const card = async () => within((await screen.findByText("Cloudflare R2")).closest("[data-slot=card]") as HTMLElement);
+const card = async () => within((await screen.findByText("Cloudflare R2")).closest(".ui-card") as HTMLElement);
 
 it("saves the connection and keeps both credentials out of the request", async () => {
   const user = userEvent.setup();

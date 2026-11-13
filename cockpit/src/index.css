@@ -1,5 +1,7 @@
 @import "tailwindcss";
-@import "tw-animate-css";
+/* After Tailwind, so the components join its components layer and a utility
+   in className overrides them. */
+@import "@stellarr/ui/styles.css";
 
 /*
  * The panel follows the documentation site (docs/.vitepress/theme/custom.css):
@@ -217,6 +219,49 @@
     --sidebar-accent-foreground: #dfdfd6;
     --sidebar-border: #2e2e32;
   }
+}
+
+/*
+ * The shared components (@stellarr/ui) read only --ui-* tokens. Cockpit maps
+ * its palette onto them here; the names on the left are the package's, listed
+ * in packages/stellarr-ui/README.md. They follow the scheme through var().
+ */
+:root {
+  --ui-page: var(--background);
+  --ui-surface: var(--card);
+  --ui-surface-muted: var(--muted);
+  --ui-popover: var(--popover);
+  --ui-hover: var(--accent);
+  --ui-text: var(--foreground);
+  --ui-text-muted: var(--muted-foreground);
+  --ui-line: var(--border);
+  --ui-line-field: var(--input);
+  --ui-ring: var(--ring);
+  --ui-ring-offset: #ffffff;
+  --ui-accent: var(--primary);
+  --ui-accent-hover: var(--primary-hover);
+  --ui-on-accent: var(--primary-foreground);
+  --ui-danger: var(--destructive);
+  --ui-on-danger: #ffffff;
+  --ui-danger-text: var(--danger);
+  --ui-danger-soft: var(--danger-soft);
+  --ui-success-text: var(--success);
+  --ui-success-soft: var(--success-soft);
+  --ui-warning-text: var(--warning);
+  --ui-warning-soft: var(--warning-soft);
+  --ui-scrim: rgb(0 0 0 / 0.4);
+
+  --ui-elevation-low: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+  --ui-elevation-menu: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --ui-elevation-modal: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+
+  --ui-radius-xs: 0.125rem;
+  --ui-radius-sm: calc(var(--radius) - 4px);
+  --ui-radius-md: calc(var(--radius) - 2px);
+  --ui-radius-lg: var(--radius);
+  --ui-radius-xl: 1rem;
+
+  --ui-ease: cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @layer base {

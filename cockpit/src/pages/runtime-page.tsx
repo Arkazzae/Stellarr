@@ -1,3 +1,4 @@
+import { Alert, AlertDescription, AlertTitle, Button, Card, cx, Spinner } from "@stellarr/ui";
 import { useEffect } from "react";
 
 import { CardTitleRow } from "@/components/card-title-row";
@@ -5,12 +6,8 @@ import { MiniCells, MiniLine, MiniStems } from "@/components/mini-charts";
 import { PageHeader } from "@/components/page-header";
 import { RequestChart } from "@/components/request-chart";
 import { ServiceUptime, UptimeAxis } from "@/components/service-uptime";
-import { Spinner } from "@/components/spinner";
 import { StatTile } from "@/components/stat-tile";
 import { StatusBadge } from "@/components/status-badge";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { getLocale, t } from "@/i18n";
 import { formatDateTime, formatMegabytes, formatNumber } from "@/i18n/format";
 import { cockpitApi, type CockpitRuntime, type CockpitRuntimeSample } from "@/lib/api";
@@ -18,7 +15,6 @@ import { bucketize } from "@/lib/sparkline";
 import { formatUptime, minuteSlots, serviceSlotStates } from "@/lib/uptime";
 import { useCockpitResource } from "@/lib/use-cockpit-resource";
 import { useMeasuredHeight } from "@/lib/use-measured-height";
-import { cn } from "@/lib/utils";
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -164,7 +160,7 @@ function RequestsChart({ data, className }: { data: CockpitRuntime; className?: 
   const [plot, height, remPx] = useMeasuredHeight<HTMLDivElement>(MIN_PLOT + REQUEST_CHART_CHROME);
   const scale = remPx / 16;
   return (
-    <Card className={cn("gap-0 py-0", className)}>
+    <Card className={cx("gap-0 py-0", className)}>
       <CardTitleRow icon="chart" title={t("runtime.chart.requests")}>
         <span className="text-sm text-muted-foreground">{t("runtime.chart.perInterval", { seconds: data.sampleSeconds })}</span>
       </CardTitleRow>
@@ -195,7 +191,7 @@ function RequestsChart({ data, className }: { data: CockpitRuntime; className?: 
 function ServicesCard({ data, className }: { data: CockpitRuntime; className?: string }) {
   const { end, slots } = minuteSlots(data.history);
   return (
-    <Card className={cn("gap-0 py-0", className)}>
+    <Card className={cx("gap-0 py-0", className)}>
       <CardTitleRow icon="server" title={t("runtime.services.title")} />
       <div className="flex min-h-0 flex-1 flex-col gap-4 px-5 py-4">
         {data.services.map((service) => (

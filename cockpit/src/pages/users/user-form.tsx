@@ -1,16 +1,16 @@
-import { useState, type FormEvent } from "react";
-
-import { Spinner } from "@/components/spinner";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
+  Button,
+  Input,
+  Label,
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet";
+  Spinner,
+} from "@stellarr/ui";
+import { useState, type FormEvent } from "react";
+
 import { t } from "@/i18n";
 import { cockpitApi, type CockpitRole } from "@/lib/api";
 import type { Perform } from "@/pages/users/use-access-actions";
@@ -56,7 +56,7 @@ export function UserForm({ open, roles, onOpenChange, perform }: UserFormProps) 
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="overflow-y-auto sm:max-w-md">
+      <SheetContent closeLabel={t("common.close")} className="overflow-y-auto sm:max-w-md">
         <SheetHeader>
           <SheetTitle>{t("userForm.title")}</SheetTitle>
           <SheetDescription>{t("userForm.description")}</SheetDescription>

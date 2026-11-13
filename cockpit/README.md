@@ -26,6 +26,8 @@ npm run dev -w stellarr-cockpit
 
 The dev server listens on `http://localhost:3001` and proxies `/api` and `/health` to `STELLARR_API_ORIGIN` (`http://127.0.0.1:5000` by default).
 
+The UI parts (buttons, fields, cards, tables, tabs, dialogs, sheets, menus, tooltips) and the icons come from the shared [`@stellarr/ui`](../packages/stellarr-ui/README.md) package; Cockpit composes its pages from them with Tailwind utilities. `src/index.css` imports the package's stylesheet and maps Cockpit's palette onto its `--ui-*` tokens.
+
 In the production container image, Nginx serves the static build under `/cockpit/` on the same origin as the web client (`/ops/` redirects with `308`). All `/api/cockpit/*` endpoints require an authenticated session with the instance owner role.
 
 ## Localization

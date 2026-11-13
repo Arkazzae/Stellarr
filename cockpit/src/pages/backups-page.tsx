@@ -1,15 +1,14 @@
-import { useEffect, useState, type FormEvent } from "react";
-
-import { Icon } from "@/components/icons/icon";
-import { BackupSettings } from "@/components/backup-settings";
-import { Spinner } from "@/components/spinner";
-import { PageHeader } from "@/components/page-header";
-import { Stat, StatGrid } from "@/components/stats";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
   Dialog,
   DialogClose,
   DialogContent,
@@ -17,16 +16,23 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import {
+  Spinner,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@stellarr/ui";
+import { useEffect, useState, type FormEvent } from "react";
+
+import { BackupSettings } from "@/components/backup-settings";
+import { Icon } from "@/components/icons/icon";
+import { PageHeader } from "@/components/page-header";
+import { Stat, StatGrid } from "@/components/stats";
 import { t, type MessageKey } from "@/i18n";
 import { formatDateTime, formatMegabytes, formatNumber } from "@/i18n/format";
 import {
@@ -156,7 +162,7 @@ function CreateDialog({ open, storedBytes, onOpenChange, onCreate }: CreateDialo
         onOpenChange(next);
       }}
     >
-      <DialogContent>
+      <DialogContent closeLabel={t("common.close")}>
         <DialogHeader>
           <DialogTitle>{t("backups.dialog.title")}</DialogTitle>
           <DialogDescription>{t("backups.dialog.description")}</DialogDescription>
@@ -320,7 +326,7 @@ export function BackupsPage() {
       />
 
       <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-        <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-2xl">
+        <DialogContent closeLabel={t("common.close")} className="max-h-[85dvh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>{t("backups.settings.title")}</DialogTitle>
             <DialogDescription>{t("backups.settings.description")}</DialogDescription>
