@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import { Icon } from "@stellarr/ui/icons";
 import { Switch } from "@/components/primitives/Switch";
 import {
@@ -7,21 +9,25 @@ import {
   type PermissionOverridePatch,
 } from "@/components/settings/PermissionOverrideEditor";
 import { SettingsSection } from "@/components/settings/SettingsSection";
-import type { ChannelSettingsVM } from "@/components/settings/channelSettingsModel";
-import type { Translator } from "@/i18n";
+import {
+  channelLabel,
+  type ChannelSettingsVM,
+} from "@/components/settings/channelSettingsModel";
+import { useAsyncAction } from "@/hooks/useAsyncAction";
 import type { PermissionOverride, Role } from "@/ports";
+import { useLanguage } from "@/state/hooks";
 
 export interface NotificationsPaneProps {
   muted: boolean;
   onMutedChange: (muted: boolean) => void;
-  t: Translator;
 }
 
 /** This member's own mute for the channel; it saves as soon as it flips. */
-export function NotificationsPane({ muted, onMutedChange, t }: NotificationsPaneProps) {
+export function NotificationsPane({ muted, onMutedChange }: NotificationsPaneProps) {
+  const { t } = useLanguage();
   return (
     <SettingsSection title={t("channel.notifications")} icon="bell">
-      <div className="frm">
+      <div className="frm ch-frm-flush">
         <div className="frm-row">
           <span className="frm-lab">
             {t("channel.muteNotifications")}
@@ -46,7 +52,6 @@ export interface PermissionsPaneProps {
   permissionOverrides: readonly PermissionOverride[];
   onSavePermissionOverride: (roleId: string, patch: PermissionOverridePatch) => Promise<void>;
   onOpenRoles: () => void;
-  t: Translator;
 }
 
 export function PermissionsPane({
@@ -55,10 +60,19 @@ export function PermissionsPane({
   permissionOverrides,
   onSavePermissionOverride,
   onOpenRoles,
-  t,
 }: PermissionsPaneProps) {
+  const { t } = useLanguage();
   return (
-    <SettingsSection title={t("channel.channelPermissions")} icon="shield">
+    <SettingsSection
+      title={t("channel.channelPermissions")}
+      icon="shield"
+      action={
+        <button type="button" className="btn-ghost sm ch-roles-link" onClick={onOpenRoles}>
+          <Icon name="shield" size={14} />
+          {t("channel.openServerRoles")}
+        </button>
+      }
+    >
       <p className="fld-note">{t("channel.permissionsDetailText")}</p>
       {roles.length === 0 ? (
         <p className="fld-note">{t("channel.noRoles")}</p>
@@ -70,68 +84,72 @@ export function PermissionsPane({
           onSave={onSavePermissionOverride}
         />
       )}
-      <button type="button" className="btn-ghost sm" onClick={onOpenRoles}>
-        <Icon name="shield" size={15} />
-        {t("channel.openServerRoles")}
-      </button>
     </SettingsSection>
   );
 }
 
 export interface DangerPaneProps {
-  current: ChannelSettingsVM | null;
+  channel: ChannelSettingsVM;
   supported: boolean;
-  confirming: boolean;
-  setConfirming: (confirming: boolean) => void;
-  onDelete: () => void;
-  t: Translator;
+  onDelete: () => Promise<void>;
 }
 
-export function DangerPane({
-  current,
-  supported,
-  confirming,
-  setConfirming,
-  onDelete,
-  t,
-}: DangerPaneProps) {
+/**
+ * The server's danger zone, for one channel. Deleting takes a second press on
+ * a button that names the channel, so the first press can never be the one
+ * that loses its history.
+ */
+export function DangerPane({ channel, supported, onDelete }: DangerPaneProps) {
+  const { t } = useLanguage();
+  const action = useAsyncAction();
+  const [confirming, setConfirming] = useState(false);
+
   return (
-    <SettingsSection title={t("channel.delete")} icon="trash" className="danger-section">
-      <p className="fld-note">{t("channel.deleteWarning")}</p>
-      {confirming ? (
-        <div className="ch-confirm">
-          <button
-            type="button"
-            className="btn-danger sm"
-            disabled={!supported}
-            onClick={() => {
-              setConfirming(false);
-              onDelete();
-            }}
-          >
-            <Icon name="trash" size={15} />
-            {current === null
-              ? t("channel.delete")
-              : t("settings.deleteNamedServer", {
-                  name: `${current.kind === "voice" ? "" : "#"}${current.name}`,
+    <SettingsSection title={t("server.danger")} icon="trash" className="danger-section">
+      {action.failed ? (
+        <p className="set-note sound-error" role="alert">
+          {t("channel.deleteFailed")}
+        </p>
+      ) : null}
+      <div className="set-row danger">
+        <span className="set-lab">
+          <b>{t("channel.delete")}</b>
+          <span>{t("channel.deleteWarning")}</span>
+        </span>
+        <span className="set-ctl">
+          {confirming ? (
+            <>
+              <button
+                type="button"
+                className="btn-ghost"
+                disabled={action.pending}
+                onClick={() => setConfirming(false)}
+              >
+                {t("common.cancel")}
+              </button>
+              <button
+                type="button"
+                className="btn-danger"
+                disabled={!supported || action.pending}
+                onClick={() => void action.run(onDelete)}
+              >
+                {t("settings.deleteNamedServer", {
+                  name: channelLabel(channel.kind, channel.name),
                 })}
-          </button>
-          <button type="button" className="btn-ghost sm" onClick={() => setConfirming(false)}>
-            <Icon name="x" size={14} />
-            {t("common.cancel")}
-          </button>
-        </div>
-      ) : (
-        <button
-          type="button"
-          className="btn-danger sm"
-          disabled={!supported}
-          onClick={() => setConfirming(true)}
-        >
-          <Icon name="trash" size={15} />
-          {t("channel.delete")}
-        </button>
-      )}
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              className="btn-danger"
+              disabled={!supported}
+              onClick={() => setConfirming(true)}
+            >
+              {t("channel.delete")}
+            </button>
+          )}
+        </span>
+      </div>
     </SettingsSection>
   );
 }

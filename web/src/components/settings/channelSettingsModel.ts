@@ -1,4 +1,5 @@
 import type { IconName } from "@stellarr/ui/icons";
+import type { SettingsShellGroup, SettingsShellItem } from "@/components/settings/SettingsShell";
 import type { Translator } from "@/i18n";
 import type { ChannelKind, OpusProfileId } from "@/ports";
 
@@ -13,31 +14,34 @@ export interface ChannelSettingsVM {
   /** Voice only; the codec profile shared by the call. */
   audioProfile: OpusProfileId;
   userLimit: number;
+  /** The section the channel sits in, shown beside its name; none when unsectioned. */
+  sectionName?: string;
 }
 
-export type ChannelSettingsPaneKey =
-  | "general"
-  | "voice"
-  | "notifications"
-  | "permissions"
-  | "danger";
+export type ChannelSettingsPaneKey = "overview" | "notifications" | "permissions" | "danger";
 
-export interface ChannelSettingsNavItem {
-  key: ChannelSettingsPaneKey;
-  label: string;
-  icon: IconName;
+export interface ChannelSettingsNavItem extends SettingsShellItem<ChannelSettingsPaneKey> {
+  /** The sentence under the pane's name in the bar. */
   detail: string;
-  danger?: boolean;
 }
 
-export interface ChannelSettingsNavGroup {
-  caption: string;
+export interface ChannelSettingsNavGroup extends SettingsShellGroup<ChannelSettingsPaneKey> {
   items: readonly ChannelSettingsNavItem[];
 }
 
+/** The mark of a channel kind, used wherever a channel is drawn. */
+export const channelIcon = (kind: ChannelKind): IconName => (kind === "voice" ? "speaker" : "hash");
+
+/** A text channel is written with its hash, a voice channel without one. */
+export const channelLabel = (kind: ChannelKind, name: string): string =>
+  `${kind === "voice" ? "" : "#"}${name}`;
+
 /**
+ * The groups and words of the server settings: a general group with the
+ * channel's own panes, then management with access and deletion.
+ *
  * A member who cannot manage the channel only gets notifications, and only on
- * a text channel: a voice channel always shows its voice pane and the rest.
+ * a text channel; the dialog does not open for them on a voice channel.
  */
 export function navigationFor(
   kind: ChannelKind,
@@ -53,29 +57,23 @@ export function navigationFor(
   };
 
   if (!canManageChannel && !voice) {
-    return [{ caption: t("channel.channel"), items: [notifications] }];
+    return [{ caption: t("server.general"), items: [notifications] }];
   }
 
-  const general: ChannelSettingsNavItem = {
-    key: "general",
-    label: t("settings.general"),
-    icon: voice ? "speaker" : "hash",
-    detail: voice ? t("channel.nameVisibility") : t("channel.nameTopicVisibility"),
-  };
-  const voicePane: ChannelSettingsNavItem = {
-    key: "voice",
-    label: t("settings.voiceVideo"),
-    icon: "headphones",
-    detail: t("channel.personLimitDetail"),
+  const overview: ChannelSettingsNavItem = {
+    key: "overview",
+    label: t("server.overview"),
+    icon: channelIcon(kind),
+    detail: voice ? t("channel.nameLimitVisibility") : t("channel.nameTopicVisibility"),
   };
 
   return [
     {
-      caption: t("channel.channel"),
-      items: [general, voice ? voicePane : notifications],
+      caption: t("server.general"),
+      items: voice ? [overview] : [overview, notifications],
     },
     {
-      caption: t("settings.access"),
+      caption: t("server.management"),
       items: [
         {
           key: "permissions",
@@ -83,14 +81,9 @@ export function navigationFor(
           icon: "shield",
           detail: t("channel.permissionsDetail"),
         },
-      ],
-    },
-    {
-      caption: t("settings.other"),
-      items: [
         {
           key: "danger",
-          label: t("channel.delete"),
+          label: t("server.danger"),
           icon: "trash",
           detail: t("channel.deleteDetail"),
           danger: true,
@@ -104,5 +97,5 @@ export function initialPane(
   channel: ChannelSettingsVM | null,
   canManageChannel: boolean,
 ): ChannelSettingsPaneKey {
-  return channel?.kind === "text" && !canManageChannel ? "notifications" : "general";
+  return channel?.kind === "text" && !canManageChannel ? "notifications" : "overview";
 }
