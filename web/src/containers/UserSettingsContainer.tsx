@@ -164,6 +164,10 @@ export function UserSettingsContainer() {
           resolvedScheme: resolved,
           onChange: updateTheme,
           onReset: resetTheme,
+          motion: {
+            reducedMotion: account.preferences.reducedMotion,
+            onChange: (reducedMotion) => persistPreferences({ reducedMotion }),
+          },
         }}
         voice={{
           settings: voiceSettings,

@@ -6,6 +6,7 @@ import { Button } from "@stellarr/ui";
 import { Icon, type IconName } from "@stellarr/ui/icons";
 import { Avatar } from "@/components/primitives/Avatar";
 import { Segmented, type SegmentedOption } from "@/components/primitives/Segmented";
+import { Switch } from "@/components/primitives/Switch";
 import {
   DEFAULT_THEME,
   DENSITIES,
@@ -110,6 +111,16 @@ function MessagePreview() {
   );
 }
 
+/**
+ * Reduced motion. It is an account preference with its own owner rather than
+ * an axis of the theme, but it answers the same question as contrast and text
+ * size, how the app reads, so it is set here.
+ */
+export interface MotionPreferenceProps {
+  reducedMotion: boolean;
+  onChange: (reducedMotion: boolean) => void;
+}
+
 export interface AppearancePaneProps {
   theme: ThemePreference;
   /** Which of dark and light is actually in effect; the preset tiles follow it. */
@@ -117,6 +128,7 @@ export interface AppearancePaneProps {
   onChange: (patch: Partial<ThemePreference>) => void;
   /** Every axis back to `DEFAULT_THEME`, in one write. */
   onReset: () => void;
+  motion?: MotionPreferenceProps;
 }
 
 /**
@@ -131,6 +143,7 @@ export function AppearancePane({
   resolvedScheme,
   onChange,
   onReset,
+  motion,
 }: AppearancePaneProps) {
   const { t } = useLanguage();
 
@@ -154,9 +167,16 @@ export function AppearancePane({
     detail: t(`theme.density.${id}Detail`),
   }));
 
-  const isDefault = (Object.keys(DEFAULT_THEME) as (keyof ThemePreference)[]).every(
-    (axis) => theme[axis] === DEFAULT_THEME[axis],
-  );
+  const isDefault =
+    (Object.keys(DEFAULT_THEME) as (keyof ThemePreference)[]).every(
+      (axis) => theme[axis] === DEFAULT_THEME[axis],
+    ) && motion?.reducedMotion !== true;
+
+  // "Restore defaults" means everything this pane shows, motion included.
+  const resetAll = () => {
+    onReset();
+    if (motion?.reducedMotion) motion.onChange(false);
+  };
   const preset = getPalette(theme.palette);
   const accentIsPreset = theme.accent.toLowerCase() === preset.colors.accent.toLowerCase();
 
@@ -170,7 +190,7 @@ export function AppearancePane({
           size="sm"
           className="ap-reset"
           disabled={isDefault}
-          onClick={onReset}
+          onClick={resetAll}
         >
           {t("common.resetDefaults")}
         </Button>
@@ -264,7 +284,7 @@ export function AppearancePane({
 
       <MessagePreview />
 
-      <Card icon="brush" title={t("theme.typography")}>
+      <Card icon="brush" title={t("theme.readability")}>
         <ChoiceRow title={t("theme.textSize")} detail={t("theme.textSizeDetail")}>
           <Segmented
             options={sizeOptions}
@@ -283,6 +303,21 @@ export function AppearancePane({
             label={t("theme.density")}
           />
         </ChoiceRow>
+
+        {motion === undefined ? null : (
+          <div className="set-row">
+            <span className="set-lab">
+              <b>{t("preference.reducedMotion")}</b>
+              <span>{t("preference.reducedMotionDetail")}</span>
+              <span>{t("preference.reducedMotionNote")}</span>
+            </span>
+            <Switch
+              checked={motion.reducedMotion}
+              onChange={motion.onChange}
+              label={t("preference.reducedMotion")}
+            />
+          </div>
+        )}
       </Card>
     </>
   );

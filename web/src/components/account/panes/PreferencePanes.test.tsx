@@ -179,16 +179,15 @@ describe("PrivacyPane", () => {
 });
 
 describe("AdvancedPane", () => {
-  it("writes developer mode and reduced motion", async () => {
+  it("writes developer mode, and leaves motion to the appearance pane", async () => {
     const user = userEvent.setup();
     const onChange = vi.fn();
     render(<AdvancedPane preferences={preferences} onChange={onChange} />);
 
     await user.click(screen.getByRole("switch", { name: "Tryb dewelopera" }));
-    await user.click(screen.getByRole("switch", { name: "Ogranicz animacje" }));
 
-    expect(onChange).toHaveBeenCalledWith({ developerMode: true });
-    expect(onChange).toHaveBeenCalledWith({ reducedMotion: true });
+    expect(onChange).toHaveBeenCalledExactlyOnceWith({ developerMode: true });
+    expect(screen.queryByRole("switch", { name: "Ogranicz animacje" })).toBeNull();
   });
 
   it("leaves out system startup unless the desktop client supplies it", () => {

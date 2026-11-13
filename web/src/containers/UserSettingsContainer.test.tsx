@@ -184,6 +184,15 @@ describe("UserSettingsContainer", () => {
     expect(world.friends.unblock).toHaveBeenCalledExactlyOnceWith("u-nils");
   });
 
+  it("hands the appearance pane the account's reduced motion and stores a change", () => {
+    world.account = { ...world.account, preferences: { vadSensitivity: 50, reducedMotion: true } };
+    render(<UserSettingsContainer />);
+
+    expect(dialog().appearance.motion?.reducedMotion).toBe(true);
+    dialog().appearance.motion?.onChange(false);
+    expect(setPreferences()).toHaveBeenCalledWith({ reducedMotion: false });
+  });
+
   it("hands the dialog the test hooks for the voice pane", () => {
     render(<UserSettingsContainer />);
 

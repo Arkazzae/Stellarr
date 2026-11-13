@@ -275,6 +275,8 @@ export function AdvancedPane({
           />
         </SwitchCard>
       )}
+      {/* Reduced motion used to live here; it is a question of how the app
+          looks and reads, so it sits with contrast and text size now. */}
       <SwitchCard title={t("preference.advanced")} icon="sliders">
         <PreferenceRow
           label={t("preference.developerMode")}
@@ -282,14 +284,7 @@ export function AdvancedPane({
           checked={preferences.developerMode}
           onChange={(developerMode) => onChange({ developerMode })}
         />
-        <PreferenceRow
-          label={t("preference.reducedMotion")}
-          detail={t("preference.reducedMotionDetail")}
-          checked={preferences.reducedMotion}
-          onChange={(reducedMotion) => onChange({ reducedMotion })}
-        />
       </SwitchCard>
-      <p className="set-note">{t("preference.reducedMotionNote")}</p>
     </>
   );
 }
