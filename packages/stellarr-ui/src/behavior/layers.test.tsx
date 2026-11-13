@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { useRef } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { hideOthers, lockPointer, lockScroll, useLayer, type Layer } from "./layers";
+import { allowScroll, hideOthers, lockPointer, lockScroll, useLayer, type Layer } from "./layers";
 
 type Handlers = Pick<Layer, "owns" | "onEscape" | "onTab" | "onPointerDownOutside">;
 
@@ -429,6 +429,51 @@ describe("lockScroll", () => {
 
     undoSecond();
     expect(document.body.style.overflow).toBe("auto");
+  });
+});
+
+describe("allowScroll", () => {
+  const wheelOver = (target: Element) =>
+    !target.dispatchEvent(new WheelEvent("wheel", { bubbles: true, cancelable: true }));
+
+  it("lets an element outside the locking layer scroll while the page is locked", () => {
+    const locker = addToBody("locker");
+    const floating = addToBody("floating");
+    const page = addToBody("page");
+    track(lockScroll(() => [locker]));
+
+    const undo = track(allowScroll(() => [floating]));
+
+    expect(wheelOver(floating)).toBe(false);
+    expect(wheelOver(locker)).toBe(false);
+    expect(wheelOver(page)).toBe(true);
+
+    undo();
+    expect(wheelOver(floating)).toBe(true);
+    expect(wheelOver(locker)).toBe(false);
+  });
+
+  it("takes no lock of its own", () => {
+    document.body.style.overflow = "auto";
+    const floating = addToBody("floating");
+    const page = addToBody("page");
+
+    track(allowScroll(() => [floating]));
+
+    expect(document.body.style.overflow).toBe("auto");
+    expect(wheelOver(page)).toBe(false);
+  });
+
+  it("reads its areas on every wheel, so an element that mounts later counts", () => {
+    track(lockScroll(() => []));
+    let floating: HTMLElement | null = null;
+    track(allowScroll(() => (floating === null ? [] : [floating])));
+    const late = addToBody("late");
+    expect(wheelOver(late)).toBe(true);
+
+    floating = late;
+
+    expect(wheelOver(late)).toBe(false);
   });
 });
 

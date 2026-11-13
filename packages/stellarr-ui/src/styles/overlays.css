@@ -271,9 +271,12 @@
     width: var(--_dropdown-width, auto);
     max-height: var(--_dropdown-max-height, none);
     padding: calc(5 * var(--ui-unit));
+    /* Never sideways: a label with no place to break wraps inside the row. */
+    overflow-x: hidden;
     overflow-y: auto;
     overscroll-behavior: contain;
-    background: var(--ui-surface);
+    background: var(--ui-dropdown-list-bg, var(--ui-surface));
+    border: var(--ui-dropdown-list-border, none);
     border-radius: var(--ui-radius-md);
     box-shadow: var(--ui-elevation-menu);
     animation: ui-dropdown-in 110ms var(--ui-ease);
@@ -330,13 +333,17 @@
     gap: calc(2 * var(--ui-unit));
   }
 
+  /* A label and its detail break at their spaces as always, and anywhere only
+     when a word is wider than the row, such as a dotted source name. */
   .ui-dropdown-option-label {
+    overflow-wrap: anywhere;
     font-size: var(--ui-dropdown-font-size, calc(14 * var(--ui-unit)));
     font-weight: 500;
     line-height: 1.35;
   }
 
   .ui-dropdown-option-detail {
+    overflow-wrap: anywhere;
     font-size: calc(12 * var(--ui-unit));
     color: var(--ui-text-faint);
     line-height: 1.4;

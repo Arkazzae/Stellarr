@@ -11,7 +11,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 
-import { useLayer } from "../behavior/layers";
+import { allowScroll, useLayer } from "../behavior/layers";
 import { cx } from "../cx";
 import { Icon, type IconName } from "../icons/Icon";
 
@@ -166,9 +166,12 @@ export function Dropdown<T extends string>({
     const field = fieldRef.current;
     const list = listRef.current;
     if (field === null || list === null) return;
+    // `scrollHeight` leaves the borders out, and a list that opens above is
+    // placed by its height, so they are added back. They are what the box has
+    // beyond its client area, which stays right when the list is capped.
     const placement = placeList(
       field.getBoundingClientRect(),
-      { height: list.scrollHeight },
+      { height: list.scrollHeight + list.offsetHeight - list.clientHeight },
       { width: window.innerWidth, height: window.innerHeight },
     );
     // Written to the element rather than kept in state, and as custom
@@ -200,6 +203,13 @@ export function Dropdown<T extends string>({
       window.removeEventListener("resize", reposition);
     };
   }, [open, reposition]);
+
+  // A dialog or a sheet that holds the page still lets only its own element
+  // scroll, and the list is drawn in <body>, outside it.
+  useEffect(() => {
+    if (!open) return;
+    return allowScroll(() => (listRef.current === null ? [] : [listRef.current]));
+  }, [open]);
 
   useLayer(open, {
     node: () => listRef.current,
@@ -361,9 +371,12 @@ export function Dropdown<T extends string>({
         <span className="ui-dropdown-caret" aria-hidden="true">
           <Icon name="caret" size={14} />
         </span>
+        {/* Inside the button, so the field is one element among its siblings and
+            a parent's `:last-child` or `space-y-*` rule sees nothing else. A
+            hidden input is not interactive, so it is valid there, and it still
+            belongs to the form around the button. */}
+        {name === undefined ? null : <input type="hidden" name={name} value={value} disabled={disabled} />}
       </button>
-
-      {name === undefined ? null : <input type="hidden" name={name} value={value} disabled={disabled} />}
 
       {open
         ? createPortal(
