@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -107,7 +107,7 @@ describe("ConfirmProvider", () => {
     const dialog = screen.getByRole("dialog");
     expect(dialog).toHaveAttribute("aria-modal", "true");
 
-    fireEvent.click(dialog);
+    await user.click(dialog);
     await vi.waitFor(() => expect(onAnswer).toHaveBeenCalledWith(false));
   });
 

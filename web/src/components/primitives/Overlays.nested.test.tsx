@@ -17,10 +17,11 @@ import { Modal } from "./Modal";
 import { Popover } from "./Popover";
 
 /*
- * What happens when overlays are open on top of one another, as it is. Every
- * overlay here listens for Escape and for a press elsewhere by itself, so a
- * nesting that closes two things at once is pinned as such: the tests record
- * today's behaviour, they do not argue for it.
+ * What happens when overlays are open on top of one another. The rule: one
+ * Escape closes one layer, the topmost that takes it, and a press outside
+ * reaches the topmost layer only, so the first press closes the top one and the
+ * next press the one beneath. Every overlay here is a layer on the shared
+ * stack, which is what makes the rule hold for any nesting.
  */
 
 const OPTIONS = [
@@ -79,13 +80,18 @@ describe("a confirm dialog over a settings dialog", () => {
     return { user, onClose, onAnswer };
   }
 
-  it("is closed by Escape together with the dialog beneath it", async () => {
+  it("is closed by Escape alone, and the next Escape closes the dialog beneath it", async () => {
     const { user, onClose, onAnswer } = await raiseConfirm();
 
     await user.keyboard("{Escape}");
 
     await waitFor(() => expect(screen.queryByRole("dialog", { name: "Delete?" })).toBeNull());
     expect(onAnswer).toHaveBeenCalledExactlyOnceWith(false);
+    expect(onClose).not.toHaveBeenCalled();
+    expect(settings()).not.toBeNull();
+
+    await user.keyboard("{Escape}");
+
     expect(onClose).toHaveBeenCalledOnce();
     expect(settings()).toBeNull();
   });
@@ -111,7 +117,7 @@ describe("a confirm dialog over a settings dialog", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it("does the same when a settings pane raised the question", async () => {
+  it("is closed by Escape alone when a settings pane raised the question", async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
     const onDelete = vi.fn();
@@ -134,6 +140,11 @@ describe("a confirm dialog over a settings dialog", () => {
 
     await waitFor(() => expect(screen.queryByRole("dialog", { name: /mushris/ })).toBeNull());
     expect(onDelete).not.toHaveBeenCalled();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(settings()).not.toBeNull();
+
+    await user.keyboard("{Escape}");
+
     expect(onClose).toHaveBeenCalledOnce();
     expect(settings()).toBeNull();
   });
@@ -187,13 +198,19 @@ describe("a context menu over a dialog", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it("is closed by a press on the backdrop, and the click that ends it closes the dialog too", async () => {
+  it("is closed by a press on the backdrop alone, and the click that ends it leaves the dialog open", async () => {
     const { user, onClose } = await openMenu();
 
     await user.click(settings()!);
 
     expect(screen.queryByRole("menu")).toBeNull();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(settings()).not.toBeNull();
+
+    await user.click(settings()!);
+
     expect(onClose).toHaveBeenCalledOnce();
+    expect(settings()).toBeNull();
   });
 
   it("leaves the dialog open when a press lands inside the menu", async () => {
@@ -241,13 +258,19 @@ describe("a dropdown inside a dialog", () => {
     expect(onClose).not.toHaveBeenCalled();
   });
 
-  it("is closed by a press on the backdrop, and the click that ends it closes the dialog too", async () => {
+  it("is closed by a press on the backdrop alone, and the click that ends it leaves the dialog open", async () => {
     const { user, onClose } = await openList();
 
     await user.click(settings()!);
 
     expect(screen.queryByRole("listbox")).toBeNull();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(settings()).not.toBeNull();
+
+    await user.click(settings()!);
+
     expect(onClose).toHaveBeenCalledOnce();
+    expect(settings()).toBeNull();
   });
 
   it("leaves the dialog open when an option is chosen", async () => {
@@ -424,7 +447,7 @@ describe("a window-level Escape handler beside a dialog", () => {
     }
   });
 
-  it("does not hear the Escape that closes a confirm dialog over a dialog", async () => {
+  it("does not hear the Escape that closes a confirm dialog over a dialog, which closes the confirm dialog alone", async () => {
     const user = userEvent.setup();
     const { onWindowKey, stop } = listenOnWindow();
     try {
@@ -436,9 +459,10 @@ describe("a window-level Escape handler beside a dialog", () => {
           </button>
         );
       }
+      const onClose = vi.fn();
       render(
         <ConfirmProvider>
-          <Dialog onClose={vi.fn()}>
+          <Dialog onClose={onClose}>
             <Asking />
           </Dialog>
         </ConfirmProvider>,
@@ -450,6 +474,14 @@ describe("a window-level Escape handler beside a dialog", () => {
       await user.keyboard("{Escape}");
 
       expect(onWindowKey).not.toHaveBeenCalled();
+      await waitFor(() => expect(screen.queryByRole("dialog", { name: "Delete?" })).toBeNull());
+      expect(onClose).not.toHaveBeenCalled();
+      expect(settings()).not.toBeNull();
+
+      await user.keyboard("{Escape}");
+
+      expect(onWindowKey).not.toHaveBeenCalled();
+      expect(onClose).toHaveBeenCalledOnce();
     } finally {
       stop();
     }
@@ -479,7 +511,7 @@ describe("an anchored card over a dialog", () => {
     );
   }
 
-  it("is closed together with the dialog by Escape when focus is on a plain control in it", async () => {
+  it("is closed alone by Escape when focus is on a plain control in it, and the next Escape closes the dialog", async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
     render(
@@ -491,7 +523,13 @@ describe("an anchored card over a dialog", () => {
     await user.keyboard("{Escape}");
 
     expect(screen.queryByRole("dialog", { name: "Card" })).toBeNull();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(settings()).not.toBeNull();
+
+    await user.keyboard("{Escape}");
+
     expect(onClose).toHaveBeenCalledOnce();
+    expect(settings()).toBeNull();
   });
 
   it("is closed alone by Escape in the search field of the emoji picker inside it", async () => {
@@ -512,7 +550,7 @@ describe("an anchored card over a dialog", () => {
     expect(settings()).not.toBeNull();
   });
 
-  it("is closed together with the dialog by Escape on a cell of the emoji picker inside it", async () => {
+  it("is closed alone by Escape on a cell of the emoji picker inside it, and the next Escape closes the dialog", async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
     render(
@@ -525,7 +563,13 @@ describe("an anchored card over a dialog", () => {
     await user.keyboard("{Escape}");
 
     expect(screen.queryByRole("dialog", { name: "Card" })).toBeNull();
+    expect(onClose).not.toHaveBeenCalled();
+    expect(settings()).not.toBeNull();
+
+    await user.keyboard("{Escape}");
+
     expect(onClose).toHaveBeenCalledOnce();
+    expect(settings()).toBeNull();
   });
 
   it("is closed by a press on a control of the dialog beneath, which stays open", async () => {
@@ -586,31 +630,44 @@ describe("two outside-dismissed panels, one raised from the other", () => {
   const popoverOpen = () =>
     screen.getByRole("button", { name: "Account" }).getAttribute("aria-expanded") === "true";
 
-  it("both close on Escape", async () => {
+  it("only the upper one closes on Escape, and the next Escape closes the one beneath", async () => {
     const user = await raiseCard();
 
     await user.keyboard("{Escape}");
 
     expect(screen.queryByRole("dialog", { name: "Card" })).toBeNull();
+    expect(popoverOpen()).toBe(true);
+
+    await user.keyboard("{Escape}");
+
     expect(popoverOpen()).toBe(false);
   });
 
-  it("both close on a press elsewhere", async () => {
+  it("only the upper one closes on a press elsewhere, and the next press closes the one beneath", async () => {
     const user = await raiseCard();
 
     await user.click(screen.getByRole("button", { name: "Elsewhere" }));
 
     expect(screen.queryByRole("dialog", { name: "Card" })).toBeNull();
+    expect(popoverOpen()).toBe(true);
+
+    await user.click(screen.getByRole("button", { name: "Elsewhere" }));
+
     expect(popoverOpen()).toBe(false);
   });
 
-  it("the popover counts a press inside the card as a press elsewhere", async () => {
+  it("a press inside the card is not a press elsewhere for the popover beneath", async () => {
     const user = await raiseCard();
 
     await user.click(screen.getByRole("button", { name: "In card" }));
 
     expect(screen.getByRole("dialog", { name: "Card" })).toBeInTheDocument();
-    expect(popoverOpen()).toBe(false);
+    expect(popoverOpen()).toBe(true);
+
+    await user.click(screen.getByRole("button", { name: "Elsewhere" }));
+
+    expect(screen.queryByRole("dialog", { name: "Card" })).toBeNull();
+    expect(popoverOpen()).toBe(true);
   });
 });
 

@@ -1,4 +1,4 @@
-import { FOCUSABLE } from "@stellarr/ui/behavior";
+import { FOCUSABLE, trapTab as sharedTrapTab } from "@stellarr/ui/behavior";
 
 /**
  * What counts as a tab stop inside a dialog or an anchored card. It is the
@@ -16,26 +16,14 @@ export function focusWithin(container: HTMLElement | null): void {
 /**
  * Keeps a Tab press inside `container` by wrapping at both ends.
  *
- * Call it from a keydown handler for the Tab key. The container itself is
- * focusable (`tabindex="-1"`) and counts as "before the first" stop, so
- * Shift+Tab from it lands on the last one.
+ * Call it from a layer's `onTab`. The container itself is focusable
+ * (`tabindex="-1"`) and counts as "before the first" stop, so Shift+Tab from it
+ * lands on the last one.
+ *
+ * Unlike the shared package's trap, it does not pull the focus back in when it
+ * is outside the container: an anchored card or a menu may sit above a dialog,
+ * outside its element, and hold the focus, so a Tab from there is left alone.
  */
 export function trapTab(event: KeyboardEvent, container: HTMLElement): void {
-  const stops = Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE));
-  const first = stops[0];
-  const last = stops[stops.length - 1];
-  if (first === undefined || last === undefined) {
-    event.preventDefault();
-    container.focus();
-    return;
-  }
-
-  const active = document.activeElement;
-  if (event.shiftKey && (active === first || active === container)) {
-    event.preventDefault();
-    last.focus();
-  } else if (!event.shiftKey && active === last) {
-    event.preventDefault();
-    first.focus();
-  }
+  sharedTrapTab(event, container, { reclaim: false });
 }

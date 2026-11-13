@@ -13,6 +13,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 
+import { useLayer } from "@stellarr/ui/behavior";
 import { Icon, type IconName } from "@stellarr/ui/icons";
 
 /** The least room the menu leaves to the edge of the viewport. */
@@ -72,6 +73,9 @@ function withoutStraySeparators(entries: MenuEntry[]): MenuEntry[] {
  * transformed ancestor makes `position: fixed` resolve against that ancestor
  * instead of the viewport, which would clip the menu by the row it came from.
  *
+ * It is a layer on the shared stack: Escape and a press elsewhere close it
+ * unless a layer above it takes them.
+ *
  * Keep it short. Past about six items a menu stops being faster than the
  * alternative and becomes something to read.
  */
@@ -105,23 +109,27 @@ export function ContextMenu({ at, entries, label, controls, onClose }: ContextMe
       ? menu?.querySelector<HTMLElement>("input, select, textarea, button")
       : null;
     (firstControl ?? menu)?.focus();
-
-    const onPointerDown = (event: PointerEvent) => {
-      if (event.target instanceof Node && menu?.contains(event.target)) return;
-      onClose();
-    };
     // Scrolling or resizing moves what the menu was opened on out from under
     // it, and a menu pointing at nothing is worse than none.
     const onLeave = () => onClose();
-    document.addEventListener("pointerdown", onPointerDown);
     window.addEventListener("scroll", onLeave, true);
     window.addEventListener("resize", onLeave);
     return () => {
-      document.removeEventListener("pointerdown", onPointerDown);
       window.removeEventListener("scroll", onLeave, true);
       window.removeEventListener("resize", onLeave);
     };
   }, [hasControls, onClose]);
+
+  useLayer(true, {
+    node: () => menuRef.current,
+    onEscape: (event) => {
+      event.preventDefault();
+      onClose();
+    },
+    onPointerDownOutside: () => {
+      onClose();
+    },
+  });
 
   useEffect(() => {
     menuRef.current
@@ -135,12 +143,6 @@ export function ContextMenu({ at, entries, label, controls, onClose }: ContextMe
   };
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    if (event.key === "Escape") {
-      event.preventDefault();
-      event.stopPropagation();
-      onClose();
-      return;
-    }
     // A range needs the arrows and a text field needs Space and Enter: those
     // controls keep their native keys instead of steering the action list.
     const { target } = event;
