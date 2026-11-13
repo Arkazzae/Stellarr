@@ -153,15 +153,6 @@ export function UserNotificationsPane({
             />
           </div>
         </div>
-        {/* One switch covers both halves of a comings-and-goings sound: the
-            shared chime and the clip someone chose for their own arrival
-            announce the same event, so "do I want to hear that" has one answer. */}
-        <PreferenceRow
-          label={t("preference.joinLeaveSound")}
-          detail={t("preference.joinLeaveSoundDetail")}
-          checked={preferences.joinLeaveSound}
-          onChange={(joinLeaveSound) => onChange({ joinLeaveSound })}
-        />
       </SwitchCard>
     </>
   );

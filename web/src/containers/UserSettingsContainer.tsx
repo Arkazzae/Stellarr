@@ -119,7 +119,6 @@ export function UserSettingsContainer() {
           onSave: (patch) => account.update(patch),
           onPickImage: account.setImage,
           onRemoveImage: account.removeImage,
-          joinSound,
         }}
         security={{
           // The new address proves it receives mail before it replaces the old.
@@ -148,6 +147,14 @@ export function UserSettingsContainer() {
           pending: browserNotifications.pending,
           error: browserNotifications.error,
           onChange: changeSystemNotifications,
+        }}
+        sounds={{
+          joinSound,
+          arrivalsAudible: account.preferences.joinLeaveSound,
+          onArrivalsAudibleChange: (joinLeaveSound) => persistPreferences({ joinLeaveSound }),
+          soundboardVolume: voiceSettings.soundboardVolume,
+          onSoundboardVolumeChange: (soundboardVolume) =>
+            ports.voiceSettings.update({ soundboardVolume }),
         }}
         keybinds={keybinds}
         startup={

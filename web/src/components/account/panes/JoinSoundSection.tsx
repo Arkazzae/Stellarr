@@ -20,17 +20,16 @@ function pickerStatus(joinSound: JoinSoundPicker, t: Translator): string {
 /**
  * What the room hears from you before you say anything.
  *
- * It sits with the rest of your public identity on the account pane: like your
- * name and your face, it is something other people are made to experience, not
- * a setting of your own call. It saves the moment it changes, apart from the
- * profile form above it, because it is chosen by ear and not typed.
+ * It saves the moment it changes, because it is chosen by ear and not typed,
+ * and it heads the sounds pane: it is the one sound there that other people
+ * hear rather than you.
  */
 export function JoinSoundSection({ joinSound }: { joinSound: JoinSoundPicker }) {
   const { t } = useLanguage();
   const selectId = useId();
 
   return (
-    <section className="sc acc-join-sound">
+    <section className="sc">
       <header className="sc-h">
         <span className="sc-ico" aria-hidden="true">
           <Icon name="sound" size={17} />

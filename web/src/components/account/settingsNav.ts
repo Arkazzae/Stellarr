@@ -13,6 +13,7 @@ export type UserSettingsPaneKey =
   | "wyglad"
   | "jezyk"
   | "powiadomienia"
+  | "dzwieki"
   | "glos"
   | "skroty"
   | "zaawansowane";
@@ -60,6 +61,11 @@ export const USER_SETTINGS_PANES: Record<UserSettingsPaneKey, UserSettingsPane> 
     title: "settings.notifications.title",
     detail: "settings.notifications.detail",
   },
+  dzwieki: {
+    icon: "sound",
+    title: "settings.sounds.title",
+    detail: "settings.sounds.detail",
+  },
   glos: {
     icon: "mic",
     title: "settings.voice.title",
@@ -94,7 +100,7 @@ export const USER_SETTINGS_GROUPS: readonly {
   },
   {
     caption: "settings.group.app",
-    panes: ["wyglad", "jezyk", "powiadomienia", "glos", "skroty", "zaawansowane"],
+    panes: ["wyglad", "jezyk", "powiadomienia", "dzwieki", "glos", "skroty", "zaawansowane"],
   },
 ];
 

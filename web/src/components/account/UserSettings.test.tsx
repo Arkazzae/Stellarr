@@ -164,6 +164,12 @@ function setup(overrides: Partial<UserSettingsProps> = {}) {
       onChangePassword: vi.fn(async () => "changed" as const),
     },
     preferences: { preferences, onChange: vi.fn() },
+    sounds: {
+      arrivalsAudible: true,
+      onArrivalsAudibleChange: vi.fn(),
+      soundboardVolume: 80,
+      onSoundboardVolumeChange: vi.fn(),
+    },
     keybinds: {
       bindings: { ...DEFAULT_KEYBINDINGS },
       recording: null,
@@ -236,15 +242,17 @@ describe("UserSettings", () => {
     ).toBeInTheDocument();
   });
 
-  it("picks an arrival sound on the profile and auditions it", async () => {
+  it("picks an arrival sound under sounds and auditions it", async () => {
     const user = userEvent.setup();
     const select = vi.fn();
     const preview = vi.fn();
     setup({
-      accountPane: {
-        onSave: vi.fn(),
-        onPickImage: vi.fn(),
-        onRemoveImage: vi.fn(),
+      initialPane: "dzwieki",
+      sounds: {
+        arrivalsAudible: true,
+        onArrivalsAudibleChange: vi.fn(),
+        soundboardVolume: 80,
+        onSoundboardVolumeChange: vi.fn(),
         // Already announced by the first sound: the audition is only offered
         // for a choice that stands, so the pane has to be given one.
         joinSound: { ...joinSound, selectedId: "sound-1", select, preview },
@@ -267,10 +275,12 @@ describe("UserSettings", () => {
 
   it("keeps showing an arrival sound whose server was left", () => {
     setup({
-      accountPane: {
-        onSave: vi.fn(),
-        onPickImage: vi.fn(),
-        onRemoveImage: vi.fn(),
+      initialPane: "dzwieki",
+      sounds: {
+        arrivalsAudible: true,
+        onArrivalsAudibleChange: vi.fn(),
+        soundboardVolume: 80,
+        onSoundboardVolumeChange: vi.fn(),
         joinSound: { ...joinSound, servers: [], selectedId: "sound-gone", selectionAvailable: false },
       },
     });
@@ -524,10 +534,30 @@ describe("UserSettings", () => {
     expect(screen.queryByRole("switch", { name: "Powiadomienia push" })).toBeNull();
     expect(screen.queryByRole("switch", { name: "Powiadomienia e-mail" })).toBeNull();
     await user.click(screen.getByRole("switch", { name: "Dźwięk wiadomości" }));
-    await user.click(screen.getByRole("switch", { name: "Dźwięk wejścia i wyjścia" }));
 
     expect(onChange).toHaveBeenCalledWith({ messageSound: false });
-    expect(onChange).toHaveBeenCalledWith({ joinLeaveSound: false });
+  });
+
+  it("keeps the sounds of a call on their own pane, away from the profile", async () => {
+    const user = userEvent.setup();
+    const props = setup({
+      accountPane: { onSave: vi.fn(), onPickImage: vi.fn(), onRemoveImage: vi.fn() },
+      sounds: {
+        joinSound,
+        arrivalsAudible: true,
+        onArrivalsAudibleChange: vi.fn(),
+        soundboardVolume: 80,
+        onSoundboardVolumeChange: vi.fn(),
+      },
+    });
+
+    expect(screen.queryByLabelText(/Twój dźwięk/)).toBeNull();
+    await user.click(screen.getByRole("button", { name: "Dźwięki" }));
+
+    expect(screen.getByRole("heading", { level: 2, name: "Dźwięki" })).toBeInTheDocument();
+    expect(screen.getByLabelText(/Twój dźwięk/)).toBeInTheDocument();
+    await user.click(screen.getByRole("switch", { name: "Dźwięk wejścia i wyjścia" }));
+    expect(props.sounds.onArrivalsAudibleChange).toHaveBeenCalledExactlyOnceWith(false);
   });
 
   it("offers native system startup only when the desktop supplies it", async () => {

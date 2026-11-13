@@ -69,6 +69,12 @@ function props(overrides: Partial<UserSettingsProps> = {}): UserSettingsProps {
       onChangePassword: vi.fn(async () => "changed" as const),
     },
     preferences: { preferences, onChange: vi.fn() },
+    sounds: {
+      arrivalsAudible: true,
+      onArrivalsAudibleChange: vi.fn(),
+      soundboardVolume: 100,
+      onSoundboardVolumeChange: vi.fn(),
+    },
     keybinds: {
       bindings: { ...DEFAULT_KEYBINDINGS },
       recording: null,
