@@ -4,6 +4,8 @@ const VARIABLES: Record<CockpitSecretName, string> = {
   "mail.resend-api-key": "STELLARR_RESEND_API_KEY",
   "mail.smtp-password": "STELLARR_SMTP_PASSWORD",
   "giphy.api-key": "GIPHY_API_KEY",
+  "backups.access-key": "STELLARR_BACKUP_ACCESS_KEY",
+  "backups.secret-key": "STELLARR_BACKUP_SECRET_KEY",
 };
 
 /** The state of one secret as the server reports it. */

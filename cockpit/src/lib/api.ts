@@ -233,7 +233,33 @@ export interface CockpitBackupJob {
   objectsTotal: number;
 }
 
+export interface CockpitBackupAutomation {
+  enabled: boolean;
+  intervalHours: number;
+  remoteEnabled: boolean;
+  lastSuccessAt: string | null;
+  nextAttemptAt: string | null;
+  pendingBackupId: string | null;
+  lastError: string | null;
+}
+
+export interface CockpitBackupSettings {
+  enabled: boolean;
+  intervalHours: number;
+  retryMinutes: number;
+  initialDelayMinutes: number;
+  remoteEnabled: boolean;
+  endpoint: string;
+  region: string;
+  bucket: string;
+  prefix: string;
+  retentionDays: number;
+  cleanupEnabled: boolean;
+  source: "environment" | "panel";
+}
+
 export interface CockpitBackups {
+  automation?: CockpitBackupAutomation | null;
   backups: CockpitBackup[];
   retentionDays: number;
   job: CockpitBackupJob | null;
@@ -264,7 +290,7 @@ export interface CockpitRecovery {
   sessionsRevoked: number;
 }
 
-export type CockpitSecretName = "mail.resend-api-key" | "mail.smtp-password" | "giphy.api-key";
+export type CockpitSecretName = "mail.resend-api-key" | "mail.smtp-password" | "giphy.api-key" | "backups.access-key" | "backups.secret-key";
 
 /**
  * Whether a secret is set and where from. The value never comes back: the
@@ -535,6 +561,10 @@ export const cockpitApi = {
   logExportUrl: (filters: CockpitLogFilters) => `/api/cockpit/logs/export${logQuery(filters)}`,
 
   backups: (signal?: AbortSignal) => request<CockpitBackups>("/api/cockpit/backups", {}, signal),
+  backupSettings: (signal?: AbortSignal) => request<CockpitBackupSettings>("/api/cockpit/backups/settings", {}, signal),
+  updateBackupSettings: (settings: CockpitBackupSettings) =>
+    request<CockpitBackupSettings>("/api/cockpit/backups/settings", { method: "PUT", body: settings }),
+  resetBackupSettings: () => request<CockpitBackupSettings>("/api/cockpit/backups/settings", { method: "DELETE" }),
   /**
    * The database alone comes back at once as a plain SQLite file; anything
    * more starts an archive in the background and comes back as its job.

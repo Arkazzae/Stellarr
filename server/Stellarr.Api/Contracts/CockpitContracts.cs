@@ -204,7 +204,8 @@ public sealed record CockpitBackupsDto(
     IReadOnlyList<CockpitBackupDto> Backups,
     int RetentionDays,
     CockpitBackupJobDto? Job,
-    CockpitBackupFailureDto? LastFailure);
+    CockpitBackupFailureDto? LastFailure,
+    Stellarr.Api.Backups.AutomaticBackupStatus? Automation = null);
 
 /// <summary>What to back up. A request without a body asks for the database alone, as a plain SQLite file.</summary>
 public sealed record CreateCockpitBackupRequest(bool Database, bool Objects, bool Keys, bool Instance = false);

@@ -117,6 +117,24 @@ beforeEach(() => {
 });
 
 describe("BackupsPage list", () => {
+  it("shows the automatic policy and an offsite failure without claiming success", async () => {
+    await renderLoaded(list([newest], 14, {
+      automation: {
+        enabled: true,
+        intervalHours: 24,
+        remoteEnabled: true,
+        lastSuccessAt: null,
+        nextAttemptAt: "2025-03-04T10:15:00Z",
+        pendingBackupId: newest.id,
+        lastError: "Automatic backup failed; inspect the server logs.",
+      },
+    }));
+    expect(screen.getByText("Pełny backup z weryfikacją co 24 godzin.", { exact: false })).toBeTruthy();
+    expect(screen.getByText("Ostatni udany cykl: Brak", { exact: false })).toBeTruthy();
+    expect(screen.getByRole("alert").textContent).toContain("Automatyczny backup nie powiódł się");
+    expect(screen.getByRole("status").textContent).toContain("oczekuje na wysłanie poza serwer");
+  });
+
   it("lists each backup with its time, size and verification", async () => {
     await renderLoaded();
 

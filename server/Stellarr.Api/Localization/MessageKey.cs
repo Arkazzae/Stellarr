@@ -106,6 +106,8 @@ public enum MessageKey
     CockpitTimeZoneBroken,
     CockpitMailFromRequired,
     CockpitBackupRetentionRange,
+    CockpitBackupPolicyFieldsInvalid,
+    CockpitBackupPolicyDestinationInvalid,
     CockpitLogRetentionRange,
     CockpitOrphanRetentionRange,
     CockpitVersionInvalid,

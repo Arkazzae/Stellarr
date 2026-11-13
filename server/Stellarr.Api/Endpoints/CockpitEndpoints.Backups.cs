@@ -23,6 +23,7 @@ public static partial class CockpitEndpoints
         AppDbContext db,
         IConfiguration configuration,
         BackupJobs jobs,
+        AutomaticBackupWorker automation,
         CancellationToken cancellationToken)
     {
         var serverId = http.RequireInstanceServer().Id;
@@ -36,7 +37,8 @@ public static partial class CockpitEndpoints
             await ReadBackupsAsync(BackupDirectory(configuration), cancellationToken),
             retentionDays ?? InstanceSettingsService.DefaultBackupRetentionDays,
             running is null ? null : ToJobDto(running),
-            failure is null ? null : new CockpitBackupFailureDto(failure.Id, failure.Message, failure.At)));
+            failure is null ? null : new CockpitBackupFailureDto(failure.Id, failure.Message, failure.At),
+            automation.Status));
     }
 
     /// <summary>
