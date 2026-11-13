@@ -24,7 +24,7 @@
     flex-shrink: 0;
     align-items: center;
     justify-content: center;
-    gap: var(--ui-button-gap, 0px);
+    gap: var(--ui-button-gap, normal);
     min-height: var(--ui-button-min-height, auto);
     white-space: var(--ui-button-white-space, inherit);
     border-radius: calc(infinity * 1px);
@@ -51,7 +51,7 @@
 
   .ui-button[data-size="sm"] {
     height: calc(32 * var(--ui-unit));
-    gap: var(--ui-button-sm-gap, var(--ui-button-gap, 0px));
+    gap: var(--ui-button-sm-gap, var(--ui-button-gap, normal));
     padding-inline: var(--ui-button-sm-padding-x, calc(14 * var(--ui-unit)));
     font-size: var(--ui-button-sm-font-size, var(--ui-button-font-size, calc(13 * var(--ui-unit))));
     line-height: var(--ui-button-sm-line-height, var(--ui-button-line-height, inherit));
@@ -68,7 +68,7 @@
   }
 
   .ui-button[data-variant="primary"] {
-    background-color: var(--ui-accent);
+    background-color: var(--ui-button-primary-bg, var(--ui-accent));
     color: var(--ui-on-accent);
   }
 
@@ -122,7 +122,7 @@
     .ui-button[data-variant="secondary"]:hover:not(:disabled) {
       --_border: var(--ui-button-secondary-hover-border, var(--ui-line-strong));
       background-color: var(--ui-button-secondary-hover-bg, var(--ui-button-secondary-bg, transparent));
-      color: var(--ui-text);
+      color: var(--ui-button-secondary-hover-text, var(--ui-text));
     }
 
     .ui-button[data-variant="quiet"]:hover:not(:disabled) {

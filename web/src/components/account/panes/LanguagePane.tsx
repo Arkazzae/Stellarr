@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 
+import { Button } from "@stellarr/ui";
 import { Icon } from "@stellarr/ui/icons";
 import { Switch } from "@/components/primitives/Switch";
 import {
@@ -126,9 +127,9 @@ function ModelState({ state, t, onRetry }: ModelStateProps) {
       return (
         <div className="lang-model-error" role="alert">
           <span>{t("language.model.failed")}</span>
-          <button type="button" className="btn-ghost" onClick={onRetry}>
+          <Button type="button" variant="secondary" onClick={onRetry}>
             {t("language.model.retry")}
-          </button>
+          </Button>
         </div>
       );
   }

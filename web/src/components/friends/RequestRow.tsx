@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@stellarr/ui";
 import { Icon } from "@stellarr/ui/icons";
 import type { FriendRequestVM } from "@/components/view-models";
 import { useLanguage } from "@/state/LanguageProvider";
@@ -58,9 +59,9 @@ export function RequestRow({
             </button>
           </>
         ) : (
-          <button type="button" className="btn-ghost sm" onClick={onCancel}>
+          <Button type="button" variant="secondary" size="sm" onClick={onCancel}>
             {t("friends.cancel")}
-          </button>
+          </Button>
         )}
       </span>
     </li>

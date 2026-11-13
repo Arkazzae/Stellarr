@@ -117,7 +117,7 @@ The tables show each fallback. A fallback that names another token follows it, s
 | Token | Fallback | Used for |
 | --- | --- | --- |
 | `--ui-button-min-height` | `auto` | The least height, which a touch screen raises |
-| `--ui-button-gap` | `0px` | The space between an icon and the label |
+| `--ui-button-gap` | `normal` | The space between an icon and the label |
 | `--ui-button-sm-gap` | `--ui-button-gap` | The same in the `sm` size |
 | `--ui-button-icon-size` | `auto` | The width and height of an icon, which `auto` leaves at the size of its own attributes |
 | `--ui-button-white-space` | `inherit` | Whether a label may wrap |
@@ -128,11 +128,13 @@ The tables show each fallback. A fallback that names another token follows it, s
 | `--ui-button-sm-font-size`, `--ui-button-sm-line-height` | The tokens above | The label of the `sm` size |
 | `--ui-button-sm-padding-x` | `14` units | The space at both ends of an `sm` label |
 | `--ui-button-disabled-opacity` | `1`, and `0.4` for `secondary` | A disabled button |
+| `--ui-button-primary-bg` | `--ui-accent` | The fill of `primary`, while it is not hovered |
 | `--ui-button-secondary-border` | `--ui-line` | The outline |
 | `--ui-button-secondary-bg` | `transparent` | The fill |
 | `--ui-button-secondary-text` | `--ui-text-muted` | The label |
 | `--ui-button-secondary-hover-border` | `--ui-line-strong` | The outline while hovered |
 | `--ui-button-secondary-hover-bg` | `--ui-button-secondary-bg` | The fill while hovered |
+| `--ui-button-secondary-hover-text` | `--ui-text` | The label while hovered |
 | `--ui-button-secondary-pressed-border`, `--ui-button-secondary-pressed-bg` | The hovered values | A toggle that is on |
 | `--ui-button-secondary-pressed-text` | `--ui-text` | A toggle that is on |
 | `--ui-button-secondary-unpressed-text` | `--ui-button-secondary-text` | A toggle that is off |

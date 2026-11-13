@@ -2,6 +2,7 @@
 
 import { useId } from "react";
 
+import { Button } from "@stellarr/ui";
 import { useLanguage } from "@/state/LanguageProvider";
 
 import type { AddFriendForm } from "./useAddFriend";
@@ -36,13 +37,13 @@ export function AddFriendPanel({ form }: { form: AddFriendForm }) {
           aria-invalid={answer !== null && !accepted ? true : undefined}
           onChange={(event) => form.type(event.target.value)}
         />
-        <button
+        <Button
           type="submit"
-          className="btn-primary"
+          variant="primary"
           disabled={typed.trim().length === 0 || submitting}
         >
           {t("friends.sendInvite")}
-        </button>
+        </Button>
       </form>
       {answer === null ? null : (
         <p

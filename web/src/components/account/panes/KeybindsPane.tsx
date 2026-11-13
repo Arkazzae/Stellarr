@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@stellarr/ui";
 import { Icon } from "@stellarr/ui/icons";
 import {
   DEFAULT_KEYBINDINGS,
@@ -140,15 +141,16 @@ export function KeybindsPane({
                       <Keys keys={keyChordParts(binding)} />
                     )}
                   </button>
-                  <button
+                  <Button
                     type="button"
-                    className="btn-ghost kb-clear"
+                    variant="secondary"
+                    className="kb-clear"
                     disabled={binding === null}
                     aria-label={t("keybinds.clearOne", { action: label })}
                     onClick={() => clearBinding(action)}
                   >
                     {t("keybinds.clear")}
-                  </button>
+                  </Button>
                 </span>
                 {listening && recordingError !== null ? (
                   <span className="kb-error" role="alert">
@@ -161,14 +163,14 @@ export function KeybindsPane({
         </ul>
         <div className="kb-reset-row">
           <span>{t("keybinds.recordingHint")}</span>
-          <button
+          <Button
             type="button"
-            className="btn-ghost"
+            variant="secondary"
             disabled={isDefault(bindings)}
             onClick={resetBindings}
           >
             {t("keybinds.reset")}
-          </button>
+          </Button>
         </div>
       </VoiceSection>
 

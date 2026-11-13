@@ -2,6 +2,7 @@
 
 import { useId, useState, type ReactNode } from "react";
 
+import { Button } from "@stellarr/ui";
 import { Icon } from "@stellarr/ui/icons";
 import type { FriendRequestVM, FriendsTab, FriendVM } from "@/components/view-models";
 import type { AddFriendResult } from "@/ports";
@@ -86,16 +87,18 @@ export function FriendsView({
             It is the app's primary button because it does the same kind of
             thing as "New link" or "Add channel"; below 768 only the icon
             survives and `aria-label` keeps the name. */}
-        <button
+        <Button
           type="button"
-          className={adding ? "btn-primary sm fr-add on" : "btn-primary sm fr-add"}
+          variant="primary"
+          size="sm"
+          className={adding ? "fr-add on" : "fr-add"}
           aria-pressed={adding}
           aria-label={t("friends.addFriend")}
           onClick={() => onTabChange("add")}
         >
           <Icon name="userAdd" size={15} />
           <span className="fr-add-label">{t("friends.addFriend")}</span>
-        </button>
+        </Button>
       </header>
 
       <div

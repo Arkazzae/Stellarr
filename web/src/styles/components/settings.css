@@ -152,7 +152,7 @@
   .frm-row:has(> .frm-switch){grid-template-columns:minmax(0,1fr) auto;align-items:center}
   .frm-row:has(> .frm-switch) .frm-lab{padding-top:0}
   .frm-ctl.frm-switch{display:flex;align-items:center;justify-content:flex-end;padding-top:0}
-  .frm-actions{display:flex;justify-content:flex-end;padding-top:20px}
+  .frm-actions{display:flex;justify-content:flex-end;padding-top:20px;--ui-button-disabled-opacity:0.45}
   .frm-actions .btn-primary:disabled{opacity:0.45;cursor:default}
   .frm-actions .btn-primary:disabled:hover{background:var(--accent)}
 
@@ -188,7 +188,7 @@
     transform:translateY(-70%) rotate(45deg);
   }
   .sv-tick{display:inline-flex;margin-right:8px}
-  .btn-primary.lg{height:46px;padding:0 26px;border-radius:12px;font-size:var(--text-14)}
+  .nf-home{height:46px;border-radius:12px;--ui-button-padding-x:26px;--ui-button-font-size:var(--text-14)}
   .set-lab{min-width:0;flex:1;display:flex;flex-direction:column;gap:3px}
   .set-lab b{font-size:var(--text-14);font-weight:550}
   .set-lab span{font-size:var(--text-13);color:var(--text-faint);line-height:1.45}
@@ -721,11 +721,10 @@
   .desktop-release-body{display:flex;flex-direction:column;gap:18px}
   .desktop-release-state{margin:0;color:var(--text-faint);font-size:var(--text-13);line-height:1.5}
   .desktop-release-state.bad{color:var(--danger-text)}
-  .desktop-release-copy{display:flex;align-items:center;justify-content:space-between;gap:20px}
+  .desktop-release-copy{display:flex;align-items:center;justify-content:space-between;gap:20px;--ui-button-gap:7px}
   .desktop-release-copy > div{display:flex;min-width:0;flex-direction:column;gap:4px}
   .desktop-release-copy b{font-size:var(--text-15);font-weight:600;color:var(--text)}
   .desktop-release-copy span{font-size:var(--text-13);color:var(--text-faint);font-variant-numeric:tabular-nums}
-  .desktop-release-copy .btn-primary{gap:7px}
   .desktop-release-notes{margin:0;max-width:68ch;color:var(--text-muted);font-size:var(--text-13);line-height:1.55}
   .desktop-release-details{display:flex;flex-direction:column;margin:0;border-top:1px solid var(--line-subtle)}
   .desktop-release-details > div{display:grid;grid-template-columns:120px minmax(0,1fr);gap:16px;padding:12px 0;border-bottom:1px solid var(--line-subtle)}
@@ -734,8 +733,8 @@
   .desktop-release-details code{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:var(--text-12)/1.4 ui-monospace,SFMono-Regular,Menlo,monospace}
   .desktop-release-install{margin:0}
   @media (max-width:560px){
-    .desktop-release-copy{align-items:stretch;flex-direction:column}
-    .desktop-release-copy .btn-primary{align-self:flex-start;min-height:44px}
+    .desktop-release-copy{align-items:stretch;flex-direction:column;--ui-button-min-height:44px}
+    .desktop-release-copy > a{align-self:flex-start}
     .desktop-release-details > div{grid-template-columns:minmax(0,1fr);gap:5px}
   }
 
@@ -1310,7 +1309,11 @@
   }
 
   @media (max-width:479px){
+    /* The save button fills the row whether it is a bare `.btn-primary` or a
+       `Button`, which takes its minimum height from a token. */
     .frm-actions .btn-primary{width:100%;min-height:44px}
+    .frm-actions{--ui-button-min-height:44px}
+    .frm-actions > button{width:100%}
     .perm-editor-head{align-items:flex-start;flex-direction:column;gap:4px}
     .perm-editor-head span{text-align:left}
     .mic-test{align-items:stretch;flex-direction:column}

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { Button } from "@stellarr/ui";
 import { useLanguage } from "@/state/hooks";
 
 /**
@@ -23,24 +24,25 @@ export function VoiceResetRow({ onReset }: { onReset: () => void }) {
       </span>
       {confirming ? (
         <>
-          <button type="button" className="btn-ghost sm" onClick={() => setConfirming(false)}>
+          <Button type="button" variant="secondary" size="sm" onClick={() => setConfirming(false)}>
             Anuluj
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
-            className="btn-danger sm"
+            variant="danger"
+            size="sm"
             onClick={() => {
               setConfirming(false);
               onReset();
             }}
           >
             {t("voice.resetConfirm")}
-          </button>
+          </Button>
         </>
       ) : (
-        <button type="button" className="btn-ghost sm" onClick={() => setConfirming(true)}>
+        <Button type="button" variant="secondary" size="sm" onClick={() => setConfirming(true)}>
           {t("common.reset")}
-        </button>
+        </Button>
       )}
     </div>
   );

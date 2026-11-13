@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 
+import { Button } from "@stellarr/ui";
 import { useLanguage } from "@/state/hooks";
 
 /**
- * Built from the same `.sv-h` heading and `.btn-primary` button the settings
+ * Built from the same `.sv-h` heading and primary `Button` the settings
  * screens use. A 404 that looked like a different product would read as a
  * broken deployment rather than a wrong address.
  *
@@ -22,9 +23,9 @@ export default function NotFound() {
           {t("notFound.title")}
           <span>{t("notFound.detail")}</span>
         </h1>
-        <Link className="btn-primary lg" href="/">
-          {t("notFound.back")}
-        </Link>
+        <Button asChild variant="primary" className="nf-home">
+          <Link href="/">{t("notFound.back")}</Link>
+        </Button>
       </div>
     </main>
   );

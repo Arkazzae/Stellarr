@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef } from "react";
 
+import { Button } from "@stellarr/ui";
 import { Icon } from "@stellarr/ui/icons";
 import { ErrorNotice } from "@/components/primitives/ErrorNotice";
 import type { CameraTest, VoiceSettings } from "@/ports";
@@ -41,9 +42,11 @@ export function VoiceCameraSection({ settings, onChange, camera }: VoiceCameraSe
         </FormRow>
 
         <FormRow label={t("voice.preview")} detail={t("voice.cameraPreviewDetail")}>
-          <button
+          <Button
             type="button"
-            className={camera.running ? "btn-ghost sm on" : "btn-ghost sm"}
+            variant="secondary"
+            size="sm"
+            className={camera.running ? "test-toggle on" : "test-toggle"}
             disabled={camera.starting}
             onClick={() => (camera.running ? camera.stop() : camera.start())}
           >
@@ -53,7 +56,7 @@ export function VoiceCameraSection({ settings, onChange, camera }: VoiceCameraSe
               : camera.starting
                 ? t("voice.openCamera")
                 : t("voice.checkCamera")}
-          </button>
+          </Button>
           {camera.error === null ? null : (
             <ErrorNotice
               compact
