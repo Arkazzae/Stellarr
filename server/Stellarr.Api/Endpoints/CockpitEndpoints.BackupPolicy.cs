@@ -4,7 +4,6 @@ using Stellarr.Api.Backups;
 using Stellarr.Api.Data;
 using Stellarr.Api.Localization;
 using Stellarr.Api.Operations;
-using Stellarr.Api.Secrets;
 
 namespace Stellarr.Api.Endpoints;
 
@@ -19,13 +18,9 @@ public static partial class CockpitEndpoints
 
     private static async Task<IResult> UpdateBackupPolicyAsync(BackupPolicyRequest request,
         HttpContext http, AppDbContext db, IConfiguration configuration, BackupPolicyStore policies,
-        InstanceSecrets secrets, Messages messages, CancellationToken cancellationToken)
+        Messages messages, CancellationToken cancellationToken)
     {
         var problems = new Dictionary<string, string[]>();
-        if (request.Endpoint is null || request.Region is null || request.Bucket is null || request.Prefix is null ||
-            request.Endpoint.Length > 2048 || request.Region.Length > 100 || request.Bucket.Length > 255 || request.Prefix.Length > 512)
-            problems["destination"] = [messages.Get(MessageKey.CockpitBackupPolicyFieldsInvalid)];
-        if (problems.Count > 0) return Results.ValidationProblem(problems);
         var policy = BackupPolicyStore.FromRequest(request);
         var validations = new List<ValidationResult>();
         Validator.TryValidateObject(policy, new ValidationContext(policy), validations, validateAllProperties: true);
@@ -33,10 +28,6 @@ public static partial class CockpitEndpoints
             foreach (var member in result.MemberNames) problems[member] = [result.ErrorMessage!];
         if (request.RetentionDays is < 1 or > InstanceSettingsService.MaxRetentionDays)
             problems["retentionDays"] = [messages.Get(MessageKey.CockpitBackupRetentionRange, ("max", InstanceSettingsService.MaxRetentionDays))];
-        var resolved = await secrets.ReadAsync(cancellationToken);
-        if (policy.Destination.Enabled && (!policy.Destination.IsValid(requireCredentials: false) ||
-            !resolved[SecretNames.BackupAccessKey].IsSet || !resolved[SecretNames.BackupSecretKey].IsSet))
-            problems["destination"] = [messages.Get(MessageKey.CockpitBackupPolicyDestinationInvalid)];
         if (problems.Count > 0) return Results.ValidationProblem(problems);
 
         var server = http.RequireInstanceServer();
@@ -54,8 +45,7 @@ public static partial class CockpitEndpoints
     {
         var policy = policies.Current;
         return new(policy.Enabled, policy.IntervalHours, policy.RetryMinutes, policy.InitialDelayMinutes,
-            policy.Destination.Enabled, policy.Destination.Endpoint, policy.Destination.Region,
-            policy.Destination.Bucket, policy.Destination.Prefix, retentionDays, cleanupEnabled, policies.Source);
+            retentionDays, cleanupEnabled, policies.Source);
     }
 
     private static async Task<IResult> ResetBackupPolicyAsync(HttpContext http, AppDbContext db,

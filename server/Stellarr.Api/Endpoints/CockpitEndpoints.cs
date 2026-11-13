@@ -48,6 +48,9 @@ public static partial class CockpitEndpoints
         cockpit.MapGet("/backups/settings", GetBackupPolicyAsync);
         cockpit.MapPut("/backups/settings", UpdateBackupPolicyAsync).AddEndpointFilter<FreshSecondStepFilter>();
         cockpit.MapDelete("/backups/settings", ResetBackupPolicyAsync).AddEndpointFilter<FreshSecondStepFilter>();
+        cockpit.MapGet("/integrations/cloudflare/r2", GetCloudflareR2Async);
+        cockpit.MapPut("/integrations/cloudflare/r2", UpdateCloudflareR2Async).AddEndpointFilter<FreshSecondStepFilter>();
+        cockpit.MapDelete("/integrations/cloudflare/r2", ResetCloudflareR2Async).AddEndpointFilter<FreshSecondStepFilter>();
         cockpit.MapPost("/backups", CreateBackupAsync);
         cockpit.MapPost("/backups/{backupId}/verify", VerifyBackupAsync);
         cockpit.MapGet("/backups/{backupId}/download", DownloadBackup).AddEndpointFilter<FreshSecondStepFilter>();

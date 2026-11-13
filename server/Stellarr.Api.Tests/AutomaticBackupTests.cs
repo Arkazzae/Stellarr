@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 using Stellarr.Api.Backups;
+using Stellarr.Api.Integrations.Cloudflare;
 using Stellarr.Api.Storage;
 
 namespace Stellarr.Api.Tests;
@@ -142,7 +143,7 @@ public sealed class AutomaticBackupTests
     [InlineData("https://example.com", "instance/backups", true)]
     public void DestinationRequiresHttpsAndSafePrefix(string endpoint, string prefix, bool valid)
     {
-        Assert.Equal(valid, new BackupDestinationOptions
+        Assert.Equal(valid, new CloudflareR2Options
         {
             Enabled = true, Endpoint = endpoint, Prefix = prefix,
             Bucket = "backup", AccessKey = "key", SecretKey = "secret",
@@ -154,7 +155,7 @@ public sealed class AutomaticBackupTests
         factory.Services.GetRequiredService<IServiceScopeFactory>(),
         factory.Services.GetRequiredService<IConfiguration>(),
         Options.Create(new AutomaticBackupOptions { Enabled = enabled, InitialDelayMinutes = 1440 }),
-        factory.Services.GetRequiredService<BackupJobs>(), destination, time,
+        factory.Services.GetRequiredService<BackupJobs>(), [destination], time,
         NullLogger<AutomaticBackupWorker>.Instance, policies);
 
     private sealed class BackupClock : TimeProvider
@@ -166,6 +167,7 @@ public sealed class AutomaticBackupTests
 
     private sealed class RecordingDestination : IBackupDestination
     {
+        public bool Enabled => true;
         public bool Fail { get; set; }
         public List<string> Paths { get; } = [];
         public Task UploadAsync(string path, Guid serverId, CancellationToken cancellationToken)

@@ -23,7 +23,7 @@ public sealed partial class AutomaticBackupWorker(
     IConfiguration configuration,
     IOptions<AutomaticBackupOptions> options,
     BackupJobs jobs,
-    IBackupDestination destination,
+    IEnumerable<IBackupDestination> destinations,
     TimeProvider time,
     ILogger<AutomaticBackupWorker> logger,
     BackupPolicyStore? policies = null) : BackgroundService
@@ -38,7 +38,7 @@ public sealed partial class AutomaticBackupWorker(
         {
             var state = Volatile.Read(ref _state);
             var policy = policies?.Current ?? options.Value;
-            return new(policy.Enabled, policy.IntervalHours, policy.Destination.Enabled,
+            return new(policy.Enabled, policy.IntervalHours, destinations.Any(x => x.Enabled),
                 state.LastSuccessAt, NextAttempt(state, policy), state.PendingBackupId, state.LastError);
         }
     }
@@ -98,7 +98,10 @@ public sealed partial class AutomaticBackupWorker(
             }
 
             var path = Path.Combine(directory, _state.PendingBackupId!);
-            await destination.UploadAsync(path, _state.ServerId!.Value, cancellationToken);
+            // Every enabled destination has to accept the archive: a completed
+            // local copy alone is not an offsite copy.
+            foreach (var destination in destinations.Where(x => x.Enabled))
+                await destination.UploadAsync(path, _state.ServerId!.Value, cancellationToken);
             now = time.GetUtcNow().UtcDateTime;
             _state = new(now, now.AddHours(policy.IntervalHours));
             await SaveAsync(cancellationToken);

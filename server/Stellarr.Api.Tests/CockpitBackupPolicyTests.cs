@@ -11,7 +11,7 @@ namespace Stellarr.Api.Tests;
 
 public sealed class CockpitBackupPolicyTests
 {
-    private static BackupPolicyRequest Policy => new(true, 12, 10, 1440, false, "", "auto", "", "stellarr", 30);
+    private static BackupPolicyRequest Policy => new(true, 12, 10, 1440, 30);
 
     [Fact]
     public async Task OwnerCanSaveReloadAndResetThePolicyWithoutRestarting()
@@ -30,7 +30,7 @@ public sealed class CockpitBackupPolicyTests
         Assert.True(factory.Services.GetRequiredService<AutomaticBackupWorker>().Status.Enabled);
 
         var reloaded = new BackupPolicyStore(factory.Services.GetRequiredService<IOptions<AutomaticBackupOptions>>(),
-            factory.Services.GetRequiredService<IDataProtectionProvider>(), factory.Services.GetRequiredService<IServiceScopeFactory>());
+            factory.Services.GetRequiredService<IDataProtectionProvider>());
         await using (var scope = factory.Services.CreateAsyncScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -46,43 +46,16 @@ public sealed class CockpitBackupPolicyTests
         Assert.False(factory.Services.GetRequiredService<AutomaticBackupWorker>().Status.Enabled);
     }
 
-    [Fact]
-    public async Task RemoteCredentialsAreWriteOnlyEncryptedAndResolvedAtRuntime()
-    {
-        using var factory = new StellarrWebApplicationFactory();
-        using var owner = await OwnerAsync(factory);
-        (await owner.PutAsJsonAsync("/api/cockpit/secrets/backups.access-key", new { value = "r2-private-access" })).EnsureSuccessStatusCode();
-        (await owner.PutAsJsonAsync("/api/cockpit/secrets/backups.secret-key", new { value = "r2-private-secret" })).EnsureSuccessStatusCode();
-        var response = await owner.PutAsJsonAsync("/api/cockpit/backups/settings", Policy with
-        {
-            RemoteEnabled = true, Endpoint = "https://account.r2.cloudflarestorage.com", Bucket = "private-backups",
-        });
-        response.EnsureSuccessStatusCode();
-        var settings = await owner.GetStringAsync("/api/cockpit/backups/settings");
-        var listed = await owner.GetStringAsync("/api/cockpit/secrets");
-        Assert.DoesNotContain("r2-private-access", settings + listed, StringComparison.Ordinal);
-        Assert.DoesNotContain("r2-private-secret", settings + listed, StringComparison.Ordinal);
-        var policies = factory.Services.GetRequiredService<BackupPolicyStore>();
-        Assert.Equal("r2-private-secret", (await policies.ResolveAsync(default)).Destination.SecretKey);
-        (await owner.PutAsJsonAsync("/api/cockpit/secrets/backups.secret-key", new { value = "rotated" })).EnsureSuccessStatusCode();
-        Assert.Equal("rotated", (await policies.ResolveAsync(default)).Destination.SecretKey);
-        await using var scope = factory.Services.CreateAsyncScope();
-        var rows = await scope.ServiceProvider.GetRequiredService<AppDbContext>().InstanceSecrets.AsNoTracking().ToListAsync();
-        Assert.All(rows, row => Assert.DoesNotContain("r2-private", row.ProtectedValue, StringComparison.Ordinal));
-    }
-
     [Theory]
-    [InlineData(0, 30, false, "")]
-    [InlineData(12, 0, false, "")]
-    [InlineData(12, 30, true, "http://insecure.example")]
-    [InlineData(12, 30, true, "https://account.r2.cloudflarestorage.com")]
-    public async Task InvalidPoliciesDoNotReplaceTheRunningPolicy(int interval, int retention, bool remote, string endpoint)
+    [InlineData(0, 30)]
+    [InlineData(12, 0)]
+    public async Task InvalidPoliciesDoNotReplaceTheRunningPolicy(int interval, int retention)
     {
         using var factory = new StellarrWebApplicationFactory();
         using var owner = await OwnerAsync(factory);
         var response = await owner.PutAsJsonAsync("/api/cockpit/backups/settings", Policy with
         {
-            IntervalHours = interval, RetentionDays = retention, RemoteEnabled = remote, Endpoint = endpoint, Bucket = "bucket",
+            IntervalHours = interval, RetentionDays = retention,
         });
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Equal("environment", factory.Services.GetRequiredService<BackupPolicyStore>().Source);
