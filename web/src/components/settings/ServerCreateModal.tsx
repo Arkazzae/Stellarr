@@ -3,6 +3,7 @@
 import { useId, useState, type ReactNode } from "react";
 
 import { Icon, type IconName } from "@stellarr/ui/icons";
+import { DialogClose } from "@/components/primitives/DialogClose";
 import { Modal } from "@/components/primitives/Modal";
 import { Segmented } from "@/components/primitives/Segmented";
 import { Switch } from "@/components/primitives/Switch";
@@ -407,12 +408,7 @@ export function ServerCreateModal({ open, onClose, onCreate }: ServerCreateModal
             <h2>{current.label}</h2>
             <p>{current.detail}</p>
           </div>
-          <div className="sv-close">
-            <button type="button" className="sv-x" aria-label={t("common.close")} onClick={close}>
-              <Icon name="x" size={18} />
-            </button>
-            <span>ESC</span>
-          </div>
+          <DialogClose label={t("common.close")} onClose={close} />
         </div>
 
         <aside className="sv-nav">

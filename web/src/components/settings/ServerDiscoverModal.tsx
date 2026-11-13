@@ -127,6 +127,7 @@ export function ServerDiscoverModal({
           detail={t("shell.findServersDetail")}
           onClose={close}
           closeDisabled={busy}
+          centered
         />
 
         <div className="dlg-body">

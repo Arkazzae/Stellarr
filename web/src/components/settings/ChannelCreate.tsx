@@ -3,8 +3,8 @@
 import { Fragment, useEffect, useId, useRef, useState } from "react";
 
 import { Icon } from "@stellarr/ui/icons";
-import { Modal } from "@/components/primitives/Modal";
 import { channelLabel } from "@/components/settings/channelSettingsModel";
+import { CreateDialog } from "@/components/settings/CreateDialog";
 import { toChannelSlug } from "@/lib/format";
 import type { ChannelKind, NewChannel } from "@/ports";
 import { useLanguage } from "@/state/hooks";
@@ -62,7 +62,6 @@ export function ChannelCreate({
   onCreate,
 }: ChannelCreateProps) {
   const { t } = useLanguage();
-  const titleId = useId();
   const hintId = useId();
   const errorId = useId();
   const glyphRef = useRef<HTMLButtonElement>(null);
@@ -142,10 +141,6 @@ export function ChannelCreate({
     setFocus({ target: "glyph" });
   };
 
-  const close = () => {
-    if (!submitting) onClose();
-  };
-
   const submit = async () => {
     if (locked || slug.length === 0) return;
     setSubmitting(true);
@@ -222,92 +217,65 @@ export function ChannelCreate({
   };
 
   return (
-    <Modal open={open} onClose={close} labelledBy={titleId} className="act-modal ch-place-modal" exitMs={200}>
-      <form
-        className="am-card ch-place-card"
-        onSubmit={(event) => {
-          event.preventDefault();
-          void submit();
-        }}
-      >
-        <header className="am-head">
-          <div className="am-title">
-            <h2 id={titleId}>{t("channel.new")}</h2>
-            <p>{t("channel.placeHint")}</p>
-          </div>
-          <div className="sv-close">
-            <button
-              type="button"
-              className="sv-x"
-              aria-label={t("common.close")}
-              disabled={submitting}
-              onClick={close}
-            >
-              <Icon name="x" size={18} />
-            </button>
-            <span>ESC</span>
-          </div>
-        </header>
-
-        <div className="ch-place-body">
-          {supported ? null : <p className="set-note">{t("settings.createChannelUnsupported")}</p>}
-
-          <div className="ch-place" role="group" aria-label={t("channel.placement")}>
-            <div className="ch-place-server">{serverName}</div>
-            {groups.map((group) => (
-              <div
-                key={group.key}
-                className={group.kind === null ? "ch-place-group section" : "ch-place-group"}
-              >
-                <div className="ch-place-cap">
-                  {group.kind === null ? (
-                    <span className="ch-place-folder" aria-hidden="true">
-                      <Icon name="folder" size={12} />
-                    </span>
-                  ) : null}
-                  <span className="ch-place-caption">{group.caption}</span>
-                  {group.key === here ? null : (
-                    <button
-                      type="button"
-                      className="ch-place-move"
-                      aria-label={t("channel.moveTo", { group: group.caption })}
-                      title={t("channel.moveTo", { group: group.caption })}
-                      disabled={locked}
-                      onClick={() => moveTo(group)}
-                    >
-                      <Icon name="plus" size={14} />
-                    </button>
-                  )}
-                </div>
-                {rows(group)}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <footer className="ch-place-foot">
-          <div className="ch-place-notes">
-            <p id={hintId} className="ch-place-hint">
-              {reshaped
-                ? t("channel.willCreate", { name: channelLabel(chosenKind, slug) })
-                : t("channel.placeHow")}
+    <CreateDialog
+      open={open}
+      onClose={onClose}
+      title={t("channel.new")}
+      detail={t("channel.placeHint")}
+      submitLabel={t("channel.create")}
+      busy={submitting}
+      busyLabel={t("channel.creating")}
+      canSubmit={supported && slug.length > 0}
+      onSubmit={() => void submit()}
+      className="ch-place-modal"
+      notes={
+        <>
+          <p id={hintId} className="ch-place-hint">
+            {reshaped
+              ? t("channel.willCreate", { name: channelLabel(chosenKind, slug) })
+              : t("channel.placeHow")}
+          </p>
+          {error === null ? null : (
+            <p id={errorId} className="ch-place-error" role="alert">
+              {error}
             </p>
-            {error === null ? null : (
-              <p id={errorId} className="ch-place-error" role="alert">
-                {error}
-              </p>
-            )}
-          </div>
-          <button
-            type="submit"
-            className="btn-primary"
-            disabled={locked || slug.length === 0}
-            aria-busy={submitting || undefined}
+          )}
+        </>
+      }
+    >
+      {supported ? null : <p className="set-note">{t("settings.createChannelUnsupported")}</p>}
+
+      <div className="ch-place" role="group" aria-label={t("channel.placement")}>
+        <div className="ch-place-server">{serverName}</div>
+        {groups.map((group) => (
+          <div
+            key={group.key}
+            className={group.kind === null ? "ch-place-group section" : "ch-place-group"}
           >
-            {submitting ? t("channel.creating") : t("channel.create")}
-          </button>
-        </footer>
-      </form>
-    </Modal>
+            <div className="ch-place-cap">
+              {group.kind === null ? (
+                <span className="ch-place-folder" aria-hidden="true">
+                  <Icon name="folder" size={12} />
+                </span>
+              ) : null}
+              <span className="ch-place-caption">{group.caption}</span>
+              {group.key === here ? null : (
+                <button
+                  type="button"
+                  className="ch-place-move"
+                  aria-label={t("channel.moveTo", { group: group.caption })}
+                  title={t("channel.moveTo", { group: group.caption })}
+                  disabled={locked}
+                  onClick={() => moveTo(group)}
+                >
+                  <Icon name="plus" size={14} />
+                </button>
+              )}
+            </div>
+            {rows(group)}
+          </div>
+        ))}
+      </div>
+    </CreateDialog>
   );
 }
