@@ -24,7 +24,7 @@ All variables in `.env` have defaults suitable for local testing on `localhost`.
 docker compose up -d
 ```
 
-Docker pulls `ghcr.io/arkazzae/stellarr`, creates the `stellarr-v2_stellarr_data` volume, and starts the `stellarr-v2` container. Verify that it is healthy:
+Docker pulls `ghcr.io/arkazzae/stellarr`, creates the `stellarr_stellarr_data` volume, and starts the `stellarr` container. Verify that it is healthy:
 
 ```bash
 docker compose ps
@@ -81,7 +81,7 @@ docker compose down      # remove container and network, preserve data volume
 ```
 
 > [!CAUTION]
-> `docker compose down -v` permanently deletes the `stellarr-v2_stellarr_data` volume, including all accounts, messages, uploads, and secrets.
+> `docker compose down -v` permanently deletes the `stellarr_stellarr_data` volume, including all accounts, messages, uploads, and secrets.
 
 ## Next steps
 

@@ -6,10 +6,10 @@
 #
 # The project, service, container and volume names are fixed. Docker derives
 # the name of the data volume from the project and the volume key
-# (stellarr-v2_stellarr_data), so changing any of them would start an existing
+# (stellarr_stellarr_data), so changing any of them would start an existing
 # installation on an empty database.
 
-name: stellarr-v2
+name: stellarr
 
 services:
   stellarr:
@@ -19,7 +19,7 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_GIPHY_API_KEY: ${GIPHY_API_KEY:-}
-    container_name: stellarr-v2
+    container_name: stellarr
     restart: unless-stopped
     mem_limit: ${STELLARR_CONTAINER_MEMORY_LIMIT:-4g}
     cpus: ${STELLARR_CONTAINER_CPUS:-4}

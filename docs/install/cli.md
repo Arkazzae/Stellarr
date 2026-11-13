@@ -168,7 +168,7 @@ Or directly with `docker run` against the named volume:
 
 ```sh
 docker run --rm -it \
-  -v stellarr-v2_stellarr_data:/data/stellarr \
+  -v stellarr_stellarr_data:/data/stellarr \
   --entrypoint stellarr \
   ghcr.io/arkazzae/stellarr:latest doctor
 ```

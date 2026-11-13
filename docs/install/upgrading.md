@@ -1,6 +1,6 @@
 # Upgrading
 
-Upgrading replaces the container image while preserving the `stellarr-v2_stellarr_data` volume. The API applies schema updates automatically on startup.
+Upgrading replaces the container image while preserving the `stellarr_stellarr_data` volume. The API applies schema updates automatically on startup.
 
 > [!CAUTION]
 > Never run `docker compose down -v` on a production instance. The `-v` flag deletes the data volume, including all messages, uploads, accounts, and secrets.
@@ -12,14 +12,14 @@ Always take a full volume backup while the container is stopped so SQLite (`stel
 1. Record the currently running image version:
 
    ```bash
-   docker inspect --format '{{ index .Config.Labels "org.opencontainers.image.version" }}' stellarr-v2
+   docker inspect --format '{{ index .Config.Labels "org.opencontainers.image.version" }}' stellarr
    ```
 
-2. Stop the container and archive `stellarr-v2_stellarr_data`:
+2. Stop the container and archive `stellarr_stellarr_data`:
 
    ```bash
    docker compose stop
-   docker run --rm -v stellarr-v2_stellarr_data:/data -v "$PWD":/backup alpine \
+   docker run --rm -v stellarr_stellarr_data:/data -v "$PWD":/backup alpine \
      tar czf /backup/stellarr-data-$(date +%F).tar.gz -C /data .
    ```
 
@@ -52,7 +52,7 @@ Release notes are published at <https://github.com/Arkazzae/Stellarr/releases>.
    ```bash
    docker compose ps
    curl -sk -o /dev/null -w '%{http_code}\n' https://localhost:8443/login
-   docker inspect --format '{{ index .Config.Labels "org.opencontainers.image.version" }}' stellarr-v2
+   docker inspect --format '{{ index .Config.Labels "org.opencontainers.image.version" }}' stellarr
    ```
 
    Confirm that `docker compose ps` reports `healthy` (which checks both `/health` and `/login`) and `curl` returns `200`.
@@ -72,7 +72,7 @@ Rolling back restores the entire data volume to the backup snapshot; any message
 
    ```bash
    docker compose down
-   docker run --rm -v stellarr-v2_stellarr_data:/data -v "$PWD":/backup alpine \
+   docker run --rm -v stellarr_stellarr_data:/data -v "$PWD":/backup alpine \
      sh -c "find /data -mindepth 1 -delete && tar xzf /backup/stellarr-data-YYYY-MM-DD.tar.gz -C /data"
    ```
 

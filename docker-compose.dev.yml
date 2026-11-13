@@ -99,7 +99,7 @@ services:
       context: .
       dockerfile: Dockerfile
       target: api-dev
-    image: stellarr-v2-api-dev:local
+    image: stellarr-api-dev:local
     working_dir: /src/server/Stellarr.Api
     # Hot reload is off: when applying an edit in place fails, it can stop the
     # whole watcher, while a plain rebuild and restart always recovers.
@@ -172,7 +172,7 @@ services:
       context: .
       dockerfile: Dockerfile
       target: media-dev
-    image: stellarr-v2-media-dev:local
+    image: stellarr-media-dev:local
     working_dir: /app
     # cargo run instead of a --locked build, for the same reason as npm install
     # above: Cargo.lock lives on the host, and adding a dependency should not
