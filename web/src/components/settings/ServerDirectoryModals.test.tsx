@@ -21,7 +21,7 @@ describe("ServerCreateModal", () => {
     await user.type(screen.getByRole("textbox", { name: /^Opis/ }), "  Wieczorne granie  ");
     // Visibility lives on its own pane now, so the switch has to be reached.
     await user.click(screen.getByRole("button", { name: "Widoczność" }));
-    await user.click(screen.getByRole("button", { name: "Serwer publiczny" }));
+    await user.click(screen.getByRole("switch", { name: "Serwer publiczny" }));
     await user.click(screen.getByRole("button", { name: "Utwórz serwer" }));
 
     expect(onCreate).toHaveBeenCalledWith({
@@ -67,7 +67,7 @@ describe("ServerCreateModal", () => {
     await user.clear(text);
     await user.type(text, "Ogłoszenia Ekipy");
     // Opting out of the voice channel hides its name field entirely.
-    await user.click(screen.getByRole("button", { name: "Utwórz kanał głosowy" }));
+    await user.click(screen.getByRole("switch", { name: "Utwórz kanał głosowy" }));
     expect(screen.queryByRole("textbox", { name: /^Nazwa$/ })).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Utwórz serwer" }));

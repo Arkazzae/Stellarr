@@ -42,12 +42,12 @@ describe("UserNotificationsPane", () => {
     const onChange = vi.fn();
     render(<UserNotificationsPane preferences={preferences} onChange={onChange} />);
 
-    expect(screen.queryByRole("button", { name: "Powiadomienia push" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Powiadomienia e-mail" })).toBeNull();
+    expect(screen.queryByRole("switch", { name: "Powiadomienia push" })).toBeNull();
+    expect(screen.queryByRole("switch", { name: "Powiadomienia e-mail" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Tylko wzmianki" })).toBeNull();
 
-    await user.click(screen.getByRole("button", { name: "Dźwięk wiadomości" }));
-    await user.click(screen.getByRole("button", { name: "Dźwięk wejścia i wyjścia" }));
+    await user.click(screen.getByRole("switch", { name: "Dźwięk wiadomości" }));
+    await user.click(screen.getByRole("switch", { name: "Dźwięk wejścia i wyjścia" }));
 
     expect(onChange).toHaveBeenCalledWith({ messageSound: false });
     expect(onChange).toHaveBeenCalledWith({ joinLeaveSound: false });
@@ -62,8 +62,8 @@ describe("UserNotificationsPane", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: "Powiadomienia systemowe" }))
-      .toHaveAttribute("aria-pressed", "false");
+    expect(screen.getByRole("switch", { name: "Powiadomienia systemowe" }))
+      .toHaveAttribute("aria-checked", "false");
   });
 
   it("hands the system switch to the browser permission flow", async () => {
@@ -77,7 +77,7 @@ describe("UserNotificationsPane", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Powiadomienia systemowe" }));
+    await user.click(screen.getByRole("switch", { name: "Powiadomienia systemowe" }));
 
     expect(onChange).toHaveBeenCalledExactlyOnceWith(true);
   });
@@ -101,7 +101,7 @@ describe("UserNotificationsPane", () => {
     );
     expect(screen.getByText(/nie obsługuje powiadomień systemowych/)).toBeInTheDocument();
     expect(screen.getByRole("alert")).toHaveTextContent("Nie udało się włączyć powiadomień systemowych.");
-    expect(screen.getByRole("button", { name: "Powiadomienia systemowe" })).toBeDisabled();
+    expect(screen.getByRole("switch", { name: "Powiadomienia systemowe" })).toBeDisabled();
   });
 });
 
@@ -111,9 +111,9 @@ describe("PrivacyPane", () => {
     const onChange = vi.fn();
     render(<PrivacyPane preferences={preferences} onChange={onChange} />);
 
-    await user.click(screen.getByRole("button", { name: "Wiadomości prywatne od osób z serwera" }));
-    await user.click(screen.getByRole("button", { name: "Zaproszenia do znajomych" }));
-    await user.click(screen.getByRole("button", { name: "Pokazuj mój status" }));
+    await user.click(screen.getByRole("switch", { name: "Wiadomości prywatne od osób z serwera" }));
+    await user.click(screen.getByRole("switch", { name: "Zaproszenia do znajomych" }));
+    await user.click(screen.getByRole("switch", { name: "Pokazuj mój status" }));
 
     expect(onChange).toHaveBeenNthCalledWith(1, { allowDirectMessages: false });
     expect(onChange).toHaveBeenNthCalledWith(2, { allowFriendRequests: true });
@@ -127,8 +127,8 @@ describe("AdvancedPane", () => {
     const onChange = vi.fn();
     render(<AdvancedPane preferences={preferences} onChange={onChange} />);
 
-    await user.click(screen.getByRole("button", { name: "Tryb dewelopera" }));
-    await user.click(screen.getByRole("button", { name: "Ogranicz animacje" }));
+    await user.click(screen.getByRole("switch", { name: "Tryb dewelopera" }));
+    await user.click(screen.getByRole("switch", { name: "Ogranicz animacje" }));
 
     expect(onChange).toHaveBeenCalledWith({ developerMode: true });
     expect(onChange).toHaveBeenCalledWith({ reducedMotion: true });
@@ -137,7 +137,7 @@ describe("AdvancedPane", () => {
   it("leaves out system startup unless the desktop client supplies it", () => {
     render(<AdvancedPane preferences={preferences} onChange={vi.fn()} />);
 
-    expect(screen.queryByRole("button", { name: "Uruchamiaj Stellarr wraz z systemem" })).toBeNull();
+    expect(screen.queryByRole("switch", { name: "Uruchamiaj Stellarr wraz z systemem" })).toBeNull();
   });
 
   it("toggles system startup", async () => {
@@ -151,7 +151,7 @@ describe("AdvancedPane", () => {
       />,
     );
 
-    await user.click(screen.getByRole("button", { name: "Uruchamiaj Stellarr wraz z systemem" }));
+    await user.click(screen.getByRole("switch", { name: "Uruchamiaj Stellarr wraz z systemem" }));
 
     expect(onChange).toHaveBeenCalledExactlyOnceWith(true);
   });
@@ -165,7 +165,7 @@ describe("AdvancedPane", () => {
       />,
     );
 
-    expect(screen.getByRole("button", { name: "Uruchamiaj Stellarr wraz z systemem" })).toBeDisabled();
+    expect(screen.getByRole("switch", { name: "Uruchamiaj Stellarr wraz z systemem" })).toBeDisabled();
     expect(screen.getByRole("alert")).toHaveTextContent("Nie udało się zmienić ustawienia autostartu");
   });
 });

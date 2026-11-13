@@ -38,7 +38,7 @@ describe("LanguagePane", () => {
 
     await waitFor(() => expect(model.download).toHaveBeenCalledOnce());
     expect(screen.getByText(/22 MB/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Tłumacz automatycznie" }))
+    expect(screen.getByRole("switch", { name: "Tłumacz automatycznie" }))
       .toBeDisabled();
 
     await userEvent.click(screen.getAllByRole("radio", { name: /English/ })[0]!);
@@ -59,7 +59,7 @@ describe("LanguagePane", () => {
       />,
     );
 
-    const auto = screen.getByRole("button", { name: "Translate automatically" });
+    const auto = screen.getByRole("switch", { name: "Translate automatically" });
     expect(auto).toBeEnabled();
     await userEvent.click(auto);
     expect(update).toHaveBeenCalledWith({ chatAutoTranslateEnabled: true });

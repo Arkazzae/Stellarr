@@ -82,15 +82,15 @@ describe("ServerCreateModal", () => {
 
     await user.type(nameField(), "Załoga");
     await user.click(screen.getByRole("button", { name: "Widoczność" }));
-    await user.click(screen.getByRole("button", { name: "Serwer publiczny" }));
+    await user.click(screen.getByRole("switch", { name: "Serwer publiczny" }));
 
     rerender(<ServerCreateModal open={false} {...props} />);
     rerender(<ServerCreateModal open {...props} />);
 
     expect(nameField()).toHaveValue("");
     await user.click(screen.getByRole("button", { name: "Widoczność" }));
-    expect(screen.getByRole("button", { name: "Serwer publiczny" })).toHaveAttribute(
-      "aria-pressed",
+    expect(screen.getByRole("switch", { name: "Serwer publiczny" })).toHaveAttribute(
+      "aria-checked",
       "false",
     );
   });

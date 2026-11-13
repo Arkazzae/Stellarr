@@ -398,12 +398,6 @@
       inset: -10px;
     }
 
-    .sw::before {
-      content: "";
-      position: absolute;
-      inset: -9px 0;
-    }
-
     /* These controls otherwise appear only on hover, which touch screens do
        not have. Keep the actions present without changing their desktop row.
        Channels and roles no longer need it — their action is a real button

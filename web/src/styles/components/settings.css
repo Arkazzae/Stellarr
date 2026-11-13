@@ -199,18 +199,6 @@
   .set-h{font-size:var(--text-18);font-weight:600;display:flex;align-items:center;gap:12px;padding:8px 0 12px}
   .set-h .btn-primary{margin-left:auto}
   .set-note{font-size:var(--text-13);color:var(--text-faint);line-height:1.5;margin:-4px 0 14px}
-  /* przełącznik */
-  .sw{
-    width:44px;height:26px;border-radius:999px;flex:none;position:relative;
-    background:var(--surface-overlay);border:1px solid var(--line);
-    transition:background var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard);
-  }
-  .sw i{
-    position:absolute;left:2px;top:2px;width:20px;height:20px;border-radius:50%;
-    background:var(--text-faint);transition:left var(--dur-base) var(--ease-standard), background var(--dur-fast) var(--ease-standard);
-  }
-  .sw.on{background:var(--accent);border-color:var(--accent)}
-  .sw.on i{left:20px;background:var(--on-accent)}
   /* segment z profilami */
   .seg{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   /* Three choices are three columns; the 2×2 the default grid made of them
@@ -1217,7 +1205,7 @@
     }
     .set-input,.set-select,.set-area{font-size:var(--text-16)}
     .set-select{max-width:100%}
-    .set-row:not(:has(.sw)){flex-direction:column;align-items:stretch;gap:10px}
+    .set-row:not(:has([role="switch"])){flex-direction:column;align-items:stretch;gap:10px}
     .set-ctl{min-width:0;flex-wrap:wrap}
     .seg{grid-template-columns:minmax(0,1fr)}
     /* `.seg.three` outranks the line above on specificity, so it has to be

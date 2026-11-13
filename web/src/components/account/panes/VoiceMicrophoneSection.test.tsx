@@ -191,7 +191,7 @@ describe("VoiceMicrophoneSection levels", () => {
     const user = userEvent.setup();
     const { onChange } = setup();
 
-    await user.click(screen.getByRole("button", { name: "Bramka mikrofonu" }));
+    await user.click(screen.getByRole("switch", { name: "Bramka mikrofonu" }));
 
     expect(onChange).toHaveBeenCalledWith({ inputGate: false });
   });
