@@ -264,6 +264,9 @@ export function Composer({
       }
       if (event.key === "Escape") {
         event.preventDefault();
+        // The list takes this Escape, so nothing beneath it (a panel, the
+        // drawers) acts on it too.
+        event.stopPropagation();
         mentions.dismiss();
         return;
       }

@@ -77,8 +77,8 @@ export function AppShell({
       closeDrawers();
       if (stageFull) onExitStageFull?.();
     };
-    // On `window`, so a popover listening on `document` can stop Escape before
-    // it gets here and close only itself.
+    // On `window`, so a layer on the shared stack, which listens on `document`,
+    // takes Escape before it gets here and closes only itself.
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [closeDrawers, stageFull, onExitStageFull]);

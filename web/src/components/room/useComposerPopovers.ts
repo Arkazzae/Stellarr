@@ -41,17 +41,14 @@ export function useComposerPopovers() {
   });
   // On a phone the actions sit behind one disclosure button instead of five
   // 44px targets around the field. The tray is a toolbar, not a modal: a press
-  // elsewhere dismisses it, and a picker opened from it owns Escape until that
-  // picker closes.
+  // elsewhere dismisses it. Whatever is opened after it (the GIF panel in the
+  // tray, a picker) is above it on the stack and answers Escape and a press
+  // first.
   useDismissible(mobileActionsOpen, {
     isInside: (target) =>
-      [mobileActions, mobileActionsTrigger, emojiPanel].some((part) =>
-        part.current?.contains(target),
-      ),
+      [mobileActions, mobileActionsTrigger].some((part) => part.current?.contains(target)),
     onDismiss: () => setMobileActionsOpen(false),
     returnFocusTo: mobileActionsTrigger,
-    claimsEscape: () =>
-      !emojiOpen && !mobileActions.current?.querySelector('[role="dialog"]:not([hidden])'),
   });
 
   return {

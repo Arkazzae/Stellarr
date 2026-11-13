@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 
+import { useLayer } from "@stellarr/ui/behavior";
 import { Icon } from "@stellarr/ui/icons";
 import {
   fetchGiphyPage,
@@ -128,7 +129,8 @@ export interface GifBrowserProps {
 /**
  * The GIF button and the panel it opens. Choosing a GIF sends it at once and
  * closes the panel; the panel stays mounted but hidden, so its search survives
- * a close.
+ * a close. While open it is a layer on the shared stack: Escape and a press
+ * elsewhere close it when no layer above it takes them.
  */
 export function GifBrowser({ apiKey, customerId, onSelect }: GifBrowserProps) {
   const { t } = useLanguage();
@@ -153,26 +155,23 @@ export function GifBrowser({ apiKey, customerId, onSelect }: GifBrowserProps) {
   useEffect(() => {
     if (!open) return;
     const frame = requestAnimationFrame(() => searchRef.current?.focus());
-    const dismissOnOutsidePress = (event: PointerEvent) => {
-      const target = event.target;
-      if (!(target instanceof Node)) return;
-      const inside = panelRef.current?.contains(target) || triggerRef.current?.contains(target);
-      if (!inside) setOpen(false);
-    };
-    const dismissOnEscape = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      event.stopPropagation();
-      setOpen(false);
-      triggerRef.current?.focus();
-    };
-    document.addEventListener("pointerdown", dismissOnOutsidePress);
-    document.addEventListener("keydown", dismissOnEscape);
-    return () => {
-      cancelAnimationFrame(frame);
-      document.removeEventListener("pointerdown", dismissOnOutsidePress);
-      document.removeEventListener("keydown", dismissOnEscape);
-    };
+    return () => cancelAnimationFrame(frame);
   }, [open]);
+
+  // The panel stays mounted while closed, so it is a layer only while open. The
+  // trigger toggles the panel itself; closing on a press there too would
+  // reopen it.
+  useLayer(open, {
+    node: () => panelRef.current,
+    owns: (target) =>
+      panelRef.current?.contains(target) === true || triggerRef.current?.contains(target) === true,
+    onEscape: () => {
+      close();
+    },
+    onPointerDownOutside: () => {
+      setOpen(false);
+    },
+  });
 
   const send = async (gif: GiphyGif) => {
     if (sendingId !== null) return;

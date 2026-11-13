@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useEffectEvent, useId, useRef, type RefObject } from "react";
+import { useEffect, useId, useRef, type RefObject } from "react";
 import { createPortal } from "react-dom";
 
+import { useLayer } from "@stellarr/ui/behavior";
 import { Icon, type IconName } from "@stellarr/ui/icons";
 import { focusWithin, trapTab } from "@/components/primitives/focus";
 
@@ -30,6 +31,9 @@ export interface MessageActionSheetProps {
  * The phone's version of the hover toolbar: every action with its name, in a
  * modal sheet. Selecting an item closes the sheet first, so an action that
  * opens something else of its own does so on a clear screen.
+ *
+ * It is a layer on the shared stack: Escape and a press on the backdrop close
+ * it when no layer above it takes them.
  */
 export function MessageActionSheet({
   title,
@@ -39,16 +43,28 @@ export function MessageActionSheet({
   onClose,
 }: MessageActionSheetProps) {
   const titleId = useId();
+  const layer = useRef<HTMLDivElement>(null);
   const sheet = useRef<HTMLDivElement>(null);
 
-  const keyPressed = useEffectEvent((event: KeyboardEvent) => {
-    if (event.key === "Escape") {
+  // The layer element is the backdrop around the sheet. A press on it, or
+  // anywhere else outside it, dismisses; a press on the sheet or on anything
+  // the sheet holds is inside.
+  useLayer(true, {
+    node: () => layer.current,
+    owns: (target) => {
+      const backdrop = layer.current;
+      return backdrop !== null && target !== backdrop && backdrop.contains(target);
+    },
+    onEscape: (event) => {
       event.preventDefault();
-      event.stopPropagation();
       onClose();
-    } else if (event.key === "Tab" && sheet.current !== null) {
-      trapTab(event, sheet.current);
-    }
+    },
+    onTab: (event) => {
+      if (sheet.current !== null) trapTab(event, sheet.current);
+    },
+    onPointerDownOutside: () => {
+      onClose();
+    },
   });
 
   useEffect(() => {
@@ -58,22 +74,15 @@ export function MessageActionSheet({
     body.style.overflow = "hidden";
     // One frame later, so the sheet is laid out before it takes focus.
     const frame = requestAnimationFrame(() => focusWithin(sheet.current));
-    document.addEventListener("keydown", keyPressed);
     return () => {
       cancelAnimationFrame(frame);
-      document.removeEventListener("keydown", keyPressed);
       body.style.overflow = overflow;
       if (returnTarget?.isConnected) returnTarget.focus();
     };
   }, [returnFocusTo]);
 
   return createPortal(
-    <div
-      className="msg-action-layer"
-      onPointerDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
-      }}
-    >
+    <div ref={layer} className="msg-action-layer">
       <div
         ref={sheet}
         className="msg-action-sheet"

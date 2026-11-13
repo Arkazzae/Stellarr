@@ -166,24 +166,19 @@ function StatusEditor({ customStatus, customEmoji, onSave }: StatusEditorProps) 
           className="acc-emoji-card"
           autoFocus={pickerAutoFocus}
         >
-          {/* The card is portalled out of the menu hosting this panel, so the
-              menu's document-level outside-press listener would count a press
-              inside the card as outside and close the menu. */}
-          <div onPointerDown={(event) => event.stopPropagation()}>
-            <EmojiPicker
-              customEmoji={customEmoji}
-              autoFocus={pickerAutoFocus}
-              onPick={(entry) => {
-                toggleLeading(
-                  entry.imageUrl === undefined
-                    ? entry.glyph
-                    : `:${entry.shortcode}:`,
-                );
-                setPickerAnchor(null);
-              }}
-              onClose={() => setPickerAnchor(null)}
-            />
-          </div>
+          <EmojiPicker
+            customEmoji={customEmoji}
+            autoFocus={pickerAutoFocus}
+            onPick={(entry) => {
+              toggleLeading(
+                entry.imageUrl === undefined
+                  ? entry.glyph
+                  : `:${entry.shortcode}:`,
+              );
+              setPickerAnchor(null);
+            }}
+            onClose={() => setPickerAnchor(null)}
+          />
         </AnchoredCard>
       )}
     </section>

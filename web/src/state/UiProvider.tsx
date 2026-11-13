@@ -4,7 +4,6 @@ import {
   createContext,
   useCallback,
   useContext,
-  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -12,6 +11,7 @@ import {
   type ReactNode,
 } from "react";
 
+import { useLayer } from "@stellarr/ui/behavior";
 import type { ChannelPanelTab } from "@/components/room/channelPanelModel";
 import type { FriendsTab, RoomView } from "@/components/view-models";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
@@ -391,21 +391,20 @@ export function UiProvider({ children }: { children: ReactNode }) {
   }, []);
 
   /*
-   * Escape unwinds in the order dialog, cinema, drawers. `Modal` closes itself
-   * from its own `document` listener, so this one stands aside while a dialog
-   * is up. The drawers listen on `window`, one hop further along, so stopping
-   * propagation here is what keeps one press from closing them behind cinema.
+   * Escape unwinds in the order dialog, cinema, drawers. Cinema is a layer that
+   * hears only Escape: a dialog opened over it is above it on the stack and
+   * takes the key first, and cinema passes the key down while a dialog is up in
+   * case it joined the stack above one. The drawers listen on `window`, which
+   * an Escape that a layer took never reaches, so one press does not also close
+   * them behind cinema.
    */
-  useEffect(() => {
-    if (!cinema || modal !== null) return;
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      event.stopPropagation();
+  useLayer(cinema, {
+    node: () => null,
+    onEscape: () => {
+      if (modal !== null) return false;
       setCinema(false);
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [cinema, modal]);
+    },
+  });
 
   const value = useMemo<UiValue>(
     () => ({
