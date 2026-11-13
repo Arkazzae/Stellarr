@@ -2,8 +2,8 @@
 
 import { useId, type ReactNode } from "react";
 
-import { Icon } from "@stellarr/ui/icons";
 import { Modal } from "@/components/primitives/Modal";
+import { DialogHeader } from "@/components/settings/DialogHeader";
 import { useLanguage } from "@/state/hooks";
 
 export interface CreateDialogProps {
@@ -18,6 +18,14 @@ export interface CreateDialogProps {
   /** Whether the form holds enough to submit. */
   canSubmit: boolean;
   onSubmit: () => void;
+  /** Names the dialog's own variant on the wrapper, beside `act-modal`. */
+  className?: string;
+  /**
+   * Lines that belong to the answer rather than to the fields: what the input
+   * will become, and the error a submit came back with. They sit above the
+   * buttons outside the scrolling body, so a long body never hides them.
+   */
+  notes?: ReactNode;
   /** The fields, and whatever notes and errors belong with them. */
   children: ReactNode;
 }
@@ -36,6 +44,8 @@ export function CreateDialog({
   busyLabel,
   canSubmit,
   onSubmit,
+  className = "ch-modal",
+  notes,
   children,
 }: CreateDialogProps) {
   const { t } = useLanguage();
@@ -46,7 +56,13 @@ export function CreateDialog({
   };
 
   return (
-    <Modal open={open} onClose={close} labelledBy={titleId} className="act-modal ch-modal" exitMs={200}>
+    <Modal
+      open={open}
+      onClose={close}
+      labelledBy={titleId}
+      className={`act-modal ${className}`}
+      exitMs={200}
+    >
       <form
         className="am-card"
         onSubmit={(event) => {
@@ -54,26 +70,17 @@ export function CreateDialog({
           onSubmit();
         }}
       >
-        <header className="am-head">
-          <div className="am-title">
-            <h2 id={titleId}>{title}</h2>
-            <p>{detail}</p>
-          </div>
-          <div className="sv-close">
-            <button
-              type="button"
-              className="sv-x"
-              aria-label={t("common.close")}
-              disabled={busy}
-              onClick={close}
-            >
-              <Icon name="x" size={18} />
-            </button>
-            <span>ESC</span>
-          </div>
-        </header>
+        <DialogHeader
+          titleId={titleId}
+          title={title}
+          detail={detail}
+          onClose={close}
+          closeDisabled={busy}
+        />
 
         <div className="ch-body">{children}</div>
+
+        {notes === undefined ? null : <div className="ch-notes">{notes}</div>}
 
         <footer className="ch-foot">
           <button type="button" className="btn-ghost" disabled={busy} onClick={close}>

@@ -29,6 +29,7 @@ import {
 import { VoicePane, type VoicePaneProps } from "@/components/account/panes/VoicePane";
 import { Icon } from "@stellarr/ui/icons";
 import { Avatar } from "@/components/primitives/Avatar";
+import { DialogClose } from "@/components/primitives/DialogClose";
 import { Modal } from "@/components/primitives/Modal";
 import {
   AppearancePane,
@@ -186,17 +187,7 @@ export function UserSettings({
             <h2>{t(current.title)}</h2>
             <p>{t(current.detail)}</p>
           </div>
-          <div className="sv-close">
-            <button
-              type="button"
-              className="sv-x"
-              aria-label={t("settings.close")}
-              onClick={onClose}
-            >
-              <Icon name="x" size={18} />
-            </button>
-            <span>ESC</span>
-          </div>
+          <DialogClose label={t("settings.close")} onClose={onClose} />
         </div>
 
         <aside className="sv-nav">

@@ -3,6 +3,7 @@
 import { Fragment, useEffect, useRef, type ReactNode } from "react";
 
 import { Icon, type IconName } from "@stellarr/ui/icons";
+import { DialogClose } from "@/components/primitives/DialogClose";
 
 export interface SettingsShellItem<K extends string> {
   key: K;
@@ -99,18 +100,7 @@ export function SettingsShell<K extends string>({
           <h2>{title}</h2>
           <p>{detail}</p>
         </div>
-        <div className="sv-close">
-          <button
-            type="button"
-            className="sv-x"
-            aria-label={closeLabel}
-            disabled={!closable}
-            onClick={onClose}
-          >
-            <Icon name="x" size={18} />
-          </button>
-          <span>ESC</span>
-        </div>
+        <DialogClose label={closeLabel} onClose={onClose} disabled={!closable} />
       </div>
       <aside className="sv-nav">
         <div className="sv-brand">

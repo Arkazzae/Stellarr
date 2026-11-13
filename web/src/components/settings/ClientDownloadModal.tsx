@@ -113,6 +113,7 @@ export function ClientDownloadModal({ open, onClose, loadReleases }: ClientDownl
           title={t("client.title")}
           detail={t("client.subtitle")}
           onClose={onClose}
+          centered
         />
 
         <div className="dlg-body client-list">
