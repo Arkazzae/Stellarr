@@ -88,6 +88,11 @@ interface Placement {
   above: boolean;
 }
 
+/** Never narrower than the field, so the value does not shift sideways as the list opens under it. */
+function listWidth(field: DOMRect): number {
+  return Math.max(field.width, MIN_LIST_WIDTH);
+}
+
 /**
  * Where the list goes: under the field, where the value it replaces is. It
  * flips above only when the space below cannot hold it and the space above is
@@ -106,9 +111,7 @@ function placeList(
     MIN_LIST_HEIGHT,
     Math.min(MAX_LIST_HEIGHT, above ? spaceAbove : spaceBelow),
   );
-  // Never narrower than the field, so the value does not shift sideways as the
-  // list opens under it.
-  const width = Math.max(field.width, MIN_LIST_WIDTH);
+  const width = listWidth(field);
 
   return {
     left: Math.max(EDGE, Math.min(field.left, view.width - EDGE - width)),
@@ -166,20 +169,26 @@ export function Dropdown<T extends string>({
     const field = fieldRef.current;
     const list = listRef.current;
     if (field === null || list === null) return;
-    // `scrollHeight` leaves the borders out, and a list that opens above is
-    // placed by its height, so they are added back. They are what the box has
-    // beyond its client area, which stays right when the list is capped.
-    const placement = placeList(
-      field.getBoundingClientRect(),
-      { height: list.scrollHeight + list.offsetHeight - list.clientHeight },
-      { width: window.innerWidth, height: window.innerHeight },
-    );
+    const box = field.getBoundingClientRect();
     // Written to the element rather than kept in state, and as custom
     // properties rather than `left` and `top`, so a stylesheet can still
     // override where the list goes.
+    //
+    // The width goes on first and the height is read after it: labels wrap at
+    // the list's real width, and a list that opens above is placed by its
+    // height, so a height taken at any other width would leave the list over
+    // the field or short of it.
+    list.style.setProperty("--_dropdown-width", `${listWidth(box)}px`);
+    // `scrollHeight` leaves the borders out, so they are added back. They are
+    // what the box has beyond its client area, which stays right when the list
+    // is capped.
+    const placement = placeList(
+      box,
+      { height: list.scrollHeight + list.offsetHeight - list.clientHeight },
+      { width: window.innerWidth, height: window.innerHeight },
+    );
     list.style.setProperty("--_x", `${placement.left}px`);
     list.style.setProperty("--_y", `${placement.top}px`);
-    list.style.setProperty("--_dropdown-width", `${placement.width}px`);
     list.style.setProperty("--_dropdown-max-height", `${placement.maxHeight}px`);
     list.toggleAttribute("data-above", placement.above);
     list.dataset.placed = "";

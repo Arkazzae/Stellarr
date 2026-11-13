@@ -251,6 +251,33 @@ describe("Dropdown", () => {
     });
   });
 
+  describe("placing a list whose labels wrap", () => {
+    const FIELD = { top: 700, bottom: 736, left: 20, right: 220, width: 200, height: 36, x: 20, y: 700 } as DOMRect;
+    afterEach(() => vi.restoreAllMocks());
+
+    it("measures the list at the width it will have, so it clears the field when it opens above", async () => {
+      const user = userEvent.setup();
+      const { field } = setup();
+      vi.spyOn(field, "getBoundingClientRect").mockReturnValue(FIELD);
+      // As layout would have it: with no width yet the list is as wide as its
+      // longest label and one line shorter than at the field's width.
+      const height = function (this: HTMLElement) {
+        if (this.getAttribute("role") !== "listbox") return 0;
+        return this.style.getPropertyValue("--_dropdown-width") === "" ? 280 : 300;
+      };
+      vi.spyOn(Element.prototype, "scrollHeight", "get").mockImplementation(height);
+      vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockImplementation(height);
+      vi.spyOn(Element.prototype, "clientHeight", "get").mockImplementation(height);
+
+      await user.click(field);
+
+      const list = screen.getByRole("listbox");
+      expect(list.style.getPropertyValue("--_dropdown-width")).toBe("200px");
+      // 700 (field top) - 6 (gap) - 300 (the height at that width).
+      expect(list.style.getPropertyValue("--_y")).toBe("394px");
+    });
+  });
+
   describe("inside a dialog that holds the page", () => {
     it("lets the list scroll by wheel, and the page behind it still not", async () => {
       const user = userEvent.setup();
