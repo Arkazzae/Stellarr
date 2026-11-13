@@ -26,6 +26,7 @@ Inside the package, import with relative paths. The `@/` aliases belong to the a
 | `Table`, `TableHeader`, `TableBody`, `TableRow`, `TableHead`, `TableCell` | A table whose header sticks to the area that scrolls it. |
 | `Dialog` + `DialogContent`, `DialogHeader`, `DialogTitle`, `DialogDescription`, `DialogFooter`, `DialogClose`, `DialogTrigger` | A centred modal. |
 | `Sheet` + `SheetContent` (`side`: `right`, `left`), `SheetHeader`, `SheetTitle`, `SheetDescription`, `SheetClose`, `SheetTrigger` | A modal along an edge. |
+| `Dropdown` | A single choice from a list, as a combobox with a listbox popup: one tab stop, arrows, Home and End, and typing to jump, as a `<select>` has. Controlled with `options`, `value` and `onChange`; named by `label`, or by `id` when a visible `<label for>` does it. `variant`: `field` (fills a form row, the default) or `quiet` (a bare control for a bar that is already boxed). An option has a `label`, and optionally a `detail` second line, an `icon`, a `lang` for a label in another language than the page's, and `disabled`. `placeholder` shows when the value names nothing in the list, and the field is empty without one. `name` submits the value with the form, `invalid` draws the field as refused, and `aria-describedby` points it at a hint. |
 | `DropdownMenu` + `DropdownMenuTrigger`, `DropdownMenuContent`, `DropdownMenuItem`, `DropdownMenuLabel`, `DropdownMenuSeparator` | A list of actions under a button. |
 | `Tooltip` + `TooltipTrigger`, `TooltipContent` | A note for the pointer (after `delayDuration`, 300 ms) and the keyboard (at once). |
 | `Spinner` | Work in progress, the icon set's open ring turning. |
@@ -36,7 +37,7 @@ What they share:
 - `asChild` on `Button` and on the triggers, `DialogClose` and `DropdownMenuItem` draws the one child element, such as an `<a>`, with the part's look and behaviour.
 - No text is built in. `DialogContent` and `SheetContent` take a required `closeLabel` for the close button; everything else is named by the caller.
 - Dialogs, sheets and menus are modal: the page behind is hidden from assistive tech and does not scroll, Tab stays inside, Escape closes the topmost one only, and focus goes back to what opened it. A menu item that opens a dialog hands it the focus and gets it back.
-- Menus and tooltips place themselves beside the trigger, flip to the other side when only that one has room, and stay inside the window. The stylesheet takes the position from the private custom properties `--_x` and `--_y`, not from an inline `left` and `top`, so an app that draws a menu differently on a phone can override `left` and `top` through `className` under a media query.
+- Menus, tooltips and a dropdown's list place themselves beside the trigger, flip to the other side when only that one has room, and stay inside the window. The stylesheet takes the position from the private custom properties `--_x` and `--_y`, not from an inline `left` and `top`, so an app that draws a menu differently on a phone can override `left` and `top` through `className` under a media query.
 
 ## Styles
 
@@ -174,7 +175,25 @@ A button changes under the pointer only where the pointer can hover, and never w
 
 A segment answers the pointer even while it is disabled, and whether or not the pointer can hover, except in a `pill`, where only a segment that can be pressed lights up. The checked segment keeps its look under the pointer. A segment's second line is `--ui-text-faint` in 12 units and has no tokens. An app that colours the checked segment by meaning sets the two `on` tokens under a selector on `data-tone`, as in the note on `data-*` attributes above.
 
-All three parts draw focus from three more tokens:
+`Dropdown`. A `quiet` field draws its own look completely; of these only the least height, the widest width and the corner radius reach it. The list is drawn in `<body>`, outside whatever region sets a token, so the tokens only it reads (`--ui-dropdown-tick-text`, the two `--ui-dropdown-option-*` and `--ui-dropdown-list-z-index`) take effect from `:root` or `body` and from nowhere below, and `--ui-dropdown-font-size` reaches its options from there alone:
+
+| Token | Fallback | Used for |
+| --- | --- | --- |
+| `--ui-dropdown-min-height` | `42` units, and `28` for `quiet` | The least height of the field, which a touch screen raises |
+| `--ui-dropdown-max-width` | `320` units, and `200` for `quiet` | The widest the field gets. `100%` lets it fill its column |
+| `--ui-dropdown-padding` | `9`, `10`, `9` and `14` units | The space inside the field |
+| `--ui-dropdown-radius` | `--ui-radius-md` | The corners of the field |
+| `--ui-dropdown-bg` | `--ui-surface-muted` | The fill of the field |
+| `--ui-dropdown-border` | `--ui-line-subtle` | The border of the field while it is neither hovered nor open |
+| `--ui-dropdown-font-size` | `14` units | The chosen value in the field and the label of each option |
+| `--ui-dropdown-tick-text` | `--ui-accent` | The tick on the chosen option. The web client sets its accent as text, which is mixed differently from the accent as a fill |
+| `--ui-dropdown-option-min-height` | `auto` | The least height of an option, which a touch screen raises |
+| `--ui-dropdown-option-padding-y` | `8` units | The space above and below an option's text |
+| `--ui-dropdown-list-z-index` | `98` | Where the list stacks: above the web client's settings dialog and media viewer, below its confirmation dialog. The package's other overlays are at 50 |
+
+A field refused with `invalid` takes `--ui-danger-text` as its border, as an `Input` does, in every state.
+
+The button, the switch, the segments and the dropdown field draw focus from three more tokens:
 
 | Token | Fallback | Used for |
 | --- | --- | --- |

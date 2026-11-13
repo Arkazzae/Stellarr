@@ -12,9 +12,9 @@
     --anchored-safe-left: env(safe-area-inset-left);
     position: fixed;
     /*
-     * 98, for the reason `.dd-list` is: an anchored card is raised *from* a
-     * control, and controls live inside the settings dialog (95) and the media
-     * viewer (96). At 90 the emoji catalogue opened from the soundboard editor
+     * 98, for the reason a dropdown's list is: an anchored card is raised
+     * *from* a control, and controls live inside the settings dialog (95) and
+     * the media viewer (96). At 90 the emoji catalogue opened from the soundboard editor
      * was drawn behind the dialog that owns the button. Below the confirmation
      * dialog (100), which such a card can itself raise.
      */
