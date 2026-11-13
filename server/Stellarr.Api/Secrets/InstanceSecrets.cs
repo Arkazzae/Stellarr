@@ -37,6 +37,8 @@ public static class SecretNames
     public const string ResendApiKey = "mail.resend-api-key";
     public const string SmtpPassword = "mail.smtp-password";
     public const string GiphyApiKey = "giphy.api-key";
+    public const string BackupAccessKey = "backups.access-key";
+    public const string BackupSecretKey = "backups.secret-key";
 
     /// <summary>The longest value a secret may hold.</summary>
     public const int MaxLength = 4096;
@@ -46,6 +48,8 @@ public static class SecretNames
         new(ResendApiKey, "Mail:ResendApiKey", "STELLARR_RESEND_API_KEY", Trim: true),
         new(SmtpPassword, "Mail:SmtpPassword", "STELLARR_SMTP_PASSWORD", Trim: false),
         new(GiphyApiKey, "GIPHY_API_KEY", "GIPHY_API_KEY", Trim: true),
+        new(BackupAccessKey, "Backups:Destination:AccessKey", "STELLARR_BACKUP_ACCESS_KEY", Trim: true),
+        new(BackupSecretKey, "Backups:Destination:SecretKey", "STELLARR_BACKUP_SECRET_KEY", Trim: true),
     ];
 
     public static SecretDefinition? Find(string name) => All.FirstOrDefault(x => x.Name == name);

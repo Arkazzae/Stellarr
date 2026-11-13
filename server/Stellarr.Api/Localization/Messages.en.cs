@@ -107,6 +107,8 @@ public sealed partial class Messages
         MessageKey.CockpitTimeZoneBroken => "The time zone configuration on the server is invalid.",
         MessageKey.CockpitMailFromRequired => "Mailing needs a valid sender address when it is turned on.",
         MessageKey.CockpitBackupRetentionRange => "Backup retention must be 1 to {max} days.",
+        MessageKey.CockpitBackupPolicyFieldsInvalid => "Invalid backup destination fields.",
+        MessageKey.CockpitBackupPolicyDestinationInvalid => "A remote destination requires HTTPS, bucket, region, a safe prefix and both credentials. Save the credentials before enabling offsite backups.",
         MessageKey.CockpitLogRetentionRange => "Log retention must be 1 to {max} days.",
         MessageKey.CockpitOrphanRetentionRange => "Orphaned object retention must be 1 to {max} days.",
         MessageKey.CockpitVersionInvalid => "Enter a stable version in the major.minor.patch format.",

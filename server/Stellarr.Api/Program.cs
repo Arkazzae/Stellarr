@@ -114,6 +114,15 @@ builder.Services.AddHostedService<MaintenanceWorker>();
 builder.Services.Configure<MailOptions>(builder.Configuration.GetSection(MailOptions.SectionName));
 builder.Services.AddScoped<InstanceSecrets>();
 builder.Services.AddSingleton<BackupJobs>();
+builder.Services.AddOptions<AutomaticBackupOptions>()
+    .Bind(builder.Configuration.GetSection(AutomaticBackupOptions.SectionName))
+    .ValidateDataAnnotations()
+    .Validate(settings => settings.Destination.IsValid(requireCredentials: false), "Backups destination requires HTTPS, bucket, region and a safe prefix.")
+    .ValidateOnStart();
+builder.Services.AddSingleton<IBackupDestination, BackupDestination>();
+builder.Services.AddSingleton<BackupPolicyStore>();
+builder.Services.AddSingleton<AutomaticBackupWorker>();
+builder.Services.AddHostedService(services => services.GetRequiredService<AutomaticBackupWorker>());
 builder.Services.AddSingleton<SmtpEmailDelivery>();
 builder.Services.AddScoped<IEmailDelivery, MailDelivery>();
 // GIPHY takes its key in the query string: this client logs nothing, so the
@@ -277,6 +286,7 @@ static async Task InitializeApplicationAsync(WebApplication app)
     {
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
         await DatabaseSchema.UpgradeAsync(db, stopping);
+        await app.Services.GetRequiredService<BackupPolicyStore>().LoadAsync(db, stopping);
         // A backup cut short by the last stop left a partial file; it is no backup.
         BackupJobs.RemoveLeftovers(BackupJobs.Directory(app.Configuration));
         await EmbedRecovery.EnqueueStaleYouTubeAsync(db, app.Services.GetRequiredService<EmbedInbox>(), stopping);

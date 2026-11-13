@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from "react";
 
 import { Icon } from "@/components/icons/icon";
+import { BackupSettings } from "@/components/backup-settings";
 import { Spinner } from "@/components/spinner";
 import { PageHeader } from "@/components/page-header";
 import { Stat, StatGrid } from "@/components/stats";
@@ -238,6 +239,7 @@ export function BackupsPage() {
   const [actionError, setActionError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [verifyingId, setVerifyingId] = useState<string | null>(null);
   // The archive this page started, to say when it is ready.
   const [startedJobId, setStartedJobId] = useState<string | null>(null);
@@ -245,10 +247,10 @@ export function BackupsPage() {
 
   // While an archive is written, the list is read again until it is done.
   useEffect(() => {
-    if (!job) return;
-    const timer = window.setInterval(() => void refresh(), JOB_POLL_MS);
+    if (!job && !data?.automation?.enabled) return;
+    const timer = window.setInterval(() => void refresh(), job ? JOB_POLL_MS : 30000);
     return () => window.clearInterval(timer);
-  }, [job, refresh]);
+  }, [job, data?.automation?.enabled, refresh]);
 
   async function create(choice: CockpitBackupChoice): Promise<boolean> {
     try {
@@ -309,12 +311,23 @@ export function BackupsPage() {
                 {t("backups.scope.description")}
               </TooltipContent>
             </Tooltip>
+            <Button variant="outline" onClick={() => setSettingsOpen(true)}>{t("backups.settings.title")}</Button>
             <Button onClick={() => setDialogOpen(true)} disabled={job !== null}>
               {t("backups.create")}
             </Button>
           </>
         }
       />
+
+      <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+        <DialogContent className="max-h-[85dvh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>{t("backups.settings.title")}</DialogTitle>
+            <DialogDescription>{t("backups.settings.description")}</DialogDescription>
+          </DialogHeader>
+          {settingsOpen ? <BackupSettings onSaved={() => void refresh()} /> : null}
+        </DialogContent>
+      </Dialog>
 
       <CreateDialog
         open={dialogOpen}
@@ -342,6 +355,26 @@ export function BackupsPage() {
         </Alert>
       ) : null}
       {job ? <JobProgress job={job} /> : null}
+
+      {data?.automation ? (
+        <Card className="gap-3 px-5 py-4">
+          <p className="text-sm font-medium">{t("backups.automation.title")}</p>
+          <p className="text-sm text-muted-foreground">
+            {data.automation.enabled
+              ? t("backups.automation.enabled", { hours: data.automation.intervalHours })
+              : t("backups.automation.disabled")}
+            {" "}{t(data.automation.remoteEnabled ? "backups.automation.remote" : "backups.automation.local")}
+          </p>
+          {data.automation.enabled ? (
+            <p className="text-xs text-muted-foreground">
+              {t("backups.automation.success", { date: data.automation.lastSuccessAt ? formatDateTime(data.automation.lastSuccessAt) : t("common.none") })}
+              {" · "}{t("backups.automation.next", { date: data.automation.nextAttemptAt ? formatDateTime(data.automation.nextAttemptAt) : t("backups.automation.waiting") })}
+            </p>
+          ) : null}
+          {data.automation.lastError ? <p role="alert" className="text-sm text-danger">{t("backups.automation.failed")}</p> : null}
+          {data.automation.pendingBackupId ? <p role="status" className="text-xs text-muted-foreground">{t("backups.automation.pending")}</p> : null}
+        </Card>
+      ) : null}
 
       <StatGrid className="sm:grid-cols-3">
         <Stat

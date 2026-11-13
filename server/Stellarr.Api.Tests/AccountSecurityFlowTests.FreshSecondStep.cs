@@ -80,10 +80,13 @@ public sealed partial class AccountSecurityFlowTests
         using var download = await owner.GetAsync("/api/cockpit/backups/not-a-backup/download");
         using var secret = await owner.DeleteAsync("/api/cockpit/secrets/giphy.api-key");
         using var check = await owner.GetAsync("/api/cockpit/fresh-second-step");
+        var backupPolicy = new Stellarr.Api.Backups.BackupPolicyRequest(false, 24, 15, 5, false, "", "auto", "", "stellarr", 14);
+        using var backupSettings = await owner.PutAsJsonAsync("/api/cockpit/backups/settings", backupPolicy);
+        using var resetBackupSettings = await owner.DeleteAsync("/api/cockpit/backups/settings");
 
         Assert.Equal(HttpStatusCode.OK, read.StatusCode);
         Assert.Equal(HttpStatusCode.OK, general.StatusCode);
-        foreach (var refused in new[] { security, download, secret, check })
+        foreach (var refused in new[] { security, download, secret, check, backupSettings, resetBackupSettings })
         {
             Assert.Equal(HttpStatusCode.Forbidden, refused.StatusCode);
             Assert.Equal(
@@ -95,8 +98,10 @@ public sealed partial class AccountSecurityFlowTests
         using var confirmed = await owner.PutAsJsonAsync("/api/cockpit/settings", securityChange);
         using var missing = await owner.GetAsync("/api/cockpit/backups/not-a-backup/download");
         using var checkAgain = await owner.GetAsync("/api/cockpit/fresh-second-step");
+        using var confirmedBackupSettings = await owner.PutAsJsonAsync("/api/cockpit/backups/settings", backupPolicy);
         Assert.Equal(HttpStatusCode.OK, confirmed.StatusCode);
         Assert.Equal(HttpStatusCode.NoContent, checkAgain.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, confirmedBackupSettings.StatusCode);
         Assert.NotEqual(HttpStatusCode.Forbidden, missing.StatusCode);
     }
 

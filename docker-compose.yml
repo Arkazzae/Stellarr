@@ -71,6 +71,17 @@ services:
       Oidc__CallbackPath: /api/auth/oidc/callback
       Oidc__TrustProviderMfa: ${STELLARR_OIDC_TRUST_PROVIDER_MFA:-false}
       Oidc__ProviderMfaAmr: ${STELLARR_OIDC_PROVIDER_MFA_AMR:-mfa}
+      Backups__Enabled: ${STELLARR_BACKUP_ENABLED:-true}
+      Backups__IntervalHours: ${STELLARR_BACKUP_INTERVAL_HOURS:-24}
+      Backups__RetryMinutes: ${STELLARR_BACKUP_RETRY_MINUTES:-15}
+      Backups__InitialDelayMinutes: ${STELLARR_BACKUP_INITIAL_DELAY_MINUTES:-5}
+      Backups__Destination__Enabled: ${STELLARR_BACKUP_REMOTE_ENABLED:-false}
+      Backups__Destination__Endpoint: ${STELLARR_BACKUP_ENDPOINT:-}
+      Backups__Destination__Region: ${STELLARR_BACKUP_REGION:-auto}
+      Backups__Destination__Bucket: ${STELLARR_BACKUP_BUCKET:-}
+      Backups__Destination__AccessKey: ${STELLARR_BACKUP_ACCESS_KEY:-}
+      Backups__Destination__SecretKey: ${STELLARR_BACKUP_SECRET_KEY:-}
+      Backups__Destination__Prefix: ${STELLARR_BACKUP_PREFIX:-stellarr}
       Uploads__MaxStoredBytesPerUser: ${STELLARR_UPLOAD_USER_BYTES:-2147483648}
       Uploads__MaxStoredBytes: ${STELLARR_UPLOAD_TOTAL_BYTES:-21474836480}
       Uploads__MinimumFreeDataRootBytes: ${STELLARR_MIN_FREE_BYTES:-1073741824}

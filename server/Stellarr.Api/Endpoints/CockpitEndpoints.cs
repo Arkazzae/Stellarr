@@ -45,6 +45,9 @@ public static partial class CockpitEndpoints
         cockpit.MapGet("/logs", GetLogs);
         cockpit.MapGet("/logs/export", ExportLogs);
         cockpit.MapGet("/backups", GetBackupsAsync);
+        cockpit.MapGet("/backups/settings", GetBackupPolicyAsync);
+        cockpit.MapPut("/backups/settings", UpdateBackupPolicyAsync).AddEndpointFilter<FreshSecondStepFilter>();
+        cockpit.MapDelete("/backups/settings", ResetBackupPolicyAsync).AddEndpointFilter<FreshSecondStepFilter>();
         cockpit.MapPost("/backups", CreateBackupAsync);
         cockpit.MapPost("/backups/{backupId}/verify", VerifyBackupAsync);
         cockpit.MapGet("/backups/{backupId}/download", DownloadBackup).AddEndpointFilter<FreshSecondStepFilter>();

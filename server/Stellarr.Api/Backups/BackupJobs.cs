@@ -13,7 +13,10 @@ using Stellarr.Api.Storage;
 namespace Stellarr.Api.Backups;
 
 /// <summary>A backup being written.</summary>
-public sealed record BackupJob(string Id, BackupParts Parts, DateTime StartedAt, BackupProgress Progress);
+public sealed record BackupJob(string Id, BackupParts Parts, DateTime StartedAt, BackupProgress Progress)
+{
+    internal TaskCompletionSource<bool> Completion { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
+}
 
 /// <summary>Why the last backup did not finish.</summary>
 public sealed record BackupFailure(string Id, string Message, DateTime At);
@@ -76,7 +79,7 @@ public sealed partial class BackupJobs(
     }
 
     /// <returns>The started job, or null while another one runs.</returns>
-    public BackupJob? TryStart(BackupParts parts, Guid serverId, Guid actorId)
+    public BackupJob? TryStart(BackupParts parts, Guid serverId, Guid actorId, bool automatic = false)
     {
         BackupJob job;
         lock (_gate)
@@ -93,14 +96,15 @@ public sealed partial class BackupJobs(
             _running = job;
         }
 
-        _ = Task.Run(() => RunAsync(job, serverId, actorId, lifetime.ApplicationStopping));
+        _ = Task.Run(() => RunAsync(job, serverId, actorId, automatic, lifetime.ApplicationStopping));
         return job;
     }
 
-    private async Task RunAsync(BackupJob job, Guid serverId, Guid actorId, CancellationToken cancellationToken)
+    private async Task RunAsync(BackupJob job, Guid serverId, Guid actorId, bool automatic, CancellationToken cancellationToken)
     {
         var directory = Directory(configuration);
         var partial = Path.Combine(directory, PartialPrefix + job.Id + PartialExtension);
+        var succeeded = false;
         try
         {
             System.IO.Directory.CreateDirectory(directory);
@@ -141,21 +145,38 @@ public sealed partial class BackupJobs(
                 .Select(definition => definition.Variable)
                 .ToArray();
 
-            await BackupArchive.WriteAsync(
+            var manifest = await BackupArchive.WriteAsync(
                 partial,
                 job.Parts,
                 new BackupSources(connectionString, storage, objects, keysDirectory, server.Name, environmentSecrets, directory, dataRoot),
                 progress,
                 cancellationToken);
+            if (automatic)
+            {
+                if (manifest.MissingObjects.Count > 0)
+                {
+                    throw new BackupFailedException("Automatic backup contains missing objects.");
+                }
+
+                var verdict = await BackupArchive.VerifyAsync(partial, directory, cancellationToken);
+                if (verdict != "ok") throw new BackupFailedException(verdict);
+            }
             File.Move(partial, Path.Combine(directory, job.Id));
+            if (automatic)
+            {
+                await File.WriteAllTextAsync(Path.Combine(directory, job.Id) + ".verified",
+                    DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture), cancellationToken);
+            }
 
             await CockpitEndpoints.StageAuditAsync(
-                db, serverId, actorId, messages.Get(MessageKey.AuditBackupCreated, ("id", job.Id)), cancellationToken);
+                db, serverId, actorId,
+                (automatic ? "[automatic] " : "") + messages.Get(MessageKey.AuditBackupCreated, ("id", job.Id)), cancellationToken);
             await db.SaveChangesAsync(cancellationToken);
             lock (_gate)
             {
                 _lastFailure = null;
             }
+            succeeded = true;
         }
         catch (Exception exception)
         {
@@ -177,6 +198,7 @@ public sealed partial class BackupJobs(
             {
                 _running = null;
             }
+            job.Completion.TrySetResult(succeeded);
         }
     }
 
