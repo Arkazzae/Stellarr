@@ -122,9 +122,16 @@ describe("LogsPage", () => {
     render(<LogsPage />);
     await screen.findByText("wpis 3");
 
-    await user.selectOptions(screen.getByLabelText("Źródło logów"), "Microsoft.AspNetCore");
+    const field = screen.getByRole("combobox", { name: "Źródło logów" });
+    await user.click(field);
+    const option = await screen.findByRole("option", { name: /^Microsoft\.AspNetCore/ });
+    // The count is the option's second line, not part of its name.
+    expect(within(option).getByText("Microsoft.AspNetCore")).toBeTruthy();
+    expect(within(option).getByText("2")).toBeTruthy();
+    await user.click(option);
 
     await waitFor(() => expect(lastFilters().source).toBe("Microsoft.AspNetCore"));
+    expect(field.textContent).toContain("Microsoft.AspNetCore");
   });
 
   it("loads older lines from the cursor and appends them", async () => {

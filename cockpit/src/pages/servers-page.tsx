@@ -12,6 +12,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  Dropdown,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -47,6 +48,7 @@ function TransferForm({ server, onDone, perform }: { server: CockpitServer; onDo
   const [members, setMembers] = useState<CockpitServerMember[] | null>(null);
   const [failure, setFailure] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [picked, setPicked] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -58,6 +60,8 @@ function TransferForm({ server, onDone, perform }: { server: CockpitServer; onDo
   }, [server.id]);
 
   const candidates = members?.filter((member) => !member.isOwner) ?? [];
+  // Starts at the first candidate, which is only known once the members are read.
+  const chosenId = candidates.some((member) => member.id === picked) ? picked : (candidates[0]?.id ?? "");
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -95,18 +99,16 @@ function TransferForm({ server, onDone, perform }: { server: CockpitServer; onDo
     <form className="space-y-4" onSubmit={submit}>
       <div className="space-y-2">
         <Label htmlFor="transfer-user">{t("servers.transfer.member")}</Label>
-        <select
+        <Dropdown
           id="transfer-user"
           name="userId"
-          required
-          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-        >
-          {candidates.map((member) => (
-            <option key={member.id} value={member.id}>
-              {member.displayName} (@{member.username})
-            </option>
-          ))}
-        </select>
+          options={candidates.map((member) => ({
+            value: member.id,
+            label: `${member.displayName} (@${member.username})`,
+          }))}
+          value={chosenId}
+          onChange={setPicked}
+        />
       </div>
       <Button type="submit" className="w-full" disabled={pending}>
         {pending ? <Spinner /> : null}

@@ -6,8 +6,8 @@ import {
   Button,
   Card,
   cx,
+  Dropdown,
   Input,
-  Label,
   Spinner,
   Table,
   TableBody,
@@ -120,6 +120,12 @@ export function LogsPage() {
   const filtered = levels.length > 0 || source !== "" || searchText.trim() !== "";
   const sources = feed.summary?.sources ?? [];
   const knownSource = source === "" || sources.some((entry) => entry.name === source);
+  const sourceOptions = [
+    { value: "", label: t("logs.source.all") },
+    // A source picked earlier that the feed no longer lists stays as the choice.
+    ...(knownSource ? [] : [{ value: source, label: source }]),
+    ...sources.map((entry) => ({ value: entry.name, label: entry.name, detail: formatNumber(entry.count) })),
+  ];
 
   function toggleLevel(level: CockpitLogLevel) {
     setLevels((current) =>
@@ -193,25 +199,13 @@ export function LogsPage() {
             </Button>
           ))}
         </div>
-        <div className="flex items-center gap-2">
-          <Label htmlFor="log-source" className="sr-only">
-            {t("logs.source")}
-          </Label>
-          <select
-            id="log-source"
-            value={source}
-            onChange={(event) => setSource(event.target.value)}
-            className="h-9 max-w-72 rounded-full border border-input bg-background px-4 text-sm"
-          >
-            <option value="">{t("logs.source.all")}</option>
-            {knownSource ? null : <option value={source}>{source}</option>}
-            {sources.map((entry) => (
-              <option key={entry.name} value={entry.name}>
-                {entry.name} ({formatNumber(entry.count)})
-              </option>
-            ))}
-          </select>
-        </div>
+        <Dropdown
+          options={sourceOptions}
+          value={source}
+          onChange={setSource}
+          label={t("logs.source")}
+          className="w-72 shrink-0 rounded-full pr-3 pl-4"
+        />
         {filtered ? (
           <Button
             type="button"

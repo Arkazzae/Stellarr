@@ -333,6 +333,38 @@
   --ui-switch-disabled-opacity: 0.5;
 }
 
+/*
+ * The dropdown's field is drawn as the text input (.ui-input) it sits beside in
+ * a form: 36 high, 12 across, the field's border at rest and under the pointer,
+ * and no fill of its own. It fills its row; a place that wants less says so in
+ * className. The list is drawn in <body>, so its tokens have to be set here, on
+ * :root, and it reads like the menu (.ui-menu): the popover's fill, a line
+ * border and a menu's layer. Its rows are a little tighter than the package's.
+ */
+:root {
+  --ui-dropdown-min-height: calc(36 * var(--ui-unit));
+  --ui-dropdown-max-width: 100%;
+  --ui-dropdown-padding: calc(4 * var(--ui-unit)) calc(12 * var(--ui-unit));
+  --ui-dropdown-bg: transparent;
+  --ui-dropdown-border: var(--ui-line-field);
+  --ui-dropdown-hover-border: var(--ui-line-field);
+  --ui-dropdown-tick-text: var(--brand);
+  --ui-dropdown-option-padding-y: calc(6 * var(--ui-unit));
+  --ui-dropdown-list-bg: var(--ui-popover);
+  --ui-dropdown-list-border: 1px solid var(--ui-line);
+  --ui-dropdown-list-z-index: 50;
+}
+
+/* The second-step cards are long: one to a row, because two columns would cut
+   each description to a few words a line. A title and its description are two
+   things, so the title is the text colour and the description the muted one
+   of a description, not the faint one. */
+.requirement-cards {
+  --ui-segmented-columns: 1fr;
+  --ui-segmented-item-text: var(--ui-text);
+  --ui-segmented-detail-text: var(--ui-text-muted);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

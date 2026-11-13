@@ -1,4 +1,4 @@
-import { Badge, Button, Card, Input, Label, Spinner, Switch } from "@stellarr/ui";
+import { Badge, Button, Card, Dropdown, Input, Label, Spinner, Switch } from "@stellarr/ui";
 import { useState, type FormEvent } from "react";
 
 import { CardTitleRow } from "@/components/card-title-row";
@@ -80,18 +80,12 @@ function ConnectionForm({ initial, secrets, onSecretChanged }: {
         <fieldset disabled={busy} className="space-y-5">
           <div className="space-y-2">
             <Label htmlFor="cloudflare-r2-mode">{t("integrations.cloudflare.mode")}</Label>
-            <select
+            <Dropdown
               id="cloudflare-r2-mode"
+              options={MODES.map(({ value, labelKey }) => ({ value, label: t(labelKey) }))}
               value={form.mode}
-              onChange={(event) => change("mode", event.target.value as CockpitCloudflareR2Settings["mode"])}
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-            >
-              {MODES.map(({ value, labelKey }) => (
-                <option key={value} value={value}>
-                  {t(labelKey)}
-                </option>
-              ))}
-            </select>
+              onChange={(mode) => change("mode", mode)}
+            />
             <p className="text-xs leading-5 text-muted-foreground">
               {t(worker ? "integrations.cloudflare.mode.workerHint" : "integrations.cloudflare.mode.s3Hint")}
             </p>

@@ -5,6 +5,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  Dropdown,
   Input,
   Table,
   TableBody,
@@ -53,6 +54,10 @@ interface AccountsTabProps {
 
 export function AccountsTab({ users, roles, filter, onFilterChange, perform }: AccountsTabProps) {
   const visible = users.filter((user) => matchesFilter(user, filter));
+  const roleOptions = [
+    { value: "", label: t("accounts.allRoles") },
+    ...roles.map((role) => ({ value: role.id, label: role.name })),
+  ];
 
   return (
     <Card className="min-h-0 flex-1">
@@ -74,19 +79,13 @@ export function AccountsTab({ users, roles, filter, onFilterChange, perform }: A
               aria-label={t("accounts.search")}
             />
           </div>
-          <select
+          <Dropdown
+            options={roleOptions}
             value={filter.roleId}
-            onChange={(event) => onFilterChange({ ...filter, roleId: event.target.value })}
-            aria-label={t("accounts.roleFilter")}
-            className="h-9 rounded-full border border-input bg-background px-4 text-sm"
-          >
-            <option value="">{t("accounts.allRoles")}</option>
-            {roles.map((role) => (
-              <option key={role.id} value={role.id}>
-                {role.name}
-              </option>
-            ))}
-          </select>
+            onChange={(roleId) => onFilterChange({ ...filter, roleId })}
+            label={t("accounts.roleFilter")}
+            className="w-44 shrink-0 rounded-full pr-3 pl-4"
+          />
         </div>
       </CardHeader>
       <CardContent className="relative min-h-0 flex-1 overflow-auto px-4 sm:px-6">

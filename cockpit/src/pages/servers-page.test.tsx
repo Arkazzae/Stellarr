@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { cockpitApi, type CockpitServer } from "@/lib/api";
 import { ServersPage } from "@/pages/servers-page";
+import { choose } from "@/test/dropdown";
 import { selectPolish } from "@/test/locale";
 
 selectPolish();
@@ -91,8 +92,11 @@ describe("ServersPage", () => {
     await user.click(await screen.findByRole("menuitem", { name: "Przekaż własność…" }));
 
     const sheet = await screen.findByRole("dialog");
-    const select = await within(sheet).findByLabelText("Nowy właściciel");
-    expect(within(select).getAllByRole("option").map((option) => option.textContent)).toEqual(["Ada (@ada)"]);
+    const field = await within(sheet).findByRole("combobox", { name: "Nowy właściciel" });
+    await user.click(field);
+    const options = within(await screen.findByRole("listbox")).getAllByRole("option");
+    expect(options.map((option) => option.textContent)).toEqual(["Ada (@ada)"]);
+    await user.click(options[0]!);
     await user.click(within(sheet).getByRole("button", { name: "Przekaż własność" }));
 
     expect(membersMock).toHaveBeenCalledWith("s-corner", expect.any(AbortSignal));
@@ -100,6 +104,24 @@ describe("ServersPage", () => {
     expect(await screen.findByText("Serwer Kącik Jo należy teraz do Ada.")).toBeTruthy();
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(serversMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("hands the server to the member picked from the list", async () => {
+    membersMock.mockResolvedValue([
+      { id: "u-jo", username: "jo", displayName: "Jo", isOwner: true },
+      { id: "u-ada", username: "ada", displayName: "Ada", isOwner: false },
+      { id: "u-bob", username: "bob", displayName: "Bob", isOwner: false },
+    ]);
+    const user = userEvent.setup();
+    render(<ServersPage />);
+    await user.click(await screen.findByRole("button", { name: "Akcje dla serwera Kącik Jo" }));
+    await user.click(await screen.findByRole("menuitem", { name: "Przekaż własność…" }));
+    const sheet = await screen.findByRole("dialog");
+
+    await choose(user, await within(sheet).findByRole("combobox", { name: "Nowy właściciel" }), "Bob (@bob)");
+    await user.click(within(sheet).getByRole("button", { name: "Przekaż własność" }));
+
+    expect(transferMock).toHaveBeenCalledWith("s-corner", "u-bob");
   });
 
   it("deletes a server only once its name is typed", async () => {

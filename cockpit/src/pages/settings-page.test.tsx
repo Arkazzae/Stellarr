@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -8,6 +8,7 @@ import { CockpitApiError, cockpitApi, type CockpitSettings } from "@/lib/api";
 import { SettingsPage } from "@/pages/settings-page";
 import { CockpitContext, type CockpitContextValue } from "@/state/cockpit-context";
 import { LocaleProvider } from "@/state/locale-provider";
+import { choose } from "@/test/dropdown";
 import { selectPolish } from "@/test/locale";
 import { secret, secrets } from "@/test/secrets";
 import { cockpitValue } from "@/test/cockpit-fixtures";
@@ -278,6 +279,28 @@ describe("SettingsPage saving", () => {
     expect(context.reload).not.toHaveBeenCalled();
   });
 
+  it("marks the encryption field as refused and points it at the server's message", async () => {
+    const user = userEvent.setup();
+    await renderLoaded();
+    const field = screen.getByRole("combobox", { name: "Szyfrowanie" });
+    expect(field.getAttribute("aria-invalid")).toBeNull();
+    updateMock.mockRejectedValue(
+      new CockpitApiError(400, "Ustawienia są niepoprawne.", { smtpSecurity: ["Nieznany tryb szyfrowania."] }),
+    );
+
+    await userEvent.click(button("Zapisz ustawienia"));
+
+    const message = await screen.findByText("Nieznany tryb szyfrowania.");
+    expect(field.getAttribute("aria-invalid")).toBe("true");
+    expect(field.getAttribute("aria-describedby")).toBe(message.id);
+
+    await choose(user, field, /^TLS od początku/);
+
+    expect(screen.queryByText("Nieznany tryb szyfrowania.")).toBeNull();
+    expect(field.getAttribute("aria-invalid")).toBeNull();
+    expect(field.getAttribute("aria-describedby")).toBeNull();
+  });
+
   it("keeps the edits after a refusal and drops the messages once the next edit is made", async () => {
     await renderLoaded();
     updateMock.mockRejectedValue(
@@ -396,12 +419,13 @@ describe("SettingsPage mail", () => {
   });
 
   it("sends the edited SMTP server with the rest of the settings", async () => {
+    const user = userEvent.setup();
     await renderLoaded();
     updateMock.mockResolvedValue(stored);
 
     await replaceText("Serwer SMTP", "mail.example.org");
     await replaceText("Port", "465");
-    await userEvent.selectOptions(screen.getByLabelText("Szyfrowanie"), "tls");
+    await choose(user, screen.getByRole("combobox", { name: "Szyfrowanie" }), /^TLS od początku/);
     await userEvent.click(button("Zapisz ustawienia"));
 
     expect(updateMock).toHaveBeenLastCalledWith({
@@ -425,9 +449,10 @@ describe("SettingsPage mail", () => {
 
 describe("SettingsPage panel language", () => {
   it("switches the panel to English at once and remembers it in this browser", async () => {
+    const user = userEvent.setup();
     await renderLoaded();
 
-    await userEvent.selectOptions(screen.getByLabelText("Język"), "English");
+    await choose(user, screen.getByRole("combobox", { name: "Język" }), "English");
 
     expect(getLocale()).toBe("en");
     expect(localStorage.getItem("stellarr.cockpit.locale")).toBe("en");
@@ -460,7 +485,8 @@ describe("SettingsPage SMTP password", () => {
 });
 
 describe("SettingsPage account security", () => {
-  const radio = (name: string) => screen.getByRole("radio", { name: new RegExp(`^${name}`) }) as HTMLInputElement;
+  const radio = (name: string) => screen.getByRole("radio", { name: new RegExp(`^${name}`) });
+  const isChecked = (name: string) => radio(name).getAttribute("aria-checked") === "true";
   const saveSecurity = () => button("Zapisz ustawienia bezpieczeństwa");
   const warning = () => screen.queryByText("Cockpit poprosi o drugi krok");
 
@@ -477,8 +503,8 @@ describe("SettingsPage account security", () => {
       cliRecoveryMinutes: 15,
     });
 
-    expect(radio("Tylko Cockpit").checked).toBe(true);
-    for (const name of ["Opcjonalny", "Administratorzy", "Wszyscy"]) expect(radio(name).checked).toBe(false);
+    expect(isChecked("Tylko Cockpit")).toBe(true);
+    for (const name of ["Opcjonalny", "Administratorzy", "Wszyscy"]) expect(isChecked(name)).toBe(false);
     expect(input("Zaufane urządzenie, dni").value).toBe("30");
     expect(input("Czas na drugi krok, minuty").value).toBe("7");
     expect(input("Ważność kodu z maila, minuty").value).toBe("12");
@@ -509,10 +535,10 @@ describe("SettingsPage account security", () => {
   it("describes each requirement in one line", async () => {
     await renderLoaded();
 
-    expect(radio("Opcjonalny").checked).toBe(true);
-    expect(radio("Administratorzy").closest("label")?.textContent).toContain("uprawnieniem „Zarządzanie serwerem”");
-    expect(radio("Wszyscy").closest("label")?.textContent).toContain("Wymagany od każdego konta.");
-    expect(radio("Tylko Cockpit").closest("label")?.textContent).toContain("Logowanie zostaje bez zmian.");
+    expect(isChecked("Opcjonalny")).toBe(true);
+    expect(radio("Administratorzy").textContent).toContain("uprawnieniem „Zarządzanie serwerem”");
+    expect(radio("Wszyscy").textContent).toContain("Wymagany od każdego konta.");
+    expect(radio("Tylko Cockpit").textContent).toContain("Logowanie zostaje bez zmian.");
   });
 
   it("warns while a requirement other than optional is picked", async () => {
@@ -599,7 +625,7 @@ describe("SettingsPage account security", () => {
     reply.resolve({ ...stored, mfaRequirement: "admins", trustedDeviceDays: 30 });
 
     expect((await screen.findByRole("status")).textContent).toBe("Zapisano ustawienia bezpieczeństwa kont.");
-    expect(radio("Administratorzy").checked).toBe(true);
+    expect(isChecked("Administratorzy")).toBe(true);
     expect(input("Zaufane urządzenie, dni").value).toBe("30");
     // The other card's edit is still an edit, and the saved requirement no longer warns.
     expect(input("Nazwa instancji").value).toBe("Nowy dom");
@@ -630,7 +656,7 @@ describe("SettingsPage account security", () => {
 
     expect(updateMock).toHaveBeenCalledExactlyOnceWith({ ...stored, instanceName: "Nowy dom" });
     expect(await screen.findByText("Ustawienia zapisane")).toBeTruthy();
-    expect(radio("Wszyscy").checked).toBe(true);
+    expect(isChecked("Wszyscy")).toBe(true);
     expect(input("Kody z maila na godzinę").value).toBe("20");
     expect(warning()).toBeTruthy();
     expect(saveSecurity().disabled).toBe(false);
@@ -646,6 +672,43 @@ describe("SettingsPage account security", () => {
 
     expect(updateMock).toHaveBeenCalledExactlyOnceWith(stored, { cliRecoveryMinutes: 20 });
     expect(await screen.findByText("Zapisano ustawienia bezpieczeństwa kont.")).toBeTruthy();
+  });
+
+  it("saves the card on Enter in the requirement group, not the rest of the page", async () => {
+    const user = userEvent.setup();
+    await renderLoaded();
+    updateMock.mockResolvedValue({ ...stored, mfaRequirement: "admins" });
+    await replaceText("Nazwa instancji", "Nowy dom");
+    await user.click(radio("Administratorzy"));
+
+    await user.keyboard("{Enter}");
+
+    expect(updateMock).toHaveBeenCalledExactlyOnceWith(stored, { mfaRequirement: "admins" });
+    expect(await screen.findByText("Zapisano ustawienia bezpieczeństwa kont.")).toBeTruthy();
+  });
+
+  it("does not save on Enter in the requirement group while there is nothing to save", async () => {
+    const user = userEvent.setup();
+    await renderLoaded();
+    radio("Opcjonalny").focus();
+
+    await user.keyboard("{Enter}");
+
+    expect(updateMock).not.toHaveBeenCalled();
+  });
+
+  it("moves the requirement with the arrow keys, as a radio group does", async () => {
+    const user = userEvent.setup();
+    await renderLoaded();
+    const group = screen.getByRole("radiogroup", { name: "Drugi krok przy logowaniu" });
+    expect(within(group).getAllByRole("radio")).toHaveLength(4);
+    radio("Opcjonalny").focus();
+
+    await user.keyboard("{ArrowDown}");
+
+    expect(isChecked("Administratorzy")).toBe(true);
+    expect(isChecked("Opcjonalny")).toBe(false);
+    expect(document.activeElement).toBe(radio("Administratorzy"));
   });
 
   it("shows the server's messages in the card and keeps the edits", async () => {
@@ -669,7 +732,7 @@ describe("SettingsPage account security", () => {
     expect(screen.queryByText("Druga uwaga.")).toBeNull();
     // The page's own save notices stay for the page's save.
     expect(screen.queryByText("Ustawienia nie zostały zapisane")).toBeNull();
-    expect(radio("Wszyscy").checked).toBe(true);
+    expect(isChecked("Wszyscy")).toBe(true);
     expect(field.value).toBe("9");
     expect(context.reload).not.toHaveBeenCalled();
 
