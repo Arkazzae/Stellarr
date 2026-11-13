@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { cockpitApi, type CockpitRole, type CockpitSession, type CockpitUser } from "@/lib/api";
 import { UsersPage } from "@/pages/users-page";
+import { choose } from "@/test/dropdown";
 import { selectPolish } from "@/test/locale";
 
 selectPolish();
@@ -271,7 +272,7 @@ describe("UsersPage accounts", () => {
     const search = screen.getByRole("textbox", { name: "Szukaj użytkownika" });
     const roleFilter = screen.getByRole("combobox", { name: "Filtruj według roli" });
 
-    await user.selectOptions(roleFilter, moderator.id);
+    await choose(user, roleFilter, "Moderator");
     expect(screen.getAllByRole("row")).toHaveLength(2);
     expect(rowOf("Cleo Nowak")).toBeTruthy();
 
@@ -283,7 +284,7 @@ describe("UsersPage accounts", () => {
     expect(screen.getAllByRole("row")).toHaveLength(2);
     expect(rowOf("Cleo Nowak")).toBeTruthy();
 
-    await user.selectOptions(roleFilter, "");
+    await choose(user, roleFilter, "Wszystkie role");
     expect(screen.getAllByRole("row")).toHaveLength(3);
   });
 
@@ -529,8 +530,8 @@ describe("UsersPage sessions", () => {
 });
 
 describe("UsersPage new account", () => {
-  async function openForm() {
-    const view = await renderLoaded();
+  async function openForm(offered: CockpitRole[] = roles) {
+    const view = await renderLoaded({ roles: offered });
     await userEvent.click(screen.getByRole("button", { name: "Dodaj użytkownika" }));
     const sheet = await screen.findByRole("dialog");
     return { ...view, sheet };
@@ -545,7 +546,8 @@ describe("UsersPage new account", () => {
   it("offers every role except the owner role", async () => {
     const { sheet } = await openForm();
 
-    const options = within(within(sheet).getByLabelText("Rola")).getAllByRole("option");
+    await userEvent.click(within(sheet).getByRole("combobox", { name: "Rola" }));
+    const options = within(await screen.findByRole("listbox")).getAllByRole("option");
 
     expect(options.map((option) => option.textContent)).toEqual([
       "Członek",
@@ -555,10 +557,11 @@ describe("UsersPage new account", () => {
   });
 
   it("creates the account without an e-mail when none is given", async () => {
+    const user = userEvent.setup();
     const { sheet } = await openForm();
     api.createUser.mockResolvedValue({ id: "u-new" });
     await fillRequired(sheet);
-    await userEvent.selectOptions(within(sheet).getByLabelText("Rola"), moderator.id);
+    await choose(user, within(sheet).getByRole("combobox", { name: "Rola" }), "Moderator");
 
     await userEvent.click(within(sheet).getByRole("button", { name: "Utwórz konto" }));
 
@@ -574,6 +577,17 @@ describe("UsersPage new account", () => {
     expect(input).not.toHaveProperty("email");
     expect(api.users).toHaveBeenCalledTimes(2);
     expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("cannot be submitted while no role can be offered", async () => {
+    const user = userEvent.setup();
+    const { sheet } = await openForm([owner]);
+    await fillRequired(sheet);
+
+    expect(within(sheet).getByRole("button", { name: "Utwórz konto" })).toHaveProperty("disabled", true);
+    await user.type(within(sheet).getByLabelText("Hasło tymczasowe"), "{Enter}");
+
+    expect(api.createUser).not.toHaveBeenCalled();
   });
 
   it("sends the e-mail when it is filled in", async () => {

@@ -9,8 +9,11 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  Dropdown,
+  type DropdownOption,
   Input,
   Label,
+  Segmented,
   Spinner,
   Switch,
 } from "@stellarr/ui";
@@ -114,6 +117,12 @@ interface CardProps {
 /** Each language named in itself, so it can be found whatever the panel shows now. */
 const LANGUAGE_NAMES: Record<Locale, string> = { en: "English", pl: "Polski" };
 
+const LANGUAGE_OPTIONS: readonly DropdownOption<Locale>[] = LOCALES.map((locale) => ({
+  value: locale,
+  label: LANGUAGE_NAMES[locale],
+  lang: locale,
+}));
+
 /** The panel's own language: applied at once and kept in this browser, apart from the saved settings. */
 function LanguageCard() {
   const { locale, changeLocale } = useLocale();
@@ -121,18 +130,7 @@ function LanguageCard() {
     <Section title={t("settings.language.title")} description={t("settings.language.description")}>
       <div className="space-y-2">
         <Label htmlFor="panel-language">{t("settings.language.label")}</Label>
-        <select
-          id="panel-language"
-          value={locale}
-          onChange={(event) => changeLocale(event.target.value as Locale)}
-          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-        >
-          {LOCALES.map((option) => (
-            <option key={option} value={option} lang={option}>
-              {LANGUAGE_NAMES[option]}
-            </option>
-          ))}
-        </select>
+        <Dropdown id="panel-language" options={LANGUAGE_OPTIONS} value={locale} onChange={changeLocale} />
       </div>
     </Section>
   );
@@ -296,20 +294,19 @@ function MailCard({ settings, update, errors, smtpPassword, onSecretChanged }: M
       </div>
       <div className="space-y-2">
         <Label htmlFor="smtp-security">{t("settings.smtp.security")}</Label>
-        <select
+        <Dropdown
           id="smtp-security"
+          options={SMTP_SECURITY.map(({ value, labelKey }) => ({ value, label: t(labelKey) }))}
           value={settings.smtpSecurity}
-          onChange={(event) => update("smtpSecurity", event.target.value as CockpitSmtpSecurity)}
-          aria-invalid={Boolean(securityError)}
-          className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-        >
-          {SMTP_SECURITY.map((option) => (
-            <option key={option.value} value={option.value}>
-              {t(option.labelKey)}
-            </option>
-          ))}
-        </select>
-        {securityError ? <p className="text-xs text-danger">{securityError}</p> : null}
+          onChange={(security) => update("smtpSecurity", security)}
+          invalid={Boolean(securityError)}
+          aria-describedby={securityError ? "smtp-security-error" : undefined}
+        />
+        {securityError ? (
+          <p id="smtp-security-error" className="text-xs text-danger">
+            {securityError}
+          </p>
+        ) : null}
       </div>
       <Field
         id="smtp-username"
@@ -407,7 +404,7 @@ interface SecurityCardProps {
  */
 function SecurityCard({ settings, storedRequirement, update, errors, canSave, saving, notice, onSave }: SecurityCardProps) {
   const requirementError = errors.mfaRequirement?.[0];
-  function saveOnEnter(event: KeyboardEvent<HTMLInputElement>) {
+  function saveOnEnter(event: KeyboardEvent<HTMLElement>) {
     if (event.key !== "Enter") return;
     event.preventDefault();
     if (canSave) onSave();
@@ -417,30 +414,25 @@ function SecurityCard({ settings, storedRequirement, update, errors, canSave, sa
   const locksCockpit = settings.mfaRequirement !== "optional" && settings.mfaRequirement !== storedRequirement;
   return (
     <Section title={t("settings.security.title")} description={t("settings.security.description")}>
-      <fieldset className="space-y-3">
-        <legend className="text-sm font-medium">{t("settings.security.requirement")}</legend>
-        {MFA_REQUIREMENTS.map((option) => (
-          <label key={option.value} className="flex cursor-pointer items-start gap-3 rounded-md border p-3">
-            <input
-              type="radio"
-              name="mfa-requirement"
-              value={option.value}
-              checked={settings.mfaRequirement === option.value}
-              onChange={() => update("mfaRequirement", option.value)}
-              onKeyDown={saveOnEnter}
-              className="mt-0.5 size-4 accent-[var(--primary)]"
-            />
-            <span>
-              <span className="block text-sm font-medium">{t(option.labelKey)}</span>
-              <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">{t(option.descriptionKey)}</span>
-            </span>
-          </label>
-        ))}
+      {/* The segments take the arrows and leave Enter alone, so it bubbles up to this handler. */}
+      <div className="space-y-3" onKeyDown={saveOnEnter}>
+        <p className="text-sm font-medium">{t("settings.security.requirement")}</p>
+        <Segmented
+          options={MFA_REQUIREMENTS.map(({ value, labelKey, descriptionKey }) => ({
+            value,
+            label: t(labelKey),
+            detail: t(descriptionKey),
+          }))}
+          value={settings.mfaRequirement}
+          onChange={(requirement) => update("mfaRequirement", requirement)}
+          label={t("settings.security.requirement")}
+          className="requirement-cards"
+        />
         <p className="text-xs leading-5 text-muted-foreground">
           {t("settings.security.cockpitNote")} {t("settings.security.sessionsNote")}
         </p>
         {requirementError ? <p className="text-xs text-danger">{requirementError}</p> : null}
-      </fieldset>
+      </div>
       {locksCockpit ? (
         <Alert>
           <AlertTitle>{t("settings.security.warning.title")}</AlertTitle>

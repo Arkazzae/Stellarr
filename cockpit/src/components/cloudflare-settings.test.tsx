@@ -4,6 +4,7 @@ import { beforeEach, expect, it, vi } from "vitest";
 
 import { CloudflareSettings } from "@/components/cloudflare-settings";
 import { CockpitApiError, cockpitApi, type CockpitCloudflareR2Settings } from "@/lib/api";
+import { choose } from "@/test/dropdown";
 import { selectPolish } from "@/test/locale";
 import { secrets } from "@/test/secrets";
 
@@ -69,7 +70,7 @@ it("switches to the relay Worker and asks for its token instead of S3 keys", asy
   render(<CloudflareSettings secrets={secrets({ "cloudflare.r2.worker-token": "environment" })} onSecretChanged={changed} />);
   const cloudflare = await card();
 
-  await user.selectOptions(cloudflare.getByLabelText("Połączenie"), "worker");
+  await choose(user, cloudflare.getByLabelText("Połączenie"), "Worker pośredniczący w kopiach");
 
   expect(cloudflare.queryByLabelText("R2 Access Key ID")).toBeNull();
   expect(cloudflare.queryByLabelText("R2 Secret Access Key")).toBeNull();

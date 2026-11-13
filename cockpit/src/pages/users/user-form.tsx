@@ -1,5 +1,6 @@
 import {
   Button,
+  Dropdown,
   Input,
   Label,
   Sheet,
@@ -23,6 +24,24 @@ import type { Perform } from "@/pages/users/use-access-actions";
  */
 const loginPattern = "[\\p{L}\\p{Nd}_.\\-]+";
 
+/**
+ * The role picker, a part of its own so that closing the sheet drops the choice
+ * and the next account starts at the first role again. A role that is no longer
+ * offered gives way to the first one rather than being submitted unseen.
+ */
+function RoleField({ roles }: { roles: CockpitRole[] }) {
+  const [picked, setPicked] = useState("");
+  const roleId = roles.some((role) => role.id === picked) ? picked : (roles[0]?.id ?? "");
+  const options = roles.map((role) => ({ value: role.id, label: role.name }));
+
+  return (
+    <div className="space-y-2">
+      <Label htmlFor="new-user-role">{t("common.role")}</Label>
+      <Dropdown id="new-user-role" name="roleId" options={options} value={roleId} onChange={setPicked} />
+    </div>
+  );
+}
+
 interface UserFormProps {
   open: boolean;
   roles: CockpitRole[];
@@ -32,6 +51,7 @@ interface UserFormProps {
 
 export function UserForm({ open, roles, onOpenChange, perform }: UserFormProps) {
   const [pending, setPending] = useState(false);
+  const offered = roles.filter((role) => !role.isOwner);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -91,24 +111,10 @@ export function UserForm({ open, roles, onOpenChange, perform }: UserFormProps) 
               minLength={8}
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="new-user-role">{t("common.role")}</Label>
-            <select
-              id="new-user-role"
-              name="roleId"
-              required
-              className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm"
-            >
-              {roles
-                .filter((role) => !role.isOwner)
-                .map((role) => (
-                  <option key={role.id} value={role.id}>
-                    {role.name}
-                  </option>
-                ))}
-            </select>
-          </div>
-          <Button type="submit" className="w-full" disabled={pending}>
+          <RoleField roles={offered} />
+          {/* The dropdown's value travels in a hidden input, which `required` does
+              not check, so without a role to offer the button is what stops the form. */}
+          <Button type="submit" className="w-full" disabled={pending || offered.length === 0}>
             {pending ? <Spinner /> : null}
             {pending ? t("common.creating") : t("userForm.submit")}
           </Button>
