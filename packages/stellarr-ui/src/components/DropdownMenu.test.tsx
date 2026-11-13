@@ -73,6 +73,22 @@ describe("DropdownMenu", () => {
     expect(within(menu).getByRole("menuitem", { name: "Open the app" })).toHaveAttribute("href", "/");
   });
 
+  it("is placed through custom properties, so a stylesheet can still move it", async () => {
+    const user = userEvent.setup();
+    render(<RowMenu />);
+    vi.spyOn(trigger(), "getBoundingClientRect").mockReturnValue(new DOMRect(100, 50, 40, 30));
+
+    await user.click(trigger());
+
+    const menu = screen.getByRole("menu");
+    // Beside the trigger's end, 4 px below it; align="end" with a menu of no width.
+    expect(menu.style.getPropertyValue("--_x")).toBe("140px");
+    expect(menu.style.getPropertyValue("--_y")).toBe("84px");
+    expect(menu.style.left).toBe("");
+    expect(menu.style.top).toBe("");
+    expect(menu).toHaveAttribute("data-placed");
+  });
+
   it("opens from the keyboard on the first item, and the arrows skip what is disabled", async () => {
     const user = userEvent.setup();
     render(<RowMenu />);

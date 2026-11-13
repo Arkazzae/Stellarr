@@ -2,8 +2,8 @@
 
 import { createContext, useContext, useId, type ComponentProps, type KeyboardEvent } from "react";
 
+import { useControllableState } from "../behavior/state";
 import { cx } from "../cx";
-import { useControllableState } from "../internal/state";
 
 interface TabsContextValue {
   value: string;

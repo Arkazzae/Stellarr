@@ -1,4 +1,9 @@
-/* Card, alert, table and tabs: the parts a page is laid out from. */
+/*
+ * Card, alert, table and tabs: the parts a page is laid out from.
+ *
+ * Every length is a multiple of `--ui-unit`. What stays in px is meant as a
+ * device pixel: the 1px borders and the 2px focus ring of a tab.
+ */
 
 @layer components.ui {
   /* ---------------------------------------------------------------- card -- */
@@ -6,35 +11,35 @@
   .ui-card {
     display: flex;
     flex-direction: column;
-    gap: 1.5rem;
+    gap: calc(24 * var(--ui-unit));
     border: 1px solid color-mix(in oklab, var(--ui-line) 70%, transparent);
     border-radius: var(--ui-radius-xl);
     background-color: var(--ui-surface);
-    padding-block: 1.5rem;
+    padding-block: calc(24 * var(--ui-unit));
     color: var(--ui-text);
   }
 
   .ui-card-header {
     display: grid;
-    gap: 0.375rem;
-    padding-inline: 1.5rem;
+    gap: calc(6 * var(--ui-unit));
+    padding-inline: calc(24 * var(--ui-unit));
   }
 
   .ui-card-title {
-    font-size: 1.125rem;
+    font-size: calc(18 * var(--ui-unit));
     line-height: 1.25;
     font-weight: 500;
     letter-spacing: -0.01em;
   }
 
   .ui-card-description {
-    font-size: 0.875rem;
+    font-size: calc(14 * var(--ui-unit));
     line-height: calc(1.25 / 0.875);
     color: var(--ui-text-muted);
   }
 
   .ui-card-content {
-    padding-inline: 1.5rem;
+    padding-inline: calc(24 * var(--ui-unit));
   }
 
   /* --------------------------------------------------------------- alert -- */
@@ -45,25 +50,25 @@
     width: 100%;
     grid-template-columns: 0 1fr;
     align-items: start;
-    row-gap: 0.125rem;
+    row-gap: calc(2 * var(--ui-unit));
     border: 1px solid transparent;
     border-radius: var(--ui-radius-lg);
     background-color: var(--ui-surface-muted);
-    padding: 0.75rem 1rem;
-    font-size: 0.875rem;
+    padding: calc(12 * var(--ui-unit)) calc(16 * var(--ui-unit));
+    font-size: calc(14 * var(--ui-unit));
     line-height: calc(1.25 / 0.875);
     color: var(--ui-text);
   }
 
   .ui-alert:has(> svg) {
-    grid-template-columns: 1rem 1fr;
-    column-gap: 0.75rem;
+    grid-template-columns: calc(16 * var(--ui-unit)) 1fr;
+    column-gap: calc(12 * var(--ui-unit));
   }
 
   .ui-alert > svg {
-    width: 1rem;
-    height: 1rem;
-    translate: 0 0.125rem;
+    width: calc(16 * var(--ui-unit));
+    height: calc(16 * var(--ui-unit));
+    translate: 0 calc(2 * var(--ui-unit));
   }
 
   .ui-alert[data-variant="destructive"] {
@@ -81,7 +86,7 @@
 
   .ui-alert-description {
     grid-column-start: 2;
-    font-size: 0.875rem;
+    font-size: calc(14 * var(--ui-unit));
     line-height: calc(1.25 / 0.875);
     color: var(--ui-text-muted);
   }
@@ -102,7 +107,7 @@
     width: 100%;
     min-width: max-content;
     caption-side: bottom;
-    font-size: 0.875rem;
+    font-size: calc(14 * var(--ui-unit));
     line-height: calc(1.25 / 0.875);
   }
 
@@ -139,11 +144,11 @@
   }
 
   .ui-table-head {
-    height: 2.5rem;
-    padding-inline: 0.5rem;
+    height: calc(40 * var(--ui-unit));
+    padding-inline: calc(8 * var(--ui-unit));
     text-align: left;
     vertical-align: middle;
-    font-size: 0.75rem;
+    font-size: calc(12 * var(--ui-unit));
     line-height: calc(1 / 0.75);
     font-weight: 500;
     white-space: nowrap;
@@ -151,7 +156,7 @@
   }
 
   .ui-table-cell {
-    padding: 0.5rem;
+    padding: calc(8 * var(--ui-unit));
     vertical-align: middle;
     white-space: nowrap;
   }
@@ -161,7 +166,7 @@
   .ui-tabs {
     display: flex;
     flex-direction: column;
-    gap: 1rem;
+    gap: calc(16 * var(--ui-unit));
   }
 
   .ui-tabs-list {
@@ -169,7 +174,7 @@
     width: fit-content;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.25rem;
+    gap: calc(4 * var(--ui-unit));
     color: var(--ui-text-muted);
   }
 
@@ -177,11 +182,11 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    gap: 0.375rem;
+    gap: calc(6 * var(--ui-unit));
     border: 1px solid transparent;
     border-radius: calc(infinity * 1px);
-    padding: 0.375rem 0.875rem;
-    font-size: 0.875rem;
+    padding: calc(6 * var(--ui-unit)) calc(14 * var(--ui-unit));
+    font-size: calc(14 * var(--ui-unit));
     line-height: calc(1.25 / 0.875);
     font-weight: 500;
     white-space: nowrap;

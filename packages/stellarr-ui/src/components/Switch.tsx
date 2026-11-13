@@ -2,8 +2,8 @@
 
 import type { ComponentProps } from "react";
 
+import { useControllableState } from "../behavior/state";
 import { cx } from "../cx";
-import { useControllableState } from "../internal/state";
 
 export interface SwitchProps extends Omit<ComponentProps<"button">, "value" | "defaultChecked" | "onChange"> {
   checked?: boolean;

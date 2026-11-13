@@ -1,3 +1,5 @@
+"use client";
+
 import { useLayoutEffect, useRef, useState } from "react";
 
 /** The longest exit the package draws, with room to spare; a stuck element still leaves. */
@@ -11,6 +13,10 @@ const EXIT_LIMIT_MS = 1000;
  * the animation in CSS. When the closed state animates nothing (no
  * stylesheet, as under jsdom, or a part that has no exit) it leaves in the
  * same commit, before the browser paints.
+ *
+ * Render the element only while `present` is true, attach `ref` to it, and set
+ * its `data-state` to `open` or `closed` from the same `open` that is passed
+ * here.
  */
 export function usePresence<T extends HTMLElement>(open: boolean) {
   const ref = useRef<T | null>(null);

@@ -17,13 +17,13 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 
+import { hideOthers, lockPointer, lockScroll, useLayer } from "../behavior/layers";
+import { measure, place, snap, type Align, type Side } from "../behavior/place";
+import { usePresence } from "../behavior/presence";
+import { useComposedRefs } from "../behavior/refs";
+import { Slot } from "../behavior/slot";
+import { useControllableState } from "../behavior/state";
 import { cx } from "../cx";
-import { hideOthers, lockPointer, lockScroll, useLayer } from "../internal/layers";
-import { measure, place, snap, type Align, type Side } from "../internal/place";
-import { usePresence } from "../internal/presence";
-import { useComposedRefs } from "../internal/refs";
-import { Slot } from "../internal/slot";
-import { useControllableState } from "../internal/state";
 
 /** How long a typed prefix stays alive before the next key starts a new one. */
 const TYPEAHEAD_MS = 1000;
@@ -161,8 +161,10 @@ export function DropdownMenuContent({
     );
     // Written to the element rather than kept in state: the list is placed
     // and focused before the browser paints, never drawn in the corner first.
-    node.style.left = `${snap(placement.left)}px`;
-    node.style.top = `${snap(placement.top)}px`;
+    // Custom properties rather than `left` and `top`, so a stylesheet can
+    // still override where the list goes.
+    node.style.setProperty("--_x", `${snap(placement.left)}px`);
+    node.style.setProperty("--_y", `${snap(placement.top)}px`);
     node.style.setProperty("--_menu-available-height", `${placement.availableHeight}px`);
     node.dataset.side = placement.side;
     node.dataset.placed = "";

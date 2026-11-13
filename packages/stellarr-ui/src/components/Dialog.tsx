@@ -13,14 +13,14 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 
+import { focusFirst, trapTab } from "../behavior/focus";
+import { hideOthers, lockScroll, useLayer } from "../behavior/layers";
+import { usePresence } from "../behavior/presence";
+import { useComposedRefs } from "../behavior/refs";
+import { Slot } from "../behavior/slot";
+import { useControllableState } from "../behavior/state";
 import { cx } from "../cx";
 import { Icon } from "../icons/Icon";
-import { focusFirst, trapTab } from "../internal/focus";
-import { hideOthers, lockScroll, useLayer } from "../internal/layers";
-import { usePresence } from "../internal/presence";
-import { useComposedRefs } from "../internal/refs";
-import { Slot } from "../internal/slot";
-import { useControllableState } from "../internal/state";
 
 interface DialogContextValue {
   open: boolean;

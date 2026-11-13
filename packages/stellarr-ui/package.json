@@ -5,6 +5,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./behavior": "./src/behavior/index.ts",
     "./icons": "./src/icons/index.ts",
     "./styles.css": "./src/styles.css"
   },
