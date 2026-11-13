@@ -27,7 +27,9 @@
     overflow:hidden;min-width:0;
     background:var(--surface-canvas);border-right:1px solid var(--line);
     display:flex;flex-direction:column;align-items:center;gap:10px;
-    padding:12px 0;
+    /* The launcher tile (46px) centres in the bottom band, beside the account
+       row and the composer. */
+    padding:12px 0 calc((var(--dock-h) - 46px) / 2);
   }
   /* A closed phone drawer leaves the tab order and the accessibility tree. */
   .srv-rail[inert]{border-right:none}
@@ -530,7 +532,9 @@
   /* ---------- ACCOUNT ROW ---------- */
   /* `position` for the panel that slides out of it — `.acc-pop` in
      `account.css` is positioned against this row. */
-  .account{position:relative;border-top:1px solid var(--line-subtle);padding:22px 8px 22px 16px;display:flex;align-items:center;gap:6px;flex:none}
+  /* Exactly the bottom band: its hairline is the band's top edge, and the
+     name centres on the same line as the launcher and the composer. */
+  .account{position:relative;border-top:1px solid var(--line-subtle);height:var(--dock-h);padding:0 8px 0 16px;display:flex;align-items:center;gap:6px;flex:none}
   .account .icon-btn:disabled{opacity:0.4;cursor:not-allowed}
   .account .icon-btn:disabled:hover{background:none;color:var(--text-faint)}
   .account .who{min-width:0;flex:1}

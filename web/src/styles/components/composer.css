@@ -25,7 +25,12 @@
   .comp-reply-x:hover{background:var(--surface-overlay);color:var(--text)}
 
   /* ---------- COMPOSER ---------- */
-  .composer{flex:none;padding:4px 20px 18px;width:100%;position:relative}
+  /* The box's resting height, which the padding below centres in the bottom
+     band; a taller draft grows the box upwards and keeps its bottom edge. */
+  .composer{
+    --composer-h:54px;
+    flex:none;padding:4px 20px calc((var(--dock-h) - var(--composer-h)) / 2);width:100%;position:relative;
+  }
   .comp-code-bar{
     display:flex;align-items:center;gap:8px;width:max-content;max-width:100%;
     margin:0 0 6px;padding:6px 8px 6px 10px;
@@ -75,7 +80,7 @@
     position:relative;
     background:var(--surface-field);border:1px solid var(--line-subtle);
     border-radius:16px;display:flex;align-items:center;gap:2px;
-    min-height:54px;padding:8px 10px 8px 16px;
+    min-height:var(--composer-h);padding:8px 10px 8px 16px;
     transition:border-color var(--dur-fast) var(--ease-standard), background var(--dur-fast) var(--ease-standard);
   }
   .composer-box:focus-within{border-color:var(--line);background:var(--surface-overlay)}
