@@ -5,7 +5,8 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./icons": "./src/icons/index.ts"
+    "./icons": "./src/icons/index.ts",
+    "./styles.css": "./src/styles.css"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -13,12 +14,14 @@
     "icons:export": "node scripts/export-brand-icons.mjs"
   },
   "peerDependencies": {
-    "react": "^19"
+    "react": "^19",
+    "react-dom": "^19"
   },
   "devDependencies": {
     "@testing-library/dom": "^10.4.2",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.9",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.2.1",

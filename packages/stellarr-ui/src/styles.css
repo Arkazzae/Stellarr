@@ -1,0 +1,14 @@
+/*
+ * @stellarr/ui's stylesheet. Import it after Tailwind, so its rules join
+ * Tailwind's `components` layer and a utility in `className` overrides them:
+ *
+ *   @import "tailwindcss";
+ *   @import "@stellarr/ui/styles.css";
+ *
+ * It reads only the --ui-* tokens listed in the package README, which the app
+ * maps onto its own palette; it declares none of them.
+ */
+
+@import "./styles/controls.css";
+@import "./styles/surfaces.css";
+@import "./styles/overlays.css";
