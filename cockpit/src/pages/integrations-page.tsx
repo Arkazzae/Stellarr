@@ -123,7 +123,7 @@ function GiphyCard({ settings, apiKey, saving, onToggle, onSecretChanged }: Card
             <p className="text-sm text-muted-foreground">{t("integrations.giphy.checkDescription")}</p>
             <Button
               type="button"
-              variant="outline"
+              variant="secondary"
               disabled={!settings.giphyKeyConfigured || check.state === "checking"}
               onClick={() => void runCheck()}
             >

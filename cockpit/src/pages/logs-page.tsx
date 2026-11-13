@@ -143,11 +143,11 @@ export function LogsPage() {
         description={t("logs.description")}
         actions={
           <>
-            <Button variant="outline" onClick={feed.reload} disabled={loading}>
+            <Button variant="secondary" onClick={feed.reload} disabled={loading}>
               {loading ? <Spinner /> : null}
               {t("logs.refresh")}
             </Button>
-            <Button variant="outline" asChild>
+            <Button variant="secondary" asChild>
               <a href={cockpitApi.logExportUrl(filters)} download>
                 {t("logs.export")}
               </a>
@@ -180,7 +180,7 @@ export function LogsPage() {
             <Button
               key={level}
               type="button"
-              variant="outline"
+              variant="secondary"
               aria-pressed={levels.includes(level)}
               onClick={() => toggleLevel(level)}
             >
@@ -215,7 +215,7 @@ export function LogsPage() {
         {filtered ? (
           <Button
             type="button"
-            variant="ghost"
+            variant="quiet"
             onClick={() => {
               setLevels([]);
               setSource("");
@@ -279,7 +279,7 @@ export function LogsPage() {
 
             <div ref={sentinel} className="flex min-h-12 items-center justify-center py-3 text-sm text-muted-foreground">
               {hasMore ? (
-                <Button variant="outline" onClick={() => void loadMore()} disabled={loadingMore || loading}>
+                <Button variant="secondary" onClick={() => void loadMore()} disabled={loadingMore || loading}>
                   {loadingMore ? <Spinner /> : null}
                   {loadingMore ? t("logs.loadingMore") : t("logs.more")}
                 </Button>

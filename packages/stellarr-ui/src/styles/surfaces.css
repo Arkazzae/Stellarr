@@ -1,6 +1,6 @@
 /* Card, alert, table and tabs: the parts a page is laid out from. */
 
-@layer components {
+@layer components.ui {
   /* ---------------------------------------------------------------- card -- */
 
   .ui-card {

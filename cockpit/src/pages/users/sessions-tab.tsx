@@ -88,7 +88,7 @@ export function SessionsTab({ sessions, perform }: SessionsTabProps) {
                 <TableCell>{formatShortDateTime(session.expiresAt)}</TableCell>
                 <TableCell>
                   <Button
-                    variant="ghost"
+                    variant="quiet"
                     size="sm"
                     disabled={session.current}
                     onClick={() =>

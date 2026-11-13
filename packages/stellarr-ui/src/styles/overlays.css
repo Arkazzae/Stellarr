@@ -7,7 +7,7 @@
  * leaves at once.
  */
 
-@layer components {
+@layer components.ui {
   .ui-overlay {
     position: fixed;
     inset: 0;

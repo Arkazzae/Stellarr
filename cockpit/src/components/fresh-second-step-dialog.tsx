@@ -36,7 +36,7 @@ export function FreshSecondStepDialog() {
         </DialogHeader>
         <DialogFooter>
           <DialogClose asChild>
-            <Button type="button" variant="outline">
+            <Button type="button" variant="secondary">
               {t("fresh.cancel")}
             </Button>
           </DialogClose>

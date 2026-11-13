@@ -526,7 +526,7 @@ function TestMail({ settings }: { settings: CockpitSettings }) {
         />
         <Button
           type="button"
-          variant="outline"
+          variant="secondary"
           onClick={() => void send()}
           disabled={
             sending || !settings.mailingEnabled || !settings.mailReady || !recipient.trim()

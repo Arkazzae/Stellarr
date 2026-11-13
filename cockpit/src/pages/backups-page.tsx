@@ -106,11 +106,11 @@ function BackupRow({ backup, verifying, onVerify }: BackupRowProps) {
       </TableCell>
       <TableCell className="text-right">
         <div className="inline-flex gap-1">
-          <Button variant="ghost" size="sm" disabled={verifying} onClick={onVerify}>
+          <Button variant="quiet" size="sm" disabled={verifying} onClick={onVerify}>
             {verifying ? <Spinner /> : null}
             {t("backups.verify")}
           </Button>
-          <Button variant="ghost" size="icon-sm" asChild>
+          <Button variant="quiet" size="icon-sm" asChild>
             <a
               href={cockpitApi.backupDownloadUrl(backup.id)}
               download
@@ -195,7 +195,7 @@ function CreateDialog({ open, storedBytes, onOpenChange, onCreate }: CreateDialo
           ) : null}
           <DialogFooter>
             <DialogClose asChild>
-              <Button type="button" variant="outline">
+              <Button type="button" variant="secondary">
                 {t("backups.dialog.cancel")}
               </Button>
             </DialogClose>
@@ -309,7 +309,7 @@ export function BackupsPage() {
           <>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label={t("backups.scope.title")}>
+                <Button variant="quiet" size="icon" aria-label={t("backups.scope.title")}>
                   <Icon name="info" size={18} />
                 </Button>
               </TooltipTrigger>
@@ -317,7 +317,7 @@ export function BackupsPage() {
                 {t("backups.scope.description")}
               </TooltipContent>
             </Tooltip>
-            <Button variant="outline" onClick={() => setSettingsOpen(true)}>{t("backups.settings.title")}</Button>
+            <Button variant="secondary" onClick={() => setSettingsOpen(true)}>{t("backups.settings.title")}</Button>
             <Button onClick={() => setDialogOpen(true)} disabled={job !== null}>
               {t("backups.create")}
             </Button>

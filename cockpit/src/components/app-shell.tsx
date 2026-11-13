@@ -187,7 +187,7 @@ export function AppShell() {
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
               <SheetTrigger asChild>
                 <Button
-                  variant="ghost"
+                  variant="quiet"
                   size="icon"
                   className="-ml-2 lg:hidden"
                   aria-label={t("shell.openNavigation")}

@@ -192,7 +192,7 @@ export function UserSecuritySheet({ user, open, onOpenChange }: UserSecurityShee
                         </span>
                         <Button
                           type="button"
-                          variant="outline"
+                          variant="secondary"
                           size="sm"
                           disabled={pending}
                           onClick={() =>
@@ -242,7 +242,7 @@ export function UserSecuritySheet({ user, open, onOpenChange }: UserSecurityShee
                   sessions: recovery.sessionsRevoked,
                 })}
               </p>
-              <Button type="button" variant="outline" size="sm" onClick={() => void copy()}>
+              <Button type="button" variant="secondary" size="sm" onClick={() => void copy()}>
                 {copied ? t("userSecurity.copied") : t("userSecurity.copy")}
               </Button>
             </section>
@@ -260,7 +260,7 @@ export function UserSecuritySheet({ user, open, onOpenChange }: UserSecurityShee
                 onChange={(event) => setReason(event.target.value)}
               />
               <p className="text-xs text-muted-foreground">{t("userSecurity.reasonHint")}</p>
-              <Button type="submit" variant="destructive" disabled={pending || reason.trim().length < 3}>
+              <Button type="submit" variant="danger-solid" disabled={pending || reason.trim().length < 3}>
                 {pending ? <Spinner /> : null}
                 {pending ? t("userSecurity.recovering") : t("userSecurity.recover")}
               </Button>
