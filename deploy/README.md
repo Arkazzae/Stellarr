@@ -31,3 +31,14 @@ Automatic full backups are described in [the backup and recovery guide](../docs/
 optional Cloudflare R2 offsite storage is an integration described in
 [the R2 guide](../docs/admin/cloudflare-r2.md). Production Compose enables
 daily local copies by default; R2 requires separate bucket credentials.
+
+## Cloudflare backup relay
+
+[`cloudflare/backup-relay/`](cloudflare/backup-relay/README.md) is an optional
+Worker that receives completed archives and writes them to R2 through a binding.
+It has its own Deploy to Cloudflare button:
+
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/Arkazzae/Stellarr/tree/main/deploy/cloudflare/backup-relay)
+
+The Worker is not a Stellarr platform template. Stellarr stays in its container;
+the Worker is only the offsite backup destination.

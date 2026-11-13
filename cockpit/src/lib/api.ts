@@ -256,6 +256,8 @@ export interface CockpitBackupSettings {
 /** The optional Cloudflare R2 destination; credentials are separate secrets. */
 export interface CockpitCloudflareR2Settings {
   enabled: boolean;
+  /** Direct S3 credentials, or the backup relay Worker deployed from deploy/cloudflare/backup-relay. */
+  mode: "s3" | "worker";
   endpoint: string;
   region: string;
   bucket: string;
@@ -300,7 +302,8 @@ export type CockpitSecretName =
   | "mail.smtp-password"
   | "giphy.api-key"
   | "cloudflare.r2.access-key"
-  | "cloudflare.r2.secret-key";
+  | "cloudflare.r2.secret-key"
+  | "cloudflare.r2.worker-token";
 
 /**
  * Whether a secret is set and where from. The value never comes back: the

@@ -12,7 +12,7 @@ namespace Stellarr.Api.Tests;
 
 public sealed class CockpitCloudflareSettingsTests
 {
-    private static CloudflareR2Request Settings => new(false, "", "auto", "", "stellarr");
+    private static CloudflareR2Request Settings => new(false, CloudflareR2Modes.S3, "", "auto", "", "stellarr");
 
     [Fact]
     public async Task OwnerCanSaveReloadAndResetTheR2ConnectionWithoutRestarting()
@@ -71,6 +71,27 @@ public sealed class CockpitCloudflareSettingsTests
         await using var scope = factory.Services.CreateAsyncScope();
         var rows = await scope.ServiceProvider.GetRequiredService<AppDbContext>().InstanceSecrets.AsNoTracking().ToListAsync();
         Assert.All(rows, row => Assert.DoesNotContain("r2-private", row.ProtectedValue, StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public async Task WorkerModeNeedsItsTokenInsteadOfS3Credentials()
+    {
+        using var factory = new StellarrWebApplicationFactory();
+        using var owner = await OwnerAsync(factory);
+        var worker = Settings with
+        {
+            Enabled = true, Mode = CloudflareR2Modes.Worker,
+            Endpoint = "https://stellarr-backups.example.workers.dev",
+        };
+        var missing = await owner.PutAsJsonAsync("/api/cockpit/integrations/cloudflare/r2", worker);
+        Assert.Equal(HttpStatusCode.BadRequest, missing.StatusCode);
+
+        (await owner.PutAsJsonAsync("/api/cockpit/secrets/cloudflare.r2.worker-token", new { value = "relay-token" })).EnsureSuccessStatusCode();
+        var saved = await owner.PutAsJsonAsync("/api/cockpit/integrations/cloudflare/r2", worker);
+        saved.EnsureSuccessStatusCode();
+        var settings = await saved.Content.ReadFromJsonAsync<CloudflareR2Dto>();
+        Assert.Equal(CloudflareR2Modes.Worker, settings!.Mode);
+        Assert.Equal("relay-token", (await factory.Services.GetRequiredService<CloudflareR2PolicyStore>().ResolveAsync(default)).WorkerToken);
     }
 
     [Theory]

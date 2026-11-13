@@ -10,10 +10,10 @@ namespace Stellarr.Api.Integrations.Cloudflare;
 
 /// <summary>Non-secret connection settings saved in Cockpit; credentials use InstanceSecrets.</summary>
 public sealed record CloudflareR2Request(
-    bool Enabled, string Endpoint, string Region, string Bucket, string Prefix);
+    bool Enabled, string Mode, string Endpoint, string Region, string Bucket, string Prefix);
 
 public sealed record CloudflareR2Dto(
-    bool Enabled, string Endpoint, string Region, string Bucket, string Prefix, string Source);
+    bool Enabled, string Mode, string Endpoint, string Region, string Bucket, string Prefix, string Source);
 
 /// <summary>
 /// Persists the panel override in the existing instance-settings store, next
@@ -49,7 +49,7 @@ public sealed class CloudflareR2PolicyStore(
         await using var scope = scopes.CreateAsyncScope();
         var resolved = await scope.ServiceProvider.GetRequiredService<InstanceSecrets>().ReadAsync(cancellationToken);
         return Build(policy, resolved[SecretNames.CloudflareR2AccessKey].Value,
-            resolved[SecretNames.CloudflareR2SecretKey].Value);
+            resolved[SecretNames.CloudflareR2SecretKey].Value, resolved[SecretNames.CloudflareR2WorkerToken].Value);
     }
 
     public async Task StageAsync(AppDbContext db, CloudflareR2Options policy, CancellationToken cancellationToken)
@@ -78,20 +78,23 @@ public sealed class CloudflareR2PolicyStore(
     public static CloudflareR2Options FromRequest(CloudflareR2Request request) => new()
     {
         Enabled = request.Enabled,
+        Mode = request.Mode.Trim(),
         Endpoint = request.Endpoint.Trim(),
         Region = request.Region.Trim(),
         Bucket = request.Bucket.Trim(),
         Prefix = request.Prefix.Trim(),
     };
 
-    private static CloudflareR2Options Build(CloudflareR2Options policy, string accessKey, string secretKey) => new()
+    private static CloudflareR2Options Build(CloudflareR2Options policy, string accessKey, string secretKey, string workerToken) => new()
     {
         Enabled = policy.Enabled,
+        Mode = policy.Mode,
         Endpoint = policy.Endpoint,
         Region = policy.Region,
         Bucket = policy.Bucket,
         Prefix = policy.Prefix,
         AccessKey = accessKey,
         SecretKey = secretKey,
+        WorkerToken = workerToken,
     };
 }

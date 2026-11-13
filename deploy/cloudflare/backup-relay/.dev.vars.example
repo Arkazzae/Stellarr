@@ -1,0 +1,3 @@
+# The Deploy to Cloudflare button reads this file to ask for the Worker secret.
+# Use a long random value, for example: openssl rand -hex 32
+BACKUP_TOKEN=replace-with-a-long-random-value

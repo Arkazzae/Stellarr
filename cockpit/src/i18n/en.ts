@@ -444,14 +444,23 @@ export const en = {
   "integrations.cloudflare.enabled": "Send backup copies to Cloudflare R2",
   "integrations.cloudflare.enabledDescription":
     "A cycle counts as successful only when the archive reaches this bucket. Local copies stay on the server.",
+  "integrations.cloudflare.mode": "Connection",
+  "integrations.cloudflare.mode.s3": "R2 S3 API credentials",
+  "integrations.cloudflare.mode.s3Hint": "Stellarr uploads directly with a scoped R2 access key and secret.",
+  "integrations.cloudflare.mode.worker": "Backup relay Worker",
+  "integrations.cloudflare.mode.workerHint": "Stellarr calls the Worker from deploy/cloudflare/backup-relay, which writes to R2 through its binding.",
   "integrations.cloudflare.endpoint": "S3 API endpoint (HTTPS)",
+  "integrations.cloudflare.workerEndpoint": "Worker URL (HTTPS)",
   "integrations.cloudflare.region": "Region",
   "integrations.cloudflare.bucket": "Bucket name",
   "integrations.cloudflare.prefix": "Object prefix",
   "integrations.cloudflare.accessKey": "R2 Access Key ID",
   "integrations.cloudflare.secretKey": "R2 Secret Access Key",
+  "integrations.cloudflare.workerToken": "Worker upload token",
   "integrations.cloudflare.credentialsHint":
     "Save both credentials first, then enable offsite copies and save the connection. Empty secret fields keep the existing values.",
+  "integrations.cloudflare.workerHint":
+    "Deploy the Worker from deploy/cloudflare/backup-relay, copy its URL and token here, then enable offsite copies. The token is stored encrypted like every other secret.",
   "integrations.cloudflare.cloudPolicies":
     "Remote retention, bucket locks, lifecycle rules and incomplete multipart cleanup stay in Cloudflare. Local retention does not delete R2 objects. ZIP archives contain secrets and are not encrypted by the application.",
   "integrations.cloudflare.environment": "Deployment defaults apply. Saving in the panel takes precedence.",

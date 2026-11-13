@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Net;
 using System.Security.Cryptography;
 using Amazon.Runtime;
@@ -54,10 +55,98 @@ public sealed class BackupDestinationTests
         finally { File.Delete(path); }
     }
 
+
+    [Fact]
+    public async Task WorkerUploadStreamsThroughTheRelayAndVerifiesRemoteMetadata()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"backup-{Guid.NewGuid():N}.zip");
+        await File.WriteAllTextAsync(path, "archive content");
+        try
+        {
+            using var relay = new RecordingRelay();
+            var serverId = Guid.NewGuid();
+            var destination = new R2BackupDestination(Options.Create(new CloudflareR2Options
+            {
+                Enabled = true, Mode = CloudflareR2Modes.Worker, Endpoint = "https://relay.invalid/",
+                Prefix = "stellarr", WorkerToken = "relay-token",
+            }), _ => throw new InvalidOperationException("S3 is not used in worker mode."), new RelayClientFactory(relay));
+
+            await destination.UploadAsync(path, serverId, default);
+
+            Assert.Equal(1, relay.PutCount);
+            Assert.Equal(1, relay.HeadCount);
+            Assert.Equal("Bearer relay-token", relay.Authorization);
+            Assert.Equal($"stellarr/{serverId:D}/{Path.GetFileName(path)}", relay.Key);
+            Assert.Equal(new FileInfo(path).Length, relay.Length);
+            Assert.Equal(Convert.ToHexStringLower(SHA256.HashData(await File.ReadAllBytesAsync(path))), relay.Hash);
+            Assert.Equal("https://relay.invalid/object", relay.Path);
+        }
+        finally { File.Delete(path); }
+    }
+
+    [Fact]
+    public async Task WorkerRefusesToOverwriteAConflictingObject()
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"backup-{Guid.NewGuid():N}.zip");
+        await File.WriteAllTextAsync(path, "archive content");
+        try
+        {
+            using var relay = new RecordingRelay { PutStatus = HttpStatusCode.Conflict };
+            var destination = new R2BackupDestination(Options.Create(new CloudflareR2Options
+            {
+                Enabled = true, Mode = CloudflareR2Modes.Worker, Endpoint = "https://relay.invalid",
+                Prefix = "stellarr", WorkerToken = "relay-token",
+            }), _ => throw new InvalidOperationException("S3 is not used in worker mode."), new RelayClientFactory(relay));
+
+            await Assert.ThrowsAsync<BackupFailedException>(() => destination.UploadAsync(path, Guid.NewGuid(), default));
+            Assert.Equal(1, relay.PutCount);
+            Assert.Equal(0, relay.HeadCount);
+        }
+        finally { File.Delete(path); }
+    }
+
     private static R2BackupDestination Create(RecordingS3 client) => new(Options.Create(new CloudflareR2Options
     {
         Enabled = true, Bucket = "private-backups", Endpoint = "https://r2.invalid", AccessKey = "key", SecretKey = "secret",
     }), _ => client);
+
+    private sealed class RelayClientFactory(HttpMessageHandler handler) : IHttpClientFactory
+    {
+        public HttpClient CreateClient(string name) => new(handler, disposeHandler: false);
+    }
+
+    private sealed class RecordingRelay : HttpMessageHandler
+    {
+        public HttpStatusCode PutStatus { get; set; } = HttpStatusCode.Created;
+        public int PutCount { get; private set; }
+        public int HeadCount { get; private set; }
+        public string? Authorization { get; private set; }
+        public string? Key { get; private set; }
+        public string? Path { get; private set; }
+        public long Length { get; private set; }
+        public string Hash { get; private set; } = "";
+
+        protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Path = request.RequestUri?.AbsoluteUri;
+            Authorization = request.Headers.Authorization?.ToString();
+            Key = request.Headers.TryGetValues("X-Stellarr-Key", out var keys) ? keys.Single() : null;
+            if (request.Method == HttpMethod.Put)
+            {
+                PutCount++;
+                var bytes = await request.Content!.ReadAsByteArrayAsync(cancellationToken);
+                Length = bytes.Length;
+                Hash = Convert.ToHexStringLower(SHA256.HashData(bytes));
+                return new HttpResponseMessage(PutStatus);
+            }
+
+            HeadCount++;
+            var response = new HttpResponseMessage(HttpStatusCode.OK);
+            response.Headers.Add("X-Stellarr-Size", Length.ToString(CultureInfo.InvariantCulture));
+            response.Headers.Add("X-Stellarr-Sha256", Hash);
+            return response;
+        }
+    }
 
     private sealed class RecordingS3() : AmazonS3Client(new AnonymousAWSCredentials(), new AmazonS3Config
     {

@@ -39,6 +39,7 @@ public static class SecretNames
     public const string GiphyApiKey = "giphy.api-key";
     public const string CloudflareR2AccessKey = "cloudflare.r2.access-key";
     public const string CloudflareR2SecretKey = "cloudflare.r2.secret-key";
+    public const string CloudflareR2WorkerToken = "cloudflare.r2.worker-token";
 
     /// <summary>The longest value a secret may hold.</summary>
     public const int MaxLength = 4096;
@@ -50,6 +51,7 @@ public static class SecretNames
         new(GiphyApiKey, "GIPHY_API_KEY", "GIPHY_API_KEY", Trim: true),
         new(CloudflareR2AccessKey, "Cloudflare:R2:AccessKey", "STELLARR_CLOUDFLARE_R2_ACCESS_KEY", Trim: true),
         new(CloudflareR2SecretKey, "Cloudflare:R2:SecretKey", "STELLARR_CLOUDFLARE_R2_SECRET_KEY", Trim: true),
+        new(CloudflareR2WorkerToken, "Cloudflare:R2:WorkerToken", "STELLARR_CLOUDFLARE_R2_WORKER_TOKEN", Trim: true),
     ];
 
     public static SecretDefinition? Find(string name) => All.FirstOrDefault(x => x.Name == name);
@@ -73,6 +75,8 @@ public sealed record ResolvedSecrets(IReadOnlyDictionary<string, SecretValue> Va
     public SecretValue CloudflareR2AccessKey => this[SecretNames.CloudflareR2AccessKey];
 
     public SecretValue CloudflareR2SecretKey => this[SecretNames.CloudflareR2SecretKey];
+
+    public SecretValue CloudflareR2WorkerToken => this[SecretNames.CloudflareR2WorkerToken];
 }
 
 /// <summary>
