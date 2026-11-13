@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+  <title>database</title>
+  <path d="M12 2.5C16.42 2.5 20 3.84 20 5.5C20 7.16 16.42 8.5 12 8.5C7.58 8.5 4 7.16 4 5.5C4 3.84 7.58 2.5 12 2.5Z"/>
+  <path d="M4 5.5V18.5C4 20.2 7.6 21.5 12 21.5C16.4 21.5 20 20.2 20 18.5V5.5"/>
+  <path d="M4 12C4 13.7 7.6 15 12 15C16.4 15 20 13.7 20 12"/>
+</svg>

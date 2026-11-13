@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+  <title>pin</title>
+  <path d="M10 3L14 3C15.05 3 15.43 3.44 15.27 4.48L14.73 8.02C14.57 9.06 14.78 9.85 15.44 10.67L17.25 12.94C18.13 14.03 17.9 14.5 16.5 14.5L7.5 14.5C6.1 14.5 5.87 14.03 6.75 12.94L8.56 10.67C9.22 9.85 9.43 9.06 9.27 8.02L8.73 4.48C8.57 3.44 8.95 3 10 3Z"/>
+  <path d="M12 14.5V21.5"/>
+</svg>

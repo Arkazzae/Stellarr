@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+  <title>sliders</title>
+  <path d="M2.5 7H7M13 7H21.5M2.5 17H11M17 17H21.5"/>
+  <path d="M10 4C11.66 4 13 5.34 13 7C13 8.66 11.66 10 10 10C8.34 10 7 8.66 7 7C7 5.34 8.34 4 10 4Z"/>
+  <path d="M14 14C15.66 14 17 15.34 17 17C17 18.66 15.66 20 14 20C12.34 20 11 18.66 11 17C11 15.34 12.34 14 14 14Z"/>
+</svg>
