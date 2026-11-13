@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useId, useRef, type KeyboardEvent } from "react";
+import { useId, useRef, type KeyboardEvent } from "react";
 
+import { useLayer } from "@stellarr/ui/behavior";
 import { Icon, type IconName } from "@stellarr/ui/icons";
 import { IconButton } from "@/components/primitives/IconButton";
 import type { MessageKey } from "@/i18n";
@@ -122,23 +123,19 @@ export function ChannelPanel({
   const tabRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
   /*
-   * Escape closes the panel before it reaches the drawers: listened for on
-   * `document` with the event stopped, because `AppShell` listens one hop
-   * further out on `window` and a single press must not also shut the rail
-   * behind this.
+   * While open the panel is a layer that hears only Escape, so Escape closes
+   * the panel before it reaches the drawers on `window`. The panel can open
+   * while a dialog is already up (leaving a call from a keybind opens it), and
+   * it then sits above the dialog on the stack, so it passes the key down to
+   * the dialog whenever one is in front.
    */
-  useEffect(() => {
-    if (!open) return;
-    const onKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      // A dialog is in front of the panel and owns the key.
-      if (document.querySelector('[role="dialog"][aria-modal="true"]') !== null) return;
-      event.stopPropagation();
+  useLayer(open, {
+    node: () => null,
+    onEscape: () => {
+      if (document.querySelector('[role="dialog"][aria-modal="true"]') !== null) return false;
       onClose();
-    };
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
-  }, [open, onClose]);
+    },
+  });
 
   const index: IndexStatus = {
     loading: indexLoading,

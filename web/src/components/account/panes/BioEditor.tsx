@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 
+import { useLayer } from "@stellarr/ui/behavior";
 import { Icon } from "@stellarr/ui/icons";
 import { ProfileBioText } from "@/components/profile/ProfileBio";
 import { EmojiPicker } from "@/components/room/EmojiPicker";
@@ -42,18 +43,22 @@ export function BioEditor({ value, customEmoji, onChange }: BioEditorProps) {
   // Opening the picker by touch must not raise the keyboard of either field.
   const [emojiAutoFocus, setEmojiAutoFocus] = useState(true);
 
-  useEffect(() => {
-    if (!emojiOpen) return;
-    const dismiss = (event: PointerEvent) => {
-      const target = event.target;
-      if (!(target instanceof Node)) return;
-      if (emojiPanel.current?.contains(target)) return;
-      if (emojiTrigger.current?.contains(target)) return;
+  // The panel is a layer above the dialog around it, so Escape closes the panel
+  // and leaves the dialog open. The trigger toggles the panel itself; closing on
+  // a press there too would reopen it.
+  useLayer(emojiOpen, {
+    node: () => emojiPanel.current,
+    owns: (target) =>
+      emojiPanel.current?.contains(target) === true ||
+      emojiTrigger.current?.contains(target) === true,
+    onEscape: () => {
       setEmojiOpen(false);
-    };
-    document.addEventListener("pointerdown", dismiss);
-    return () => document.removeEventListener("pointerdown", dismiss);
-  }, [emojiOpen]);
+      emojiTrigger.current?.focus();
+    },
+    onPointerDownOutside: () => {
+      setEmojiOpen(false);
+    },
+  });
 
   const selection = (): Range => {
     const start = field.current?.selectionStart ?? value.length;

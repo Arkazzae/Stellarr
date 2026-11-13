@@ -1,13 +1,9 @@
 "use client";
 
-import {
-  useEffect,
-  useEffectEvent,
-  useRef,
-  type CSSProperties,
-  type RefObject,
-} from "react";
+import { useRef, type CSSProperties, type RefObject } from "react";
 import { createPortal } from "react-dom";
+
+import { useLayer } from "@stellarr/ui/behavior";
 
 import type { EmojiEntry } from "@/lib/emoji";
 import type { CustomEmoji } from "@/ports";
@@ -68,7 +64,8 @@ export interface ReactionPopoverProps {
 
 /**
  * The emoji picker as a floating dialog for choosing one reaction. Mounted only
- * while open, which is also when it listens for presses outside and for Escape.
+ * while open, which is also when it is a layer on the shared stack: Escape and
+ * a press outside close it when no layer above it takes them.
  */
 export function ReactionPopover({
   placement,
@@ -81,30 +78,20 @@ export function ReactionPopover({
 }: ReactionPopoverProps) {
   const panel = useRef<HTMLDivElement>(null);
 
-  const pressedOutside = useEffectEvent((event: PointerEvent) => {
-    const { target } = event;
-    if (!(target instanceof Node)) return;
+  useLayer(true, {
+    node: () => panel.current,
     // The picker itself is the inside. The panel around it is not: on a phone
     // it is the clear layer behind the sheet, and pressing it dismisses.
-    if (panel.current?.querySelector(".emo-pick")?.contains(target)) return;
-    if (triggers.some((trigger) => trigger.current?.contains(target))) return;
-    onClose(false);
+    owns: (target) =>
+      panel.current?.querySelector(".emo-pick")?.contains(target) === true ||
+      triggers.some((trigger) => trigger.current?.contains(target) === true),
+    onEscape: () => {
+      onClose(true);
+    },
+    onPointerDownOutside: () => {
+      onClose(false);
+    },
   });
-
-  const keyPressed = useEffectEvent((event: KeyboardEvent) => {
-    if (event.key !== "Escape") return;
-    event.stopPropagation();
-    onClose(true);
-  });
-
-  useEffect(() => {
-    document.addEventListener("pointerdown", pressedOutside);
-    document.addEventListener("keydown", keyPressed);
-    return () => {
-      document.removeEventListener("pointerdown", pressedOutside);
-      document.removeEventListener("keydown", keyPressed);
-    };
-  }, []);
 
   return createPortal(
     <div

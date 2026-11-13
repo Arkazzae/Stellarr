@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useEffectEvent, type RefObject } from "react";
+import type { RefObject } from "react";
+
+import { useLayer } from "@stellarr/ui/behavior";
 
 interface Options {
   /** A press here belongs to the popover and does not dismiss it. */
@@ -8,40 +10,27 @@ interface Options {
   onDismiss(): void;
   /** Where focus goes when Escape closes it. A press elsewhere takes focus itself. */
   returnFocusTo?: RefObject<HTMLElement | null>;
-  /**
-   * Return false to leave Escape to something else that is open on top, such
-   * as a picker with its own handler. Defaults to claiming every Escape.
-   */
-  claimsEscape?(): boolean;
 }
 
 /**
  * Closes a popover on a press outside it or on Escape, while it is `open`.
  *
- * Escape is stopped here so it does not also close whatever sits behind the
- * composer.
+ * While open the popover is a layer on the shared stack, so one Escape closes
+ * only the topmost layer and a press outside reaches only the topmost layer
+ * that listens for one. That keeps a press or a key from also closing whatever
+ * sits behind the composer.
  */
 export function useDismissible(open: boolean, options: Options) {
-  const onPress = useEffectEvent((event: PointerEvent) => {
-    const { target } = event;
-    if (target instanceof Node && !options.isInside(target)) options.onDismiss();
+  useLayer(open, {
+    // `owns` answers for every press, so there is no single element to name.
+    node: () => null,
+    owns: (target) => options.isInside(target),
+    onEscape: () => {
+      options.onDismiss();
+      options.returnFocusTo?.current?.focus();
+    },
+    onPointerDownOutside: () => {
+      options.onDismiss();
+    },
   });
-  const onKey = useEffectEvent((event: KeyboardEvent) => {
-    if (event.key !== "Escape" || options.claimsEscape?.() === false) return;
-    event.stopPropagation();
-    options.onDismiss();
-    options.returnFocusTo?.current?.focus();
-  });
-
-  useEffect(() => {
-    if (!open) return;
-    const pressed = (event: PointerEvent) => onPress(event);
-    const keyed = (event: KeyboardEvent) => onKey(event);
-    document.addEventListener("pointerdown", pressed);
-    document.addEventListener("keydown", keyed);
-    return () => {
-      document.removeEventListener("pointerdown", pressed);
-      document.removeEventListener("keydown", keyed);
-    };
-  }, [open]);
 }

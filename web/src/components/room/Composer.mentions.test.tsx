@@ -98,6 +98,26 @@ describe("Composer mentions", () => {
     expect(options()).toEqual([expect.stringContaining("Alan Turing")]);
   });
 
+  it("keeps the Escape that closes the list from reaching the page behind it", async () => {
+    const { user, field } = setup();
+    const page = vi.fn();
+    window.addEventListener("keydown", page);
+
+    try {
+      await user.type(field, "@a");
+      page.mockClear();
+      await user.keyboard("{Escape}");
+      expect(suggestions()).toBeNull();
+      expect(page).not.toHaveBeenCalled();
+
+      // With the list gone the same key is the page's again.
+      await user.keyboard("{Escape}");
+      expect(page).toHaveBeenCalledOnce();
+    } finally {
+      window.removeEventListener("keydown", page);
+    }
+  });
+
   it("inserts into the middle of a draft where the caret is", async () => {
     const { user, field } = setup();
 

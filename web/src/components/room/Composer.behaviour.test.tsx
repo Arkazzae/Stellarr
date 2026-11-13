@@ -161,4 +161,52 @@ describe("Composer popovers", () => {
 
     expect(more).toHaveAttribute("aria-expanded", "false");
   });
+
+  describe("with the mobile tray opened over the picker from the keyboard", () => {
+    async function openTrayOverPicker() {
+      const { user } = setup();
+      const more = screen.getByRole("button", { name: "Więcej opcji wiadomości" });
+      await user.click(screen.getByRole("button", { name: "Emoji" }));
+      // The keyboard reaches the tray button by Tab and presses it: the focus is
+      // on the button, not in the picker's search field, and no pointer is
+      // involved, so the picker stays open.
+      more.focus();
+      fireEvent.click(more, { detail: 0 });
+      expect(more).toHaveAttribute("aria-expanded", "true");
+      expect(screen.getByRole("dialog", { name: "Szukaj emoji" })).toBeInTheDocument();
+      return { user, more };
+    }
+
+    it("closes the tray on one Escape and the picker on the next", async () => {
+      const { user, more } = await openTrayOverPicker();
+
+      await user.keyboard("{Escape}");
+      expect(more).toHaveAttribute("aria-expanded", "false");
+      expect(screen.getByRole("dialog", { name: "Szukaj emoji" })).toBeInTheDocument();
+
+      await user.keyboard("{Escape}");
+      expect(screen.queryByRole("dialog", { name: "Szukaj emoji" })).toBeNull();
+    });
+
+    it("closes the tray on a press outside both and the picker on the next", async () => {
+      const { user, more } = await openTrayOverPicker();
+
+      await user.click(document.body);
+      expect(more).toHaveAttribute("aria-expanded", "false");
+      expect(screen.getByRole("dialog", { name: "Szukaj emoji" })).toBeInTheDocument();
+
+      await user.click(document.body);
+      expect(screen.queryByRole("dialog", { name: "Szukaj emoji" })).toBeNull();
+    });
+
+    it("closes the tray, and leaves the picker open, on a press inside the picker", async () => {
+      const { more } = await openTrayOverPicker();
+
+      fireEvent.pointerDown(
+        screen.getByRole("dialog", { name: "Szukaj emoji" }).querySelector(".emo-pick")!,
+      );
+      expect(more).toHaveAttribute("aria-expanded", "false");
+      expect(screen.getByRole("dialog", { name: "Szukaj emoji" })).toBeInTheDocument();
+    });
+  });
 });

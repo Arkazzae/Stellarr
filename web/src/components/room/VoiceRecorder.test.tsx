@@ -2,6 +2,8 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { Modal } from "@/components/primitives/Modal";
+
 import { VoiceRecorder } from "./VoiceRecorder";
 
 /** Long enough for a recording to pass the half-second minimum. */
@@ -144,6 +146,36 @@ describe("VoiceRecorder cancelling", () => {
     expect(onCancel).toHaveBeenCalledOnce();
     expect(dispose).toHaveBeenCalledOnce();
     expect(onSend).not.toHaveBeenCalled();
+  });
+
+  it("leaves Escape to a dialog opened over it, and keeps recording", async () => {
+    stubRecorder();
+    const user = userEvent.setup();
+    const { open, dispose } = microphone();
+    const onCancel = vi.fn();
+    const onDialogClose = vi.fn();
+    const tree = (dialogOpen: boolean) => (
+      <>
+        <VoiceRecorder openMicrophone={open} onCancel={onCancel} onSend={vi.fn()} />
+        <Modal
+          open={dialogOpen}
+          onClose={onDialogClose}
+          labelledBy="dialog-title"
+          className="sv-wrap"
+        >
+          <h2 id="dialog-title">Ustawienia</h2>
+        </Modal>
+      </>
+    );
+    const { rerender } = render(tree(false));
+    await screen.findByRole("button", { name: "Zakończ nagrywanie" });
+
+    rerender(tree(true));
+    await user.keyboard("{Escape}");
+
+    expect(onDialogClose).toHaveBeenCalledOnce();
+    expect(onCancel).not.toHaveBeenCalled();
+    expect(dispose).not.toHaveBeenCalled();
   });
 
   it("releases a microphone that opens after the recorder was cancelled", async () => {

@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { useRef, useState } from "react";
 
+import { useLayer } from "@stellarr/ui/behavior";
 import { Icon } from "@stellarr/ui/icons";
 import type { OpenVoiceMessageCapture } from "@/ports";
 import { useLanguage } from "@/state/hooks";
@@ -59,16 +60,14 @@ export function VoiceRecorder({ openMicrophone, onCancel, onSend }: VoiceRecorde
     onCancel();
   };
 
-  const cancelOnEscape = useEffectEvent((event: KeyboardEvent) => {
-    if (event.key !== "Escape") return;
-    event.stopPropagation();
-    cancel();
+  // A layer that hears only Escape, so a dialog or a menu opened over the
+  // recorder takes the key first and the recording survives it.
+  useLayer(true, {
+    node: () => null,
+    onEscape: () => {
+      cancel();
+    },
   });
-  useEffect(() => {
-    const listener = (event: KeyboardEvent) => cancelOnEscape(event);
-    document.addEventListener("keydown", listener);
-    return () => document.removeEventListener("keydown", listener);
-  }, []);
 
   const send = async () => {
     if (ready === null || sending) return;

@@ -2,6 +2,8 @@ import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
+import { Modal } from "@/components/primitives/Modal";
+
 import type { MediaItemVM, PinnedMessageVM } from "./channelPanelModel";
 import { ChannelPanel, type ChannelPanelProps } from "./ChannelPanel";
 
@@ -188,6 +190,29 @@ describe("ChannelPanel closing", () => {
       dialog.remove();
     }
 
+    expect(onClose).not.toHaveBeenCalled();
+  });
+});
+
+describe("ChannelPanel beside a dialog", () => {
+  it("leaves Escape to a dialog in front of it, even when it joined the stack after the dialog", async () => {
+    const onClose = vi.fn();
+    const onDialogClose = vi.fn();
+    const tree = (panelOpen: boolean) => (
+      <>
+        <Modal open onClose={onDialogClose} labelledBy="dialog-title" className="sv-wrap">
+          <h2 id="dialog-title">Ustawienia</h2>
+        </Modal>
+        {panel({ open: panelOpen, onClose })}
+      </>
+    );
+    const { rerender } = render(tree(false));
+
+    // Leaving a call from a keybind opens the panel while the dialog is up.
+    rerender(tree(true));
+    await userEvent.setup().keyboard("{Escape}");
+
+    expect(onDialogClose).toHaveBeenCalledOnce();
     expect(onClose).not.toHaveBeenCalled();
   });
 });
