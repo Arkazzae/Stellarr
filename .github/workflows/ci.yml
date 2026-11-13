@@ -108,9 +108,9 @@ jobs:
       - run: npm run test:web
       - run: npm run typecheck:ui
       - run: npm run test:ui
-      # branding/icons/ is exported from the icon paths in @stellarr/ui; a
-      # glyph changed in one place only fails here.
-      - run: npm run icons:export -w @stellarr/ui -- --check
+      # src/icons/paths.ts and branding/icons/ are built from the glyph
+      # source in @stellarr/ui; a glyph changed in one place only fails here.
+      - run: npm run icons:build -w @stellarr/ui -- --check
       # Every token the package reads must be defined by each app, spelled as
       # the package spells it, and listed in its README.
       - run: npm run tokens:check -w @stellarr/ui

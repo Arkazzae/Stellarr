@@ -5,7 +5,7 @@ Components and helpers shared by the web client (`web/`) and Cockpit (`cockpit/`
 - `@stellarr/ui`: the components below and the `cx` class-name helper.
 - `@stellarr/ui/styles.css`: the components' stylesheet.
 - `@stellarr/ui/behavior`: the helpers the components are built from, for an overlay an app draws itself. See [Behaviour](#behaviour).
-- `@stellarr/ui/icons`: Stellarr's icon set, `Icon` and `ICON_PATHS`, the one registry both apps and [`branding/icons/`](../../branding/icons/) use. How to draw a glyph: [`src/icons/README.md`](src/icons/README.md).
+- `@stellarr/ui/icons`: Stellarr's icon family in two variants, linear and broken (the default): `Icon`, `IconVariantProvider`, `ICON_GLYPHS` and `iconPaths`, the one registry both apps and [`branding/icons/`](../../branding/icons/) use. How to draw a glyph: [`src/icons/README.md`](src/icons/README.md).
 
 It is consumed as TypeScript source: `exports` points at `src/index.ts` and there is no build step. Next.js compiles it through `transpilePackages`, and Vite and Vitest compile it as part of the importing app.
 
@@ -244,6 +244,6 @@ Run these from the repository root, after `npm ci`:
 ```bash
 npm run typecheck:ui
 npm run test:ui
-npm run icons:export -w @stellarr/ui -- --check
+npm run icons:build -w @stellarr/ui -- --check
 npm run tokens:check -w @stellarr/ui
 ```

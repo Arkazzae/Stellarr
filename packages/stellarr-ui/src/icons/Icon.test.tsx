@@ -2,32 +2,55 @@ import { render } from "@testing-library/react";
 import type { CSSProperties } from "react";
 import { describe, expect, it } from "vitest";
 
-import { Icon, type IconName } from "./Icon";
-import { ICON_PATHS } from "./paths";
+import { Icon, IconVariantProvider, type IconName, type IconVariant } from "./Icon";
+import { ICON_GLYPHS, ICON_VARIANTS, iconPaths, type IconGlyph } from "./paths";
+import { GLYPHS } from "./source/glyphs";
+
+const NAMES = Object.keys(ICON_GLYPHS) as IconName[];
 
 function renderIcon(
   name: IconName,
-  props: { size?: number; className?: string; style?: CSSProperties } = {},
+  props: { size?: number; variant?: IconVariant; className?: string; style?: CSSProperties } = {},
 ) {
   const { container } = render(<Icon name={name} {...props} />);
   return container.firstElementChild as HTMLElement | SVGElement;
 }
 
-describe("Icon", () => {
-  it("draws every glyph of the table as a stroked path", () => {
-    for (const name of Object.keys(ICON_PATHS) as (keyof typeof ICON_PATHS)[]) {
-      const svg = renderIcon(name);
-      const paths = svg.querySelectorAll("path");
+const drawn = (svg: Element) => [...svg.querySelectorAll("path")].map((p) => p.getAttribute("d"));
 
-      expect(paths, name).toHaveLength(ICON_PATHS[name].length);
-      for (const path of paths) {
-        expect(path.getAttribute("d"), name).toBeTruthy();
-        expect(path.getAttribute("stroke")).toBe("currentColor");
-        expect(path.getAttribute("stroke-width")).toBe("1.5");
-        expect(path.getAttribute("stroke-linecap")).toBe("round");
-        expect(path.getAttribute("stroke-linejoin")).toBe("round");
+describe("Icon", () => {
+  it("draws every glyph of both variants as stroked paths", () => {
+    for (const variant of ICON_VARIANTS) {
+      for (const name of NAMES) {
+        const svg = renderIcon(name, { variant });
+
+        expect(drawn(svg), `${name} ${variant}`).toEqual(iconPaths(name, variant));
+        for (const path of svg.querySelectorAll("path")) {
+          expect(path.getAttribute("stroke")).toBe("currentColor");
+          expect(path.getAttribute("stroke-width")).toBe("1.5");
+          expect(path.getAttribute("stroke-linecap")).toBe("round");
+          expect(path.getAttribute("stroke-linejoin")).toBe("round");
+        }
       }
     }
+  });
+
+  it("draws the broken variant unless told otherwise", () => {
+    expect(drawn(renderIcon("headphones"))).toEqual(iconPaths("headphones", "broken"));
+    expect(drawn(renderIcon("headphones", { variant: "linear" }))).toEqual(iconPaths("headphones", "linear"));
+  });
+
+  it("takes the variant of the nearest provider, and a prop over it", () => {
+    const { container } = render(
+      <IconVariantProvider variant="linear">
+        <Icon name="mic" />
+        <Icon name="mic" variant="broken" />
+      </IconVariantProvider>,
+    );
+    const [inherited, own] = [...container.querySelectorAll("svg")];
+
+    expect(drawn(inherited!)).toEqual(iconPaths("mic", "linear"));
+    expect(drawn(own!)).toEqual(iconPaths("mic", "broken"));
   });
 
   it("sizes the box and passes the class on", () => {
@@ -67,21 +90,38 @@ describe("Icon", () => {
   });
 });
 
-describe("ICON_PATHS", () => {
-  it("names every glyph in camel case, the form the brand export turns into kebab case", () => {
-    for (const name of Object.keys(ICON_PATHS)) {
-      expect(name).toMatch(/^[a-z][a-zA-Z0-9]*$/);
+describe("ICON_GLYPHS", () => {
+  it("is the build of source/glyphs.ts (run npm run icons:build -w @stellarr/ui)", () => {
+    expect(NAMES).toEqual(Object.keys(GLYPHS));
+    for (const name of NAMES) {
+      for (const variant of ICON_VARIANTS) {
+        const source = GLYPHS[name].map((s) => (typeof s === "string" ? s : s[variant]));
+        expect(iconPaths(name, variant), `${name} ${variant}`).toEqual(source);
+      }
     }
   });
 
+  it("keeps a broken form only where it differs from the linear one", () => {
+    for (const name of NAMES) {
+      const glyph: IconGlyph = ICON_GLYPHS[name];
+      if (glyph.broken) expect(glyph.broken, name).not.toEqual(glyph.linear);
+    }
+  });
+
+  it("names every glyph in camel case, the form the brand export turns into kebab case", () => {
+    for (const name of NAMES) expect(name).toMatch(/^[a-z][a-zA-Z0-9]*$/);
+  });
+
   it("draws every glyph with absolute path commands inside the 24 × 24 canvas", () => {
-    for (const [name, paths] of Object.entries(ICON_PATHS)) {
-      for (const path of paths) {
-        // Absolute commands only, so each glyph reads and exports as written.
-        expect(path, name).toMatch(/^M[MLHVCSQAZ0-9.\s,-]*$/);
-        for (const value of path.match(/-?\d*\.?\d+/g) ?? []) {
-          expect(Number(value), `${name}: ${value}`).toBeGreaterThanOrEqual(0);
-          expect(Number(value), `${name}: ${value}`).toBeLessThanOrEqual(24);
+    for (const variant of ICON_VARIANTS) {
+      for (const name of NAMES) {
+        for (const path of iconPaths(name, variant)) {
+          // Absolute commands only, so each glyph reads and exports as written.
+          expect(path, name).toMatch(/^M[MLHVCSQAZ0-9.\s,-]*$/);
+          for (const value of path.match(/-?\d*\.?\d+/g) ?? []) {
+            expect(Number(value), `${name}: ${value}`).toBeGreaterThanOrEqual(0);
+            expect(Number(value), `${name}: ${value}`).toBeLessThanOrEqual(24);
+          }
         }
       }
     }
@@ -89,7 +129,7 @@ describe("ICON_PATHS", () => {
 
   it("includes the glyphs Cockpit needs beyond the web client's", () => {
     for (const name of ["refresh", "info", "chart", "pulse", "memory", "database", "clock"]) {
-      expect(ICON_PATHS, name).toHaveProperty(name);
+      expect(ICON_GLYPHS, name).toHaveProperty(name);
     }
   });
 });

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+  <title>server</title>
+  <path d="M21 8.79L21 16.5C21 20 19.5 21.5 16 21.5L8 21.5C4.5 21.5 3 20 3 16.5L3 7.5C3 4 4.5 2.5 8 2.5L16 2.5C18.83 2.5 20.35 3.48 20.83 5.7"/>
+  <path d="M3 12H21"/>
+  <path d="M7 7.25H7.01M7 16.75H7.01"/>
+  <path d="M11 7.25H17M11 16.75H17"/>
+</svg>

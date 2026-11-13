@@ -12,7 +12,7 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
-    "icons:export": "node scripts/export-brand-icons.mjs",
+    "icons:build": "node scripts/build-icons.mjs",
     "tokens:check": "node scripts/check-tokens.mjs"
   },
   "peerDependencies": {

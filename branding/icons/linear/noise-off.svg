@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+  <title>noise Off</title>
+  <path d="M3.25 10V14M6.75 6.5V17.5M10.25 9V15"/>
+  <path d="M17.5 7.75C19.85 7.75 21.75 9.65 21.75 12C21.75 14.35 19.85 16.25 17.5 16.25C15.15 16.25 13.25 14.35 13.25 12C13.25 9.65 15.15 7.75 17.5 7.75Z"/>
+  <path d="M14.5 9L20.5 15"/>
+</svg>
