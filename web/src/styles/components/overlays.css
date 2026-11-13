@@ -16,14 +16,14 @@
     flex:none;display:flex;align-items:center;gap:12px;
     padding:max(12px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) 12px max(16px,env(safe-area-inset-left));
     color:var(--text);
+    --ui-button-quiet-text:var(--text-muted);
+    --ui-button-quiet-hover-bg:oklch(1 0 0 / 0.1);
   }
   .mv-bar h2{
     flex:1;min-width:0;font-size:var(--text-14);font-weight:550;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   }
   .mv-bar .mv-count{font-size:var(--text-12);color:var(--text-faint);font-variant-numeric:tabular-nums;flex:none}
-  .mv-bar .icon-btn{color:var(--text-muted)}
-  .mv-bar .icon-btn:hover{background:oklch(1 0 0 / 0.1);color:var(--text)}
   .mv-stage{
     flex:1;min-height:0;position:relative;
     display:flex;align-items:center;justify-content:center;

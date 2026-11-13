@@ -516,7 +516,7 @@
     padding:2px 4px;border-radius:var(--radius-sm);
     transition:color var(--dur-fast) var(--ease-standard),background var(--dur-fast) var(--ease-standard);
   }
-  .att-code .code-actions .icon-btn{width:28px;height:28px;padding:0}
+  .att-code .code-actions .code-copy{width:28px;height:28px;padding:0}
   .att-code .code-actions button:hover{color:var(--text);background:var(--surface-overlay)}
   .att-code .code-actions .copy-error{color:var(--danger-text)}
   .att-code button:focus-visible,.att-code select:focus-visible{

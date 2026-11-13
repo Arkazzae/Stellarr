@@ -306,6 +306,11 @@
   --ui-button-secondary-hover-bg: var(--ui-hover);
   --ui-button-secondary-hover-border: var(--ui-line);
 
+  /* A quiet button takes its label colour from the surroundings, and its icon
+     sizes are round. */
+  --ui-button-quiet-text: currentColor;
+  --ui-button-icon-only-radius: calc(infinity * 1px);
+
   --ui-button-danger-solid-border-width: 0px;
   --ui-button-danger-solid-hover-bg: color-mix(in oklab, var(--ui-danger) 90%, transparent);
   --ui-button-danger-solid-focus-shadow: 0 0 0 3px color-mix(in oklab, var(--ui-danger) 20%, transparent);

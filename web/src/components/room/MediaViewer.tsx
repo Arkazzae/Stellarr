@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 
+import { Button } from "@stellarr/ui";
 import { Icon } from "@stellarr/ui/icons";
 import { IconButton } from "@/components/primitives/IconButton";
 import { Modal } from "@/components/primitives/Modal";
@@ -121,17 +122,18 @@ export function MediaViewer({ target, onClose }: MediaViewerProps) {
                 {index + 1} / {galleryLength}
               </span>
             ) : null}
-            <a
-              className="icon-btn"
-              href={media.src}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={t("media.download")}
-              title={t("media.download")}
-              download=""
-            >
-              <Icon name="download" size={16} />
-            </a>
+            <Button asChild variant="quiet" size="icon-sm">
+              <a
+                href={media.src}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={t("media.download")}
+                title={t("media.download")}
+                download=""
+              >
+                <Icon name="download" size={16} />
+              </a>
+            </Button>
             <IconButton
               icon="x"
               size={18}
