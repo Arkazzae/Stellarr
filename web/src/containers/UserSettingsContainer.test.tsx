@@ -20,6 +20,10 @@ const world = vi.hoisted(() => ({
   account: {} as Record<string, unknown>,
   ports: {} as Record<string, unknown>,
   notifications: {} as Record<string, unknown>,
+  friends: {
+    blocked: [] as { id: string; displayName: string; username: string; avatarUrl?: string }[],
+    unblock: vi.fn(),
+  },
   joinSoundOpen: vi.fn(),
 }));
 
@@ -37,6 +41,7 @@ vi.mock("@/hooks/useBrowserNotifications", () => ({
 vi.mock("@/state/hooks", () => ({
   useAccount: () => world.account,
   useEmoji: () => ({ emoji: [] }),
+  useFriends: () => world.friends,
   useKeybinds: () => ({}),
   useLanguage: () => ({
     locale: "pl",
@@ -118,6 +123,7 @@ function setDesktop(desktop?: DesktopPort) {
 
 beforeEach(() => {
   world.shown = null;
+  world.friends = { blocked: [], unblock: vi.fn() };
   world.modal = "account";
   world.closeModal = vi.fn();
   world.logout = vi.fn(async () => undefined);
@@ -161,6 +167,21 @@ describe("UserSettingsContainer", () => {
     expect(world.closeModal.mock.invocationCallOrder[1]).toBeLessThan(
       world.logout.mock.invocationCallOrder[0] ?? 0,
     );
+  });
+
+  it("lists the blocked people from the friends store and unblocks through it", () => {
+    world.friends.blocked = [
+      { id: "u-ola", displayName: "Ola", username: "ola", avatarUrl: "/assets/ola" },
+      { id: "u-nils", displayName: "Nils", username: "nils" },
+    ];
+    render(<UserSettingsContainer />);
+
+    expect(dialog().blocked?.people).toEqual([
+      { id: "u-ola", displayName: "Ola", username: "ola", avatarUrl: "/assets/ola" },
+      { id: "u-nils", displayName: "Nils", username: "nils" },
+    ]);
+    dialog().blocked?.onUnblock("u-nils");
+    expect(world.friends.unblock).toHaveBeenCalledExactlyOnceWith("u-nils");
   });
 
   it("hands the dialog the test hooks for the voice pane", () => {

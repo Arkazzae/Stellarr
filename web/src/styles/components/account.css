@@ -101,6 +101,13 @@
     color: var(--text-faint);
   }
 
+  /* A blocked person reads as a person: face, name, handle, and the one way
+     back. Centred, because the copy is two short lines beside a round face. */
+  .acc-security-summary.acc-blocked {
+    align-items: center;
+    gap: 12px;
+  }
+
   .acc-security-empty {
     margin: 0;
     font-size: var(--text-13);

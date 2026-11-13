@@ -8,6 +8,7 @@ import type { UserPreferences } from "@/ports";
 import {
   useAccount,
   useEmoji,
+  useFriends,
   useKeybinds,
   useLanguage,
   usePorts,
@@ -38,6 +39,7 @@ export function UserSettingsContainer() {
   const ui = useUi();
   const account = useAccount();
   const { emoji: customEmoji } = useEmoji();
+  const friends = useFriends();
   const session = useSession();
   const language = useLanguage();
   const keybinds = useKeybinds();
@@ -129,6 +131,15 @@ export function UserSettingsContainer() {
         preferences={{
           preferences: account.preferences,
           onChange: persistPreferences,
+        }}
+        blocked={{
+          people: friends.blocked.map((person) => ({
+            id: person.id,
+            displayName: person.displayName,
+            username: person.username,
+            ...(person.avatarUrl ? { avatarUrl: person.avatarUrl } : {}),
+          })),
+          onUnblock: friends.unblock,
         }}
         systemNotifications={{
           supported: browserNotifications.supported,

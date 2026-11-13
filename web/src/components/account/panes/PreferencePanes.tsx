@@ -2,7 +2,9 @@
 
 import type { ReactNode } from "react";
 
-import type { IconName } from "@stellarr/ui/icons";
+import { Button } from "@stellarr/ui";
+import { Icon, type IconName } from "@stellarr/ui/icons";
+import { Avatar } from "@/components/primitives/Avatar";
 import { Switch } from "@/components/primitives/Switch";
 import type { UserPreferences } from "@/ports";
 import { useLanguage } from "@/state/hooks";
@@ -13,7 +15,8 @@ import { VoiceSection } from "./VoiceFields";
  * The switch panes: notifications, privacy and advanced.
  *
  * They share one shape, a card of switches each with a sentence saying what it
- * changes, so they share this file and its row.
+ * changes, so they share this file and its row. Everything here is stored on
+ * the account and follows the person to every device.
  */
 
 export interface PreferencePaneProps {
@@ -28,6 +31,20 @@ export interface SystemNotificationPreferenceProps {
   pending: boolean;
   error: boolean;
   onChange(enabled: boolean): void;
+}
+
+/** Someone this account blocked, as the privacy pane lists them. */
+export interface BlockedPerson {
+  id: string;
+  displayName: string;
+  username: string;
+  avatarUrl?: string;
+}
+
+/** The block list, owned by the friends store rather than by the preferences. */
+export interface BlockedPeopleProps {
+  people: readonly BlockedPerson[];
+  onUnblock: (id: string) => void;
 }
 
 /** Starting with the operating system, offered only by the native client. */
@@ -120,11 +137,15 @@ export function UserNotificationsPane({
   );
 }
 
-export function PrivacyPane({ preferences, onChange }: PreferencePaneProps) {
+export function PrivacyPane({
+  preferences,
+  onChange,
+  blocked,
+}: PreferencePaneProps & { blocked?: BlockedPeopleProps }) {
   const { t } = useLanguage();
   return (
     <>
-      <SwitchCard title={t("preference.privacySecurity")} icon="shield">
+      <SwitchCard title={t("preference.contactVisibility")} icon="shield">
         {/* The details say what turning a switch off takes away, because the
             off side is the one with consequences. */}
         <PreferenceRow
@@ -146,7 +167,59 @@ export function PrivacyPane({ preferences, onChange }: PreferencePaneProps) {
           onChange={(showPresence) => onChange({ showPresence })}
         />
       </SwitchCard>
+      {blocked === undefined ? null : <BlockedCard {...blocked} />}
     </>
+  );
+}
+
+/**
+ * The people you blocked. Blocking happens where the person is, on their card
+ * or in a menu; this is where you find them again once they are out of sight.
+ */
+function BlockedCard({ people, onUnblock }: BlockedPeopleProps) {
+  const { t } = useLanguage();
+  return (
+    <section className="sc acc-security">
+      <header className="sc-h">
+        <span className="sc-ico" aria-hidden="true">
+          <Icon name="ban" size={17} />
+        </span>
+        {t("preference.blocked")}
+      </header>
+      <div className="sc-b acc-security-list">
+        {people.length === 0 ? (
+          <p className="acc-security-item acc-security-empty">{t("preference.blockedEmpty")}</p>
+        ) : (
+          people.map((person) => (
+            <div className="acc-security-item" key={person.id}>
+              <div className="acc-security-summary acc-blocked">
+                <Avatar
+                  id={person.id}
+                  displayName={person.displayName || person.username}
+                  {...(person.avatarUrl ? { avatarUrl: person.avatarUrl } : {})}
+                  size="sm"
+                />
+                <span className="acc-security-copy">
+                  <b>{person.displayName || person.username}</b>
+                  <small>@{person.username}</small>
+                </span>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="sm"
+                  aria-label={t("preference.unblockPerson", {
+                    name: person.displayName || person.username,
+                  })}
+                  onClick={() => onUnblock(person.id)}
+                >
+                  {t("common.unblock")}
+                </Button>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </section>
   );
 }
 

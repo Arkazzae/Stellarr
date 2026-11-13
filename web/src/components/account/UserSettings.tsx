@@ -19,6 +19,7 @@ import {
   AdvancedPane,
   PrivacyPane,
   UserNotificationsPane,
+  type BlockedPeopleProps,
   type PreferencePaneProps,
   type StartupPreferenceProps,
   type SystemNotificationPreferenceProps,
@@ -62,6 +63,8 @@ export interface UserSettingsProps {
   accountPane: Omit<AccountPaneProps, "account">;
   security: Omit<SecurityPaneProps, "account">;
   preferences: PreferencePaneProps;
+  /** The people this account blocked, listed under privacy. */
+  blocked?: BlockedPeopleProps;
   systemNotifications?: SystemNotificationPreferenceProps;
   keybinds: KeybindsPaneProps & { cancelRecording: () => void };
   startup?: StartupPreferenceProps;
@@ -91,6 +94,7 @@ export function UserSettings({
   accountPane,
   security,
   preferences,
+  blocked,
   systemNotifications,
   keybinds,
   startup,
@@ -154,7 +158,7 @@ export function UserSettings({
       case "sesje":
         return security.twoStep ? <AccountActivitySections {...security.twoStep} /> : null;
       case "prywatnosc":
-        return <PrivacyPane {...preferences} />;
+        return <PrivacyPane {...preferences} blocked={blocked} />;
       case "wyglad":
         return <AppearancePane {...appearance} />;
       case "jezyk":
