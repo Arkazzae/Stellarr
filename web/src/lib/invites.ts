@@ -37,3 +37,33 @@ export function takePendingInvite(): string | null {
   }
   return code;
 }
+
+const MINUTE = 60_000;
+const HOUR = 60 * MINUTE;
+const DAY = 24 * HOUR;
+
+/** How long an invite link has left; each place words it in its own register. */
+export type InviteExpiry =
+  | { state: "never" }
+  | { state: "expired" }
+  | { state: "later"; value: number; unit: "minute" | "hour" | "day" };
+
+/**
+ * The time an invite link has left, counted in the coarsest unit that fits:
+ * minutes under an hour, hours under a day, days beyond. A date that cannot be
+ * read counts as never expiring, the way the server treats a missing one.
+ */
+export function inviteExpiry(expiresAt: string | null, now: number): InviteExpiry {
+  if (expiresAt === null) return { state: "never" };
+  const remaining = new Date(expiresAt).getTime() - now;
+  if (Number.isNaN(remaining)) return { state: "never" };
+  if (remaining <= 0) return { state: "expired" };
+
+  const [unitMs, unit] =
+    remaining < HOUR
+      ? ([MINUTE, "minute"] as const)
+      : remaining < DAY
+        ? ([HOUR, "hour"] as const)
+        : ([DAY, "day"] as const);
+  return { state: "later", value: Math.round(remaining / unitMs), unit };
+}
