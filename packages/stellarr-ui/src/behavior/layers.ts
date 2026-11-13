@@ -1,14 +1,22 @@
+"use client";
+
 import { useEffect, useRef } from "react";
 
 /**
  * Everything that floats over the page (a dialog, a sheet, a menu, a tooltip)
  * is a layer. Only the topmost layer that handles a key hears it, so Escape in
  * a menu opened from a sheet closes the menu and leaves the sheet open.
+ *
+ * A layer lists only the keys and presses it handles. An Escape or a Tab goes
+ * to the topmost layer that has a handler for it, and a press outside goes to
+ * the topmost layer alone, which ignores it when it has no handler for it.
  */
 export interface Layer {
   /** The layer's own element; a press inside it is not "outside". */
   node: () => HTMLElement | null;
+  /** Escape. The event goes no further, so the page's own handlers do not also act on it. */
   onEscape?: (event: KeyboardEvent) => void;
+  /** Tab, to keep the focus inside the layer; see `trapTab`. */
   onTab?: (event: KeyboardEvent) => void;
   /** A press anywhere else; only the topmost layer hears it. */
   onPointerDownOutside?: (event: PointerEvent) => void;
@@ -61,7 +69,16 @@ function push(layer: Layer): () => void {
   };
 }
 
-/** Puts a layer on the stack while `active`; the handlers may change between renders. */
+/**
+ * Puts a layer on the stack while `active`, above every layer already there,
+ * and takes it off when `active` turns false or the component unmounts. The
+ * handlers may change between renders, so they may close over fresh state.
+ *
+ * Which handlers a layer has is read when it joins: pass `onEscape` for as
+ * long as `active` is true or not at all. The layer's element must be on the
+ * page while it is on the stack, as `node` is how a press outside is told
+ * from a press inside.
+ */
 export function useLayer(active: boolean, layer: Layer): void {
   const latest = useRef(layer);
   useEffect(() => {
@@ -89,6 +106,11 @@ const hiddenBy = new Map<Element, number>();
  * Hides everything beside `keep` from assistive tech while a modal layer is
  * open, as the dialog semantics promise. Counted per element, so a menu opened
  * from a sheet does not unhide the page when it closes.
+ *
+ * It sets `aria-hidden` on the children of `<body>`, so the layer must be
+ * rendered into `<body>` (a portal) and `keep` must hold its element. Live
+ * regions and what is already hidden are left alone. Call the returned
+ * function when the layer closes, in the cleanup of the effect that called this.
  */
 export function hideOthers(keep: Array<Element | null>): () => void {
   const kept = keep.filter((node): node is Element => node !== null);
@@ -130,6 +152,10 @@ function blockScroll(event: Event) {
 /**
  * Stops the page from scrolling under a modal layer, except inside the
  * layer's own elements, and returns the undo.
+ *
+ * `areas` is read on every wheel and touch move, so it can return elements
+ * that mount later. Locks nest: the page scrolls again only when every lock is
+ * undone. Call the returned function when the layer closes.
  */
 export function lockScroll(areas: () => Element[]): () => void {
   scrollAreas.push(areas);
@@ -157,6 +183,11 @@ let previousPointerEvents = "";
 /**
  * Makes the page ignore the pointer while a menu is open, so a press beside
  * the menu only closes it and does not also land on whatever is underneath.
+ *
+ * The layer that calls it must set `pointer-events: auto` on its own element,
+ * as it inherits the page's `none`. Locks nest, and the page takes the pointer
+ * back when every lock is undone, so call the returned function when the
+ * layer closes.
  */
 export function lockPointer(): () => void {
   pointerLocks += 1;

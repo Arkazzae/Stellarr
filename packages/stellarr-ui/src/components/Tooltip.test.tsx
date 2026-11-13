@@ -37,6 +37,23 @@ describe("Tooltip", () => {
     expect(screen.queryByRole("tooltip")).toBeNull();
   });
 
+  it("is placed through custom properties, so a stylesheet can still move it", async () => {
+    const user = userEvent.setup();
+    render(<Info />);
+    vi.spyOn(screen.getByRole("button"), "getBoundingClientRect").mockReturnValue(new DOMRect(100, 50, 40, 30));
+
+    await user.tab();
+
+    const note = screen.getByRole("tooltip");
+    // Under the trigger, 4 px below it; align="end" with a note of no width.
+    expect(note.style.getPropertyValue("--_x")).toBe("140px");
+    expect(note.style.getPropertyValue("--_y")).toBe("84px");
+    expect(note.style.left).toBe("");
+    expect(note.style.top).toBe("");
+    expect(note).toHaveAttribute("data-placed");
+    expect(note.querySelector<HTMLElement>(".ui-tooltip-arrow")?.style.getPropertyValue("--_arrow-x")).toBe("0px");
+  });
+
   it("opens for a resting pointer only after the delay", () => {
     vi.useFakeTimers();
     render(<Info />);

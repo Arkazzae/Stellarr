@@ -4,6 +4,7 @@ Components and helpers shared by the web client (`web/`) and Cockpit (`cockpit/`
 
 - `@stellarr/ui`: the components below and the `cx` class-name helper.
 - `@stellarr/ui/styles.css`: the components' stylesheet.
+- `@stellarr/ui/behavior`: the helpers the components are built from, for an overlay an app draws itself. See [Behaviour](#behaviour).
 - `@stellarr/ui/icons`: Stellarr's icon set, `Icon` and `ICON_PATHS`, the one registry both apps and [`branding/icons/`](../../branding/icons/) use. How to draw a glyph: [`src/icons/README.md`](src/icons/README.md).
 
 It is consumed as TypeScript source: `exports` points at `src/index.ts` and there is no build step. Next.js compiles it through `transpilePackages`, and Vite and Vitest compile it as part of the importing app.
@@ -35,7 +36,7 @@ What they share:
 - `asChild` on `Button` and on the triggers, `DialogClose` and `DropdownMenuItem` draws the one child element, such as an `<a>`, with the part's look and behaviour.
 - No text is built in. `DialogContent` and `SheetContent` take a required `closeLabel` for the close button; everything else is named by the caller.
 - Dialogs, sheets and menus are modal: the page behind is hidden from assistive tech and does not scroll, Tab stays inside, Escape closes the topmost one only, and focus goes back to what opened it. A menu item that opens a dialog hands it the focus and gets it back.
-- Menus and tooltips place themselves beside the trigger, flip to the other side when only that one has room, and stay inside the window.
+- Menus and tooltips place themselves beside the trigger, flip to the other side when only that one has room, and stay inside the window. The stylesheet takes the position from the private custom properties `--_x` and `--_y`, not from an inline `left` and `top`, so an app that draws a menu differently on a phone can override `left` and `top` through `className` under a media query.
 
 ## Styles
 
@@ -74,7 +75,7 @@ All look comes from custom properties, in two tiers. The stylesheet declares non
 
 | Token | Used for |
 | --- | --- |
-| `--ui-unit` | One design pixel. Every size of `Button`, `Switch` and `Segmented` is a multiple of it, and 1 px borders stay 1 px |
+| `--ui-unit` | One design pixel. Every size of every part is a multiple of it; 1 px borders and the 2 px to 4 px of a focus ring stay in px |
 | `--ui-page` | The page: sheets and tooltip text |
 | `--ui-surface` | Cards, dialogs, an active tab, a table's sticky header |
 | `--ui-surface-muted` | A neutral alert, and the track of a `pill` |
@@ -96,7 +97,7 @@ All look comes from custom properties, in two tiers. The stylesheet declares non
 | `--ui-ease` | The easing of transitions |
 | `--ui-dur-fast`, `--ui-dur-base` | The duration of colour changes, and of the switch's knob moving |
 
-`--ui-unit` is a length. The web client sets `1px`. Cockpit sets `calc(1rem / 16)`, because it scales its root font size with the window on purpose, and a `Button`, a `Switch` or a `Segmented` scales with it. The other components size in `rem`.
+`--ui-unit` is a length. The web client sets `1px`. Cockpit sets `calc(1rem / 16)`, because it scales its root font size with the window on purpose, and every part scales with it. The one length the package keeps in `rem` is the breakpoint of a media query, which cannot read a custom property.
 
 **Component tokens** are optional. A part reads them as `--ui-<component>-<part>-<property>`, with `sm` for the small size, `on` for a checked switch or segment, and `hover` and `pressed` for those states of a button. Each is read with a fallback, which is the web client's look, so an app sets a token only where its own look differs. Cockpit is the one app that deviates, and sets what it needs in `cockpit/src/index.css`.
 
@@ -184,6 +185,51 @@ All three parts draw focus from three more tokens:
 An outline is the web client's focus. Cockpit's is a ring: the border takes the ring colour and a soft shadow surrounds it.
 
 A custom property fails silently, so `npm run tokens:check -w @stellarr/ui` guards both tiers. It fails when an app lacks a system token, when an app defines a `--ui-*` token the package never reads (a typo of a component token would otherwise leave the default look in place without a sign), and when a token the package reads is missing from the tables above.
+
+## Behaviour
+
+`@stellarr/ui/behavior` exports the helpers the components are built from. An overlay an app draws itself (a modal, a popover, a context menu) uses them to share one layer stack with the package's: Escape and a press outside reach only the topmost layer, and the page behind is hidden and locked once, however many layers are open. Like the components, these are for the client: the hooks need `"use client"`.
+
+| Export | What it does |
+| --- | --- |
+| `useLayer(active, layer)` | Puts a layer on the stack while `active`. `layer` has `node` (its element) and optionally `onEscape`, `onTab` and `onPointerDownOutside`, which only the topmost layer that has the handler hears. The `Layer` type |
+| `hideOthers(keep)` | Hides every other child of `<body>` from assistive tech, counted per element, and returns the undo. The overlay has to be rendered into `<body>` |
+| `lockScroll(areas)` | Stops the page from scrolling except inside `areas()`, and returns the undo. Locks nest |
+| `lockPointer()` | Makes the page ignore the pointer, so a press beside a menu only closes it, and returns the undo. Locks nest |
+| `usePresence(open)` | Keeps an element mounted while its exit animation runs. Returns `present` and a `ref` |
+| `focusFirst(container)` | Focuses the first tab stop that is not a link, or the container |
+| `trapTab(event, container)` | Wraps a Tab press at both ends of the container |
+| `FOCUSABLE` | The selector for a tab stop |
+| `place(anchor, size, view, options)` | Where a floating element goes beside its anchor: the asked side, flipped when only the other has room, kept inside the window. `options` is a `PlaceOptions` of `side`, `align` and `offset`; `Side` and `Align` are its types. Returns a `Placement` |
+| `measure(element)` | The element's laid-out size, unaffected by a transform |
+| `snap(value)` | Rounds a length to a device pixel |
+| `useControllableState(options)` | A value the parent may own or leave to the component |
+| `Slot` | Renders its one child with its own props merged in, for `asChild` |
+| `composeRefs(...refs)`, `useComposedRefs(...refs)` | Points several refs at one node; the hook keeps the callback stable between renders |
+
+A popover joins the stack with `useLayer`, and the layers below it stay quiet while it is open:
+
+```tsx
+"use client";
+
+import { useRef, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import { useLayer } from "@stellarr/ui/behavior";
+
+export function Popover({ open, onClose, children }: { open: boolean; onClose: () => void; children: ReactNode }) {
+  const ref = useRef<HTMLDivElement>(null);
+
+  useLayer(open, {
+    node: () => ref.current,
+    onEscape: onClose,
+    onPointerDownOutside: onClose,
+  });
+
+  return open ? createPortal(<div ref={ref}>{children}</div>, document.body) : null;
+}
+```
+
+Opened from a `Dialog`, this popover closes alone on Escape and on a press outside, and the dialog stays open. A modal that also hides the page and keeps it from scrolling calls `hideOthers` and `lockScroll` in an effect, and returns their undo functions from it.
 
 ## Checks
 

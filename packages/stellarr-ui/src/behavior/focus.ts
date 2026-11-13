@@ -2,7 +2,8 @@
  * What counts as a tab stop inside a dialog or a menu.
  *
  * `:not([disabled])` matters: a trap that stopped on a disabled control would
- * strand the keyboard. The same list as the web client's dialogs.
+ * strand the keyboard. The same list as the web client's dialogs. It is a
+ * selector for `querySelectorAll` and `matches`.
  */
 export const FOCUSABLE =
   'a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])';
@@ -15,6 +16,9 @@ function tabStops(container: HTMLElement): HTMLElement[] {
  * Focuses the first tab stop in `container` that is not a link, or the
  * container when there is none. A link is skipped because Enter on it leaves
  * the dialog; a field is selected so typing replaces what it holds.
+ *
+ * Give the container `tabindex="-1"`, or it cannot take the focus when it has
+ * no stop. Call it once the container is in the document, as a layer opens.
  */
 export function focusFirst(container: HTMLElement | null): void {
   if (container === null) return;
@@ -29,6 +33,10 @@ export function focusFirst(container: HTMLElement | null): void {
  *
  * The container itself is focusable (`tabindex="-1"`) and counts as "before
  * the first" stop, so Shift+Tab from it lands on the last one.
+ *
+ * Call it from a Tab key handler, such as a layer's `onTab`. It calls
+ * `preventDefault()` only when it moves the focus itself; a Tab in the middle
+ * of the container is left to the browser.
  */
 export function trapTab(event: KeyboardEvent, container: HTMLElement): void {
   const stops = tabStops(container);

@@ -1,7 +1,7 @@
 import type { ComponentProps } from "react";
 
+import { Slot } from "../behavior/slot";
 import { cx } from "../cx";
-import { Slot } from "../internal/slot";
 
 export type ButtonVariant = "primary" | "secondary" | "quiet" | "danger" | "danger-solid";
 export type ButtonSize = "default" | "sm" | "icon" | "icon-sm";

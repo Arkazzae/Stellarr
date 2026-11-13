@@ -17,11 +17,11 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 
+import { useLayer } from "../behavior/layers";
+import { measure, place, snap, type Align, type Side } from "../behavior/place";
+import { useComposedRefs } from "../behavior/refs";
+import { Slot } from "../behavior/slot";
 import { cx } from "../cx";
-import { useLayer } from "../internal/layers";
-import { measure, place, snap, type Align, type Side } from "../internal/place";
-import { useComposedRefs } from "../internal/refs";
-import { Slot } from "../internal/slot";
 
 /** Time to move the pointer from the trigger onto the note without it closing. */
 const GRACE_MS = 150;
@@ -181,14 +181,17 @@ export function TooltipContent({
       { side, align, offset: sideOffset + arrow.offsetHeight },
     );
     const left = snap(placement.left);
-    node.style.left = `${left}px`;
-    node.style.top = `${snap(placement.top)}px`;
+    // Custom properties rather than `left` and `top`, so a stylesheet can
+    // still override where the note goes.
+    node.style.setProperty("--_x", `${left}px`);
+    node.style.setProperty("--_y", `${snap(placement.top)}px`);
     node.dataset.side = placement.side;
     node.dataset.placed = "";
 
     // The arrow points at the middle of the trigger, never past the note's ends.
     const centre = anchor.left + anchor.width / 2 - left - arrow.offsetWidth / 2;
-    arrow.style.left = `${Math.max(0, Math.min(centre, node.offsetWidth - arrow.offsetWidth))}px`;
+    const arrowX = Math.max(0, Math.min(centre, node.offsetWidth - arrow.offsetWidth));
+    arrow.style.setProperty("--_arrow-x", `${arrowX}px`);
   }, [tooltip.open, tooltip.triggerRef, side, align, sideOffset]);
 
   useLayer(tooltip.open, { node: () => ref.current, onEscape: tooltip.close });

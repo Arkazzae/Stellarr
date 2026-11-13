@@ -38,6 +38,9 @@ export interface SlotProps extends Props {
 /**
  * Renders its one child element with the component's props merged in, so
  * `asChild` can give a link the look and behaviour of a button or a menu item.
+ *
+ * It takes exactly one child element and throws on anything else. The caller
+ * passes the props the child should gain, handlers and `ref` included.
  */
 export function Slot({ children, ...props }: SlotProps) {
   const child = Children.only(children);
