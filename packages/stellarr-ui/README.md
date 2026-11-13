@@ -71,7 +71,7 @@ All look comes from custom properties, in two tiers. The stylesheet declares non
 | `--ui-surface-muted` | A neutral alert |
 | `--ui-popover` | Menus |
 | `--ui-hover` | Hovered `quiet` button, the highlighted menu item, the secondary badge, the switch's track when off |
-| `--ui-text`, `--ui-text-muted`, `--ui-text-faint` | Text, secondary text such as descriptions, table headings and placeholders, and the switch's knob when off |
+| `--ui-text`, `--ui-text-muted`, `--ui-text-faint` | Text, secondary text such as descriptions, table headings and placeholders, and faint text such as the switch's knob when off and the label of an idle `quiet` button |
 | `--ui-line` | Borders and separators |
 | `--ui-line-field` | A text field's border |
 | `--ui-line-strong` | The border of a hovered `secondary` button |
@@ -82,7 +82,7 @@ All look comes from custom properties, in two tiers. The stylesheet declares non
 | `--ui-success-text`, `--ui-success-soft`, `--ui-warning-text`, `--ui-warning-soft` | Badges |
 | `--ui-scrim` | Behind a dialog or a sheet |
 | `--ui-elevation-low`, `--ui-elevation-menu`, `--ui-elevation-modal` | Shadows of tooltips, of menus, and of dialogs and sheets |
-| `--ui-radius-xs`, `--ui-radius-sm`, `--ui-radius-md`, `--ui-radius-lg`, `--ui-radius-xl` | Corners: the close button, menu items, fields and menus, alerts, cards and dialogs |
+| `--ui-radius-xs`, `--ui-radius-sm`, `--ui-radius-md`, `--ui-radius-lg`, `--ui-radius-xl` | Corners: the close button, menu items and the icon sizes of `Button`, fields and menus, alerts, cards and dialogs |
 | `--ui-ease` | The easing of transitions |
 | `--ui-dur-fast`, `--ui-dur-base` | The duration of colour changes, and of the switch's knob moving |
 
@@ -127,6 +127,8 @@ The tables show each fallback. A fallback that names another token follows it, s
 | `--ui-button-padding-x` | `18` units | The space at both ends of the label |
 | `--ui-button-sm-font-size`, `--ui-button-sm-line-height` | The tokens above | The label of the `sm` size |
 | `--ui-button-sm-padding-x` | `14` units | The space at both ends of an `sm` label |
+| `--ui-button-icon-only-radius` | `--ui-radius-sm` | The corners of the `icon` and `icon-sm` sizes. A pill is `calc(infinity * 1px)` |
+| `--ui-button-icon-only-min-width` | `auto` | The least width of the `icon` and `icon-sm` sizes, which a touch screen raises along with `--ui-button-min-height` |
 | `--ui-button-disabled-opacity` | `1`, and `0.4` for `secondary` | A disabled button |
 | `--ui-button-primary-bg` | `--ui-accent` | The fill of `primary`, while it is not hovered |
 | `--ui-button-secondary-border` | `--ui-line` | The outline |
@@ -138,6 +140,9 @@ The tables show each fallback. A fallback that names another token follows it, s
 | `--ui-button-secondary-pressed-border`, `--ui-button-secondary-pressed-bg` | The hovered values | A toggle that is on |
 | `--ui-button-secondary-pressed-text` | `--ui-text` | A toggle that is on |
 | `--ui-button-secondary-unpressed-text` | `--ui-button-secondary-text` | A toggle that is off |
+| `--ui-button-quiet-text` | `--ui-text-faint` | The label of `quiet`, while it is not hovered. `currentColor` takes it from the surroundings |
+| `--ui-button-quiet-hover-bg` | `--ui-hover` | The fill of `quiet` while hovered |
+| `--ui-button-quiet-hover-text` | `--ui-text` | The label of `quiet` while hovered |
 | `--ui-button-danger-solid-border-width` | `1px` | The width of the transparent border of `danger-solid`, which keeps its base size level with an outlined sibling. `0px` for a button that sizes to its content |
 | `--ui-button-danger-solid-hover-bg` | `--ui-danger` mixed 86% with white | The fill while hovered |
 | `--ui-button-danger-solid-focus-shadow` | `--ui-focus-shadow` | The focus ring of the `danger-solid` variant |

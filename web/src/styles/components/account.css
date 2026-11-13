@@ -1145,13 +1145,18 @@
   }
 
   /* Without a note beside them the icons still belong on the right. */
-  .acc-foot .icon-btn:first-child {
+  .acc-foot > button:first-child {
     margin-left: auto;
   }
 
-  .acc-out:hover {
-    background: var(--danger-soft);
-    color: var(--danger-text);
+  .acc-foot > button:disabled {
+    cursor: not-allowed;
+  }
+
+  /* Signing out warns in the danger colour under the pointer. */
+  .acc-out {
+    --ui-button-quiet-hover-bg: var(--danger-soft);
+    --ui-button-quiet-hover-text: var(--danger-text);
   }
 
   @media (max-width: 767px) {

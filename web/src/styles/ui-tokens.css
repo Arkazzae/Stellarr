@@ -67,10 +67,12 @@
 }
 
 /* Touch targets, where the pointer cannot be precise: a button is at least a
-   finger tall, and a switch takes presses a little above and below its track. */
+   finger tall, an icon button a finger wide as well, and a switch takes presses
+   a little above and below its track. */
 @media (pointer: coarse) {
   :root {
     --ui-button-min-height: 44px;
+    --ui-button-icon-only-min-width: 44px;
     --ui-switch-hit-inset: -9px 0;
   }
 }

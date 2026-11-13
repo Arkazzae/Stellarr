@@ -148,7 +148,6 @@
 
   .cp-close {
     flex: none;
-    color: var(--text-faint);
   }
 
   .cp-body {

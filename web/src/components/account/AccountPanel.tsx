@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import { Button } from "@stellarr/ui";
 import { Icon } from "@stellarr/ui/icons";
 import { AnchoredCard } from "@/components/primitives/AnchoredCard";
 import { PresenceDot } from "@/components/primitives/Avatar";
@@ -234,24 +235,27 @@ export function AccountPanel({
       </div>
 
       <div className="acc-foot">
-        <button
+        <Button
           type="button"
-          className="icon-btn"
+          variant="quiet"
+          size="icon-sm"
           aria-label={t("common.openSettings")}
           title={t("common.openSettings")}
           onClick={onOpenSettings}
         >
           <Icon name="gear" size={16} />
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className="icon-btn acc-out"
+          variant="quiet"
+          size="icon-sm"
+          className="acc-out"
           aria-label={t("common.logout")}
           title={t("common.logout")}
           onClick={onLogout}
         >
           <Icon name="signout" size={16} />
-        </button>
+        </Button>
       </div>
     </>
   );

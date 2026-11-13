@@ -96,12 +96,11 @@
     .roster .roster-head {
       height: 56px;
       padding: 0 12px 0 16px;
-    }
-
-    /* The header doubles as the navigation bar here, and a faint mark is not
-       enough for the control that closes the panel. */
-    .roster .roster-head .icon-btn {
-      color: var(--text-muted);
+      /* The header doubles as the navigation bar here, and a faint mark is not
+         enough for the control that closes the panel. It stays that strong
+         under the pointer. */
+      --ui-button-quiet-text: var(--text-muted);
+      --ui-button-quiet-hover-text: var(--text-muted);
     }
 
     .burger {
@@ -329,7 +328,6 @@
       min-height: 44px;
     }
 
-    .icon-btn,
     .chip .x {
       min-width: 44px;
       min-height: 44px;

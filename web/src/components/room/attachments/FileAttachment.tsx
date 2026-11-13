@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@stellarr/ui";
 import { Icon } from "@stellarr/ui/icons";
 import { useLanguage } from "@/state/LanguageProvider";
 
@@ -21,14 +22,15 @@ export function FileAttachment({ part, onDownload }: FileAttachmentProps) {
         <b>{part.name}</b>
         <span>{part.size}</span>
       </span>
-      <button
+      <Button
         type="button"
-        className="icon-btn"
+        variant="quiet"
+        size="icon-sm"
         aria-label={t("attachment.download", { name: part.name })}
         onClick={onDownload && (() => onDownload(part))}
       >
         <Icon name="download" size={15} />
-      </button>
+      </Button>
     </div>
   );
 }

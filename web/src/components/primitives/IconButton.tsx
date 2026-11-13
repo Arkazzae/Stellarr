@@ -2,6 +2,7 @@
 
 import type { MouseEventHandler } from "react";
 
+import { Button } from "@stellarr/ui";
 import { Icon, type IconName } from "@stellarr/ui/icons";
 
 export interface IconButtonProps {
@@ -11,7 +12,7 @@ export interface IconButtonProps {
   /** The tooltip; usually the same words as the label. */
   title?: string;
   size?: number;
-  /** Added to `.icon-btn`. Other button shapes are their own components. */
+  /** Added to the button. Other button shapes are their own components. */
   className?: string;
   disabled?: boolean;
   onClick?: MouseEventHandler<HTMLButtonElement>;
@@ -27,15 +28,17 @@ export function IconButton({
   onClick,
 }: IconButtonProps) {
   return (
-    <button
+    <Button
       type="button"
-      className={className ? `icon-btn ${className}` : "icon-btn"}
+      variant="quiet"
+      size="icon-sm"
+      className={className}
       aria-label={label}
       title={title}
       disabled={disabled}
       onClick={onClick}
     >
       <Icon name={icon} size={size} />
-    </button>
+    </Button>
   );
 }

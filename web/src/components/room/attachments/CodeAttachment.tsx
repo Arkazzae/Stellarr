@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useMemo, useState } from "react";
 
+import { Button } from "@stellarr/ui";
 import { Icon } from "@stellarr/ui/icons";
 import { useLanguage } from "@/state/hooks";
 
@@ -122,15 +123,17 @@ export function CodeAttachment({ part, onCopy }: CodeAttachmentProps) {
               </button>
             </>
           ) : null}
-          <button
+          <Button
             type="button"
-            className={copyState === "error" ? "icon-btn copy-error" : "icon-btn"}
+            variant="quiet"
+            size="icon-sm"
+            className={copyState === "error" ? "code-copy copy-error" : "code-copy"}
             aria-label={copyLabel}
             title={copyLabel}
             onClick={() => void copy()}
           >
             <Icon name={copyState === "copied" ? "tick" : "copy"} size={15} />
-          </button>
+          </Button>
         </div>
       </div>
       <pre

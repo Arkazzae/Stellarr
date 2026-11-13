@@ -59,12 +59,16 @@
 
   .ui-button[data-size="icon"] {
     width: calc(36 * var(--ui-unit));
+    min-width: var(--ui-button-icon-only-min-width, auto);
     height: calc(36 * var(--ui-unit));
+    border-radius: var(--ui-button-icon-only-radius, var(--ui-radius-sm));
   }
 
   .ui-button[data-size="icon-sm"] {
     width: calc(32 * var(--ui-unit));
+    min-width: var(--ui-button-icon-only-min-width, auto);
     height: calc(32 * var(--ui-unit));
+    border-radius: var(--ui-button-icon-only-radius, var(--ui-radius-sm));
   }
 
   .ui-button[data-variant="primary"] {
@@ -81,6 +85,7 @@
 
   .ui-button[data-variant="quiet"] {
     background-color: transparent;
+    color: var(--ui-button-quiet-text, var(--ui-text-faint));
   }
 
   .ui-button[data-variant="danger"] {
@@ -126,8 +131,8 @@
     }
 
     .ui-button[data-variant="quiet"]:hover:not(:disabled) {
-      background-color: var(--ui-hover);
-      color: var(--ui-text);
+      background-color: var(--ui-button-quiet-hover-bg, var(--ui-hover));
+      color: var(--ui-button-quiet-hover-text, var(--ui-text));
     }
 
     .ui-button[data-variant="danger"]:hover:not(:disabled) {
