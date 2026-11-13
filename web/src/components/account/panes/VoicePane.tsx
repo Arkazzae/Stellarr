@@ -23,7 +23,7 @@ export interface VoicePaneProps {
 }
 
 /**
- * Voice and video: the device's settings, not the server's.
+ * Voice and video: the person's settings, not the server's.
  *
  * Ordered by what goes wrong. The microphone comes first, because a call on the
  * wrong one is not a quality problem but silence, then what is heard, then the
@@ -31,9 +31,10 @@ export interface VoicePaneProps {
  * picture follows the sound rather than interleaving with it: the camera and
  * the screen are what someone adds to a call that already works.
  *
- * Every setting is backed by the voice settings store, which persists to this
- * browser while the audio pipeline reads it live, so a change lands on a call
- * in progress without dropping it.
+ * Every setting is backed by the voice settings store, which the audio pipeline
+ * reads live, so a change lands on a call in progress without dropping it. The
+ * store keeps them in this browser and the account keeps a copy, all but the
+ * chosen devices, which belong to this computer.
  */
 export function VoicePane({
   settings,

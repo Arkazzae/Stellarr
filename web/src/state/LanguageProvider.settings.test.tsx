@@ -185,6 +185,31 @@ describe("LanguageProvider settings", () => {
     expect(storedSettings()).toMatchObject({ chatAutoTranslateEnabled: false });
   });
 
+  it("names the chosen language only once the person has chosen one", async () => {
+    const user = userEvent.setup();
+    const seen: (string | undefined)[] = [];
+    render(
+      <LanguageProvider initialLocale="pl">
+        <Probe
+          actions={{
+            check: (language) => seen.push(language.chosenLocale()),
+            english: (language) => language.update({ locale: "en" }),
+            translate: (language) => language.update({ chatTranslationEnabled: true }),
+          }}
+        />
+      </LanguageProvider>,
+    );
+    await hydrated();
+
+    await user.click(screen.getByRole("button", { name: "translate" }));
+    await user.click(screen.getByRole("button", { name: "check" }));
+    await user.click(screen.getByRole("button", { name: "english" }));
+    await user.click(screen.getByRole("button", { name: "check" }));
+
+    // The instance default showing is not a choice; picking one is.
+    expect(seen).toEqual([undefined, "en"]);
+  });
+
   it("applies several updates made in the same tick", async () => {
     const user = userEvent.setup();
     render(

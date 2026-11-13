@@ -41,6 +41,8 @@ export interface KeybindValue {
   cancelRecording: () => void;
   clearBinding: (action: KeybindAction) => void;
   resetBindings: () => void;
+  /** Every binding at once, as the account hands them back; validated first. */
+  replaceBindings: (next: unknown) => void;
 }
 
 const KeybindContext = createContext<KeybindValue | null>(null);
@@ -101,6 +103,14 @@ export function KeybindProvider({ children }: { children: ReactNode }) {
     commit({ ...DEFAULT_KEYBINDINGS });
     cancelRecording();
   }, [commit, cancelRecording]);
+
+  const replaceBindings = useCallback(
+    (next: unknown) => {
+      commit(parseKeybindings(next));
+      cancelRecording();
+    },
+    [commit, cancelRecording],
+  );
 
   // Another window changed the bindings.
   useEffect(() => {
@@ -174,6 +184,7 @@ export function KeybindProvider({ children }: { children: ReactNode }) {
       cancelRecording,
       clearBinding,
       resetBindings,
+      replaceBindings,
     }),
     [
       bindings,
@@ -183,6 +194,7 @@ export function KeybindProvider({ children }: { children: ReactNode }) {
       cancelRecording,
       clearBinding,
       resetBindings,
+      replaceBindings,
     ],
   );
 

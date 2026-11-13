@@ -42,6 +42,20 @@ describe("account calls", () => {
       answer: { maxSeconds: 5, selectedId: null, servers: [] },
     },
     {
+      name: "getClientSettings",
+      run: () => calls.getClientSettings(),
+      method: "GET",
+      url: "/api/me/settings",
+      answer: { appearance: { palette: "ember" }, language: null, keybinds: null, voice: null },
+    },
+    {
+      name: "saveClientSettings",
+      run: () => calls.saveClientSettings("voice", { opusProfile: "studio" }),
+      method: "PUT",
+      url: "/api/me/settings/voice",
+      body: { opusProfile: "studio" },
+    },
+    {
       name: "changePassword",
       run: () => calls.changePassword("old", "new-password"),
       method: "POST",

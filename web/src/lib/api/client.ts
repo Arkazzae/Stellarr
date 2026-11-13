@@ -25,6 +25,8 @@ import type {
   ChannelId,
   ChannelReadChanged,
   ChannelUpdateInput,
+  ClientSettingsSection,
+  ClientSettingsSnapshot,
   DirectMessageHistoryPage,
   FriendRequestAnswer,
   JoinSoundLibrary,
@@ -279,6 +281,14 @@ export interface ApiClient {
   ): Promise<AccountPreferences>;
   /** Every sound this account may announce its arrivals with. */
   getJoinSoundLibrary(signal?: AbortSignal): Promise<JoinSoundLibrary>;
+  /** The client's own settings the account keeps, by section. */
+  getClientSettings(signal?: AbortSignal): Promise<ClientSettingsSnapshot>;
+  /** Replaces one section of them whole. */
+  saveClientSettings(
+    section: ClientSettingsSection,
+    value: Record<string, unknown>,
+    signal?: AbortSignal,
+  ): Promise<void>;
   changePassword(
     currentPassword: string,
     newPassword: string,

@@ -119,5 +119,8 @@ export function createAccountAdapter(api: ApiClient): AccountAdapter {
     },
 
     listJoinSounds: (signal) => api.getJoinSoundLibrary(signal),
+
+    loadClientSettings: (signal) => api.getClientSettings(signal),
+    saveClientSettings: (section, value) => api.saveClientSettings(section, value),
   };
 }

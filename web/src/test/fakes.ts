@@ -245,6 +245,13 @@ export function fakeApi(overrides: Partial<ApiClient> = {}): ApiClient {
       selectedId: null,
       servers: [],
     })),
+    getClientSettings: vi.fn(async () => ({
+      appearance: null,
+      language: null,
+      keybinds: null,
+      voice: null,
+    })),
+    saveClientSettings: vi.fn(async () => undefined),
     getSoundboard: vi.fn(async () => ({
       sounds: [],
       settings: { everyoneCanPlay: true, rateLimited: true },

@@ -14,6 +14,7 @@ import { ProfileProvider } from "@/state/ProfileProvider";
 import { UiProvider } from "@/state/UiProvider";
 import { VoiceProvider } from "@/state/VoiceProvider";
 
+import { ClientSettingsSync } from "./ClientSettingsSync";
 import { DmRailContainer } from "./DmRailContainer";
 import { FriendsRoomContainer } from "./FriendsRoomContainer";
 import { IncomingCallContainer } from "./IncomingCallContainer";
@@ -107,6 +108,9 @@ function Shell() {
       {/* Above the shell and beside the dialogs: these are raised from inside
           any of them and have to outlive whatever raised them. */}
       <UserSettingsContainer />
+      {/* Renders nothing; keeps the theme, language, shortcuts and voice
+          settings on the account. */}
+      <ClientSettingsSync />
       <MiniProfileContainer />
       <IncomingCallContainer />
     </>

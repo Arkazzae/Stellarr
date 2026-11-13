@@ -108,4 +108,30 @@ describe("KeybindProvider", () => {
       meta: false,
     });
   });
+
+  it("takes a whole set from the account, validated like stored ones", () => {
+    const chord = { code: "KeyJ", ctrl: true, alt: true, shift: false, meta: false };
+    function Taker() {
+      const { replaceBindings } = useKeybindContext();
+      return (
+        <button
+          type="button"
+          onClick={() =>
+            replaceBindings({
+              version: 1,
+              // A duplicate is dropped, as it would be from storage.
+              bindings: { ...DEFAULT_KEYBINDINGS, toggleMute: chord, toggleCamera: chord },
+            })
+          }
+        >
+          replace
+        </button>
+      );
+    }
+    render(<KeybindProvider><Taker /></KeybindProvider>);
+
+    fireEvent.click(screen.getByRole("button", { name: "replace" }));
+
+    expect(readStoredKeybindings()).toMatchObject({ toggleMute: chord, toggleCamera: null });
+  });
 });

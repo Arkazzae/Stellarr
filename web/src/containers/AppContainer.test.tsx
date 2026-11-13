@@ -47,6 +47,7 @@ vi.mock("./FriendsRoomContainer", () => ({ FriendsRoomContainer: standIn("friend
 vi.mock("./RosterContainer", () => ({ RosterContainer: standIn("roster") }));
 vi.mock("./ModalsContainer", () => ({ ModalsContainer: standIn("modals") }));
 vi.mock("./UserSettingsContainer", () => ({ UserSettingsContainer: standIn("user-settings") }));
+vi.mock("./ClientSettingsSync", () => ({ ClientSettingsSync: standIn("client-settings-sync") }));
 vi.mock("./MiniProfileContainer", () => ({ MiniProfileContainer: standIn("mini-profile") }));
 vi.mock("./IncomingCallContainer", () => ({ IncomingCallContainer: standIn("incoming-call") }));
 
@@ -111,7 +112,7 @@ describe("AppContainer", () => {
   it("mounts the overlays outside the grid", () => {
     render(<AppContainer />);
 
-    for (const id of ["modals", "user-settings", "mini-profile", "incoming-call"]) {
+    for (const id of ["modals", "user-settings", "client-settings-sync", "mini-profile", "incoming-call"]) {
       expect(screen.getByTestId(id)).toBeInTheDocument();
       expect(screen.getByTestId(id).closest(".app")).toBeNull();
     }

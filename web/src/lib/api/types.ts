@@ -85,6 +85,17 @@ export interface AccountDetails {
   preferences: AccountPreferences;
 }
 
+/** The parts of the client's own settings that the account keeps, one object each. */
+export const CLIENT_SETTINGS_SECTIONS = ["appearance", "language", "keybinds", "voice"] as const;
+export type ClientSettingsSection = (typeof CLIENT_SETTINGS_SECTIONS)[number];
+
+/**
+ * The client's own settings as the account holds them: one object per section,
+ * null for a section no device has saved. The fields are the client's and are
+ * normalised by whoever reads them, since another build may have written them.
+ */
+export type ClientSettingsSnapshot = Record<ClientSettingsSection, Record<string, unknown> | null>;
+
 export interface AccountPreferences {
   desktopNotifications: boolean;
   emailNotifications: boolean;

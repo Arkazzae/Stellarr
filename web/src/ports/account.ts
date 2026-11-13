@@ -1,4 +1,9 @@
-import type { JoinSoundLibrary, UserId } from "@/lib/api/types";
+import type {
+  ClientSettingsSection,
+  ClientSettingsSnapshot,
+  JoinSoundLibrary,
+  UserId,
+} from "@/lib/api/types";
 
 import type { Unsubscribe } from "./chat";
 
@@ -64,8 +69,10 @@ export type ImageKind = "avatar" | "banner";
 /**
  * Preferences that belong to a person rather than to a server or a device.
  *
- * The theme is absent on purpose: it lives on the device, in `ThemeProvider`,
- * and listing it here would give one setting two owners.
+ * The theme, the language, the shortcuts and the voice processing are absent
+ * on purpose: the account keeps them too, but as the client's own sections
+ * (`loadClientSettings`), which the providers that apply them read and write.
+ * Listing them here as well would give one setting two owners.
  */
 export interface UserPreferences {
   /** Notifications */
@@ -123,7 +130,19 @@ export interface AccountPort {
    * it can be long.
    */
   listJoinSounds(signal?: AbortSignal): Promise<JoinSoundLibrary>;
+
+  /**
+   * The client's own settings the account keeps, so the theme, the language,
+   * the shortcuts and the voice processing follow the person between devices.
+   * The device still owns them while it runs; this is where they are kept.
+   */
+  loadClientSettings(signal?: AbortSignal): Promise<ClientSettingsSnapshot>;
+  /** Replaces one section whole; the others are left as they are. */
+  saveClientSettings(section: ClientSettingsSection, value: Record<string, unknown>): Promise<void>;
 }
+
+export type { ClientSettingsSection, ClientSettingsSnapshot };
+export { CLIENT_SETTINGS_SECTIONS } from "@/lib/api/types";
 
 /** The largest image the server accepts for each kind. */
 export const IMAGE_LIMITS: Record<ImageKind, { maxBytes: number }> = {

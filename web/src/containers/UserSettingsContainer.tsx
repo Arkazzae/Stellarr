@@ -31,8 +31,9 @@ import { useAccountSecurity } from "./useAccountSecurity";
  *
  * Three owners meet here and none of them knows about the other two: the
  * account port holds the profile and the preferences, `ThemeProvider` holds
- * the theme on this device, and the voice settings live in their own store
- * because the audio pipeline reads them while a call is running.
+ * the theme, and the voice settings live in their own store because the audio
+ * pipeline reads them while a call is running. The theme and the voice
+ * settings reach the account through `ClientSettingsSync`, not through here.
  */
 export function UserSettingsContainer() {
   const ports = usePorts();
