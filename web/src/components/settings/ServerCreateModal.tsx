@@ -2,6 +2,7 @@
 
 import { useId, useState, type ReactNode } from "react";
 
+import { Button } from "@stellarr/ui";
 import { Icon, type IconName } from "@stellarr/ui/icons";
 import { DialogClose } from "@/components/primitives/DialogClose";
 import { Modal } from "@/components/primitives/Modal";
@@ -447,19 +448,19 @@ export function ServerCreateModal({ open, onClose, onCreate }: ServerCreateModal
             </section>
           </div>
           <footer className="ch-settings-foot">
-            <button type="button" className="btn-ghost" disabled={submitting} onClick={close}>
+            <Button type="button" variant="secondary" disabled={submitting} onClick={close}>
               <Icon name="x" size={15} />
               {t("common.cancel")}
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
-              className="btn-primary"
+              variant="primary"
               disabled={submitting || !canSubmit}
               aria-busy={submitting || undefined}
             >
               <Icon name="tick" size={15} />
               {submitting ? t("shell.creatingServer") : t("shell.createServer")}
-            </button>
+            </Button>
           </footer>
         </div>
       </form>

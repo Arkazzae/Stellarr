@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 
+import { Button } from "@stellarr/ui";
 import { Icon } from "@stellarr/ui/icons";
 import { useConfirm } from "@/components/primitives/ConfirmDialog";
 import { Switch } from "@/components/primitives/Switch";
@@ -239,16 +240,18 @@ export function SoundboardPane({
         className="sound-library"
         action={
           <>
-            <button
+            <Button
               type="button"
-              className="btn-primary sm"
+              variant="primary"
+              size="sm"
+              className="asset-add"
               disabled={!supported || busy || loading || atLimit}
               title={atLimit ? t("settings.soundLimitTitle") : undefined}
               onClick={() => picker.current?.click()}
             >
               <Icon name="plus" size={15} />
               {t("settings.addSound")}
-            </button>
+            </Button>
             <input
               ref={picker}
               type="file"

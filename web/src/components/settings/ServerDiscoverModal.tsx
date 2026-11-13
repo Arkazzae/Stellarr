@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useState } from "react";
 
+import { Button } from "@stellarr/ui";
 import { Icon } from "@stellarr/ui/icons";
 import { Modal } from "@/components/primitives/Modal";
 import { DialogHeader } from "@/components/settings/DialogHeader";
@@ -160,14 +161,16 @@ export function ServerDiscoverModal({
                   setActionError(null);
                 }}
               />
-              <button
+              <Button
                 type="submit"
-                className="btn-primary sm find-join"
+                variant="primary"
+                size="sm"
+                className="find-join"
                 disabled={busy || inviteCode.length === 0}
                 aria-busy={joiningInvite || undefined}
               >
                 {joiningInvite ? t("shell.joiningServer") : t("shell.joinInvite")}
-              </button>
+              </Button>
             </form>
             <p className="fld-note">{t("shell.inviteCodeDetail")}</p>
           </section>
@@ -206,16 +209,17 @@ export function ServerDiscoverModal({
               ) : directory.status === "failed" ? (
                 <div className="dlg-retry" role="alert">
                   <p>{directory.message ?? t("shell.serverDiscoveryFailed")}</p>
-                  <button
+                  <Button
                     type="button"
-                    className="btn-ghost sm"
+                    variant="secondary"
+                    size="sm"
                     onClick={() => {
                       setDirectory({ status: "loading" });
                       setAttempt((count) => count + 1);
                     }}
                   >
                     {t("common.retry")}
-                  </button>
+                  </Button>
                 </div>
               ) : shown.length === 0 ? (
                 <div className="asset-empty">
@@ -244,9 +248,11 @@ export function ServerDiscoverModal({
                         <b>{server.name}</b>
                         <span>{server.description || t("shell.publicServerNoDescription")}</span>
                       </span>
-                      <button
+                      <Button
                         type="button"
-                        className="btn-ghost sm find-join"
+                        variant="secondary"
+                        size="sm"
+                        className="find-join"
                         disabled={busy}
                         aria-busy={joiningThis || undefined}
                         onClick={() =>
@@ -256,7 +262,7 @@ export function ServerDiscoverModal({
                         }
                       >
                         {joiningThis ? t("shell.joiningServer") : t("shell.joinServer")}
-                      </button>
+                      </Button>
                     </div>
                   );
                 })
@@ -272,10 +278,10 @@ export function ServerDiscoverModal({
         </div>
 
         <footer className="dlg-foot">
-          <button type="button" className="btn-ghost" disabled={busy} onClick={close}>
+          <Button type="button" variant="secondary" disabled={busy} onClick={close}>
             <Icon name="x" size={15} />
             {t("common.close")}
-          </button>
+          </Button>
         </footer>
       </div>
     </Modal>

@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 
+import { Button } from "@stellarr/ui";
 import { Icon } from "@stellarr/ui/icons";
 import { Avatar } from "@/components/primitives/Avatar";
 import { Modal } from "@/components/primitives/Modal";
@@ -268,10 +269,10 @@ function InviteLink({ url, expiresAt, alone, onCreate, onCopy }: InviteLinkProps
         <div className="inv-nolink">
           <p>{t("invite.noLink")}</p>
           {onCreate === undefined ? null : (
-            <button type="button" className="btn-primary sm" onClick={() => void create()}>
+            <Button type="button" variant="primary" size="sm" onClick={() => void create()}>
               <Icon name="plus" size={14} />
               {t("settings.newInvite")}
-            </button>
+            </Button>
           )}
         </div>
       ) : (
@@ -286,14 +287,16 @@ function InviteLink({ url, expiresAt, alone, onCreate, onCopy }: InviteLinkProps
               spellCheck={false}
               onFocus={(event) => event.currentTarget.select()}
             />
-            <button
+            <Button
               type="button"
-              className={copied ? "btn-primary sm inv-copy done" : "btn-primary sm inv-copy"}
+              variant="primary"
+              size="sm"
+              className={copied ? "inv-copy done" : "inv-copy"}
               onClick={copy}
             >
               <Icon name={copied ? "tick" : "copy"} size={14} />
               {copied ? t("invite.copied") : t("invite.copy")}
-            </button>
+            </Button>
           </div>
           <p className="inv-note">
             {lifetime === null ? null : `${lifetime} `}

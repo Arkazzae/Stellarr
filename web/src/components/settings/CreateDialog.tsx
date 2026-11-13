@@ -2,6 +2,7 @@
 
 import { useId, type ReactNode } from "react";
 
+import { Button } from "@stellarr/ui";
 import { Modal } from "@/components/primitives/Modal";
 import { DialogHeader } from "@/components/settings/DialogHeader";
 import { useLanguage } from "@/state/hooks";
@@ -83,17 +84,17 @@ export function CreateDialog({
         {notes === undefined ? null : <div className="ch-notes">{notes}</div>}
 
         <footer className="ch-foot">
-          <button type="button" className="btn-ghost" disabled={busy} onClick={close}>
+          <Button type="button" variant="secondary" disabled={busy} onClick={close}>
             {t("common.cancel")}
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
-            className="btn-primary"
+            variant="primary"
             disabled={busy || !canSubmit}
             aria-busy={busy || undefined}
           >
             {busy ? busyLabel : submitLabel}
-          </button>
+          </Button>
         </footer>
       </form>
     </Modal>

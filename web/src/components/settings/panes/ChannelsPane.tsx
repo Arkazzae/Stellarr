@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@stellarr/ui";
 import { Icon, type IconName } from "@stellarr/ui/icons";
 import { SettingsSection } from "@/components/settings/SettingsSection";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
@@ -74,15 +75,17 @@ export function ChannelsPane({
         count={sections.length}
         countLabel={t("settings.sectionsCount", { count: sections.length })}
         action={
-          <button
+          <Button
             type="button"
-            className="btn-primary sm"
+            variant="primary"
+            size="sm"
+            className="asset-add"
             disabled={!sectionsSupported}
             onClick={onAddSection}
           >
             <Icon name="plus" size={15} />
             {t("section.new")}
-          </button>
+          </Button>
         }
       >
         <p className="settings-section-note">{t("server.sectionsDetail")}</p>
@@ -130,15 +133,16 @@ export function ChannelsPane({
                     <Icon name="caret" size={11} />
                   </button>
                 </span>
-                <button
+                <Button
                   type="button"
-                  className="btn-ghost sm"
+                  variant="secondary"
+                  size="sm"
                   disabled={!sectionsSupported}
                   aria-label={t("settings.editSection", { name: section.name })}
                   onClick={() => onEditSection(section.id)}
                 >
                   {t("common.edit")}
-                </button>
+                </Button>
               </div>
             ))}
           </div>
@@ -150,10 +154,17 @@ export function ChannelsPane({
         count={channels.length}
         countLabel={t("settings.channelsCount", { count: channels.length })}
         action={
-          <button type="button" className="btn-primary sm" disabled={!supported} onClick={onAdd}>
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            className="asset-add"
+            disabled={!supported}
+            onClick={onAdd}
+          >
             <Icon name="plus" size={15} />
             {t("settings.addChannel")}
-          </button>
+          </Button>
         }
       >
         <p className="settings-section-note">{t("settings.channelOrder")}</p>
@@ -174,15 +185,16 @@ export function ChannelsPane({
                   <b>{channel.name}</b>
                   <span>{channel.kind === "text" ? t("channel.text") : t("channel.voice")}</span>
                 </span>
-                <button
+                <Button
                   type="button"
-                  className="btn-ghost sm"
+                  variant="secondary"
+                  size="sm"
                   disabled={!supported}
                   aria-label={t("settings.editChannel", { name: channel.name })}
                   onClick={() => onEdit(channel.id)}
                 >
                   {t("common.edit")}
-                </button>
+                </Button>
               </div>
             ))}
           </div>

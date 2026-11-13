@@ -2,6 +2,7 @@
 
 import { type CSSProperties, useState } from "react";
 
+import { Button } from "@stellarr/ui";
 import { Icon, type IconName } from "@stellarr/ui/icons";
 import { countedNoun } from "@/components/settings/panes/paneFormat";
 import { SettingsSection } from "@/components/settings/SettingsSection";
@@ -82,9 +83,11 @@ export function RolesPane({ supported, roles, onCreate, onUpdate, onDelete }: Ro
         count={roles.length}
         countLabel={t("settings.rolesCount", { count: roles.length })}
         action={
-          <button
+          <Button
             type="button"
-            className="btn-primary sm"
+            variant="primary"
+            size="sm"
+            className="asset-add"
             disabled={!supported || action.pending}
             onClick={() =>
               void action.run(() =>
@@ -94,7 +97,7 @@ export function RolesPane({ supported, roles, onCreate, onUpdate, onDelete }: Ro
           >
             <Icon name="plus" size={15} />
             {t("settings.newRole")}
-          </button>
+          </Button>
         }
       >
         {action.failed ? (
@@ -122,9 +125,10 @@ export function RolesPane({ supported, roles, onCreate, onUpdate, onDelete }: Ro
                   <b className="role-name">{role.name}</b>
                   <span>{roleSummary(role, t, locale)}</span>
                 </span>
-                <button
+                <Button
                   type="button"
-                  className="btn-ghost sm"
+                  variant="secondary"
+                  size="sm"
                   disabled={!supported || action.pending}
                   aria-label={t("settings.rolePermissionsLabel", { name: role.name })}
                   onClick={() =>
@@ -139,7 +143,7 @@ export function RolesPane({ supported, roles, onCreate, onUpdate, onDelete }: Ro
                   }
                 >
                   {t("settings.rolePermissions")}
-                </button>
+                </Button>
               </div>
             ))}
           </div>
@@ -229,22 +233,23 @@ function RoleEditor({ role, draft, supported, busy, onChange, onSave, onDelete }
         ))}
       </div>
       <div className="sv-head">
-        <button
+        <Button
           type="button"
-          className="btn-primary"
+          variant="primary"
+          className="role-save"
           disabled={locked || busy || draft.name.trim() === ""}
           onClick={onSave}
         >
           {t("settings.save")}
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className="btn-ghost"
+          variant="secondary"
           disabled={!supported || busy || role.isSystem}
           onClick={onDelete}
         >
           {t("settings.deleteRole")}
-        </button>
+        </Button>
       </div>
     </SettingsSection>
   );

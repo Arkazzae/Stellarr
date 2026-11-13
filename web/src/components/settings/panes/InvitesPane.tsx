@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 
+import { Button } from "@stellarr/ui";
 import { Icon } from "@stellarr/ui/icons";
 import { SettingsSection } from "@/components/settings/SettingsSection";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
@@ -52,15 +53,17 @@ export function InvitesPane({ supported, invites, onCreate, onRevoke }: InvitesP
         count={invites.length}
         countLabel={t("settings.invitesCount", { count: invites.length })}
         action={
-          <button
+          <Button
             type="button"
-            className="btn-primary sm"
+            variant="primary"
+            size="sm"
+            className="asset-add"
             disabled={!supported || change.pending}
             onClick={() => void change.run(onCreate)}
           >
             <Icon name="plus" size={15} />
             {t("settings.newInvite")}
-          </button>
+          </Button>
         }
       >
         {change.failed ? (

@@ -408,12 +408,6 @@
     --ui-button-secondary-hover-text: var(--accent-text);
   }
 
-  .sc .btn-ghost:has(svg) {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-  }
-
   .output-status {
     margin-top: 8px;
   }

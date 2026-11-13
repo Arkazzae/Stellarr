@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useMemo, useState } from "react";
 
+import { Button } from "@stellarr/ui";
 import { Icon, type IconName } from "@stellarr/ui/icons";
 import { Modal } from "@/components/primitives/Modal";
 import { DialogHeader } from "@/components/settings/DialogHeader";
@@ -55,10 +56,12 @@ function ReleaseOption({
           SHA-256 · <code title={release.sha256}>{release.sha256}</code>
         </small>
       </div>
-      <a className="btn-primary sm" href={release.downloadUrl} download={release.fileName}>
-        <Icon name="download" size={15} />
-        {t("client.download")}
-      </a>
+      <Button asChild variant="primary" size="sm">
+        <a href={release.downloadUrl} download={release.fileName}>
+          <Icon name="download" size={15} />
+          {t("client.download")}
+        </a>
+      </Button>
     </article>
   );
 }
