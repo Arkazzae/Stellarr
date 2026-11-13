@@ -35,6 +35,7 @@ export {
   type DropdownMenuProps,
 } from "./components/DropdownMenu";
 export { Input, Label } from "./components/Field";
+export { Segmented, type SegmentedOption, type SegmentedProps, type SegmentedVariant } from "./components/Segmented";
 export { Spinner } from "./components/Spinner";
 export { Switch, type SwitchProps } from "./components/Switch";
 export { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, type TableProps } from "./components/Table";

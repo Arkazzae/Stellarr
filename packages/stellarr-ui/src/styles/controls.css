@@ -1,14 +1,15 @@
 /*
- * Button, badge, text field, label, switch and spinner.
+ * Button, badge, text field, label, switch, segmented control and spinner.
  *
  * Every rule sits in the `components.ui` layer, nested in Tailwind's
  * `components` layer. A utility class passed in `className` wins over it
  * whatever its specificity, and so does any rule an app writes in its own
  * `components` layer.
  *
- * The button and the switch read optional `--ui-button-*`, `--ui-switch-*` and
- * `--ui-focus-*` tokens, each with a fallback that is the web client's look.
- * Their sizes are multiples of `--ui-unit`; the other parts size in rem.
+ * The button, the switch and the segmented control read optional
+ * `--ui-button-*`, `--ui-switch-*`, `--ui-segmented-*` and `--ui-focus-*`
+ * tokens, each with a fallback that is the web client's look. Their sizes are
+ * multiples of `--ui-unit`; the other parts size in rem.
  */
 
 @layer components.ui {
@@ -339,6 +340,113 @@
   .ui-switch-thumb[data-state="checked"] {
     background-color: var(--ui-switch-thumb-on-bg, var(--ui-on-accent));
     translate: var(--ui-switch-thumb-on-x, calc(20 * var(--ui-unit))) 0;
+  }
+
+  /* ----------------------------------------------------------- segmented -- */
+
+  /* The group is a grid of equal cells; an app sets the columns, and the gap
+     between them, per place. */
+  .ui-segmented {
+    display: grid;
+    grid-template-columns: var(--ui-segmented-columns, 1fr 1fr);
+    gap: var(--ui-segmented-gap, calc(10 * var(--ui-unit)));
+  }
+
+  .ui-segmented-item {
+    /* The border colour of the current state, which the focus rule falls back
+       to; see `.ui-button`. */
+    --_border: var(--ui-line-subtle);
+    display: flex;
+    flex-direction: column;
+    gap: var(--ui-segmented-item-gap, calc(4 * var(--ui-unit)));
+    padding: var(--ui-segmented-item-padding, calc(13 * var(--ui-unit)) calc(15 * var(--ui-unit)));
+    border: 1px solid var(--_border);
+    border-radius: var(--ui-radius-md);
+    background-color: transparent;
+    color: var(--ui-text-muted);
+    cursor: pointer;
+    font-size: var(--ui-segmented-item-font-size, calc(14 * var(--ui-unit)));
+    font-weight: 550;
+    text-align: left;
+    transition:
+      border-color var(--ui-dur-fast) var(--ui-ease),
+      background var(--ui-dur-fast) var(--ui-ease),
+      color var(--ui-dur-fast) var(--ui-ease);
+  }
+
+  /* A segment answers the pointer even while it is disabled, and whether or not
+     the pointer can hover. */
+  .ui-segmented-item:hover {
+    --_border: var(--ui-line-strong);
+    color: var(--ui-text);
+  }
+
+  /* After the hover rule, so the checked segment keeps its look under the
+     pointer. It is tinted from the live accent, so it follows whichever palette
+     is on. */
+  .ui-segmented-item[data-state="checked"] {
+    --_border: var(--ui-accent);
+    background-color: var(--ui-segmented-item-on-bg, color-mix(in oklab, var(--ui-accent) 12%, transparent));
+    color: var(--ui-segmented-item-on-text, var(--ui-text));
+  }
+
+  .ui-segmented-item:focus-visible {
+    border-color: var(--ui-focus-border, var(--_border));
+    outline: var(--ui-focus-outline, 2px solid var(--ui-ring));
+    outline-offset: 2px;
+    box-shadow: var(--ui-focus-shadow, none);
+  }
+
+  /* The second line of a segment, such as "1080p · 30 fps". */
+  .ui-segmented-detail {
+    color: var(--ui-text-faint);
+    font-size: calc(12 * var(--ui-unit));
+    font-weight: 400;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* The pill is one compact row: the track carries the border and the fill, and
+     each segment is a plain cell rather than a bordered card. The border is
+     turned off with `border: 0` rather than a colour, so a segment's border
+     colour stays `currentcolor` in every state, focused included. */
+  .ui-segmented[data-variant="pill"] {
+    gap: 0;
+    padding: calc(2 * var(--ui-unit));
+    border: 1px solid var(--ui-line-subtle);
+    border-radius: calc(999 * var(--ui-unit));
+    background-color: var(--ui-surface-muted);
+  }
+
+  .ui-segmented[data-variant="pill"] .ui-segmented-item {
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    height: calc(26 * var(--ui-unit));
+    padding: 0 calc(4 * var(--ui-unit));
+    border: 0;
+    border-radius: calc(999 * var(--ui-unit));
+    color: var(--ui-text-faint);
+    font-size: calc(12 * var(--ui-unit));
+    font-weight: 600;
+    text-align: center;
+  }
+
+  /* Only a segment that can be pressed lights up under the pointer. `:where`
+     keeps the rule level with the checked one below, which comes after it. */
+  .ui-segmented[data-variant="pill"] .ui-segmented-item:hover:where(:not(:disabled)) {
+    background-color: var(--ui-popover);
+    color: var(--ui-text);
+  }
+
+  .ui-segmented[data-variant="pill"] .ui-segmented-item[data-state="checked"] {
+    background-color: var(--ui-segmented-item-on-bg, var(--ui-popover));
+    color: var(--ui-segmented-item-on-text, var(--ui-text));
+  }
+
+  .ui-segmented[data-variant="pill"] .ui-segmented-item:disabled {
+    cursor: not-allowed;
+    opacity: 0.5;
   }
 
   /* ------------------------------------------------------------- spinner -- */

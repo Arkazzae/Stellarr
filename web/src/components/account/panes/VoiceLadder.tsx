@@ -49,7 +49,7 @@ export function Ladder<T extends string>({
       label: t(rungs[id].label),
       title: t(rungs[id].hint),
       leading: (
-        <span className="seg-ico" aria-hidden="true">
+        <span className="ladder-ico" aria-hidden="true">
           <Icon name={rungs[id].icon} size={iconSize} />
         </span>
       ),
@@ -63,9 +63,9 @@ export function Ladder<T extends string>({
         value={value}
         onChange={onChange}
         label={label}
-        className="row"
+        className="ladder"
       />
-      <p className="seg-note">{t(rungs[value].hint)}</p>
+      <p className="ladder-note">{t(rungs[value].hint)}</p>
     </>
   );
 }

@@ -236,6 +236,7 @@
   --ui-text-muted: var(--muted-foreground);
   --ui-text-faint: var(--faint);
   --ui-line: var(--border);
+  --ui-line-subtle: var(--border);
   --ui-line-field: var(--input);
   --ui-line-strong: var(--input);
   --ui-ring: var(--ring);
