@@ -7,6 +7,7 @@ import { PresenceDot } from "@/components/primitives/Avatar";
 import { Composer } from "@/components/room/Composer";
 import type { ComposerChip } from "@/components/room/ComposerChips";
 import type { MessageTranslationOptions } from "@/components/room/attachments/TranslatedTextAttachment";
+import type { AttachmentCallbacks } from "@/components/room/parts";
 import { Transcript, type TranscriptSectionVM } from "@/components/room/Transcript";
 import { ParticipantTiles } from "@/components/voice/ParticipantTiles";
 import type { OpenProfile, PersonVM } from "@/components/view-models";
@@ -48,6 +49,8 @@ export interface DmRoomProps {
   /** The server's own emoji: the picker and the reaction bar both offer them. */
   customEmoji?: readonly CustomEmoji[];
   translation?: MessageTranslationOptions;
+  /** The same picture, clip and recording actions the channel transcript uses. */
+  attachments?: AttachmentCallbacks;
   notificationButton?: ReactNode;
 }
 
@@ -91,6 +94,7 @@ export function DmRoom({
   onOpenProfile,
   customEmoji,
   translation,
+  attachments,
   notificationButton,
 }: DmRoomProps) {
   const t = translation?.t ?? translateForDocument;
@@ -186,6 +190,7 @@ export function DmRoom({
           onOpenAuthor={onOpenProfile}
           customEmoji={customEmoji}
           translation={translation}
+          attachments={attachments}
           intro={intro}
           hasOlder={hasOlderMessages}
           loadingOlder={loadingOlderMessages}

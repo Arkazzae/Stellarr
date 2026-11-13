@@ -48,10 +48,12 @@ export function VideoAttachment({ part, onPlay }: VideoAttachmentProps) {
         <img src={part.thumb} alt="" width={part.width} height={part.height} loading="lazy" />
       ) : hasUrl ? (
         // Without a poster the first frame of the file itself is the preview.
+        // The tile is opened, not played here, so the frame is silent without
+        // muting the element: a browser that can play the preview natively,
+        // such as a phone's inline player, must not lose its sound.
         <video
           src={part.url}
           preload="metadata"
-          muted
           playsInline
           aria-hidden="true"
           onLoadedMetadata={(event) => {

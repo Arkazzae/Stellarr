@@ -212,6 +212,13 @@ describe("FriendsRoomContainer with a conversation", () => {
     });
   });
 
+  it("opens the conversation's pictures and clips in the media viewer", () => {
+    render(<FriendsRoomContainer />);
+
+    expect(typeof room().attachments?.onOpenImage).toBe("function");
+    expect(typeof room().attachments?.onPlayVideo).toBe("function");
+  });
+
   it("knows whether someone is in the conversation's call and whether you are", () => {
     mocks.friends = fakeFriends({
       active: { ...conversation, callParticipants: ["u-ada"] },

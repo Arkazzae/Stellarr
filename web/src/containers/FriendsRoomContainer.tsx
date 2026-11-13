@@ -4,6 +4,7 @@ import { useMemo } from "react";
 
 import { DmRoom } from "@/components/friends/DmRoom";
 import { FriendsView } from "@/components/friends/FriendsView";
+import { MediaViewer } from "@/components/room/MediaViewer";
 import type {
   FriendRequestVM,
   FriendVM,
@@ -23,6 +24,7 @@ import {
 
 import { NotificationInboxButton } from "./NotificationInboxContainer";
 import { FriendsActivityContainer } from "./FriendsActivityContainer";
+import { useAttachmentViewer } from "./useAttachmentViewer";
 import { useChatTranslation } from "./useChatTranslation";
 
 /**
@@ -55,6 +57,9 @@ export function FriendsRoomContainer() {
   const { emoji: customEmoji } = useEmoji();
   const { locale } = useLanguage();
   const translation = useChatTranslation(friends.active?.id);
+  // A conversation carries the same pictures, clips and recordings as a text
+  // channel, so it opens them in the same viewer.
+  const viewer = useAttachmentViewer(user?.id ?? "stellarr");
 
   const friendList = useMemo<FriendVM[]>(
     () =>
@@ -89,46 +94,50 @@ export function FriendsRoomContainer() {
   if (conversation !== null) {
     const inCall = voice.channelId === conversation.id;
     return (
-      <DmRoom
-        peer={toPerson(conversation.peer)}
-        sections={friends.sections}
-        railOpen={ui.railOpen}
-        onToggleRail={ui.toggleRail}
-        onSend={friends.send}
-        hasOlderMessages={friends.hasOlderMessages}
-        loadingOlderMessages={friends.loadingOlderMessages}
-        onLoadOlderMessages={friends.loadOlderMessages}
-        callActive={(conversation.callParticipants?.length ?? 0) > 0}
-        inCall={inCall}
-        onCall={() => friends.callConversation(conversation.id)}
-        videoOn={voice.call?.cameraOn ?? false}
-        onVideoCall={() => {
-          if (inCall) {
-            voice.toggleCamera();
-            return;
-          }
-          friends.callConversation(conversation.id);
-          window.setTimeout(voice.toggleCamera, CAMERA_AFTER_JOIN_MS);
-        }}
-        callPeople={voice.people}
-        cameraStreams={voice.cameraStreams}
-        localPersonId={user?.id ?? ""}
-        participantVolumes={voice.participantVolumes}
-        onParticipantVolumeChange={voice.setParticipantVolume}
-        participantGates={voice.participantGates}
-        onParticipantGateChange={voice.setParticipantGate}
-        participantSuppressions={voice.participantSuppressions}
-        onParticipantSuppressionChange={voice.setParticipantSuppression}
-        chips={friends.chips}
-        onAttach={friends.attach}
-        onRemoveChip={friends.removeChip}
-        onRetryChip={friends.retryChip}
-        onReorderChips={friends.reorderChips}
-        onOpenProfile={profile.toggle}
-        customEmoji={customEmoji}
-        translation={translation}
-        notificationButton={<NotificationInboxButton />}
-      />
+      <>
+        <DmRoom
+          peer={toPerson(conversation.peer)}
+          sections={friends.sections}
+          railOpen={ui.railOpen}
+          onToggleRail={ui.toggleRail}
+          onSend={friends.send}
+          hasOlderMessages={friends.hasOlderMessages}
+          loadingOlderMessages={friends.loadingOlderMessages}
+          onLoadOlderMessages={friends.loadOlderMessages}
+          callActive={(conversation.callParticipants?.length ?? 0) > 0}
+          inCall={inCall}
+          onCall={() => friends.callConversation(conversation.id)}
+          videoOn={voice.call?.cameraOn ?? false}
+          onVideoCall={() => {
+            if (inCall) {
+              voice.toggleCamera();
+              return;
+            }
+            friends.callConversation(conversation.id);
+            window.setTimeout(voice.toggleCamera, CAMERA_AFTER_JOIN_MS);
+          }}
+          callPeople={voice.people}
+          cameraStreams={voice.cameraStreams}
+          localPersonId={user?.id ?? ""}
+          participantVolumes={voice.participantVolumes}
+          onParticipantVolumeChange={voice.setParticipantVolume}
+          participantGates={voice.participantGates}
+          onParticipantGateChange={voice.setParticipantGate}
+          participantSuppressions={voice.participantSuppressions}
+          onParticipantSuppressionChange={voice.setParticipantSuppression}
+          chips={friends.chips}
+          onAttach={friends.attach}
+          onRemoveChip={friends.removeChip}
+          onRetryChip={friends.retryChip}
+          onReorderChips={friends.reorderChips}
+          onOpenProfile={profile.toggle}
+          customEmoji={customEmoji}
+          translation={translation}
+          attachments={viewer.attachments}
+          notificationButton={<NotificationInboxButton />}
+        />
+        <MediaViewer target={viewer.target} onClose={viewer.close} />
+      </>
     );
   }
 
