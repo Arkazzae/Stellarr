@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@stellarr/ui";
 import type { FriendVM } from "@/components/view-models";
 import { useLanguage } from "@/state/LanguageProvider";
 
@@ -23,9 +24,9 @@ export function BlockedRow({ entry, onUnblock, onOpenProfile }: BlockedRowProps)
         onOpenProfile={onOpenProfile}
       />
       <span className="fr-acts">
-        <button type="button" className="btn-ghost sm" onClick={onUnblock}>
+        <Button type="button" variant="secondary" size="sm" onClick={onUnblock}>
           {t("common.unblock")}
-        </button>
+        </Button>
       </span>
     </li>
   );

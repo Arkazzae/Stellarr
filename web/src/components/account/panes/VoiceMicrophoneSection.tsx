@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef } from "react";
 
+import { Button } from "@stellarr/ui";
 import { Icon } from "@stellarr/ui/icons";
 import { ErrorNotice } from "@/components/primitives/ErrorNotice";
 import {
@@ -156,9 +157,11 @@ function MicrophoneCheck({ mic }: { mic: MicTest }) {
   return (
     <>
       <div className="mic-test">
-        <button
+        <Button
           type="button"
-          className={mic.running ? "btn-ghost sm on" : "btn-ghost sm"}
+          variant="secondary"
+          size="sm"
+          className={mic.running ? "test-toggle on" : "test-toggle"}
           disabled={mic.starting}
           onClick={() => (mic.running ? mic.stop() : mic.start())}
         >
@@ -168,7 +171,7 @@ function MicrophoneCheck({ mic }: { mic: MicTest }) {
             : mic.starting
               ? t("voice.opening")
               : t("voice.checkMicrophone")}
-        </button>
+        </Button>
         {/* One bar rather than a row of blocks: the number that matters is how
             close the level is to the line the detector draws, and `speaking`
             is where that line landed. */}

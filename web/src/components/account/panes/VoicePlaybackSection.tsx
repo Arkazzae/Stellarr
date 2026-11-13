@@ -2,6 +2,7 @@
 
 import { useId } from "react";
 
+import { Button } from "@stellarr/ui";
 import { Icon } from "@stellarr/ui/icons";
 import { ErrorNotice } from "@/components/primitives/ErrorNotice";
 import { PLAYBACK_TUNING_PRESETS } from "@/ports";
@@ -137,14 +138,16 @@ export function VoicePlaybackSection({ settings, onChange, output }: VoicePlayba
         ) : null}
 
         <FormRow label={t("voice.speakerTest")} detail={t("voice.speakerTestDetail")}>
-          <button
+          <Button
             type="button"
-            className={output.playing ? "btn-ghost sm on" : "btn-ghost sm"}
+            variant="secondary"
+            size="sm"
+            className={output.playing ? "test-toggle on" : "test-toggle"}
             onClick={() => (output.playing ? output.stop() : output.start())}
           >
             <Icon name={output.playing ? "pause" : "play"} size={15} />
             {output.playing ? t("voice.stopSound") : t("voice.playSound")}
-          </button>
+          </Button>
           <p className="pf-count output-status" role="status">
             {output.error !== null
               ? ""

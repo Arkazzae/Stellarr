@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 
+import { Button } from "@stellarr/ui";
 import { Icon } from "@stellarr/ui/icons";
 import type {
   Account,
@@ -132,9 +133,9 @@ export function AccountPane({
       </div>
 
       <div className="frm-actions">
-        <button
+        <Button
           type="button"
-          className="btn-primary"
+          variant="primary"
           disabled={!dirty || saving}
           onClick={() => void save()}
         >
@@ -144,7 +145,7 @@ export function AccountPane({
             </span>
           ) : null}
           {saved ? t("common.saved") : t("common.saveChanges")}
-        </button>
+        </Button>
       </div>
       {saveError === null ? null : (
         <p className="acc-answer bad" role="alert">

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { Button } from "@stellarr/ui";
 import { Icon } from "@stellarr/ui/icons";
 import type { DesktopRelease } from "@/lib/desktopRelease";
 import { formatBytes } from "@/lib/format";
@@ -75,10 +76,12 @@ export function DesktopReleasePane({ loadRelease }: DesktopReleasePaneProps) {
                   })}
                 </span>
               </div>
-              <a className="btn-primary" href={release.downloadUrl} download={release.fileName}>
-                <Icon name="download" size={15} />
-                {t("desktopRelease.download")}
-              </a>
+              <Button asChild variant="primary">
+                <a href={release.downloadUrl} download={release.fileName}>
+                  <Icon name="download" size={15} />
+                  {t("desktopRelease.download")}
+                </a>
+              </Button>
             </div>
             <p className="desktop-release-notes">{release.notes}</p>
             <dl className="desktop-release-details">

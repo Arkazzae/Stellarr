@@ -402,15 +402,15 @@
     font-weight: 600;
   }
 
-  /* `.btn-primary.sm` carries the shape; only the icon gap and the pressed
-     state are this button's own. */
+  /* The primary button's `sm` size carries the shape; only the icon gap and the
+     pressed state are this button's own. */
   .fr-add {
-    gap: 7px;
-    white-space: nowrap;
+    --ui-button-gap: 7px;
+    --ui-button-white-space: nowrap;
   }
 
   .fr-add.on {
-    background: var(--accent-hover);
+    --ui-button-primary-bg: var(--accent-hover);
   }
 
   .fr-body {
@@ -905,6 +905,7 @@
     align-items: center;
     gap: 10px;
     flex-wrap: wrap;
+    --ui-button-disabled-opacity: 0.45;
   }
 
   .fr-add-form input {
@@ -928,8 +929,7 @@
     border-color: var(--danger-line);
   }
 
-  .fr-add-form .btn-primary:disabled {
-    opacity: 0.45;
+  .fr-add-form > button:disabled {
     cursor: not-allowed;
   }
 
@@ -1075,7 +1075,7 @@
       grid-row: 1;
       height: 44px;
       width: 44px;
-      padding-inline: 0;
+      --ui-button-sm-padding-x: 0px;
     }
 
     .fr-add-label {
@@ -1152,9 +1152,12 @@
       flex-basis: 100%;
     }
 
-    .fr-add-form .btn-primary {
+    .fr-add-form {
+      --ui-button-min-height: 44px;
+    }
+
+    .fr-add-form > button {
       width: 100%;
-      min-height: 44px;
     }
   }
 

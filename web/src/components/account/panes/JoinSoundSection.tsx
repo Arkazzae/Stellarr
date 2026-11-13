@@ -2,6 +2,7 @@
 
 import { useId } from "react";
 
+import { Button } from "@stellarr/ui";
 import { Icon } from "@stellarr/ui/icons";
 import { ErrorNotice } from "@/components/primitives/ErrorNotice";
 import type { Translator } from "@/i18n";
@@ -73,15 +74,16 @@ export function JoinSoundSection({ joinSound }: { joinSound: JoinSoundPicker }) 
                     </optgroup>
                   ))}
                 </select>
-                <button
+                <Button
                   type="button"
-                  className="btn-ghost sm"
+                  variant="secondary"
+                  size="sm"
                   disabled={joinSound.selectedId === null || !joinSound.selectionAvailable}
                   onClick={() => joinSound.preview()}
                 >
                   <Icon name="play" size={15} />
                   {t("voice.joinSoundPreview")}
-                </button>
+                </Button>
               </div>
               <p className="pf-count" role="status">{pickerStatus(joinSound, t)}</p>
               {joinSound.failed ? (

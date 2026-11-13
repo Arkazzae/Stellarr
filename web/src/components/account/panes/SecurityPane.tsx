@@ -2,6 +2,7 @@
 
 import { useId, useState, type ChangeEvent } from "react";
 
+import { Button } from "@stellarr/ui";
 import { Icon } from "@stellarr/ui/icons";
 import type { Translator } from "@/i18n";
 import type { Account, EmailChangeResult, PasswordChangeResult } from "@/ports";
@@ -148,9 +149,9 @@ function EmailSection({
           <small>{t("account.recoveryEmailDetail")}</small>
         </span>
         {supported ? (
-          <button type="button" className="btn-ghost sm" aria-expanded={open} onClick={toggle}>
+          <Button type="button" variant="secondary" size="sm" aria-expanded={open} onClick={toggle}>
             {savedEmail.length === 0 ? t("account.addEmail") : t("account.changeEmail")}
-          </button>
+          </Button>
         ) : null}
       </div>
 
@@ -192,12 +193,12 @@ function EmailSection({
           />
           <p className="set-note">{t("account.emailLinkNote")}</p>
           <div className="acc-credential-actions">
-            <button type="button" className="btn-ghost" onClick={cancel}>
+            <Button type="button" variant="secondary" onClick={cancel}>
               {t("common.cancel")}
-            </button>
-            <button type="submit" className="btn-primary" disabled={!canSave}>
+            </Button>
+            <Button type="submit" variant="primary" disabled={!canSave}>
               {saving ? t("common.saving") : t("account.sendEmailLink")}
-            </button>
+            </Button>
           </div>
         </form>
       ) : null}
@@ -327,14 +328,15 @@ function PasswordSection({
           <span>{t("account.passwordHidden")}</span>
           <small>{t("account.passwordDetail")}</small>
         </span>
-        <button
+        <Button
           type="button"
-          className="btn-ghost sm"
+          variant="secondary"
+          size="sm"
           aria-expanded={open}
           onClick={toggle}
         >
           {open ? t("account.cancelPasswordChange") : t("account.changePassword")}
-        </button>
+        </Button>
       </div>
 
       {open ? (
@@ -367,12 +369,12 @@ function PasswordSection({
             onChange={edit("confirm")}
           />
           <div className="acc-credential-actions">
-            <button type="button" className="btn-ghost" onClick={close}>
+            <Button type="button" variant="secondary" onClick={close}>
               {t("common.cancel")}
-            </button>
-            <button type="submit" className="btn-primary" disabled={!canChange}>
+            </Button>
+            <Button type="submit" variant="primary" disabled={!canChange}>
               {saving ? t("common.saving") : t("account.changePassword")}
-            </button>
+            </Button>
           </div>
         </form>
       ) : null}

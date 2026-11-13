@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@stellarr/ui";
 import { Icon } from "@stellarr/ui/icons";
 import type {
   FriendRequestVM,
@@ -76,10 +77,10 @@ export function FriendsLists({
   // An empty list that only states its emptiness leaves the reader to work out
   // what to do about it, so each one carries the way out.
   const addAction = (
-    <button type="button" className="btn-primary sm" onClick={onAddFriend}>
+    <Button type="button" variant="primary" size="sm" onClick={onAddFriend}>
       <Icon name="userAdd" size={15} />
       {t("friends.addFriend")}
-    </button>
+    </Button>
   );
   const noMatches = (detail: MessageKey) => (
     <FriendsEmpty
@@ -87,9 +88,9 @@ export function FriendsLists({
       title={t("friends.queryEmptyTitle")}
       detail={t(detail, { query: typed })}
       action={
-        <button type="button" className="btn-ghost sm" onClick={onClearSearch}>
+        <Button type="button" variant="secondary" size="sm" onClick={onClearSearch}>
           {t("friends.clearSearch")}
-        </button>
+        </Button>
       }
     />
   );

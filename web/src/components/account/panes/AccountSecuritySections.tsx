@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@stellarr/ui";
 import { Icon } from "@stellarr/ui/icons";
 import { useConfirm } from "@/components/primitives/ConfirmDialog";
 import { formatShortDate } from "@/components/settings/panes/paneFormat";
@@ -169,9 +170,15 @@ export function AccountSecuritySections({
                           : t("security.twoStep.offDetail")}
                       </small>
                     </span>
-                    <button type="button" className="btn-ghost sm" onClick={onAddMethod} disabled={busy}>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={onAddMethod}
+                      disabled={busy}
+                    >
                       {t("security.twoStep.turnOn")}
-                    </button>
+                    </Button>
                   </div>
                 </div>
               ) : (
@@ -190,14 +197,15 @@ export function AccountSecuritySections({
                                 })}
                           </small>
                         </span>
-                        <button
+                        <Button
                           type="button"
-                          className="btn-ghost sm"
+                          variant="secondary"
+                          size="sm"
                           onClick={() => void removeMethod(method)}
                           disabled={busy}
                         >
                           {t("security.method.remove")}
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   ))}
@@ -208,20 +216,27 @@ export function AccountSecuritySections({
                         <span>{t("security.codes.remaining", { count: security.remainingRecoveryCodes })}</span>
                         <small>{t("security.codes.detail")}</small>
                       </span>
-                      <button
+                      <Button
                         type="button"
-                        className="btn-ghost sm"
+                        variant="secondary"
+                        size="sm"
                         onClick={() => void regenerate()}
                         disabled={busy}
                       >
                         {t("security.codes.regenerate")}
-                      </button>
+                      </Button>
                     </div>
                   </div>
                   <div className="acc-security-item">
-                    <button type="button" className="btn-ghost sm" onClick={onAddMethod} disabled={busy}>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      onClick={onAddMethod}
+                      disabled={busy}
+                    >
                       {t("security.twoStep.add")}
-                    </button>
+                    </Button>
                   </div>
                 </>
               )}
@@ -254,14 +269,15 @@ export function AccountSecuritySections({
                       <b>{identity.name}</b>
                       <small>{t("security.identities.linked", { date: date(identity.createdAt) })}</small>
                     </span>
-                    <button
+                    <Button
                       type="button"
-                      className="btn-ghost sm"
+                      variant="secondary"
+                      size="sm"
                       onClick={() => void unlinkIdentity(identity)}
                       disabled={busy}
                     >
                       {t("security.identities.unlink")}
-                    </button>
+                    </Button>
                   </div>
                 </div>
               ))
@@ -270,14 +286,15 @@ export function AccountSecuritySections({
               .filter((provider) => !security.identities.some((identity) => identity.providerId === provider.id))
               .map((provider) => (
                 <div className="acc-security-item" key={provider.id}>
-                  <button
+                  <Button
                     type="button"
-                    className="btn-ghost sm"
+                    variant="secondary"
+                    size="sm"
                     onClick={() => onLinkIdentity(provider)}
                     disabled={busy}
                   >
                     {t("security.identities.link", { provider: provider.displayName })}
-                  </button>
+                  </Button>
                 </div>
               ))}
           </div>
@@ -303,14 +320,15 @@ export function AccountSecuritySections({
                       <b>{deviceLabel(device.device)}</b>
                       <small>{t("security.devices.until", { date: date(device.expiresAt) })}</small>
                     </span>
-                    <button
+                    <Button
                       type="button"
-                      className="btn-ghost sm"
+                      variant="secondary"
+                      size="sm"
                       onClick={() => onRevokeDevice(device)}
                       disabled={busy}
                     >
                       {t("security.devices.revoke")}
-                    </button>
+                    </Button>
                   </div>
                 </div>
               ))
@@ -343,28 +361,30 @@ export function AccountSecuritySections({
                     </small>
                   </span>
                   {session.current ? null : (
-                    <button
+                    <Button
                       type="button"
-                      className="btn-ghost sm"
+                      variant="secondary"
+                      size="sm"
                       onClick={() => onRevokeSession(session)}
                       disabled={busy}
                     >
                       {t("security.sessions.signOut")}
-                    </button>
+                    </Button>
                   )}
                 </div>
               </div>
             ))}
             {sessions.some((session) => !session.current) ? (
               <div className="acc-security-item">
-                <button
+                <Button
                   type="button"
-                  className="btn-ghost sm"
+                  variant="secondary"
+                  size="sm"
                   onClick={() => void signOutOthers()}
                   disabled={busy}
                 >
                   {t("security.sessions.signOutOthers")}
-                </button>
+                </Button>
               </div>
             ) : null}
           </div>
