@@ -13,6 +13,13 @@ export interface LanguageSettings {
   chatTranslationTargetLanguage: TranslationTargetLanguage;
 }
 
+/** Everything but the locale, which comes from the request and not from a default. */
+export const TRANSLATION_DEFAULTS = {
+  chatTranslationEnabled: false,
+  chatAutoTranslateEnabled: false,
+  chatTranslationTargetLanguage: "en",
+} as const satisfies Omit<LanguageSettings, "locale">;
+
 /** Polish is the source catalog; the English one is checked against it by tests. */
 export type MessageKey = keyof typeof pl;
 export type MessageValues = Record<string, string | number>;

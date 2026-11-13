@@ -117,13 +117,16 @@ describe("useClientSettingsSync", () => {
     expect(world.save).not.toHaveBeenCalled();
   });
 
-  it("gives a section no device saved this device's values, without its devices", async () => {
+  it("gives a section no device saved what was set up here, without its devices", async () => {
     world.chosen = "pl";
+    world.theme = { ...DEFAULT_THEME, size: "lg" };
+    world.bindings = { ...DEFAULT_KEYBINDINGS, toggleMute: null };
+    voice().update({ opusProfile: "studio" });
 
     sync();
     await settle();
 
-    expect(world.save).toHaveBeenCalledWith("appearance", { ...DEFAULT_THEME });
+    expect(world.save).toHaveBeenCalledWith("appearance", { ...DEFAULT_THEME, size: "lg" });
     expect(world.save).toHaveBeenCalledWith("language", {
       locale: "pl",
       chatTranslationEnabled: false,
@@ -131,21 +134,67 @@ describe("useClientSettingsSync", () => {
     });
     expect(world.save).toHaveBeenCalledWith("keybinds", {
       version: KEYBIND_STORAGE_VERSION,
-      bindings: DEFAULT_KEYBINDINGS,
+      bindings: { ...DEFAULT_KEYBINDINGS, toggleMute: null },
     });
     const sentVoice = world.save.mock.calls.find(([section]) => section === "voice")?.[1] as Record<string, unknown>;
-    expect(sentVoice).toMatchObject({ version: 1, opusProfile: voice().getSnapshot().opusProfile });
+    expect(sentVoice).toMatchObject({ version: 1, opusProfile: "studio" });
     for (const local of ["inputDeviceId", "outputDeviceId", "videoDeviceId", "vadSensitivity"]) {
       expect(sentVoice).not.toHaveProperty(local);
     }
   });
 
+  it("keeps a device nobody set up off an account that has nothing yet, until it changes", async () => {
+    // Only the devices and the sensitivity differ, and those stay here anyway.
+    const hook = sync();
+    await settle();
+    expect(world.save).not.toHaveBeenCalled();
+
+    world.theme = { ...world.theme, contrast: "high" };
+    hook.rerender();
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(SAVE_DELAY_MS);
+    });
+    expect(world.save).toHaveBeenCalledExactlyOnceWith("appearance", { ...DEFAULT_THEME, contrast: "high" });
+  });
+
+  it("lets a computer set up later win over a phone signed in first", async () => {
+    const account: ClientSettingsSnapshot = { ...NOTHING_SAVED };
+    world.load = vi.fn(async () => ({ ...account }));
+    world.save = vi.fn(async (section: keyof ClientSettingsSnapshot, value: Record<string, unknown>) => {
+      account[section] = value;
+    });
+    ports.account = { loadClientSettings: world.load, saveClientSettings: world.save };
+
+    // The phone: untouched, signed in first.
+    const phone = sync();
+    await settle();
+    phone.unmount();
+    expect(account.appearance).toBeNull();
+
+    // The computer: set up, signed in second.
+    world.theme = { ...DEFAULT_THEME, palette: "harbor", density: "compact" };
+    const computer = sync();
+    await settle();
+    computer.unmount();
+
+    // The phone again: it takes the computer's theme.
+    world.theme = { ...DEFAULT_THEME };
+    world.updateTheme.mockClear();
+    sync();
+    await settle();
+    expect(world.updateTheme).toHaveBeenCalledExactlyOnceWith(
+      expect.objectContaining({ palette: "harbor", density: "compact" }),
+    );
+  });
+
   it("leaves the interface language out until the person has chosen one", async () => {
+    world.language = { ...world.language, chatTranslationEnabled: true };
+
     sync();
     await settle();
 
     expect(world.save).toHaveBeenCalledWith("language", {
-      chatTranslationEnabled: false,
+      chatTranslationEnabled: true,
       chatTranslationTargetLanguage: "en",
     });
   });

@@ -5,6 +5,7 @@ import { useEffect, useRef, useSyncExternalStore } from "react";
 import {
   appearanceFromWire,
   appearanceToWire,
+  defaultWire,
   keybindsFromWire,
   keybindsToWire,
   languageFromWire,
@@ -178,11 +179,14 @@ function load(run: Run, remote: ClientSettingsSnapshot, local: Local): void {
   for (const section of CLIENT_SETTINGS_SECTIONS) {
     const stored = remote[section];
     // Never saved: what this device has becomes the account's, which is how
-    // settings made before they followed the account carry over. Changed here
-    // and not confirmed: this device's value is the newer one.
+    // settings made before they followed the account carry over, unless it
+    // is only the defaults (see `defaultWire`). Changed here and not
+    // confirmed: this device's value is the newer one.
     if (stored === null || pending.has(section)) {
       const wire = localWire(local, section);
-      run.synced[section] = stableJson(wire);
+      const json = stableJson(wire);
+      run.synced[section] = json;
+      if (!pending.has(section) && json === stableJson(defaultWire(section))) continue;
       run.waiting[section] = wire;
       setPending(run.userId, section, true);
       send(run, section);
