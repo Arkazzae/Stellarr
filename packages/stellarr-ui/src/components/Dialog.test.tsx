@@ -17,6 +17,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "./Dialog";
+import { Tooltip, TooltipContent, TooltipTrigger } from "./Tooltip";
 
 function DeleteServer() {
   const [open, setOpen] = useState(false);
@@ -105,6 +106,30 @@ describe("Dialog", () => {
 
     await user.click(opener);
     fireEvent.pointerDown(document.querySelector(".ui-overlay") as Element);
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("closes on a press outside while a tooltip is open on a button inside it", async () => {
+    const user = userEvent.setup();
+    render(
+      <Dialog defaultOpen>
+        <DialogContent closeLabel="Close">
+          <DialogTitle>Backups</DialogTitle>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button aria-label="What a backup holds">i</Button>
+            </TooltipTrigger>
+            <TooltipContent>The database, files and keys.</TooltipContent>
+          </Tooltip>
+        </DialogContent>
+      </Dialog>,
+    );
+
+    await user.hover(screen.getByRole("button", { name: "What a backup holds" }));
+    await screen.findByRole("tooltip");
+
+    fireEvent.pointerDown(document.querySelector(".ui-overlay") as Element);
+
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 

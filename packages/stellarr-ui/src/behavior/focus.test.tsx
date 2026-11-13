@@ -18,9 +18,9 @@ function Box() {
 const box = () => screen.getByTestId("box");
 const button = (name: string) => screen.getByRole("button", { name });
 
-function pressTab(shiftKey = false) {
+function pressTab(shiftKey = false, options?: { reclaim?: boolean }) {
   const event = new KeyboardEvent("keydown", { key: "Tab", shiftKey, cancelable: true });
-  trapTab(event, box());
+  trapTab(event, box(), options);
   return event;
 }
 
@@ -111,6 +111,31 @@ describe("trapTab", () => {
 
     expect(event.defaultPrevented).toBe(true);
     expect(screen.getByRole("link", { name: "Help" })).toHaveFocus();
+  });
+
+  it("leaves a Tab from outside the container to the browser when it does not reclaim", () => {
+    render(
+      <>
+        <button>Outside</button>
+        <Box />
+      </>,
+    );
+    button("Outside").focus();
+
+    expect(pressTab(false, { reclaim: false }).defaultPrevented).toBe(false);
+    expect(pressTab(true, { reclaim: false }).defaultPrevented).toBe(false);
+    expect(button("Outside")).toHaveFocus();
+  });
+
+  it("still wraps at both ends when it does not reclaim", () => {
+    render(<Box />);
+    button("Last").focus();
+
+    expect(pressTab(false, { reclaim: false }).defaultPrevented).toBe(true);
+    expect(screen.getByRole("link", { name: "Help" })).toHaveFocus();
+
+    expect(pressTab(true, { reclaim: false }).defaultPrevented).toBe(true);
+    expect(button("Last")).toHaveFocus();
   });
 
   it("leaves a Tab between two stops to the browser", () => {

@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { hideOthers, lockPointer, lockScroll, useLayer, type Layer } from "./layers";
 
-type Handlers = Pick<Layer, "onEscape" | "onTab" | "onPointerDownOutside">;
+type Handlers = Pick<Layer, "owns" | "onEscape" | "onTab" | "onPointerDownOutside">;
 
 /** A layer that is on the stack while `active`, with the handlers it is given. */
 function Probe({ name, active = true, ...handlers }: { name: string; active?: boolean } & Handlers) {
@@ -92,6 +92,86 @@ describe("useLayer", () => {
     expect(page).toHaveBeenCalledTimes(2);
   });
 
+  it("leaves an Escape to a control inside the layer that stops it", async () => {
+    const user = userEvent.setup();
+    const escape = vi.fn();
+    const page = vi.fn();
+    window.addEventListener("keydown", page);
+    undos.push(() => window.removeEventListener("keydown", page));
+    render(
+      <>
+        <Probe name="only" onEscape={escape} />
+        <input
+          aria-label="Search"
+          onKeyDown={(event) => {
+            if (event.key === "Escape") event.stopPropagation();
+          }}
+        />
+      </>,
+    );
+
+    await user.click(screen.getByRole("textbox", { name: "Search" }));
+    await user.keyboard("{Escape}");
+
+    expect(escape).not.toHaveBeenCalled();
+    expect(page).not.toHaveBeenCalled();
+  });
+
+  it("asks the next layer down when a layer passes on an Escape, and keeps the key from the page", async () => {
+    const user = userEvent.setup();
+    const below = vi.fn();
+    const above = vi.fn(() => false as const);
+    const page = vi.fn();
+    window.addEventListener("keydown", page);
+    undos.push(() => window.removeEventListener("keydown", page));
+    render(<Stack below={{ onEscape: below }} above={{ onEscape: above }} />);
+
+    await user.keyboard("{Escape}");
+
+    expect(above).toHaveBeenCalledOnce();
+    expect(below).toHaveBeenCalledOnce();
+    expect(page).not.toHaveBeenCalled();
+  });
+
+  it("passes an Escape on to the page when every layer passes", async () => {
+    const user = userEvent.setup();
+    const below = vi.fn(() => false as const);
+    const above = vi.fn(() => false as const);
+    const page = vi.fn();
+    window.addEventListener("keydown", page);
+    undos.push(() => window.removeEventListener("keydown", page));
+    render(<Stack below={{ onEscape: below }} above={{ onEscape: above }} />);
+
+    await user.keyboard("{Escape}");
+
+    expect(above).toHaveBeenCalledOnce();
+    expect(below).toHaveBeenCalledOnce();
+    expect(page).toHaveBeenCalledOnce();
+  });
+
+  it("stops asking once a layer takes the Escape, whatever it returns", async () => {
+    const user = userEvent.setup();
+    const below = vi.fn();
+    const above = vi.fn(() => true as unknown as void);
+    render(<Stack below={{ onEscape: below }} above={{ onEscape: above }} />);
+
+    await user.keyboard("{Escape}");
+
+    expect(above).toHaveBeenCalledOnce();
+    expect(below).not.toHaveBeenCalled();
+  });
+
+  it("forwards the answer of the latest handler", async () => {
+    const user = userEvent.setup();
+    const below = vi.fn();
+    const { rerender } = render(<Stack below={{ onEscape: below }} above={{ onEscape: () => {} }} />);
+
+    rerender(<Stack below={{ onEscape: below }} above={{ onEscape: () => false }} />);
+    await user.keyboard("{Escape}");
+
+    expect(below).toHaveBeenCalledOnce();
+  });
+
   it("sends Tab to the topmost layer that handles it", async () => {
     const user = userEvent.setup();
     const below = vi.fn();
@@ -115,6 +195,15 @@ describe("useLayer", () => {
     expect(below).not.toHaveBeenCalled();
   });
 
+  it("sends a press outside to the topmost layer that listens for it, past layers that do not", () => {
+    const below = vi.fn();
+    render(<Stack below={{ onPointerDownOutside: below }} above={{ onEscape: () => {} }} />);
+
+    fireEvent.pointerDown(document.body);
+
+    expect(below).toHaveBeenCalledOnce();
+  });
+
   it("does not call a layer for a press inside its own element", () => {
     const above = vi.fn();
     render(<Probe name="above" onPointerDownOutside={above} />);
@@ -133,6 +222,59 @@ describe("useLayer", () => {
 
     expect(above).toHaveBeenCalledOnce();
     expect(below).not.toHaveBeenCalled();
+  });
+
+  it("tells inside from outside by `owns` when a layer has it", () => {
+    const outside = vi.fn();
+    render(
+      <>
+        <button>Trigger</button>
+        <Probe
+          name="own"
+          owns={(target) => target === screen.getByRole("button", { name: "Trigger" })}
+          onPointerDownOutside={outside}
+        />
+      </>,
+    );
+
+    // The layer's own element counts as outside, as `owns` does not name it.
+    fireEvent.pointerDown(screen.getByTestId("own"));
+    expect(outside).toHaveBeenCalledOnce();
+
+    // A node beside the element counts as inside, as `owns` names it.
+    fireEvent.pointerDown(screen.getByRole("button", { name: "Trigger" }));
+    expect(outside).toHaveBeenCalledOnce();
+  });
+
+  it("does not ask the element of a layer that has `owns`, and reads the latest `owns`", () => {
+    const outside = vi.fn();
+    const node = vi.fn(() => null);
+    const Owner = ({ owning }: { owning: boolean }) => {
+      useLayer(true, { node, owns: () => owning, onPointerDownOutside: outside });
+      return null;
+    };
+    const { rerender } = render(<Owner owning />);
+
+    fireEvent.pointerDown(document.body);
+    expect(outside).not.toHaveBeenCalled();
+
+    rerender(<Owner owning={false} />);
+    fireEvent.pointerDown(document.body);
+    expect(outside).toHaveBeenCalledOnce();
+    expect(node).not.toHaveBeenCalled();
+  });
+
+  it("ignores a press for a layer that has neither an element nor `owns`", () => {
+    const outside = vi.fn();
+    const Hidden = () => {
+      useLayer(true, { node: () => null, onPointerDownOutside: outside });
+      return null;
+    };
+    render(<Hidden />);
+
+    fireEvent.pointerDown(document.body);
+
+    expect(outside).not.toHaveBeenCalled();
   });
 
   it("takes its layer off the stack when it unmounts, so the one beneath is heard again", async () => {

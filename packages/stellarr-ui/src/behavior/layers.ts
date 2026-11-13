@@ -4,21 +4,39 @@ import { useEffect, useRef } from "react";
 
 /**
  * Everything that floats over the page (a dialog, a sheet, a menu, a tooltip)
- * is a layer. Only the topmost layer that handles a key hears it, so Escape in
- * a menu opened from a sheet closes the menu and leaves the sheet open.
+ * is a layer. Only one layer takes a key, so Escape in a menu opened from a
+ * sheet closes the menu and leaves the sheet open.
  *
  * A layer lists only the keys and presses it handles. An Escape or a Tab goes
  * to the topmost layer that has a handler for it, and a press outside goes to
- * the topmost layer alone, which ignores it when it has no handler for it.
+ * the topmost layer that has a handler for it. A layer above that has none is
+ * skipped, so a tooltip over a dialog does not shield the dialog from a press.
  */
 export interface Layer {
-  /** The layer's own element; a press inside it is not "outside". */
+  /**
+   * The layer's own element; a press inside it is not "outside". A layer that
+   * hears no presses returns `null`.
+   */
   node: () => HTMLElement | null;
-  /** Escape. The event goes no further, so the page's own handlers do not also act on it. */
-  onEscape?: (event: KeyboardEvent) => void;
+  /**
+   * Says whether a pressed node is part of the layer, for a layer whose element
+   * is not the whole answer: a dialog whose wrapper is also its backdrop, a
+   * panel whose trigger toggles it. When given, it decides alone and `node` is
+   * not asked.
+   */
+  owns?: (target: Node) => boolean;
+  /**
+   * Escape. The event goes no further once a layer takes it, so the page's own
+   * handlers do not also act on it. Return `false` to pass: the next layer down
+   * that has `onEscape` is asked, and when every layer passes the key carries
+   * on to the page. A side panel that stays open under a dialog passes
+   * whenever a dialog is in front of it, even if the panel joined the stack
+   * later.
+   */
+  onEscape?: (event: KeyboardEvent) => void | false;
   /** Tab, to keep the focus inside the layer; see `trapTab`. */
   onTab?: (event: KeyboardEvent) => void;
-  /** A press anywhere else; only the topmost layer hears it. */
+  /** A press anywhere else; only the topmost layer that has this handler hears it. */
   onPointerDownOutside?: (event: PointerEvent) => void;
 }
 
@@ -34,36 +52,47 @@ function topmost(handles: keyof Layer): Layer | undefined {
 
 function onKeyDown(event: KeyboardEvent) {
   if (event.key === "Escape") {
-    const layer = topmost("onEscape");
-    if (layer === undefined) return;
-    // A window-level Escape handler must not also act on this press.
-    event.stopPropagation();
-    layer.onEscape?.(event);
+    // A copy, as a layer that takes the key may leave the stack at once.
+    for (const layer of [...stack].reverse()) {
+      if (layer.onEscape === undefined || layer.onEscape(event) === false) continue;
+      // A window-level Escape handler must not also act on this press.
+      event.stopPropagation();
+      return;
+    }
   } else if (event.key === "Tab") {
     topmost("onTab")?.onTab?.(event);
   }
 }
 
 function onPointerDown(event: PointerEvent) {
-  const layer = stack[stack.length - 1];
-  const node = layer?.node();
-  if (layer === undefined || node === null || node === undefined) return;
-  if (event.target instanceof Node && node.contains(event.target)) return;
+  const layer = topmost("onPointerDownOutside");
+  const target = event.target;
+  if (layer === undefined || !(target instanceof Node)) return;
+  if (layer.owns !== undefined) {
+    if (layer.owns(target)) return;
+  } else {
+    const node = layer.node();
+    if (node === null || node.contains(target)) return;
+  }
   layer.onPointerDownOutside?.(event);
 }
 
 function push(layer: Layer): () => void {
   stack.push(layer);
   if (stack.length === 1) {
-    // Capture, so the layer hears the key before anything inside the page does.
-    document.addEventListener("keydown", onKeyDown, true);
+    // Escape and Tab are heard in the bubble phase: a control inside a layer
+    // that handles Escape itself (an inline editor that cancels, a search field
+    // that clears) keeps the key by stopping it, where in the capture phase the
+    // layer would close before the control ever heard it. A press is heard in
+    // the capture phase, before anything inside the page can stop it.
+    document.addEventListener("keydown", onKeyDown);
     document.addEventListener("pointerdown", onPointerDown, true);
   }
   return () => {
     const index = stack.lastIndexOf(layer);
     if (index !== -1) stack.splice(index, 1);
     if (stack.length === 0) {
-      document.removeEventListener("keydown", onKeyDown, true);
+      document.removeEventListener("keydown", onKeyDown);
       document.removeEventListener("pointerdown", onPointerDown, true);
     }
   };
@@ -75,9 +104,9 @@ function push(layer: Layer): () => void {
  * handlers may change between renders, so they may close over fresh state.
  *
  * Which handlers a layer has is read when it joins: pass `onEscape` for as
- * long as `active` is true or not at all. The layer's element must be on the
- * page while it is on the stack, as `node` is how a press outside is told
- * from a press inside.
+ * long as `active` is true or not at all, and likewise `owns`. The layer's
+ * element must be on the page while it is on the stack, as `node` (or `owns`)
+ * is how a press outside is told from a press inside.
  */
 export function useLayer(active: boolean, layer: Layer): void {
   const latest = useRef(layer);
@@ -89,6 +118,7 @@ export function useLayer(active: boolean, layer: Layer): void {
     if (!active) return;
     return push({
       node: () => latest.current.node(),
+      owns: layer.owns && ((target) => latest.current.owns?.(target) ?? false),
       onEscape: layer.onEscape && ((event) => latest.current.onEscape?.(event)),
       onTab: layer.onTab && ((event) => latest.current.onTab?.(event)),
       onPointerDownOutside:
