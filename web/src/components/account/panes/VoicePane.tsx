@@ -27,7 +27,9 @@ export interface VoicePaneProps {
  *
  * Ordered by what goes wrong. The microphone comes first, because a call on the
  * wrong one is not a quality problem but silence, then what is heard, then the
- * processing and codecs that matter to someone who can already be heard.
+ * processing and codecs that matter to someone who can already be heard. The
+ * picture follows the sound rather than interleaving with it: the camera and
+ * the screen are what someone adds to a call that already works.
  *
  * Every setting is backed by the voice settings store, which persists to this
  * browser while the audio pipeline reads it live, so a change lands on a call
@@ -55,8 +57,8 @@ export function VoicePane({
       />
       <VoicePlaybackSection settings={settings} onChange={onChange} output={output} />
       <VoiceProcessingSection settings={settings} onChange={onChange} mic={mic} />
-      <VoiceCameraSection settings={settings} onChange={onChange} camera={camera} />
       <VoiceAudioQualitySection settings={settings} onChange={onChange} />
+      <VoiceCameraSection settings={settings} onChange={onChange} camera={camera} />
       <VoiceScreenSharingSection settings={settings} onChange={onChange} />
       <VoiceResetRow onReset={onReset} />
     </>
