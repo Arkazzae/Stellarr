@@ -23,7 +23,9 @@ export type KeybindRecordingError =
   | { kind: Exclude<KeybindValidation, "valid"> }
   | { kind: "conflict"; action: KeybindAction };
 
-const STORAGE_VERSION = 1;
+/** The shape `parseKeybindings` reads, here and on the account. */
+export const KEYBIND_STORAGE_VERSION = 1;
+const STORAGE_VERSION = KEYBIND_STORAGE_VERSION;
 
 /** Keys that only describe a chord and cannot be its main key. */
 const MODIFIER_CODES: ReadonlySet<string> = new Set([

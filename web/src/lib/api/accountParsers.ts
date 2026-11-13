@@ -13,6 +13,8 @@ import { isPresence } from "./types";
 import type {
   AccountDetails,
   AccountPreferences,
+  ClientSettingsSection,
+  ClientSettingsSnapshot,
   EmailChangeAnswer,
   EmailConfirmAnswer,
   FriendRequestAnswer,
@@ -88,6 +90,24 @@ export function parsePreferences(value: unknown, path: string): AccountPreferenc
       typeof vad === "number" && Number.isInteger(vad) && vad >= 0 && vad <= 100
         ? vad
         : DEFAULT_VAD_SENSITIVITY,
+  };
+}
+
+export function parseClientSettings(value: unknown, path: string): ClientSettingsSnapshot {
+  const record = expectRecord(value, path);
+  const section = (key: ClientSettingsSection): Record<string, unknown> | null => {
+    const stored = record[key];
+    // Anything but an object reads as never saved, so one damaged section does
+    // not cost the others.
+    return typeof stored === "object" && stored !== null && !Array.isArray(stored)
+      ? (stored as Record<string, unknown>)
+      : null;
+  };
+  return {
+    appearance: section("appearance"),
+    language: section("language"),
+    keybinds: section("keybinds"),
+    voice: section("voice"),
   };
 }
 

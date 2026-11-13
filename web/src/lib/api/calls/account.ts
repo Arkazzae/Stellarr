@@ -1,12 +1,13 @@
 import type { ApiClient } from "../client";
 import {
   parseAccount,
+  parseClientSettings,
   parseEmailChangeAnswer,
   parseJoinSoundLibrary,
   parsePasswordAnswer,
   parsePreferences,
 } from "../parsers";
-import { fileForm, getJson, postForm, route, sendJson } from "./http";
+import { fileForm, getJson, postForm, route, sendJson, sendVoid } from "./http";
 
 type AccountCalls = Pick<
   ApiClient,
@@ -14,6 +15,8 @@ type AccountCalls = Pick<
   | "updateAccount"
   | "updatePreferences"
   | "getJoinSoundLibrary"
+  | "getClientSettings"
+  | "saveClientSettings"
   | "changePassword"
   | "requestEmailChange"
   | "uploadAccountImage"
@@ -31,6 +34,11 @@ export function accountCalls(): AccountCalls {
 
     getJoinSoundLibrary: (signal) =>
       getJson("/api/me/join-sound", parseJoinSoundLibrary, signal),
+
+    getClientSettings: (signal) => getJson("/api/me/settings", parseClientSettings, signal),
+
+    saveClientSettings: (section, value, signal) =>
+      sendVoid("PUT", route`/api/me/settings/${section}`, value, signal),
 
     changePassword: (currentPassword, newPassword, signal) =>
       sendJson(

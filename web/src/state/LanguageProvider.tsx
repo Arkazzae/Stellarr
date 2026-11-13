@@ -25,6 +25,12 @@ export type { InterfaceLocale, LanguageSettings, TranslationTargetLanguage } fro
 
 export interface LanguageValue extends LanguageSettings {
   update: (patch: Partial<LanguageSettings>) => void;
+  /**
+   * The interface language the person picked, now or on an earlier visit, or
+   * undefined while they have not: what shows then is the instance default,
+   * which nothing should store on their behalf.
+   */
+  chosenLocale: () => InterfaceLocale | undefined;
   /** Short component copy in both languages, without a catalog entry. */
   text: (polish: string, english: string) => string;
   /** Typed catalog lookup for copy shared across surfaces. */
@@ -82,9 +88,9 @@ function persist(settings: LanguageSettings, localeChosen: boolean): void {
 
 /** The language the person chose on an earlier visit, if they ever did. */
 function readStoredLocale(): InterfaceLocale | undefined {
-  const raw = window.localStorage.getItem(STORAGE_KEY);
-  if (raw === null) return undefined;
   try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+    if (raw === null) return undefined;
     const locale = (JSON.parse(raw) as { locale?: unknown } | null)?.locale;
     return isSupportedLocale(locale) ? locale : undefined;
   } catch {
@@ -112,6 +118,7 @@ function standaloneValue(locale: InterfaceLocale): LanguageValue {
     ...DEFAULTS,
     locale,
     update: () => undefined,
+    chosenLocale: () => undefined,
     text: (polish, english) => (locale === "en" ? english : polish),
     t: (key, values) => translateMessage(locale, key, values),
   };
@@ -140,7 +147,8 @@ export function LanguageProvider({
   const [pageLocale] = useState(documentLocale);
   const startLocale = initialLocale ?? pageLocale;
   // The locale from the cookie is the same on the server and in the first
-  // client render. Translation preferences live only on this device, so they
+  // client render. Translation preferences are kept in this browser (the
+  // account's copy arrives later, through ClientSettingsSync), so they
   // are read after hydration.
   const [settings, setSettings] = useState<LanguageSettings>({
     ...DEFAULTS,
@@ -191,7 +199,7 @@ export function LanguageProvider({
   );
 
   const value = useMemo<LanguageValue>(
-    () => ({ ...settings, update, text, t }),
+    () => ({ ...settings, update, chosenLocale: readStoredLocale, text, t }),
     [settings, update, text, t],
   );
 

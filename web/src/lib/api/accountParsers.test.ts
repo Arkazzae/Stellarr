@@ -4,6 +4,7 @@ import {
   parseAccount,
   parseFriendRequestAnswer,
   parsePasswordAnswer,
+  parseClientSettings,
   parsePreferences,
   parseSocialState,
   parseUser,
@@ -64,6 +65,26 @@ describe("parseUser", () => {
     expectMalformed(() => parseUser(null, "/p"));
     expectMalformed(() => parseUser({ username: "maja" }, "/p"));
     expectMalformed(() => parseUser({ id: "u-1" }, "/p"));
+  });
+});
+
+describe("parseClientSettings", () => {
+  it("keeps each saved section and reads anything else as never saved", () => {
+    expect(
+      parseClientSettings(
+        { appearance: { palette: "ember" }, language: null, keybinds: [1], voice: "loud" },
+        "/api/me/settings",
+      ),
+    ).toEqual({ appearance: { palette: "ember" }, language: null, keybinds: null, voice: null });
+  });
+
+  it("reads an older server's missing sections as never saved", () => {
+    expect(parseClientSettings({}, "/api/me/settings")).toEqual({
+      appearance: null,
+      language: null,
+      keybinds: null,
+      voice: null,
+    });
   });
 });
 
