@@ -21,15 +21,15 @@ function setup(overrides: Partial<VoicePaneProps> = {}) {
 }
 
 describe("VoicePane", () => {
-  it("lays the settings out in the order things go wrong", () => {
+  it("lays the settings out in the order things go wrong, sound before picture", () => {
     setup();
 
     const controls = [
       screen.getByLabelText("Mikrofon"),
       screen.getByLabelText("Urządzenie wyjściowe"),
       screen.getByRole("radiogroup", { name: "Redukcja szumu" }),
-      screen.getByLabelText("Kamera"),
       screen.getByRole("radiogroup", { name: "Profil dźwięku" }),
+      screen.getByLabelText("Kamera"),
       screen.getByRole("radiogroup", { name: "Jakość udostępniania ekranu" }),
       screen.getByRole("button", { name: "Przywróć" }),
     ];
