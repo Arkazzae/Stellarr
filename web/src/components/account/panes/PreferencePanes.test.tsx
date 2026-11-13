@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -44,13 +44,37 @@ describe("UserNotificationsPane", () => {
 
     expect(screen.queryByRole("switch", { name: "Powiadomienia push" })).toBeNull();
     expect(screen.queryByRole("switch", { name: "Powiadomienia e-mail" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Tylko wzmianki" })).toBeNull();
 
     await user.click(screen.getByRole("switch", { name: "Dźwięk wiadomości" }));
     await user.click(screen.getByRole("switch", { name: "Dźwięk wejścia i wyjścia" }));
 
     expect(onChange).toHaveBeenCalledWith({ messageSound: false });
     expect(onChange).toHaveBeenCalledWith({ joinLeaveSound: false });
+  });
+
+  it("chooses what the message sound plays for, with mentions as the default", async () => {
+    const user = userEvent.setup();
+    const onChange = vi.fn();
+    render(<UserNotificationsPane preferences={preferences} onChange={onChange} />);
+
+    const choice = screen.getByRole("radiogroup", { name: "Kiedy grać" });
+    expect(within(choice).getByRole("radio", { name: /Wzmianki/ })).toBeChecked();
+    await user.click(within(choice).getByRole("radio", { name: /Wszystkie wiadomości/ }));
+
+    expect(onChange).toHaveBeenCalledExactlyOnceWith({ mentionsOnly: false });
+  });
+
+  it("holds the choice while the message sound is off, since it would change nothing", () => {
+    render(
+      <UserNotificationsPane
+        preferences={{ ...preferences, messageSound: false }}
+        onChange={vi.fn()}
+      />,
+    );
+
+    for (const option of within(screen.getByRole("radiogroup", { name: "Kiedy grać" })).getAllByRole("radio")) {
+      expect(option).toBeDisabled();
+    }
   });
 
   it("shows system notifications on only when the permission is granted too", () => {
