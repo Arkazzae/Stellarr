@@ -114,7 +114,9 @@ export function RailLauncher({ items, label }: RailLauncherProps) {
       onKeyDown={(event) => {
         if (event.key !== "Escape" || !open) return;
         // `AppShell` listens on `window`; stopping here closes the card
-        // without also closing a drawer underneath it.
+        // without also closing a drawer underneath it. Prevented too, which is
+        // how the layer stack on `document` tells that the key is taken.
+        event.preventDefault();
         event.stopPropagation();
         // Focus first: arriving on the tile from a row opens the card, and
         // closing afterwards is what wins.

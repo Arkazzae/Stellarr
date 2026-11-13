@@ -117,6 +117,25 @@ describe("useLayer", () => {
     expect(page).not.toHaveBeenCalled();
   });
 
+  it("leaves alone a key that a handler on the document itself already handled", async () => {
+    const user = userEvent.setup();
+    const escape = vi.fn();
+    const tab = vi.fn();
+    // Stands in for React's own handlers in an app whose root is the document:
+    // they sit on the same node as the stack, so stopping the event would not
+    // hide it, and preventing its default is what says the key is taken.
+    const handled = (event: KeyboardEvent) => event.preventDefault();
+    document.addEventListener("keydown", handled);
+    undos.push(() => document.removeEventListener("keydown", handled));
+    render(<Probe name="only" onEscape={escape} onTab={tab} />);
+
+    await user.keyboard("{Escape}");
+    await user.keyboard("{Tab}");
+
+    expect(escape).not.toHaveBeenCalled();
+    expect(tab).not.toHaveBeenCalled();
+  });
+
   it("asks the next layer down when a layer passes on an Escape, and keeps the key from the page", async () => {
     const user = userEvent.setup();
     const below = vi.fn();

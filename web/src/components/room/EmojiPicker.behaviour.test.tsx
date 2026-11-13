@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -18,6 +18,18 @@ describe("EmojiPicker keyboard and search", () => {
     render(<EmojiPicker onPick={vi.fn()} onClose={onClose} />);
     await userEvent.type(searchBox(), "{Escape}");
     expect(onClose).toHaveBeenCalledOnce();
+  });
+
+  it("marks the Escape it closes on as handled, and leaves it alone when it cannot close", () => {
+    // `fireEvent` returns false when the default was prevented, which is how the
+    // layer stack tells that a key is taken: in the app React's handlers and the
+    // stack share the document, so stopping the event would not hide it.
+    const { unmount } = render(<EmojiPicker onPick={vi.fn()} onClose={vi.fn()} />);
+    expect(fireEvent.keyDown(searchBox(), { key: "Escape" })).toBe(false);
+    unmount();
+
+    render(<EmojiPicker onPick={vi.fn()} />);
+    expect(fireEvent.keyDown(searchBox(), { key: "Escape" })).toBe(true);
   });
 
   it("returns to the search field when arrowing up from the first row", async () => {
