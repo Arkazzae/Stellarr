@@ -29,6 +29,11 @@ internal static class AccountSchema
         ("JoinSoundId", """ALTER TABLE "UserPreferences" ADD COLUMN "JoinSoundId" TEXT NULL;"""),
         ("VadSensitivity", """ALTER TABLE "UserPreferences" ADD COLUMN "VadSensitivity" INTEGER NOT NULL DEFAULT 60;"""),
         ("MutedChannelIdsJson", """ALTER TABLE "UserPreferences" ADD COLUMN "MutedChannelIdsJson" TEXT NOT NULL DEFAULT '[]';"""),
+        // The client's own settings, one object per section; null until saved.
+        ("AppearanceSettingsJson", """ALTER TABLE "UserPreferences" ADD COLUMN "AppearanceSettingsJson" TEXT NULL;"""),
+        ("LanguageSettingsJson", """ALTER TABLE "UserPreferences" ADD COLUMN "LanguageSettingsJson" TEXT NULL;"""),
+        ("KeybindSettingsJson", """ALTER TABLE "UserPreferences" ADD COLUMN "KeybindSettingsJson" TEXT NULL;"""),
+        ("VoiceSettingsJson", """ALTER TABLE "UserPreferences" ADD COLUMN "VoiceSettingsJson" TEXT NULL;"""),
     ];
 
     internal static async Task UpgradeAsync(AppDbContext db, CancellationToken cancellationToken)
@@ -69,6 +74,10 @@ internal static class AccountSchema
                 "MutedChannelIdsJson" TEXT NOT NULL DEFAULT '[]',
                 "VadSensitivity" INTEGER NOT NULL DEFAULT 60,
                 "JoinSoundId" TEXT NULL,
+                "AppearanceSettingsJson" TEXT NULL,
+                "LanguageSettingsJson" TEXT NULL,
+                "KeybindSettingsJson" TEXT NULL,
+                "VoiceSettingsJson" TEXT NULL,
                 CONSTRAINT "FK_UserPreferences_Users_UserId"
                     FOREIGN KEY ("UserId") REFERENCES "Users" ("Id") ON DELETE CASCADE
             );

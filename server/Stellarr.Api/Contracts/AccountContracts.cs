@@ -28,6 +28,16 @@ public sealed record UpdatePreferencesRequest(
     // clears the choice; absent leaves it alone, like every field around it.
     string? JoinSoundId = null);
 
+/// <summary>
+/// The client's own settings, one object per section, or null for a section no
+/// device has saved yet. The fields belong to the client and are passed through.
+/// </summary>
+public sealed record ClientSettingsDto(
+    JsonElement? Appearance,
+    JsonElement? Language,
+    JsonElement? Keybinds,
+    JsonElement? Voice);
+
 public sealed record ChangePasswordRequest(string CurrentPassword, string NewPassword);
 
 public sealed record ForgotPasswordRequest(string Email);

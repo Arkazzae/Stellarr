@@ -84,5 +84,23 @@ public sealed class UserPreferenceSettings
     /// </summary>
     public Guid? JoinSoundId { get; set; }
 
+    /// <summary>
+    /// The web client's own settings, one JSON object per section, written as
+    /// the client sent them: how the app looks, the language it speaks, the
+    /// call shortcuts and the voice processing. The client validates every
+    /// field on the way back in, so the server only checks the shape and the
+    /// size. Null means no device has saved the section yet.
+    /// </summary>
+    public string? AppearanceSettingsJson { get; set; }
+
+    /// <inheritdoc cref="AppearanceSettingsJson"/>
+    public string? LanguageSettingsJson { get; set; }
+
+    /// <inheritdoc cref="AppearanceSettingsJson"/>
+    public string? KeybindSettingsJson { get; set; }
+
+    /// <inheritdoc cref="AppearanceSettingsJson"/>
+    public string? VoiceSettingsJson { get; set; }
+
     public User User { get; set; } = null!;
 }

@@ -18,6 +18,7 @@ public sealed partial class Messages
         MessageKey.PasswordTooLong => "Password can be at most {max} characters long.",
         MessageKey.NewPasswordTooLong => "New password can be at most {max} characters long.",
         MessageKey.RecoveryEmailChangeDisabled => "The address changes on its own, through a link sent to the new address.",
+        MessageKey.ClientSettingsInvalid => "Settings must be a JSON object of at most {max} characters.",
         MessageKey.VadSensitivityRange => "Speech detection sensitivity must be between 0 and 100.",
         MessageKey.JoinSoundNotAvailable => "Pick a sound from the soundboard of a server you are on.",
         MessageKey.AccountDisplayNameLength => "Display name must be 1 to {max} characters long.",

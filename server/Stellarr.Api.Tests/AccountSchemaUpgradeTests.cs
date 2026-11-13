@@ -104,6 +104,15 @@ public sealed class AccountSchemaUpgradeTests
                     "ALTER TABLE \"UserPreferences\" DROP COLUMN \"VadSensitivity\";");
                 await old.Database.ExecuteSqlRawAsync(
                     "ALTER TABLE \"UserPreferences\" DROP COLUMN \"MutedChannelIdsJson\";");
+                // And from before the client's own settings followed the account.
+                await old.Database.ExecuteSqlRawAsync(
+                    "ALTER TABLE \"UserPreferences\" DROP COLUMN \"AppearanceSettingsJson\";");
+                await old.Database.ExecuteSqlRawAsync(
+                    "ALTER TABLE \"UserPreferences\" DROP COLUMN \"LanguageSettingsJson\";");
+                await old.Database.ExecuteSqlRawAsync(
+                    "ALTER TABLE \"UserPreferences\" DROP COLUMN \"KeybindSettingsJson\";");
+                await old.Database.ExecuteSqlRawAsync(
+                    "ALTER TABLE \"UserPreferences\" DROP COLUMN \"VoiceSettingsJson\";");
             }
 
             await using (var upgraded = new AppDbContext(options))
@@ -121,6 +130,10 @@ public sealed class AccountSchemaUpgradeTests
                 Assert.False(preferences.PushNotifications);
                 Assert.Equal("[]", preferences.MutedChannelIdsJson);
                 Assert.Equal(60, preferences.VadSensitivity);
+                Assert.Null(preferences.AppearanceSettingsJson);
+                Assert.Null(preferences.LanguageSettingsJson);
+                Assert.Null(preferences.KeybindSettingsJson);
+                Assert.Null(preferences.VoiceSettingsJson);
             }
         }
         finally

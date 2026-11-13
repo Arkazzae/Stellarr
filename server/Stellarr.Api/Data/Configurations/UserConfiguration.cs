@@ -39,5 +39,9 @@ internal sealed class UserPreferenceSettingsConfiguration : IEntityTypeConfigura
     {
         entity.HasKey(x => x.UserId);
         entity.Property(x => x.MutedChannelIdsJson).HasMaxLength(4096).HasDefaultValue("[]");
+        entity.Property(x => x.AppearanceSettingsJson).HasMaxLength(ClientSettings.MaxLength);
+        entity.Property(x => x.LanguageSettingsJson).HasMaxLength(ClientSettings.MaxLength);
+        entity.Property(x => x.KeybindSettingsJson).HasMaxLength(ClientSettings.MaxLength);
+        entity.Property(x => x.VoiceSettingsJson).HasMaxLength(ClientSettings.MaxLength);
     }
 }

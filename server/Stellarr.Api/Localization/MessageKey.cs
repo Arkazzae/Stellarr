@@ -19,6 +19,7 @@ public enum MessageKey
     RecoveryEmailChangeDisabled,
     VadSensitivityRange,
     JoinSoundNotAvailable,
+    ClientSettingsInvalid,
     AccountDisplayNameLength,
     BioTooLong,
     CustomStatusTooLong,
