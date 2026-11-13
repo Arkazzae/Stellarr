@@ -111,6 +111,9 @@ jobs:
       # branding/icons/ is exported from the icon paths in @stellarr/ui; a
       # glyph changed in one place only fails here.
       - run: npm run icons:export -w @stellarr/ui -- --check
+      # Every token the package reads must be defined by each app, spelled as
+      # the package spells it, and listed in its README.
+      - run: npm run tokens:check -w @stellarr/ui
       - run: npm run build:web
 
   cockpit:
@@ -129,6 +132,9 @@ jobs:
       - run: npm run lint:cockpit
       - run: npm run typecheck:cockpit
       - run: npm run test:cockpit
+      # The tokens are checked here as well: a change to cockpit/src/index.css
+      # alone runs only this job.
+      - run: npm run tokens:check -w @stellarr/ui
       - run: npm run build:cockpit
 
   media:

@@ -82,7 +82,7 @@ All look comes from custom properties, in two tiers. The stylesheet declares non
 | `--ui-success-text`, `--ui-success-soft`, `--ui-warning-text`, `--ui-warning-soft` | Badges |
 | `--ui-scrim` | Behind a dialog or a sheet |
 | `--ui-elevation-low`, `--ui-elevation-menu`, `--ui-elevation-modal` | Shadows of tooltips, of menus, and of dialogs and sheets |
-| `--ui-radius-xs` … `--ui-radius-xl` | Corners: the close button, menu items, fields and menus, alerts, cards and dialogs |
+| `--ui-radius-xs`, `--ui-radius-sm`, `--ui-radius-md`, `--ui-radius-lg`, `--ui-radius-xl` | Corners: the close button, menu items, fields and menus, alerts, cards and dialogs |
 | `--ui-ease` | The easing of transitions |
 | `--ui-dur-fast`, `--ui-dur-base` | The duration of colour changes, and of the switch's knob moving |
 
@@ -152,6 +152,8 @@ Both parts draw focus from three more tokens:
 
 An outline is the web client's focus. Cockpit's is a ring: the border takes the ring colour and a soft shadow surrounds it.
 
+A custom property fails silently, so `npm run tokens:check -w @stellarr/ui` guards both tiers. It fails when an app lacks a system token, when an app defines a `--ui-*` token the package never reads (a typo of a component token would otherwise leave the default look in place without a sign), and when a token the package reads is missing from the tables above.
+
 ## Checks
 
 Run these from the repository root, after `npm ci`:
@@ -160,4 +162,5 @@ Run these from the repository root, after `npm ci`:
 npm run typecheck:ui
 npm run test:ui
 npm run icons:export -w @stellarr/ui -- --check
+npm run tokens:check -w @stellarr/ui
 ```

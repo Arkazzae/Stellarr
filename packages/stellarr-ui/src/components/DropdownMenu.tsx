@@ -163,7 +163,7 @@ export function DropdownMenuContent({
     // and focused before the browser paints, never drawn in the corner first.
     node.style.left = `${snap(placement.left)}px`;
     node.style.top = `${snap(placement.top)}px`;
-    node.style.setProperty("--ui-menu-available-height", `${placement.availableHeight}px`);
+    node.style.setProperty("--_menu-available-height", `${placement.availableHeight}px`);
     node.dataset.side = placement.side;
     node.dataset.placed = "";
   }, [ref, menu.triggerRef, side, align, sideOffset]);
