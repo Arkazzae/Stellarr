@@ -8,6 +8,7 @@ import type { MessageKey } from "@/i18n";
 export type UserSettingsPaneKey =
   | "konto"
   | "bezpieczenstwo"
+  | "sesje"
   | "prywatnosc"
   | "wyglad"
   | "jezyk"
@@ -33,6 +34,11 @@ export const USER_SETTINGS_PANES: Record<UserSettingsPaneKey, UserSettingsPane> 
     icon: "lock",
     title: "settings.security.title",
     detail: "settings.security.detail",
+  },
+  sesje: {
+    icon: "mobile",
+    title: "settings.sessions.title",
+    detail: "settings.sessions.detail",
   },
   prywatnosc: {
     icon: "shield",
@@ -72,10 +78,11 @@ export const USER_SETTINGS_PANES: Record<UserSettingsPaneKey, UserSettingsPane> 
 };
 
 /**
- * Three groups, in the order someone goes looking: who you are, what the app
- * does while you use it, and what most people open once. The theme sits under
- * the app rather than under a server, because a person chooses it for a
- * device and a server's settings would give one preference two owners.
+ * Two groups, in the order someone goes looking: who you are to the instance
+ * and to other people, then what the app does while you use it. Signing in is
+ * two panes because it is two errands: setting up how you prove who you are,
+ * and checking where the account is open when something looks wrong. The pane
+ * most people open once comes last and needs no caption of its own.
  */
 export const USER_SETTINGS_GROUPS: readonly {
   caption: MessageKey;
@@ -83,13 +90,12 @@ export const USER_SETTINGS_GROUPS: readonly {
 }[] = [
   {
     caption: "settings.group.account",
-    panes: ["konto", "bezpieczenstwo", "prywatnosc"],
+    panes: ["konto", "bezpieczenstwo", "sesje", "prywatnosc"],
   },
   {
     caption: "settings.group.app",
-    panes: ["wyglad", "jezyk", "powiadomienia", "glos"],
+    panes: ["wyglad", "jezyk", "powiadomienia", "glos", "skroty", "zaawansowane"],
   },
-  { caption: "settings.group.other", panes: ["skroty", "zaawansowane"] },
 ];
 
 /**

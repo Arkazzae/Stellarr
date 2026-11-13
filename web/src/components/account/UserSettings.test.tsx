@@ -227,16 +227,16 @@ describe("UserSettings", () => {
     });
   });
 
-  it("opens on Moje konto and names itself after the person", () => {
+  it("opens on the profile and names itself after the person", () => {
     setup();
 
     expect(screen.getByRole("dialog", { name: "Maja" })).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { level: 2, name: /Moje konto/ }),
+      screen.getByRole("heading", { level: 2, name: "Profil" }),
     ).toBeInTheDocument();
   });
 
-  it("picks an arrival sound on Moje konto and auditions it", async () => {
+  it("picks an arrival sound on the profile and auditions it", async () => {
     const user = userEvent.setup();
     const select = vi.fn();
     const preview = vi.fn();

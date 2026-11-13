@@ -2,6 +2,7 @@
 
 import { Fragment, useEffect, useId, useRef, useState } from "react";
 
+import { AccountActivitySections } from "@/components/account/panes/AccountActivitySections";
 import {
   AccountPane,
   type AccountPaneProps,
@@ -150,6 +151,8 @@ export function UserSettings({
         return <AccountPane account={account} {...accountPane} />;
       case "bezpieczenstwo":
         return <SecurityPane account={account} {...security} />;
+      case "sesje":
+        return security.twoStep ? <AccountActivitySections {...security.twoStep} /> : null;
       case "prywatnosc":
         return <PrivacyPane {...preferences} />;
       case "wyglad":

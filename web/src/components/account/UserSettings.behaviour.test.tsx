@@ -112,7 +112,7 @@ describe("UserSettings", () => {
       screen.getByRole("button", { name: /Skróty klawiszowe/ }),
     ).toHaveAttribute("aria-current", "page");
     expect(
-      screen.getByRole("button", { name: /Moje konto/ }),
+      screen.getByRole("button", { name: "Profil" }),
     ).not.toHaveAttribute("aria-current");
   });
 
@@ -135,7 +135,7 @@ describe("UserSettings", () => {
     rerender(<UserSettings {...props({ open: false })} />);
     rerender(<UserSettings {...props({ initialPane: "wyglad" })} />);
 
-    expect(heading()).toHaveTextContent("Motyw");
+    expect(heading()).toHaveTextContent("Wygląd");
   });
 
   it("closes from the corner button and from Escape", async () => {
@@ -163,7 +163,7 @@ describe("UserSettings", () => {
     );
     expect(cancelRecording).not.toHaveBeenCalled();
 
-    await user.click(screen.getByRole("button", { name: /Moje konto/ }));
+    await user.click(screen.getByRole("button", { name: "Profil" }));
 
     expect(cancelRecording).toHaveBeenCalledTimes(1);
   });
