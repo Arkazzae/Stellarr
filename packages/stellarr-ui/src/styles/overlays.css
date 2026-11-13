@@ -1,5 +1,6 @@
 /*
- * Dialog, sheet, menu and tooltip: what floats over the page.
+ * Dialog, sheet, menu, the dropdown's list and tooltip: what floats over the
+ * page.
  *
  * An open part has data-state="open" and plays its entrance. A closing part
  * keeps data-state="closed" for as long as its exit animation runs and then
@@ -10,6 +11,9 @@
  * device pixel: the 1px borders and separator, the 2px and 4px focus rings, and the 2px
  * corner and inset of the tooltip's arrow. The one `rem` is the breakpoint of
  * a media query, whose condition cannot read a custom property.
+ *
+ * The dropdown's list reads optional `--ui-dropdown-*` tokens, each with a
+ * fallback that is the web client's look.
  */
 
 @layer components.ui {
@@ -169,9 +173,9 @@
 
   /* ---------------------------------------------------------------- menu -- */
 
-  /* A menu and a tooltip are placed through `--_x` and `--_y`, not an inline
-     `left` and `top`, so that a media rule can still override the position,
-     for instance to turn a menu into a sheet on a phone. */
+  /* A menu, a dropdown's list and a tooltip are placed through `--_x` and
+     `--_y`, not an inline `left` and `top`, so that a media rule can still
+     override the position, for instance to turn a menu into a sheet on a phone. */
   .ui-menu {
     position: fixed;
     top: var(--_y);
@@ -191,6 +195,7 @@
 
   /* Until it is placed beside its trigger, so it is never seen in the corner. */
   .ui-menu:not([data-placed]),
+  .ui-dropdown-list:not([data-placed]),
   .ui-tooltip:not([data-placed]) {
     visibility: hidden;
   }
@@ -247,6 +252,94 @@
     margin: calc(4 * var(--ui-unit)) calc(-4 * var(--ui-unit));
     height: 1px;
     background-color: var(--ui-line);
+  }
+
+  /* ------------------------------------------------------ dropdown list -- */
+
+  /* The width and the height the list may take are as the field leaves room
+     for, so they are placed with the position. Before it is placed the list
+     sits at the corner at its own size, where it is measured and not seen. */
+  .ui-dropdown-list {
+    position: fixed;
+    top: var(--_y, 0px);
+    left: var(--_x, 0px);
+    /* 98 puts the list above the settings dialog it is usually opened inside
+       (95) and the media viewer (96) of the web client, and below its
+       confirmation dialog (100), which is raised from controls like this one and
+       must never sit behind one. */
+    z-index: var(--ui-dropdown-list-z-index, 98);
+    width: var(--_dropdown-width, auto);
+    max-height: var(--_dropdown-max-height, none);
+    padding: calc(5 * var(--ui-unit));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    background: var(--ui-surface);
+    border-radius: var(--ui-radius-md);
+    box-shadow: var(--ui-elevation-menu);
+    animation: ui-dropdown-in 110ms var(--ui-ease);
+  }
+
+  /* Grows out of the field, from whichever edge it opened along. */
+  .ui-dropdown-list[data-above] {
+    animation-name: ui-dropdown-in-up;
+  }
+
+  .ui-dropdown-option {
+    display: flex;
+    align-items: flex-start;
+    gap: calc(8 * var(--ui-unit));
+    min-height: var(--ui-dropdown-option-min-height, auto);
+    padding: var(--ui-dropdown-option-padding-y, calc(8 * var(--ui-unit))) calc(9 * var(--ui-unit));
+    border-radius: var(--ui-radius-sm);
+    color: var(--ui-text-muted);
+    cursor: pointer;
+  }
+
+  /* One highlight, driven by the cursor the keyboard and the pointer share. */
+  .ui-dropdown-option[data-on] {
+    background: var(--ui-hover);
+    color: var(--ui-text);
+  }
+
+  .ui-dropdown-option[aria-disabled="true"] {
+    opacity: 0.45;
+    cursor: default;
+  }
+
+  /* The tick's box is always there, so the labels line up whether or not the
+     row is the chosen one, and the list does not shift as the choice moves. */
+  .ui-dropdown-tick {
+    flex: none;
+    width: calc(14 * var(--ui-unit));
+    height: calc(19 * var(--ui-unit));
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--ui-dropdown-tick-text, var(--ui-accent));
+  }
+
+  .ui-dropdown-tick svg {
+    width: calc(14 * var(--ui-unit));
+    height: calc(14 * var(--ui-unit));
+  }
+
+  .ui-dropdown-option-text {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: calc(2 * var(--ui-unit));
+  }
+
+  .ui-dropdown-option-label {
+    font-size: var(--ui-dropdown-font-size, calc(14 * var(--ui-unit)));
+    font-weight: 500;
+    line-height: 1.35;
+  }
+
+  .ui-dropdown-option-detail {
+    font-size: calc(12 * var(--ui-unit));
+    color: var(--ui-text-faint);
+    line-height: 1.4;
   }
 
   /* ------------------------------------------------------------- tooltip -- */
@@ -310,5 +403,27 @@
   to {
     opacity: 0;
     transform: scale(0.95);
+  }
+}
+
+@keyframes ui-dropdown-in {
+  from {
+    opacity: 0;
+    transform: translateY(calc(-4 * var(--ui-unit)));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes ui-dropdown-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(calc(4 * var(--ui-unit)));
+  }
+  to {
+    opacity: 1;
+    transform: none;
   }
 }

@@ -51,6 +51,9 @@
   --ui-elevation-low: var(--elev-pop);
   --ui-elevation-menu: var(--elev-pop);
   --ui-elevation-modal: var(--elev-modal);
+  /* The tick of a chosen option is the accent as text, which is not the accent
+     of a fill: the two are mixed differently in every scheme. */
+  --ui-dropdown-tick-text: var(--accent-text);
 }
 
 /* Structure never changes with a theme, so one declaration on `:root` serves
@@ -68,12 +71,27 @@
 }
 
 /* Touch targets, where the pointer cannot be precise: a button is at least a
-   finger tall, an icon button a finger wide as well, and a switch takes presses
-   a little above and below its track. */
+   finger tall, an icon button a finger wide as well, a switch takes presses
+   a little above and below its track, and a dropdown's field and rows are a
+   finger tall. */
 @media (pointer: coarse) {
   :root {
     --ui-button-min-height: 44px;
     --ui-button-icon-only-min-width: 44px;
     --ui-switch-hit-inset: -9px 0;
+    --ui-dropdown-min-height: 44px;
+    --ui-dropdown-option-min-height: 44px;
+  }
+}
+
+/* A finger needs a bigger row, and the dropdown has to be able to fill its
+   column instead of stopping at the desktop cap. */
+@media (max-width: 767px) {
+  :root {
+    --ui-dropdown-max-width: 100%;
+    --ui-dropdown-min-height: 44px;
+    --ui-dropdown-font-size: 15px;
+    --ui-dropdown-option-min-height: 44px;
+    --ui-dropdown-option-padding-y: 10px;
   }
 }

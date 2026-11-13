@@ -23,6 +23,7 @@ export {
   type DialogProps,
   type SheetContentProps,
 } from "./components/Dialog";
+export { Dropdown, type DropdownOption, type DropdownProps } from "./components/Dropdown";
 export {
   DropdownMenu,
   DropdownMenuContent,

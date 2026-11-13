@@ -1,14 +1,15 @@
 /*
- * Button, badge, text field, label, switch, segmented control and spinner.
+ * Button, badge, text field, label, switch, segmented control, dropdown field
+ * and spinner. The dropdown's list is in `overlays.css`.
  *
  * Every rule sits in the `components.ui` layer, nested in Tailwind's
  * `components` layer. A utility class passed in `className` wins over it
  * whatever its specificity, and so does any rule an app writes in its own
  * `components` layer.
  *
- * The button, the switch and the segmented control read optional
- * `--ui-button-*`, `--ui-switch-*`, `--ui-segmented-*` and `--ui-focus-*`
- * tokens, each with a fallback that is the web client's look.
+ * The button, the switch, the segmented control and the dropdown read optional
+ * `--ui-button-*`, `--ui-switch-*`, `--ui-segmented-*`, `--ui-dropdown-*` and
+ * `--ui-focus-*` tokens, each with a fallback that is the web client's look.
  *
  * Every length is a multiple of `--ui-unit`, so a part scales with an app that
  * scales its root font size. What stays in px is meant as a device pixel: the
@@ -450,6 +451,153 @@
   .ui-segmented[data-variant="pill"] .ui-segmented-item:disabled {
     cursor: not-allowed;
     opacity: 0.5;
+  }
+
+  /* ------------------------------------------------------------ dropdown -- */
+
+  /*
+   * The closed control keeps the field vocabulary, a field fill, a hairline and
+   * a field's height, so it sits in a form row beside a text input without
+   * either looking odd. The open list is a raised surface with one shadow and
+   * no border (see `.ui-dropdown-list`).
+   */
+  .ui-dropdown {
+    /* The border colour of the current state, which the focus rule falls back
+       to; see `.ui-button`. */
+    --_border: var(--ui-dropdown-border, var(--ui-line-subtle));
+    display: flex;
+    align-items: center;
+    gap: calc(10 * var(--ui-unit));
+    width: 100%;
+    min-width: 0;
+    max-width: var(--ui-dropdown-max-width, calc(320 * var(--ui-unit)));
+    min-height: var(--ui-dropdown-min-height, calc(42 * var(--ui-unit)));
+    padding: var(
+      --ui-dropdown-padding,
+      calc(9 * var(--ui-unit)) calc(10 * var(--ui-unit)) calc(9 * var(--ui-unit)) calc(14 * var(--ui-unit))
+    );
+    /* `--_refused` is set by `aria-invalid` below, and outranks every state
+       that sets `--_border`: a refused field stays refused under the pointer. */
+    border: 1px solid var(--_refused, var(--_border));
+    border-radius: var(--ui-dropdown-radius, var(--ui-radius-md));
+    background: var(--ui-dropdown-bg, var(--ui-surface-muted));
+    color: var(--ui-text);
+    cursor: pointer;
+    text-align: left;
+    transition:
+      border-color var(--ui-dur-fast) var(--ui-ease),
+      background var(--ui-dur-fast) var(--ui-ease);
+  }
+
+  .ui-dropdown:hover:not(:disabled) {
+    --_border: var(--ui-line);
+  }
+
+  /* Open reads as accented, not as focused: focus is the ring, and the two mean
+     different things. */
+  .ui-dropdown[aria-expanded="true"] {
+    --_border: var(--ui-accent);
+  }
+
+  .ui-dropdown:focus-visible {
+    border-color: var(--_refused, var(--ui-focus-border, var(--_border)));
+    outline: var(--ui-focus-outline, 2px solid var(--ui-ring));
+    outline-offset: 2px;
+    box-shadow: var(--ui-focus-shadow, none);
+  }
+
+  .ui-dropdown[aria-invalid="true"] {
+    --_refused: var(--ui-danger-text);
+  }
+
+  .ui-dropdown:disabled {
+    opacity: 0.5;
+    cursor: default;
+  }
+
+  .ui-dropdown-value {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+    gap: calc(8 * var(--ui-unit));
+    overflow: hidden;
+  }
+
+  .ui-dropdown-label {
+    font-size: var(--ui-dropdown-font-size, calc(14 * var(--ui-unit)));
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* The detail follows the value on one line here and takes its own line in
+     the list: on the field it is a reminder, in the list it is the reason. */
+  .ui-dropdown-detail {
+    font-size: calc(13 * var(--ui-unit));
+    color: var(--ui-text-faint);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .ui-dropdown-empty {
+    color: var(--ui-text-faint);
+  }
+
+  .ui-dropdown-icon {
+    flex: none;
+    display: inline-flex;
+    align-self: center;
+    color: var(--ui-text-faint);
+  }
+
+  .ui-dropdown-icon svg {
+    width: calc(15 * var(--ui-unit));
+    height: calc(15 * var(--ui-unit));
+  }
+
+  .ui-dropdown-caret {
+    flex: none;
+    display: inline-flex;
+    color: var(--ui-text-faint);
+    transition: transform var(--ui-dur-base) var(--ui-ease);
+  }
+
+  .ui-dropdown-caret svg {
+    width: calc(14 * var(--ui-unit));
+    height: calc(14 * var(--ui-unit));
+  }
+
+  .ui-dropdown[aria-expanded="true"] .ui-dropdown-caret {
+    transform: rotate(180deg);
+  }
+
+  /* Chrome rather than a form: a picker inside a bar that is already boxed, such
+     as a toolbar's language, draws no box of its own until it is pointed at. It
+     draws its own look completely; only the least height, the widest width and
+     the corner radius are tokens, and a touch screen raises the first two. */
+  .ui-dropdown[data-variant="quiet"] {
+    --_border: transparent;
+    width: auto;
+    max-width: var(--ui-dropdown-max-width, calc(200 * var(--ui-unit)));
+    min-height: var(--ui-dropdown-min-height, calc(28 * var(--ui-unit)));
+    padding: calc(3 * var(--ui-unit)) calc(4 * var(--ui-unit)) calc(3 * var(--ui-unit)) calc(8 * var(--ui-unit));
+    gap: calc(6 * var(--ui-unit));
+    background: none;
+    color: var(--ui-text-muted);
+  }
+
+  .ui-dropdown[data-variant="quiet"] .ui-dropdown-label {
+    font-size: calc(13 * var(--ui-unit));
+    font-weight: 550;
+  }
+
+  .ui-dropdown[data-variant="quiet"]:hover:not(:disabled),
+  .ui-dropdown[data-variant="quiet"][aria-expanded="true"] {
+    --_border: transparent;
+    background: var(--ui-hover);
   }
 
   /* ------------------------------------------------------------- spinner -- */
