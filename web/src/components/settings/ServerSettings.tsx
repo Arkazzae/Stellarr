@@ -1,9 +1,10 @@
 "use client";
 
-import { Fragment, useEffect, useId, useRef, useState } from "react";
+import { useId, useState } from "react";
 
-import { Icon, type IconName } from "@stellarr/ui/icons";
+import type { IconName } from "@stellarr/ui/icons";
 import { Modal } from "@/components/primitives/Modal";
+import { SettingsShell } from "@/components/settings/SettingsShell";
 import { AuditPane, type AuditPaneProps } from "@/components/settings/panes/AuditPane";
 import { BansPane, type BansPaneProps } from "@/components/settings/panes/BansPane";
 import { ChannelsPane, type ChannelsPaneProps } from "@/components/settings/panes/ChannelsPane";
@@ -107,35 +108,11 @@ function SettingsLayout({
 }: LayoutProps) {
   const { t } = useLanguage();
   const [active, setActive] = useState<SettingsPaneKey>("prz");
-  const panesRef = useRef<HTMLDivElement>(null);
-  const navRef = useRef<HTMLElement>(null);
   const current = ITEMS[active];
-
-  useEffect(() => {
-    // The panes share one scroll container; without this the second pane
-    // opens as far down as the first was scrolled.
-    if (panesRef.current) panesRef.current.scrollTop = 0;
-    // `Modal` enters one animation frame after it mounts. Waiting one more
-    // means a directly opened pane has real geometry before its tab in the
-    // horizontal mobile navigation is brought into view.
-    let revealFrame = 0;
-    const enterFrame = requestAnimationFrame(() => {
-      revealFrame = requestAnimationFrame(() => {
-        navRef.current
-          ?.querySelector<HTMLElement>('[aria-current="page"]')
-          ?.scrollIntoView({ block: "nearest", inline: "nearest" });
-      });
-    });
-    return () => {
-      cancelAnimationFrame(enterFrame);
-      cancelAnimationFrame(revealFrame);
-    };
-  }, [active]);
 
   /**
    * Only the visible pane is mounted, so ten live data lists do not sit behind
-   * `display: none`. The section element is keyed by pane, which also replays
-   * the `.sv-pane.on` entrance animation on every switch.
+   * `display: none`.
    */
   const pane = () => {
     switch (active) {
@@ -162,68 +139,30 @@ function SettingsLayout({
     }
   };
 
+  const groups = GROUPS.map((group) => ({
+    caption: t(group.caption),
+    items: group.panes.map((key) => ({
+      key,
+      label: t(ITEMS[key].label),
+      icon: ITEMS[key].icon,
+      danger: ITEMS[key].danger,
+    })),
+  }));
+
   return (
-    <div className="sv">
-      {/* First in the DOM as well as on screen. On a phone the close action
-          must not sit below two navigation bands, and keyboard focus should
-          follow the order a reader sees. */}
-      <div className="sv-bar">
-        <div className="sv-bar-txt">
-          <h2>{t(current.label)}</h2>
-          <p>{t(current.detail)}</p>
-        </div>
-        <div className="sv-close">
-          <button type="button" className="sv-x" aria-label={t("server.close")} onClick={onClose}>
-            <Icon name="x" size={18} />
-          </button>
-          <span>ESC</span>
-        </div>
-      </div>
-      <aside className="sv-nav">
-        <div className="sv-brand">
-          <span className="sv-brand-txt">
-            <b id={titleId}>{name}</b>
-            <span>{t("server.settings")}</span>
-          </span>
-        </div>
-        <nav className="sv-nav-scroll" aria-label={t("server.sections")} ref={navRef}>
-          {GROUPS.map((group) => (
-            // A fragment, not a wrapper: `.sv-nav-scroll .sv-cap:first-child`
-            // only means "the first caption" while the captions and the items
-            // are flat siblings.
-            <Fragment key={group.caption}>
-              <div className="sv-cap">{t(group.caption)}</div>
-              {group.panes.map((key) => {
-                const item = ITEMS[key];
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    className={["sv-item", key === active && "on", item.danger && "danger"]
-                      .filter(Boolean)
-                      .join(" ")}
-                    data-pane={key}
-                    aria-current={key === active ? "page" : undefined}
-                    onClick={() => setActive(key)}
-                  >
-                    <span className="sv-ico" aria-hidden="true">
-                      <Icon name={item.icon} size={18} />
-                    </span>
-                    {t(item.label)}
-                  </button>
-                );
-              })}
-            </Fragment>
-          ))}
-        </nav>
-      </aside>
-      <div className="sv-main">
-        <div className="sv-panes" ref={panesRef}>
-          <section className="sv-pane on" data-pane={active} key={active}>
-            {pane()}
-          </section>
-        </div>
-      </div>
-    </div>
+    <SettingsShell
+      titleId={titleId}
+      brand={{ name, detail: t("server.settings") }}
+      title={t(current.label)}
+      detail={t(current.detail)}
+      closeLabel={t("server.close")}
+      onClose={onClose}
+      navLabel={t("server.sections")}
+      groups={groups}
+      active={active}
+      onSelect={setActive}
+    >
+      {pane()}
+    </SettingsShell>
   );
 }
