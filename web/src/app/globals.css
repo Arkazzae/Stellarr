@@ -1,19 +1,24 @@
 /*
  * The single stylesheet entry point.
  *
- * Order matters: Tailwind declares the layers, the theme recipe and palettes
- * publish the raw custom properties, `theme.css` maps them onto Tailwind's
- * namespaces, and the component layer sits between base and utilities so a
- * utility in JSX can always override a ported component rule.
+ * Order matters: Tailwind declares the layers, the shared components follow
+ * in `components.ui`, nested below this app's own `components` layer so any
+ * rule written here outranks them, the theme recipe and palettes publish the
+ * raw custom properties, `theme.css` maps them onto Tailwind's namespaces,
+ * `ui-tokens.css` maps them onto the shared components' tokens, and the
+ * component layer sits between base and utilities so a utility in JSX can
+ * always override a ported component rule.
  */
 
 @import "tailwindcss";
+@import "@stellarr/ui/styles.css";
 
 @import "../styles/themes/recipe.css";
 @import "../styles/themes/palettes.css";
 @import "../styles/themes/font-faces.css";
 @import "../styles/themes/typeset.css";
 @import "../styles/theme.css";
+@import "../styles/ui-tokens.css";
 @import "../styles/base.css";
 @import "../styles/components/status.css";
 

@@ -115,7 +115,7 @@ describe("ModalsContainer: channel settings", () => {
       };
       openChannelSettings(TEXT_CHANNEL.id);
 
-      await user.click(screen.getByRole("button", { name: t("channel.muteNotifications") }));
+      await user.click(screen.getByRole("switch", { name: t("channel.muteNotifications") }));
 
       expect(harness.account.setPreferences).toHaveBeenCalledExactlyOnceWith({
         mutedChannelIds: ["ch-other", TEXT_CHANNEL.id],
@@ -131,7 +131,7 @@ describe("ModalsContainer: channel settings", () => {
       };
       openChannelSettings(TEXT_CHANNEL.id);
 
-      await user.click(screen.getByRole("button", { name: t("channel.muteNotifications") }));
+      await user.click(screen.getByRole("switch", { name: t("channel.muteNotifications") }));
 
       expect(harness.account.setPreferences).toHaveBeenCalledExactlyOnceWith({
         mutedChannelIds: ["ch-other"],

@@ -476,19 +476,16 @@
   .cf-field .fld-lab{margin-bottom:7px}
   /* The answers share the row at equal widths, like the short dialogs'
      `.ch-foot`; the harmless one is a filled neutral, never an outline. */
-  .cf-foot{display:flex;gap:12px;margin-top:24px}
+  .cf-foot{
+    display:flex;gap:12px;margin-top:24px;
+    --ui-button-secondary-border:transparent;
+    --ui-button-secondary-bg:var(--surface-overlay);
+    --ui-button-secondary-text:var(--text);
+    --ui-button-secondary-hover-border:transparent;
+    --ui-button-secondary-hover-bg:color-mix(in oklab, var(--surface-overlay) 86%, var(--text));
+  }
   .cf-foot > button{flex:1 1 0;min-width:0;height:42px;font-size:var(--text-14)}
-  .cf-foot .btn-ghost{border-color:transparent;background:var(--surface-overlay);color:var(--text)}
-  .cf-foot .btn-ghost:hover{border-color:transparent;background:color-mix(in oklab, var(--surface-overlay) 86%, var(--text));color:var(--text)}
   .cf-foot button:disabled{opacity:0.45;cursor:default}
-  /* Solid here, unlike the outlined `.btn-danger` of a settings row: beside
-     the filled neutral cancel, a tinted outline read as the quieter answer,
-     and the card exists precisely to tell the two apart. */
-  /* White rather than `--on-accent`, which follows the accent and turns black
-     under a light one: the label sits on the danger red in every palette. */
-  .cf-foot .btn-danger{border-color:transparent;background:var(--danger-line);color:white}
-  .cf-foot .btn-danger:hover{background:color-mix(in oklab, var(--danger-line) 86%, white);color:white}
-  .cf-foot .btn-danger:disabled:hover{background:var(--danger-line)}
 
   @media (max-width:767px){
     /* A phone confirmation belongs at the thumb edge. The padded viewport is

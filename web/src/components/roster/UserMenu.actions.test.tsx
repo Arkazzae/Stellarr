@@ -153,8 +153,8 @@ describe("UserMenu actions", () => {
       onParticipantSuppressionChange,
     });
 
-    await user.click(screen.getByRole("button", { name: "Bramka szumów: Jo" }));
-    await user.click(screen.getByRole("button", { name: "Odszumianie u Ciebie: Jo" }));
+    await user.click(screen.getByRole("switch", { name: "Bramka szumów: Jo" }));
+    await user.click(screen.getByRole("switch", { name: "Odszumianie u Ciebie: Jo" }));
 
     expect(onParticipantGateChange).toHaveBeenCalledWith("u-2", true);
     expect(onParticipantSuppressionChange).toHaveBeenCalledWith("u-2", false);
@@ -169,7 +169,7 @@ describe("UserMenu actions", () => {
     });
 
     expect(screen.getByRole("slider", { name: "Głośność: Jo" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Bramka szumów: Jo" })).toBeNull();
+    expect(screen.queryByRole("switch", { name: "Bramka szumów: Jo" })).toBeNull();
   });
 
   it("shows nothing at all when there is nothing to offer", () => {

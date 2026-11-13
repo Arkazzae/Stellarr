@@ -522,10 +522,10 @@ describe("UserSettings", () => {
     });
 
     await user.click(screen.getByRole("button", { name: /Powiadomienia/ }));
-    expect(screen.queryByRole("button", { name: "Powiadomienia push" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Powiadomienia e-mail" })).toBeNull();
-    await user.click(screen.getByRole("button", { name: "Dźwięk wiadomości" }));
-    await user.click(screen.getByRole("button", { name: "Dźwięk wejścia i wyjścia" }));
+    expect(screen.queryByRole("switch", { name: "Powiadomienia push" })).toBeNull();
+    expect(screen.queryByRole("switch", { name: "Powiadomienia e-mail" })).toBeNull();
+    await user.click(screen.getByRole("switch", { name: "Dźwięk wiadomości" }));
+    await user.click(screen.getByRole("switch", { name: "Dźwięk wejścia i wyjścia" }));
 
     expect(onChange).toHaveBeenCalledWith({ messageSound: false });
     expect(onChange).toHaveBeenCalledWith({ joinLeaveSound: false });
@@ -545,7 +545,7 @@ describe("UserSettings", () => {
 
     await user.click(screen.getByRole("button", { name: /Zaawansowane/ }));
     await user.click(
-      screen.getByRole("button", {
+      screen.getByRole("switch", {
         name: "Uruchamiaj Stellarr wraz z systemem",
       }),
     );

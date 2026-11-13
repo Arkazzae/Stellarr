@@ -42,10 +42,10 @@ describe("LanguagePane model states", () => {
   it("hides the translation options while translation is off", async () => {
     const update = setup({ chatTranslationEnabled: false });
 
-    expect(screen.queryByRole("button", { name: "Translate automatically" })).toBeNull();
+    expect(screen.queryByRole("switch", { name: "Translate automatically" })).toBeNull();
     expect(screen.queryByRole("radiogroup", { name: "Translation target language" })).toBeNull();
 
-    await userEvent.click(screen.getByRole("button", { name: "Enable translation" }));
+    await userEvent.click(screen.getByRole("switch", { name: "Enable translation" }));
     expect(update).toHaveBeenCalledWith({ chatTranslationEnabled: true });
     expect(model.download).not.toHaveBeenCalled();
   });
@@ -85,6 +85,6 @@ describe("LanguagePane model states", () => {
     setup();
 
     expect(screen.getByRole("alert")).toHaveTextContent("This translation pair is unavailable.");
-    expect(screen.getByRole("button", { name: "Translate automatically" })).toBeDisabled();
+    expect(screen.getByRole("switch", { name: "Translate automatically" })).toBeDisabled();
   });
 });

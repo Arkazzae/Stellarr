@@ -1,0 +1,76 @@
+/*
+ * ============================================================================
+ * SHARED COMPONENTS — the tokens `@stellarr/ui` requires, on this app's palette
+ * ============================================================================
+ *
+ * The package declares none of its system tokens (`--ui-*`, listed in its
+ * README); this file defines all of them. Component tokens such as
+ * `--ui-switch-*` are optional and fall back to the look this app already has,
+ * so only a deviation is set, and only where it applies.
+ */
+
+/*
+ * Everything that follows the scheme is declared on every element that can
+ * start a scheme, as `recipe.css` declares the tokens it maps from. A `var()`
+ * on `:root` is resolved there, so a preview tile in the appearance settings
+ * that carries its own `data-theme`, `data-scheme` or `data-contrast` would
+ * otherwise inherit the page's colours instead of its own.
+ */
+:root,
+[data-theme],
+[data-scheme],
+[data-contrast] {
+  --ui-page: var(--surface-base);
+  --ui-surface: var(--surface-raised);
+  --ui-surface-muted: var(--surface-field);
+  --ui-popover: var(--surface-pop);
+  --ui-hover: var(--surface-overlay);
+  --ui-text: var(--text);
+  --ui-text-muted: var(--text-muted);
+  --ui-text-faint: var(--text-faint);
+  --ui-line: var(--line);
+  --ui-line-field: var(--line);
+  --ui-line-strong: var(--line-strong);
+  --ui-ring: var(--accent-quiet);
+  --ui-ring-offset: var(--surface-base);
+  --ui-accent: var(--accent);
+  --ui-accent-hover: var(--accent-hover);
+  --ui-on-accent: var(--on-accent);
+  --ui-danger: var(--danger-line);
+  /* White rather than `--on-accent`, which follows the accent and turns black
+     under a light one: the label sits on the danger red in every palette. */
+  --ui-on-danger: #ffffff;
+  --ui-danger-text: var(--danger-text);
+  --ui-danger-soft: var(--danger-soft);
+  --ui-success-text: var(--live);
+  --ui-success-soft: var(--live-glow);
+  --ui-warning-text: var(--warn-text);
+  --ui-warning-soft: color-mix(in srgb, var(--warn-line) 14%, transparent);
+  --ui-scrim: var(--scrim);
+  --ui-elevation-low: var(--elev-pop);
+  --ui-elevation-menu: var(--elev-pop);
+  --ui-elevation-modal: var(--elev-modal);
+}
+
+/* Structure never changes with a theme, so one declaration on `:root` serves
+   every scope. The unit is the design pixel: this app lays out in px. */
+:root {
+  --ui-unit: 1px;
+  --ui-radius-xs: 4px;
+  --ui-radius-sm: var(--radius-sm);
+  --ui-radius-md: var(--radius-md);
+  --ui-radius-lg: var(--radius-lg);
+  --ui-radius-xl: 16px;
+  --ui-ease: var(--ease-standard);
+  --ui-dur-fast: var(--dur-fast);
+  --ui-dur-base: var(--dur-base);
+}
+
+/* Touch targets, where the pointer cannot be precise: a button is at least a
+   finger tall, and a switch takes presses a little above and below its track. */
+@media (pointer: coarse) {
+  :root {
+    --ui-button-min-height: 44px;
+    --ui-switch-hit-inset: -9px 0;
+  }
+}

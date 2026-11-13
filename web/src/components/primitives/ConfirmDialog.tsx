@@ -12,6 +12,7 @@ import {
   type ReactNode,
 } from "react";
 
+import { Button } from "@stellarr/ui";
 import { Icon, type IconName } from "@stellarr/ui/icons";
 import { useLanguage } from "@/state/LanguageProvider";
 
@@ -126,16 +127,15 @@ export function ConfirmDialog({
           </div>
         </div>
         <div className="cf-foot">
-          <button type="button" className="btn-ghost" onClick={onCancel}>
+          <Button type="button" variant="secondary" onClick={onCancel}>
             {cancelLabel ?? t("common.cancel")}
-          </button>
-          <button
-            type="submit"
-            className={danger ? "btn-danger" : "btn-primary"}
-            disabled={incomplete}
-          >
+          </Button>
+          {/* Solid, not the outlined `danger`: beside the filled neutral
+              cancel, a tinted outline read as the quieter answer, and the card
+              exists precisely to tell the two apart. */}
+          <Button type="submit" variant={danger ? "danger-solid" : "primary"} disabled={incomplete}>
             {confirmLabel ?? t("common.confirm")}
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>

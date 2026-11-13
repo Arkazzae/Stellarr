@@ -1,5 +1,7 @@
 "use client";
 
+import { Switch as UiSwitch } from "@stellarr/ui";
+
 export interface SwitchProps {
   checked: boolean;
   onChange: (checked: boolean) => void;
@@ -13,17 +15,13 @@ export interface SwitchProps {
 }
 
 export function Switch({ checked, onChange, label, disabled, className }: SwitchProps) {
-  const classes = ["sw", checked ? "on" : null, className].filter(Boolean).join(" ");
   return (
-    <button
-      type="button"
-      className={classes}
-      aria-pressed={checked}
+    <UiSwitch
+      checked={checked}
+      onCheckedChange={onChange}
       aria-label={label}
       disabled={disabled}
-      onClick={() => onChange(!checked)}
-    >
-      <i />
-    </button>
+      className={className}
+    />
   );
 }

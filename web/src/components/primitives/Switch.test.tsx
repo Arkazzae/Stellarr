@@ -7,10 +7,10 @@ import { Switch } from "./Switch";
 describe("Switch", () => {
   it("is named by its label and reports its state", () => {
     const { rerender } = render(<Switch checked={false} onChange={vi.fn()} label="Mute" />);
-    expect(screen.getByRole("button", { name: "Mute", pressed: false })).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "Mute", checked: false })).toBeInTheDocument();
 
     rerender(<Switch checked onChange={vi.fn()} label="Mute" />);
-    expect(screen.getByRole("button", { name: "Mute", pressed: true })).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: "Mute", checked: true })).toBeInTheDocument();
   });
 
   it("asks for the opposite of the current state when pressed", async () => {
@@ -18,7 +18,7 @@ describe("Switch", () => {
     const onChange = vi.fn();
     render(<Switch checked onChange={onChange} label="Mute" />);
 
-    await user.click(screen.getByRole("button", { name: "Mute" }));
+    await user.click(screen.getByRole("switch", { name: "Mute" }));
 
     expect(onChange).toHaveBeenCalledWith(false);
   });
@@ -28,7 +28,7 @@ describe("Switch", () => {
     const onChange = vi.fn();
     render(<Switch checked={false} onChange={onChange} label="Mute" disabled />);
 
-    await user.click(screen.getByRole("button", { name: "Mute" }));
+    await user.click(screen.getByRole("switch", { name: "Mute" }));
 
     expect(onChange).not.toHaveBeenCalled();
   });

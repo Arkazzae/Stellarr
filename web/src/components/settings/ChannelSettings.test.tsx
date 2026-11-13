@@ -121,10 +121,10 @@ describe("ChannelSettings", () => {
     );
 
     await user.click(screen.getByRole("button", { name: "Powiadomienia" }));
-    const mute = screen.getByRole("button", {
+    const mute = screen.getByRole("switch", {
       name: "Wycisz powiadomienia kanału",
     });
-    expect(mute).toHaveAttribute("aria-pressed", "false");
+    expect(mute).toHaveAttribute("aria-checked", "false");
     expect(screen.queryByRole("button", { name: "Zapisz zmiany" })).toBeNull();
 
     await user.click(mute);
@@ -144,7 +144,7 @@ describe("ChannelSettings", () => {
 
     expect(screen.getByRole("heading", { name: "Powiadomienia" })).toBeVisible();
     expect(
-      screen.getByRole("button", { name: "Wycisz powiadomienia kanału" }),
+      screen.getByRole("switch", { name: "Wycisz powiadomienia kanału" }),
     ).toBeEnabled();
     expect(screen.queryByRole("button", { name: "Ogólne" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Uprawnienia" })).toBeNull();

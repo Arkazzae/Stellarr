@@ -94,10 +94,10 @@ describe("VoiceProcessingSection echo and volume", () => {
     const user = userEvent.setup();
     const { onChange } = setup();
 
-    await user.click(screen.getByRole("button", { name: "Izolacja głosu i echa" }));
+    await user.click(screen.getByRole("switch", { name: "Izolacja głosu i echa" }));
     expect(onChange).toHaveBeenLastCalledWith({ echoCancellation: false });
 
-    await user.click(screen.getByRole("button", { name: "Automatyczna głośność" }));
+    await user.click(screen.getByRole("switch", { name: "Automatyczna głośność" }));
     expect(onChange).toHaveBeenLastCalledWith({ autoGainControl: false });
   });
 
