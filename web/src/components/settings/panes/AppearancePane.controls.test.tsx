@@ -46,4 +46,34 @@ describe("AppearancePane controls", () => {
     expect(screen.getByLabelText("Kolor akcentu")).toHaveValue("#ff3366");
     expect(screen.getByText("#ff3366", { selector: "output" })).toBeInTheDocument();
   });
+
+  it("sets reduced motion with contrast and text size, and resets it with them", async () => {
+    const user = userEvent.setup();
+    const onMotion = vi.fn();
+    const p = props({ motion: { reducedMotion: true, onChange: onMotion } });
+    render(<AppearancePane {...p} />);
+
+    await user.click(screen.getByRole("switch", { name: "Ogranicz animacje" }));
+    expect(onMotion).toHaveBeenLastCalledWith(false);
+
+    // The theme is all default, but motion is not, so there is something to restore.
+    onMotion.mockClear();
+    await user.click(screen.getByRole("button", { name: "Przywróć domyślne" }));
+    expect(p.onReset).toHaveBeenCalledOnce();
+    expect(onMotion).toHaveBeenCalledExactlyOnceWith(false);
+  });
+
+  it("leaves reduced motion alone on reset when it is already off", async () => {
+    const user = userEvent.setup();
+    const onMotion = vi.fn();
+    const p = props({
+      theme: { ...DEFAULT_THEME, size: "lg" },
+      motion: { reducedMotion: false, onChange: onMotion },
+    });
+    render(<AppearancePane {...p} />);
+
+    await user.click(screen.getByRole("button", { name: "Przywróć domyślne" }));
+    expect(p.onReset).toHaveBeenCalledOnce();
+    expect(onMotion).not.toHaveBeenCalled();
+  });
 });
