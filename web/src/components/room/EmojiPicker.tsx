@@ -215,8 +215,14 @@ export function EmojiPicker({
 
   const onSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
     if (event.key === "Escape") {
+      // Without `onClose` the key is left to the layer the picker sits in.
+      if (onClose === undefined) return;
+      // Prevented as well as stopped: the layer stack listens on `document`,
+      // where React's own handlers run, and goes by the default to tell that
+      // the key is taken.
+      event.preventDefault();
       event.stopPropagation();
-      onClose?.();
+      onClose();
     } else if (event.key === "Enter") {
       event.preventDefault();
       const first = flat[0];

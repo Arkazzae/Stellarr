@@ -26,7 +26,8 @@ export interface Layer {
    */
   owns?: (target: Node) => boolean;
   /**
-   * Escape. The event goes no further once a layer takes it, so the page's own
+   * Escape, unless a control inside already handled it and prevented its
+   * default. The event goes no further once a layer takes it, so the page's own
    * handlers do not also act on it. Return `false` to pass: the next layer down
    * that has `onEscape` is asked, and when every layer passes the key carries
    * on to the page. A side panel that stays open under a dialog passes
@@ -34,7 +35,7 @@ export interface Layer {
    * later.
    */
   onEscape?: (event: KeyboardEvent) => void | false;
-  /** Tab, to keep the focus inside the layer; see `trapTab`. */
+  /** Tab, to keep the focus inside the layer; see `trapTab`. A Tab whose default is already prevented is left alone. */
   onTab?: (event: KeyboardEvent) => void;
   /** A press anywhere else; only the topmost layer that has this handler hears it. */
   onPointerDownOutside?: (event: PointerEvent) => void;
@@ -51,6 +52,11 @@ function topmost(handles: keyof Layer): Layer | undefined {
 }
 
 function onKeyDown(event: KeyboardEvent) {
+  // A control that handled the key itself says so by preventing its default.
+  // Stopping the event is not enough to go by: in an app whose React root is
+  // the document itself, as with Next.js, React's handlers run on this very
+  // node, and a stopped event still reaches the listeners beside them.
+  if (event.defaultPrevented) return;
   if (event.key === "Escape") {
     // A copy, as a layer that takes the key may leave the stack at once.
     for (const layer of [...stack].reverse()) {
@@ -82,9 +88,10 @@ function push(layer: Layer): () => void {
   if (stack.length === 1) {
     // Escape and Tab are heard in the bubble phase: a control inside a layer
     // that handles Escape itself (an inline editor that cancels, a search field
-    // that clears) keeps the key by stopping it, where in the capture phase the
-    // layer would close before the control ever heard it. A press is heard in
-    // the capture phase, before anything inside the page can stop it.
+    // that clears) keeps the key by preventing its default, where in the
+    // capture phase the layer would close before the control ever heard it. A
+    // press is heard in the capture phase, before anything inside the page can
+    // stop it.
     document.addEventListener("keydown", onKeyDown);
     document.addEventListener("pointerdown", onPointerDown, true);
   }

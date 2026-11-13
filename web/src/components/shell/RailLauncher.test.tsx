@@ -53,6 +53,20 @@ describe("RailLauncher", () => {
     window.removeEventListener("keydown", listener);
   });
 
+  it("marks the Escape that closes the card as handled, and no other", async () => {
+    const user = userEvent.setup();
+    render(<RailLauncher items={items} />);
+
+    await user.tab();
+    expect(tile()).toHaveAttribute("aria-expanded", "true");
+    // `fireEvent` returns false when the default was prevented, which is how the
+    // layer stack on `document` tells that the key is taken.
+    expect(fireEvent.keyDown(tile(), { key: "Escape" })).toBe(false);
+    expect(tile()).toHaveAttribute("aria-expanded", "false");
+
+    expect(fireEvent.keyDown(tile(), { key: "Escape" })).toBe(true);
+  });
+
   it("stays open under the click that follows a hover, then closes on the next click", async () => {
     const user = userEvent.setup();
     render(<RailLauncher items={items} />);

@@ -1,4 +1,4 @@
-import { act, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -116,6 +116,18 @@ describe("Composer mentions", () => {
     } finally {
       window.removeEventListener("keydown", page);
     }
+  });
+
+  it("marks the Escape that closes the list as handled, and no other", async () => {
+    const { user, field } = setup();
+
+    await user.type(field, "@a");
+    // `fireEvent` returns false when the default was prevented, which is how the
+    // layer stack on `document` tells that the key is taken.
+    expect(fireEvent.keyDown(field, { key: "Escape" })).toBe(false);
+    expect(suggestions()).toBeNull();
+
+    expect(fireEvent.keyDown(field, { key: "Escape" })).toBe(true);
   });
 
   it("inserts into the middle of a draft where the caret is", async () => {
