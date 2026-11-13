@@ -20,6 +20,7 @@ Inside the package, import with relative paths. The `@/` aliases belong to the a
 | `Alert`, `AlertTitle`, `AlertDescription` | A message that stays where it applies; `variant="destructive"` for a failure. |
 | `Input`, `Label` | A text field and its visible name. `aria-invalid` draws the field as refused. |
 | `Switch` | An on/off setting, `role="switch"`. Controlled with `checked` and `onCheckedChange`. |
+| `Segmented` | A row of mutually exclusive choices, as a radio group: one tab stop, arrows, Home and End. Controlled with `options`, `value` and `onChange`. `variant`: `cards` (a grid of bordered cards, the default) or `pill` (one compact row in a rounded track, for short words). An option has a `label`, and optionally a `detail` second line, a `leading` mark, a `title` tooltip and a `tone`. |
 | `Tabs`, `TabsList`, `TabsTrigger`, `TabsContent` | One tab stop for the row, arrows to move and pick. Only the picked panel is mounted. `unstyled` leaves the look to the caller. |
 | `Table`, `TableHeader`, `TableBody`, `TableRow`, `TableHead`, `TableCell` | A table whose header sticks to the area that scrolls it. |
 | `Dialog` + `DialogContent`, `DialogHeader`, `DialogTitle`, `DialogDescription`, `DialogFooter`, `DialogClose`, `DialogTrigger` | A centred modal. |
@@ -57,6 +58,14 @@ Apps never write selectors against `ui-*` classes. They pass `className` for lay
 
 A different look for the same meaning is a token. A different meaning is a variant.
 
+The `data-*` attributes a component publishes are part of its public surface, `data-tone` on a `Segmented` option included. An app may use them under a class of its own to set tokens, which is the same thing as setting them on an ancestor and not a selector against a `ui-*` class:
+
+```css
+.permission-pill [data-tone="deny"] {
+  --ui-segmented-item-on-bg: var(--danger-soft);
+}
+```
+
 ### Tokens
 
 All look comes from custom properties, in two tiers. The stylesheet declares none of them.
@@ -65,18 +74,19 @@ All look comes from custom properties, in two tiers. The stylesheet declares non
 
 | Token | Used for |
 | --- | --- |
-| `--ui-unit` | One design pixel. Every size of `Button` and `Switch` is a multiple of it, and 1 px borders stay 1 px |
+| `--ui-unit` | One design pixel. Every size of `Button`, `Switch` and `Segmented` is a multiple of it, and 1 px borders stay 1 px |
 | `--ui-page` | The page: sheets and tooltip text |
 | `--ui-surface` | Cards, dialogs, an active tab, a table's sticky header |
-| `--ui-surface-muted` | A neutral alert |
-| `--ui-popover` | Menus |
+| `--ui-surface-muted` | A neutral alert, and the track of a `pill` |
+| `--ui-popover` | Menus, and a `pill` segment that is hovered or checked |
 | `--ui-hover` | Hovered `quiet` button, the highlighted menu item, the secondary badge, the switch's track when off |
-| `--ui-text`, `--ui-text-muted`, `--ui-text-faint` | Text, secondary text such as descriptions, table headings and placeholders, and faint text such as the switch's knob when off and the label of an idle `quiet` button |
+| `--ui-text`, `--ui-text-muted`, `--ui-text-faint` | Text, secondary text such as descriptions, table headings, placeholders and the label of a card, and faint text such as the switch's knob when off, the label of an idle `quiet` button, the second line of a card and the label of an idle `pill` segment |
 | `--ui-line` | Borders and separators |
+| `--ui-line-subtle` | The border of a card that is neither hovered nor checked, and of a `pill`'s track |
 | `--ui-line-field` | A text field's border |
-| `--ui-line-strong` | The border of a hovered `secondary` button |
+| `--ui-line-strong` | The border of a hovered `secondary` button and of a hovered card |
 | `--ui-ring`, `--ui-ring-offset` | Focus rings, and the gap inside the close button's ring |
-| `--ui-accent`, `--ui-accent-hover`, `--ui-on-accent` | The `primary` button, the switch when on, and text selection |
+| `--ui-accent`, `--ui-accent-hover`, `--ui-on-accent` | The `primary` button, the switch when on, the border and tint of a checked card, and text selection |
 | `--ui-danger`, `--ui-on-danger` | The `danger-solid` button, and the border of a `danger` one |
 | `--ui-danger-text`, `--ui-danger-soft` | The `danger` button, destructive menu items, badges and alerts, refused fields |
 | `--ui-success-text`, `--ui-success-soft`, `--ui-warning-text`, `--ui-warning-soft` | Badges |
@@ -86,9 +96,9 @@ All look comes from custom properties, in two tiers. The stylesheet declares non
 | `--ui-ease` | The easing of transitions |
 | `--ui-dur-fast`, `--ui-dur-base` | The duration of colour changes, and of the switch's knob moving |
 
-`--ui-unit` is a length. The web client sets `1px`. Cockpit sets `calc(1rem / 16)`, because it scales its root font size with the window on purpose, and a `Button` or a `Switch` scales with it. The other components size in `rem`.
+`--ui-unit` is a length. The web client sets `1px`. Cockpit sets `calc(1rem / 16)`, because it scales its root font size with the window on purpose, and a `Button`, a `Switch` or a `Segmented` scales with it. The other components size in `rem`.
 
-**Component tokens** are optional. A part reads them as `--ui-<component>-<part>-<property>`, with `sm` for the small size, `on` for a checked switch and `hover` and `pressed` for those states of a button. Each is read with a fallback, which is the web client's look, so an app sets a token only where its own look differs. Cockpit is the one app that deviates, and sets what it needs in `cockpit/src/index.css`.
+**Component tokens** are optional. A part reads them as `--ui-<component>-<part>-<property>`, with `sm` for the small size, `on` for a checked switch or segment, and `hover` and `pressed` for those states of a button. Each is read with a fallback, which is the web client's look, so an app sets a token only where its own look differs. Cockpit is the one app that deviates, and sets what it needs in `cockpit/src/index.css`.
 
 The tables show each fallback. A fallback that names another token follows it, so an app that sets the first changes the second too.
 
@@ -149,7 +159,21 @@ The tables show each fallback. A fallback that names another token follows it, s
 
 A button changes under the pointer only where the pointer can hover, and never while disabled.
 
-Both parts draw focus from three more tokens:
+`Segmented`. Each variant draws its own look completely; these tokens only place it:
+
+| Token | Fallback | Used for |
+| --- | --- | --- |
+| `--ui-segmented-columns` | `1fr 1fr` | `grid-template-columns` of the group |
+| `--ui-segmented-gap` | `10` units | The space between cards. A `pill` has none |
+| `--ui-segmented-item-gap` | `4` units | The space between a card's label, leading mark and second line |
+| `--ui-segmented-item-padding` | `13` and `15` units | The space inside a card |
+| `--ui-segmented-item-font-size` | `14` units | A card's label |
+| `--ui-segmented-item-on-bg` | `--ui-accent` mixed 12% with transparent for `cards`, `--ui-popover` for `pill` | The fill of the checked segment |
+| `--ui-segmented-item-on-text` | `--ui-text` | The label of the checked segment |
+
+A segment answers the pointer even while it is disabled, and whether or not the pointer can hover, except in a `pill`, where only a segment that can be pressed lights up. The checked segment keeps its look under the pointer. A segment's second line is `--ui-text-faint` in 12 units and has no tokens. An app that colours the checked segment by meaning sets the two `on` tokens under a selector on `data-tone`, as in the note on `data-*` attributes above.
+
+All three parts draw focus from three more tokens:
 
 | Token | Fallback | Used for |
 | --- | --- | --- |

@@ -197,6 +197,7 @@ export function PermissionOverrideEditor({
                 <div className="perm-row" key={permission}>
                   <span className="perm-row-txt">{label}</span>
                   <Segmented
+                    variant="pill"
                     className="perm-tri"
                     label={label}
                     value={grantOf(current, permission)}

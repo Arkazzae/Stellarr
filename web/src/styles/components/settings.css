@@ -197,25 +197,9 @@
   .set-h > button{margin-left:auto}
   .set-note{font-size:var(--text-13);color:var(--text-faint);line-height:1.5;margin:-4px 0 14px}
   /* segment z profilami */
-  .seg{display:grid;grid-template-columns:1fr 1fr;gap:10px}
   /* Three choices are three columns; the 2×2 the default grid made of them
      left one cell empty and read as a broken pair. */
-  .seg.three{grid-template-columns:repeat(3,minmax(0,1fr))}
-  .seg-i{
-    display:flex;flex-direction:column;gap:4px;text-align:left;
-    padding:13px 15px;border-radius:var(--radius-md);
-    border:1px solid var(--line-subtle);font-size:var(--text-14);font-weight:550;color:var(--text-muted);
-    transition:border-color var(--dur-fast) var(--ease-standard), background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
-  }
-  .seg-i span{font-size:var(--text-12);font-weight:400;color:var(--text-faint);font-variant-numeric:tabular-nums}
-  .seg-i:hover{border-color:var(--line-strong);color:var(--text)}
-  /* Mixed from the live accent, not the indigo literal this used to hold: the
-     selected segment now follows whichever palette is on. */
-  .seg-i.on{
-    border-color:var(--accent);
-    background:color-mix(in oklab, var(--accent) 12%, transparent);
-    color:var(--text);
-  }
+  .three{--ui-segmented-columns:repeat(3,minmax(0,1fr))}
 
   /*
    * A ladder, laid out as one.
@@ -227,26 +211,29 @@
    * still there, once, under the row: it describes the choice that is on, and
    * a tile carries the whole thing as a tooltip.
    */
-  .seg.row{display:flex;flex-wrap:wrap;gap:8px}
-  .seg.row .seg-i{
-    flex:1 1 92px;min-width:0;
-    display:flex;flex-direction:column;align-items:center;gap:7px;
-    padding:11px 8px;text-align:center;font-size:var(--text-13);
+  .ladder{
+    display:flex;flex-wrap:wrap;
+    --ui-segmented-gap:8px;
+    --ui-segmented-item-gap:7px;
+    --ui-segmented-item-padding:11px 8px;
+    --ui-segmented-item-font-size:var(--text-13);
   }
-  .seg-ico{
+  .ladder > button{flex:1 1 92px;min-width:0;align-items:center;text-align:center}
+  .ladder-ico{
     display:flex;align-items:center;justify-content:center;flex:none;
     width:28px;height:28px;border-radius:9px;
     color:var(--text-faint);background:var(--surface-field);
+    font-size:var(--text-12);font-weight:400;font-variant-numeric:tabular-nums;
     transition:color var(--dur-fast) var(--ease-standard), background var(--dur-fast) var(--ease-standard);
   }
-  .seg-i:hover .seg-ico{color:var(--text-muted)}
-  .seg-i.on .seg-ico{color:var(--accent-text);background:var(--accent-soft)}
-  .seg-i:disabled .seg-ico{opacity:0.6}
+  .ladder > button:hover .ladder-ico{color:var(--text-muted)}
+  .ladder > button[data-state="checked"] .ladder-ico{color:var(--accent-text);background:var(--accent-soft)}
+  .ladder > button:disabled .ladder-ico{opacity:0.6}
   /* The one line the row costs: what the current choice actually means. */
-  .seg-note{
+  .ladder-note{
     margin-top:10px;color:var(--text-faint);font-size:var(--text-12);line-height:1.45;
   }
-  .seg-note b{color:var(--text-muted);font-weight:600}
+  .ladder-note b{color:var(--text-muted);font-weight:600}
 
   /* ---------- WYGLĄD ---------- */
   /*
@@ -438,10 +425,10 @@
    * A role's base permissions are set once, in the server's role editor. This
    * only records where one channel or section departs from them, so the row is
    * a three-way grant rather than a checkbox — and the middle, neutral state is
-   * the resting one. The big `.seg-i` profile card would make eight of these
-   * into a wall, so the same accessible radio group is repainted here as a
-   * compact pill: the control stays one row tall and the eight names read as a
-   * list rather than as a grid of buttons.
+   * the resting one. The big profile card of the segmented control would make
+   * eight of these into a wall, so the same accessible radio group is drawn here
+   * as the compact `pill` variant: the control stays one row tall and the eight
+   * names read as a list rather than as a grid of buttons.
    */
   .perm-role .int-txt{gap:4px}
   /* An inset edge rather than a `::before` bar: `.int-row` is a three-column
@@ -477,28 +464,17 @@
     flex:1;min-width:0;font-size:var(--text-14);font-weight:550;
     overflow:hidden;text-overflow:ellipsis;
   }
-  /* Repaints `.seg` as one pill: no gap between segments, the track carries the
-     border, and each segment is a plain 26px cell rather than a bordered card. */
-  .seg.perm-tri{
-    flex:none;width:228px;gap:0;padding:2px;
-    border:1px solid var(--line-subtle);border-radius:999px;
-    background:var(--surface-field);
+  /* The pill's own look is the control's `pill` variant; this is only where it
+     sits, and what colours a checked segment by its tone. */
+  .perm-tri{flex:none;width:228px}
+  .perm-tri [data-tone="allow"]{
+    --ui-segmented-item-on-bg:color-mix(in oklab, var(--live) 20%, transparent);
+    --ui-segmented-item-on-text:var(--live);
   }
-  .seg.perm-tri .seg-i{
-    flex-direction:row;align-items:center;justify-content:center;text-align:center;
-    height:26px;padding:0 4px;gap:0;
-    border:0;border-radius:999px;
-    font-size:var(--text-12);font-weight:600;color:var(--text-faint);
+  .perm-tri [data-tone="deny"]{
+    --ui-segmented-item-on-bg:var(--danger-soft);
+    --ui-segmented-item-on-text:var(--danger-text);
   }
-  .seg.perm-tri .seg-i:hover:not(:disabled){background:var(--surface-pop);color:var(--text)}
-  .seg.perm-tri .seg-i.on{background:var(--surface-pop);color:var(--text)}
-  .seg.perm-tri .seg-i[data-tone="allow"].on{
-    background:color-mix(in oklab, var(--live) 20%, transparent);color:var(--live);
-  }
-  .seg.perm-tri .seg-i[data-tone="deny"].on{
-    background:var(--danger-soft);color:var(--danger-text);
-  }
-  .seg.perm-tri .seg-i:disabled{opacity:0.5;cursor:not-allowed}
   .perm-editor-foot{
     display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:14px;
   }
@@ -1092,7 +1068,7 @@
     .dlg-search .dlg-input{height:42px}
     .ap-accent-control input[type="color"]{width:44px;height:44px}
     .int-move button{width:44px;height:44px}
-    .seg.perm-tri .seg-i{height:44px}
+    .perm-tri > button{height:44px}
     .emoji-tile.editable{padding-right:48px}
     .emoji-delete{top:2px;right:2px;width:44px;height:44px;opacity:1}
     .sound-editor-close{width:44px;height:44px}
@@ -1173,16 +1149,17 @@
     .set-select{max-width:100%}
     .set-row:not(:has([role="switch"])){flex-direction:column;align-items:stretch;gap:10px}
     .set-ctl{min-width:0;flex-wrap:wrap}
-    .seg{grid-template-columns:minmax(0,1fr)}
-    /* `.seg.three` outranks the line above on specificity, so it has to be
-       collapsed by name rather than inherited into it. */
-    .seg.three{grid-template-columns:minmax(0,1fr)}
-    .ch-modal .seg{grid-template-columns:1fr 1fr}
+    :root{--ui-segmented-columns:minmax(0,1fr)}
+    /* `.three` names its columns on the group itself, which a value inherited
+       from `:root` or from a dialog would never beat, so it asks for the
+       inherited one. */
+    .three{--ui-segmented-columns:inherit}
+    .ch-modal{--ui-segmented-columns:1fr 1fr}
     /* The permission pill is three words, not three cards: it stays one row of
        three and moves under its label instead of stacking into a tower. */
     .perm-row{align-items:stretch;flex-direction:column;gap:8px;padding:10px}
-    .seg.perm-tri{width:100%;grid-template-columns:repeat(3,minmax(0,1fr))}
-    .seg.perm-tri .seg-i{height:44px}
+    .perm-tri{width:100%;--ui-segmented-columns:repeat(3,minmax(0,1fr))}
+    .perm-tri > button{height:44px}
     /* The reorder pair moves below the section name. Keeping four controls in
        one 320px row either shrank the arrows below a finger target or crushed
        the name into a few characters. */

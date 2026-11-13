@@ -29,6 +29,7 @@
   --ui-text-muted: var(--text-muted);
   --ui-text-faint: var(--text-faint);
   --ui-line: var(--line);
+  --ui-line-subtle: var(--line-subtle);
   --ui-line-field: var(--line);
   --ui-line-strong: var(--line-strong);
   --ui-ring: var(--accent-quiet);

@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { describe, expect, it } from "vitest";
 
-import { Segmented, type SegmentedOption } from "./Segmented";
+import { Segmented, type SegmentedOption, type SegmentedVariant } from "./Segmented";
 
 type Fit = "fit" | "fill" | "stretch";
 
@@ -13,7 +13,17 @@ const OPTIONS: SegmentedOption<Fit>[] = [
   { value: "stretch", label: "Stretch", tone: "warn" },
 ];
 
-function Harness({ initial, disabled }: { initial: Fit; disabled?: boolean }) {
+function Harness({
+  initial,
+  disabled,
+  className,
+  variant,
+}: {
+  initial: Fit;
+  disabled?: boolean;
+  className?: string;
+  variant?: SegmentedVariant;
+}) {
   const [value, setValue] = useState<Fit>(initial);
   return (
     <Segmented
@@ -22,6 +32,8 @@ function Harness({ initial, disabled }: { initial: Fit; disabled?: boolean }) {
       onChange={setValue}
       label="Scaling"
       disabled={disabled}
+      className={className}
+      variant={variant}
     />
   );
 }
@@ -36,6 +48,33 @@ describe("Segmented", () => {
     expect(radio("Fill")).toBeChecked();
     expect(radio("Fit")).not.toBeChecked();
     expect(radio("Fill")).toHaveTextContent("Crops the edges");
+  });
+
+  it("publishes each choice's state for the stylesheet", async () => {
+    const user = userEvent.setup();
+    render(<Harness initial="fit" />);
+
+    expect(radio("Fit")).toHaveAttribute("data-state", "checked");
+    expect(radio("Fill")).toHaveAttribute("data-state", "unchecked");
+
+    await user.click(radio("Fill"));
+
+    expect(radio("Fit")).toHaveAttribute("data-state", "unchecked");
+    expect(radio("Fill")).toHaveAttribute("data-state", "checked");
+  });
+
+  it("publishes its variant for the stylesheet, as cards by default", () => {
+    const { rerender } = render(<Harness initial="fit" />);
+    expect(screen.getByRole("radiogroup")).toHaveAttribute("data-variant", "cards");
+
+    rerender(<Harness initial="fit" variant="pill" />);
+    expect(screen.getByRole("radiogroup")).toHaveAttribute("data-variant", "pill");
+  });
+
+  it("adds the caller's class to its own", () => {
+    render(<Harness initial="fit" className="tri" />);
+
+    expect(screen.getByRole("radiogroup")).toHaveClass("ui-segmented", "tri");
   });
 
   it("offers a single tab stop, on the checked choice", async () => {
