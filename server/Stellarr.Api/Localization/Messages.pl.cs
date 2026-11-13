@@ -16,6 +16,7 @@ public sealed partial class Messages
         MessageKey.PasswordTooLong => "Hasło może mieć najwyżej {max} znaków.",
         MessageKey.NewPasswordTooLong => "Nowe hasło może mieć najwyżej {max} znaków.",
         MessageKey.RecoveryEmailChangeDisabled => "Adres zmienia się osobno, przez link wysłany na nowy adres.",
+        MessageKey.ClientSettingsInvalid => "Ustawienia muszą być obiektem JSON o rozmiarze najwyżej {max} znaków.",
         MessageKey.VadSensitivityRange => "Czułość wykrywania mowy musi mieścić się w zakresie od 0 do 100.",
         MessageKey.JoinSoundNotAvailable => "Wybierz dźwięk z soundboardu serwera, na którym jesteś.",
         MessageKey.AccountDisplayNameLength => "Nazwa wyświetlana musi mieć od 1 do {max} znaków.",

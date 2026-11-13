@@ -258,6 +258,7 @@ app.MapRegistrationEndpoints();
 app.MapDesktopBrowserLoginEndpoints();
 app.MapSessionEndpoints();
 app.MapAccountEndpoints();
+app.MapClientSettingsEndpoints();
 app.MapAccountSecurityEndpoints();
 app.MapProfileImageEndpoints();
 app.MapBootstrapEndpoints();
