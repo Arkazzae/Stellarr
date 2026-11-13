@@ -1,8 +1,9 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from "./Dialog";
 import { Dropdown, type DropdownOption, type DropdownProps } from "./Dropdown";
 
 const PROFILES: DropdownOption<string>[] = [
@@ -218,6 +219,62 @@ describe("Dropdown", () => {
     expect(list.style.top).toBe("");
   });
 
+  describe("placing a bordered list", () => {
+    const FIELD = { top: 700, bottom: 736, left: 20, right: 220, width: 200, height: 36, x: 20, y: 700 } as DOMRect;
+    afterEach(() => vi.restoreAllMocks());
+
+    /** The list's size as layout would give it; every other element measures nothing. */
+    const ofList = (size: number) =>
+      function (this: Element) {
+        return this.getAttribute("role") === "listbox" ? size : 0;
+      };
+
+    /** Opens the list from a field near the bottom of the window, so it flips above. */
+    async function openAbove(borders: number) {
+      const user = userEvent.setup();
+      const { field } = setup();
+      vi.spyOn(field, "getBoundingClientRect").mockReturnValue(FIELD);
+      vi.spyOn(Element.prototype, "scrollHeight", "get").mockImplementation(ofList(300));
+      vi.spyOn(HTMLElement.prototype, "offsetHeight", "get").mockImplementation(ofList(300 + borders));
+      vi.spyOn(Element.prototype, "clientHeight", "get").mockImplementation(ofList(300));
+      await user.click(field);
+      return screen.getByRole("listbox").style.getPropertyValue("--_y");
+    }
+
+    it("clears the field by the list's full height, borders included", async () => {
+      // 700 (field top) - 6 (gap) - 302 (300 of content and 2 of borders).
+      expect(await openAbove(2)).toBe("392px");
+    });
+
+    it("places a list with no border as it always was", async () => {
+      expect(await openAbove(0)).toBe("394px");
+    });
+  });
+
+  describe("inside a dialog that holds the page", () => {
+    it("lets the list scroll by wheel, and the page behind it still not", async () => {
+      const user = userEvent.setup();
+      render(
+        <>
+          <p>Page</p>
+          <Dialog open onOpenChange={vi.fn()}>
+            <DialogContent closeLabel="Close">
+              <DialogTitle>Quality</DialogTitle>
+              <DialogDescription>Pick one.</DialogDescription>
+              <Dropdown options={PROFILES} value="balanced" onChange={vi.fn()} label="Sound quality" />
+            </DialogContent>
+          </Dialog>
+        </>,
+      );
+
+      await user.click(screen.getByRole("combobox", { name: "Sound quality" }));
+
+      // `fireEvent` returns false when the event was cancelled.
+      expect(fireEvent.wheel(screen.getByRole("option", { name: /Premium/ }))).toBe(true);
+      expect(fireEvent.wheel(screen.getByText("Page"))).toBe(false);
+    });
+  });
+
   describe("when the value names nothing in the list", () => {
     it("shows the placeholder", () => {
       const { field } = setup({ value: "gone", placeholder: "Device unavailable" });
@@ -250,6 +307,15 @@ describe("Dropdown", () => {
       await user.click(screen.getByRole("option", { name: /Premium/ }));
 
       expect(submission().get("quality")).toBe("premium");
+    });
+
+    it("keeps the hidden input inside the field, so the field has no sibling of its own", () => {
+      render(<Form initial="balanced" name="quality" />);
+
+      const field = screen.getByRole("combobox", { name: "Sound quality" });
+      expect(field.querySelector('input[type="hidden"]')).not.toBeNull();
+      expect(field.previousElementSibling).toBeNull();
+      expect(field.nextElementSibling).toBeNull();
     });
 
     it("submits nothing without a name", () => {

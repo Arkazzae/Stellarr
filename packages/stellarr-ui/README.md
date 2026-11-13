@@ -170,12 +170,14 @@ A button changes under the pointer only where the pointer can hover, and never w
 | `--ui-segmented-item-gap` | `4` units | The space between a card's label, leading mark and second line |
 | `--ui-segmented-item-padding` | `13` and `15` units | The space inside a card |
 | `--ui-segmented-item-font-size` | `14` units | A card's label |
+| `--ui-segmented-item-text` | `--ui-text-muted` | The label of a card that is neither hovered nor checked. A `pill` segment draws its own and has no token |
 | `--ui-segmented-item-on-bg` | `--ui-accent` mixed 12% with transparent for `cards`, `--ui-popover` for `pill` | The fill of the checked segment |
 | `--ui-segmented-item-on-text` | `--ui-text` | The label of the checked segment |
+| `--ui-segmented-detail-text` | `--ui-text-faint` | A segment's second line. An app whose second line is a sentence to read, not a figure to glance at, raises its contrast |
 
-A segment answers the pointer even while it is disabled, and whether or not the pointer can hover, except in a `pill`, where only a segment that can be pressed lights up. The checked segment keeps its look under the pointer. A segment's second line is `--ui-text-faint` in 12 units and has no tokens. An app that colours the checked segment by meaning sets the two `on` tokens under a selector on `data-tone`, as in the note on `data-*` attributes above.
+A card's label turns `--ui-text` under the pointer whatever `--ui-segmented-item-text` is, and the checked card takes `--ui-segmented-item-on-text` after it. A segment answers the pointer even while it is disabled, and whether or not the pointer can hover, except in a `pill`, where only a segment that can be pressed lights up. The checked segment keeps its look under the pointer. A segment's second line is 12 units. An app that colours the checked segment by meaning sets the two `on` tokens under a selector on `data-tone`, as in the note on `data-*` attributes above.
 
-`Dropdown`. A `quiet` field draws its own look completely; of these only the least height, the widest width and the corner radius reach it. The list is drawn in `<body>`, outside whatever region sets a token, so the tokens only it reads (`--ui-dropdown-tick-text`, the two `--ui-dropdown-option-*` and `--ui-dropdown-list-z-index`) take effect from `:root` or `body` and from nowhere below, and `--ui-dropdown-font-size` reaches its options from there alone:
+`Dropdown`. A `quiet` field draws its own look completely; of these only the least height, the widest width and the corner radius reach it. The list is drawn in `<body>`, outside whatever region sets a token, so the tokens only it reads (`--ui-dropdown-tick-text`, the two `--ui-dropdown-option-*` and the three `--ui-dropdown-list-*`) take effect from `:root` or `body` and from nowhere below, and `--ui-dropdown-font-size` reaches its options from there alone:
 
 | Token | Fallback | Used for |
 | --- | --- | --- |
@@ -185,10 +187,13 @@ A segment answers the pointer even while it is disabled, and whether or not the 
 | `--ui-dropdown-radius` | `--ui-radius-md` | The corners of the field |
 | `--ui-dropdown-bg` | `--ui-surface-muted` | The fill of the field |
 | `--ui-dropdown-border` | `--ui-line-subtle` | The border of the field while it is neither hovered nor open |
+| `--ui-dropdown-hover-border` | `--ui-line` | The border of the field while it is hovered |
 | `--ui-dropdown-font-size` | `14` units | The chosen value in the field and the label of each option |
 | `--ui-dropdown-tick-text` | `--ui-accent` | The tick on the chosen option. The web client sets its accent as text, which is mixed differently from the accent as a fill |
 | `--ui-dropdown-option-min-height` | `auto` | The least height of an option, which a touch screen raises |
 | `--ui-dropdown-option-padding-y` | `8` units | The space above and below an option's text |
+| `--ui-dropdown-list-bg` | `--ui-surface` | The fill of the list |
+| `--ui-dropdown-list-border` | `none` | The border of the list, as a whole `border` value such as `1px solid var(--ui-line)` |
 | `--ui-dropdown-list-z-index` | `98` | Where the list stacks: above the web client's settings dialog and media viewer, below its confirmation dialog. The package's other overlays are at 50 |
 
 A field refused with `invalid` takes `--ui-danger-text` as its border, as an `Input` does, in every state.
@@ -214,6 +219,7 @@ A custom property fails silently, so `npm run tokens:check -w @stellarr/ui` guar
 | `useLayer(active, layer)` | Puts a layer on the stack while `active`. `layer` has `node` (its element) and optionally `owns`, `onEscape`, `onTab` and `onPointerDownOutside`. The `Layer` type |
 | `hideOthers(keep)` | Hides every other child of `<body>` from assistive tech, counted per element, and returns the undo. The overlay has to be rendered into `<body>` |
 | `lockScroll(areas)` | Stops the page from scrolling except inside `areas()`, and returns the undo. Locks nest |
+| `allowScroll(areas)` | Lets the elements `areas()` returns scroll while a `lockScroll` is on, without taking a lock itself, and returns the undo. For a layer drawn outside the element that locked the page, such as the list a `Dropdown` opens from a `Dialog` |
 | `lockPointer()` | Makes the page ignore the pointer, so a press beside a menu only closes it, and returns the undo. Locks nest |
 | `usePresence(open)` | Keeps an element mounted while its exit animation runs. Returns `present` and a `ref` |
 | `focusFirst(container)` | Focuses the first tab stop that is not a link, or the container |

@@ -367,7 +367,7 @@
     border: 1px solid var(--_border);
     border-radius: var(--ui-radius-md);
     background-color: transparent;
-    color: var(--ui-text-muted);
+    color: var(--ui-segmented-item-text, var(--ui-text-muted));
     cursor: pointer;
     font-size: var(--ui-segmented-item-font-size, calc(14 * var(--ui-unit)));
     font-weight: 550;
@@ -403,7 +403,7 @@
 
   /* The second line of a segment, such as "1080p · 30 fps". */
   .ui-segmented-detail {
-    color: var(--ui-text-faint);
+    color: var(--ui-segmented-detail-text, var(--ui-text-faint));
     font-size: calc(12 * var(--ui-unit));
     font-weight: 400;
     font-variant-numeric: tabular-nums;
@@ -490,7 +490,7 @@
   }
 
   .ui-dropdown:hover:not(:disabled) {
-    --_border: var(--ui-line);
+    --_border: var(--ui-dropdown-hover-border, var(--ui-line));
   }
 
   /* Open reads as accented, not as focused: focus is the ring, and the two mean

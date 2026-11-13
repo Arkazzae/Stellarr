@@ -207,6 +207,23 @@ export function lockScroll(areas: () => Element[]): () => void {
   };
 }
 
+/**
+ * Lets one more element scroll while the page is locked, without taking a lock
+ * of its own, and returns the undo. For a layer that floats outside the element
+ * that locked the page, such as the list a dropdown opens from a sheet: it is
+ * drawn in `<body>`, so the sheet's own areas do not cover it.
+ *
+ * `areas` is read like the one `lockScroll` takes. With no lock on, it does
+ * nothing.
+ */
+export function allowScroll(areas: () => Element[]): () => void {
+  scrollAreas.push(areas);
+  return () => {
+    const index = scrollAreas.indexOf(areas);
+    if (index >= 0) scrollAreas.splice(index, 1);
+  };
+}
+
 let pointerLocks = 0;
 let previousPointerEvents = "";
 
