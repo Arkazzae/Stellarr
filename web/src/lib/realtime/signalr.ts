@@ -3,6 +3,7 @@ import {
   HubConnectionState,
   LogLevel,
   type HubConnection,
+  type ILogger,
   type IRetryPolicy,
 } from "@microsoft/signalr";
 import { ACTIVE_SERVER_STORAGE_KEY } from "@/lib/api/client";
@@ -56,13 +57,32 @@ const RETRY_POLICY: IRetryPolicy = {
     signalRRetryDelay(previousRetryCount),
 };
 
+/**
+ * SignalR's console logger at Warning, less the one line our own `stop()` causes.
+ *
+ * A start that `stop()` cuts short (a server switch, a sign-out, React running
+ * the session effect twice in development) rejects with an AbortError, which
+ * `negotiate` and every caller of `start()` already handle. SignalR also logs
+ * that abort at Error level, though, and Next's development overlay reports
+ * any `console.error` as a crash. The abort is deliberate, so its line is
+ * dropped; every other message reaches the console as SignalR would write it.
+ */
+export const signalRLogger: ILogger = {
+  log(level, message) {
+    if (level < LogLevel.Warning || message.includes("before stop() was called")) return;
+    const line = `[${new Date().toISOString()}] ${LogLevel[level]}: ${message}`;
+    if (level >= LogLevel.Error) console.error(line);
+    else console.warn(line);
+  },
+};
+
 export type SignalRConnectionFactory = (hubUrl: string) => HubConnection;
 
 const buildConnection: SignalRConnectionFactory = (hubUrl) =>
   new HubConnectionBuilder()
     .withUrl(hubUrl, { withCredentials: true })
     .withAutomaticReconnect(RETRY_POLICY)
-    .configureLogging(LogLevel.Warning)
+    .configureLogging(signalRLogger)
     .build();
 
 const HUB_EVENTS = Object.keys(HUB_DECODERS) as RealtimeEventName[];
