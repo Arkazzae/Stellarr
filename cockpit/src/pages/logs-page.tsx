@@ -1,28 +1,30 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-
-import { CardTitleRow } from "@/components/card-title-row";
-import { Icon } from "@/components/icons/icon";
-import { PageHeader } from "@/components/page-header";
-import { Spinner } from "@/components/spinner";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+  Badge,
+  Button,
+  Card,
+  cx,
+  Input,
+  Label,
+  Spinner,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@stellarr/ui";
+import { useEffect, useMemo, useRef, useState } from "react";
+
+import { CardTitleRow } from "@/components/card-title-row";
+import { Icon } from "@/components/icons/icon";
+import { PageHeader } from "@/components/page-header";
 import { getLocale, t, type MessageKey } from "@/i18n";
 import { formatDateTime, formatNumber } from "@/i18n/format";
 import { cockpitApi, type CockpitLogEntry, type CockpitLogLevel } from "@/lib/api";
 import { useLogFeed } from "@/lib/use-log-feed";
-import { cn } from "@/lib/utils";
 
 const SEARCH_DELAY_MS = 300;
 
@@ -76,7 +78,7 @@ function LogRow({ entry, open, onToggle }: { entry: CockpitLogEntry; open: boole
           aria-expanded={open}
           className="w-full rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <span className={cn("block break-words whitespace-pre-wrap", !open && "line-clamp-2")}>{entry.message}</span>
+          <span className={cx("break-words whitespace-pre-wrap", open ? "block" : "line-clamp-2")}>{entry.message}</span>
         </button>
         {open ? (
           <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs text-muted-foreground">
@@ -181,7 +183,6 @@ export function LogsPage() {
               variant="outline"
               aria-pressed={levels.includes(level)}
               onClick={() => toggleLevel(level)}
-              className={cn(levels.includes(level) ? "bg-accent" : "text-muted-foreground")}
             >
               {t(labelKey)}
               {feed.summary ? (
@@ -242,7 +243,7 @@ export function LogsPage() {
           </div>
         ) : (
           <div
-            className={cn(
+            className={cx(
               "relative min-h-0 flex-1 overflow-auto px-3 pb-2 transition-opacity sm:px-5",
               loading && "opacity-60",
             )}

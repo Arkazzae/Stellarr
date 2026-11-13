@@ -1,5 +1,6 @@
+import { cx } from "@stellarr/ui";
+
 import { initialsOf } from "@/lib/initials";
-import { cn } from "@/lib/utils";
 
 interface UserAvatarProps {
   displayName: string;
@@ -10,7 +11,7 @@ interface UserAvatarProps {
 export function UserAvatar({ displayName, className }: UserAvatarProps) {
   return (
     <span
-      className={cn(
+      className={cx(
         "grid shrink-0 place-items-center rounded-full bg-accent text-xs font-semibold",
         className,
       )}

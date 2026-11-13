@@ -8,12 +8,6 @@ import { selectPolish } from "@/test/locale";
 import { secret, secrets } from "@/test/secrets";
 
 selectPolish();
-// Radix switches measure themselves with a ResizeObserver, which jsdom lacks.
-vi.stubGlobal("ResizeObserver", class {
-  observe() {}
-  unobserve() {}
-  disconnect() {}
-});
 
 vi.mock("@/lib/api", async (importOriginal) => {
   const original = await importOriginal<typeof import("@/lib/api")>();
@@ -99,7 +93,7 @@ beforeEach(() => {
 
 describe("IntegrationsPage", () => {
   /** The Resend card, once the page has loaded; the GIPHY card has the same labels. */
-  const resend = async () => within((await screen.findByText("Resend")).closest("[data-slot=card]") as HTMLElement);
+  const resend = async () => within((await screen.findByText("Resend")).closest(".ui-card") as HTMLElement);
 
   it("shows Resend off, with its key from the environment", async () => {
     render(<IntegrationsPage />);
@@ -198,7 +192,7 @@ describe("IntegrationsPage", () => {
 });
 
 describe("IntegrationsPage GIPHY", () => {
-  const giphyCard = () => screen.getByText("GIPHY").closest("[data-slot=card]") as HTMLElement;
+  const giphyCard = () => screen.getByText("GIPHY").closest(".ui-card") as HTMLElement;
   const giphySwitch = () => screen.getByRole("switch", { name: "Pokazuj GIF-y w kliencie web" });
 
   it("waits for a key before GIFs can be switched on or checked", async () => {
@@ -259,7 +253,7 @@ describe("IntegrationsPage Cloudflare R2", () => {
     updateCloudflareMock.mockImplementation(async (value) => ({ ...value, source: "panel" }));
     render(<IntegrationsPage />);
 
-    const card = (await screen.findByText("Cloudflare R2")).closest("[data-slot=card]") as HTMLElement;
+    const card = (await screen.findByText("Cloudflare R2")).closest(".ui-card") as HTMLElement;
     await user.type(within(card).getByLabelText("Nazwa bucketu"), "private-backups");
     await user.click(within(card).getByRole("button", { name: "Zapisz połączenie" }));
 

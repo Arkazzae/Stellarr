@@ -3,23 +3,12 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 import { cockpitApi, type CockpitBackup, type CockpitBackupJob, type CockpitBackups } from "@/lib/api";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { BackupsPage } from "@/pages/backups-page";
 import { CockpitContext } from "@/state/cockpit-context";
 import { cockpitValue } from "@/test/cockpit-fixtures";
 import { selectPolish } from "@/test/locale";
 
 selectPolish();
-
-// The tooltip positions itself with a ResizeObserver, which jsdom lacks.
-vi.stubGlobal(
-  "ResizeObserver",
-  class {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  },
-);
 
 vi.mock("@/lib/api", async (importOriginal) => {
   const original = await importOriginal<typeof import("@/lib/api")>();
@@ -75,9 +64,7 @@ function list(backups: CockpitBackup[], retentionDays = 14, extra: Partial<Cockp
 function renderPage() {
   return render(
     <CockpitContext.Provider value={cockpitValue()}>
-      <TooltipProvider>
-        <BackupsPage />
-      </TooltipProvider>
+      <BackupsPage />
     </CockpitContext.Provider>,
   );
 }

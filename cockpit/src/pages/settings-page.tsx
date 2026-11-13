@@ -1,15 +1,23 @@
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+  Badge,
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  Input,
+  Label,
+  Spinner,
+  Switch,
+} from "@stellarr/ui";
 import { useState, type ComponentProps, type FormEvent, type KeyboardEvent, type ReactNode } from "react";
 
-import { Spinner } from "@/components/spinner";
 import { PageHeader } from "@/components/page-header";
 import { SecretField } from "@/components/secret-field";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import { LOCALES, t, type Locale, type MessageKey } from "@/i18n";
 import {
   CockpitApiError,

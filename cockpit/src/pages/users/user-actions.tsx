@@ -1,15 +1,15 @@
-import { useState } from "react";
-
-import { Icon } from "@/components/icons/icon";
-import { Button } from "@/components/ui/button";
 import {
+  Button,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@stellarr/ui";
+import { useState } from "react";
+
+import { Icon } from "@/components/icons/icon";
 import { t } from "@/i18n";
 import { cockpitApi, type CockpitRole, type CockpitUser } from "@/lib/api";
 import type { Perform } from "@/pages/users/use-access-actions";

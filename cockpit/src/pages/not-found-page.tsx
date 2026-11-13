@@ -1,6 +1,6 @@
+import { Button } from "@stellarr/ui";
 import { Link } from "react-router-dom";
 
-import { Button } from "@/components/ui/button";
 import { t } from "@/i18n";
 
 export function NotFoundPage() {

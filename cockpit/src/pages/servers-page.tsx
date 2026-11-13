@@ -1,14 +1,10 @@
-import { useEffect, useState, type FormEvent } from "react";
-
-import { CardTitleRow } from "@/components/card-title-row";
-import { Icon } from "@/components/icons/icon";
-import { PageHeader } from "@/components/page-header";
-import { Spinner } from "@/components/spinner";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+  Badge,
+  Button,
+  Card,
   Dialog,
   DialogClose,
   DialogContent,
@@ -16,24 +12,30 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog";
-import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
-import {
+  Input,
+  Label,
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  Spinner,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table";
+} from "@stellarr/ui";
+import { useEffect, useState, type FormEvent } from "react";
+
+import { CardTitleRow } from "@/components/card-title-row";
+import { Icon } from "@/components/icons/icon";
+import { PageHeader } from "@/components/page-header";
 import { t } from "@/i18n";
 import { formatNumber, formatShortDateTime } from "@/i18n/format";
 import { cockpitApi, type CockpitServer, type CockpitServerMember } from "@/lib/api";
@@ -125,7 +127,7 @@ function TransferSheet({
 }) {
   return (
     <Sheet open={server !== null} onOpenChange={(open) => !open && onClose()}>
-      <SheetContent className="overflow-y-auto sm:max-w-md">
+      <SheetContent closeLabel={t("common.close")} className="overflow-y-auto sm:max-w-md">
         <SheetHeader>
           <SheetTitle>{t("servers.transfer.title", { name: server?.name ?? "" })}</SheetTitle>
           <SheetDescription>{t("servers.transfer.description")}</SheetDescription>
@@ -174,7 +176,7 @@ function DeleteDialog({
         }
       }}
     >
-      <DialogContent>
+      <DialogContent closeLabel={t("common.close")}>
         <DialogHeader>
           <DialogTitle>{t("servers.delete.title", { name: server?.name ?? "" })}</DialogTitle>
           <DialogDescription>{t("servers.delete.description")}</DialogDescription>

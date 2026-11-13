@@ -3,7 +3,6 @@ import { createRoot } from "react-dom/client";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 
 import { AppGate } from "@/components/app-gate";
-import { TooltipProvider } from "@/components/ui/tooltip";
 import { detectLocale, setLocale } from "@/i18n";
 import { BackupsPage } from "@/pages/backups-page";
 import { DashboardPage } from "@/pages/dashboard-page";
@@ -47,11 +46,9 @@ setLocale(detectLocale());
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <CockpitProvider>
-      <TooltipProvider>
-        <LocaleProvider>
-          <RouterProvider router={router} />
-        </LocaleProvider>
-      </TooltipProvider>
+      <LocaleProvider>
+        <RouterProvider router={router} />
+      </LocaleProvider>
     </CockpitProvider>
   </StrictMode>,
 );

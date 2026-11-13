@@ -1,10 +1,17 @@
+import {
+  Alert,
+  AlertDescription,
+  AlertTitle,
+  Button,
+  Spinner,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@stellarr/ui";
 import { useCallback, useState } from "react";
 
-import { Spinner } from "@/components/spinner";
 import { PageHeader } from "@/components/page-header";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { t } from "@/i18n";
 import { cockpitApi, type CockpitRole, type CockpitSession, type CockpitUsers } from "@/lib/api";
 import { useCockpitResource } from "@/lib/use-cockpit-resource";

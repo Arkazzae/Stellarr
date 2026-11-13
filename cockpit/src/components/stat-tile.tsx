@@ -1,8 +1,7 @@
+import { Card, cx } from "@stellarr/ui";
 import type { ReactNode } from "react";
 
 import { Icon, type IconName } from "@/components/icons/icon";
-import { Card } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
 
 interface TileHeaderProps {
   icon: IconName;
@@ -15,7 +14,7 @@ interface TileHeaderProps {
 /** A tile's name with its icon, quiet beside the figure under it, and room for a badge at the end. */
 export function TileHeader({ icon, title, children, className }: TileHeaderProps) {
   return (
-    <div className={cn("flex min-h-6 items-center gap-2 text-sm text-muted-foreground", className)}>
+    <div className={cx("flex min-h-6 items-center gap-2 text-sm text-muted-foreground", className)}>
       <Icon name={icon} size={16} />
       <h2 className="min-w-0 flex-1 truncate">{title}</h2>
       {children}
@@ -26,7 +25,7 @@ export function TileHeader({ icon, title, children, className }: TileHeaderProps
 /** The headline figure of a tile. Proportional digits: tabular ones look loose this large. */
 export function TileFigure({ value, unit, className }: { value: string; unit?: string; className?: string }) {
   return (
-    <p className={cn("text-3xl leading-none font-semibold tracking-[-0.02em]", className)}>
+    <p className={cx("text-3xl leading-none font-semibold tracking-[-0.02em]", className)}>
       {value}
       {unit ? <span className="ml-1 text-base font-medium text-muted-foreground">{unit}</span> : null}
     </p>
@@ -50,7 +49,7 @@ interface StatTileProps {
 /** One headline figure: its name, the value, a small chart and a line about it. Tiles in a row share a size. */
 export function StatTile({ icon, title, value, unit, caption, trend, aside, className }: StatTileProps) {
   return (
-    <Card role="group" aria-label={title} className={cn("gap-0 px-5 py-4", className)}>
+    <Card role="group" aria-label={title} className={cx("gap-0 px-5 py-4", className)}>
       <TileHeader icon={icon} title={title} />
       <TileFigure value={value} unit={unit} className="mt-2" />
       {trend ? <div className="mt-3">{trend}</div> : null}

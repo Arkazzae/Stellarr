@@ -1,11 +1,18 @@
+import {
+  Alert,
+  AlertDescription,
+  Button,
+  Input,
+  Label,
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  Spinner,
+} from "@stellarr/ui";
 import { useCallback, useEffect, useId, useState, type FormEvent } from "react";
 
-import { Spinner } from "@/components/spinner";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { t, type MessageKey } from "@/i18n";
 import { formatDateTime } from "@/i18n/format";
 import { cockpitApi, type CockpitRecovery, type CockpitUser, type CockpitUserSecurity } from "@/lib/api";
@@ -122,7 +129,7 @@ export function UserSecuritySheet({ user, open, onOpenChange }: UserSecurityShee
 
   return (
     <Sheet open={open} onOpenChange={close}>
-      <SheetContent className="overflow-y-auto sm:max-w-md">
+      <SheetContent closeLabel={t("common.close")} className="overflow-y-auto sm:max-w-md">
         <SheetHeader>
           <SheetTitle>{t("userSecurity.title", { name: user.displayName })}</SheetTitle>
           <SheetDescription>{t("userSecurity.description")}</SheetDescription>

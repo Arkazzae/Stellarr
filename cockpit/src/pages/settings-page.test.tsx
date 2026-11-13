@@ -29,16 +29,6 @@ vi.mock("@/lib/api", async (importOriginal) => {
   };
 });
 
-// Radix switches measure themselves with a ResizeObserver, which jsdom lacks.
-vi.stubGlobal(
-  "ResizeObserver",
-  class {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  },
-);
-
 const settingsMock = vi.mocked(cockpitApi.settings);
 const updateMock = vi.mocked(cockpitApi.updateSettings);
 const testMailMock = vi.mocked(cockpitApi.sendTestMail);

@@ -1,4 +1,5 @@
-import { Badge } from "@/components/ui/badge";
+import { Badge } from "@stellarr/ui";
+
 import { t, type MessageKey } from "@/i18n";
 import type { CockpitRuntimeService } from "@/lib/api";
 

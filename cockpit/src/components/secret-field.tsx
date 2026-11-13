@@ -1,10 +1,6 @@
+import { Badge, Button, Input, Label, Spinner } from "@stellarr/ui";
 import { useId, useState, type KeyboardEvent } from "react";
 
-import { Spinner } from "@/components/spinner";
-import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { t } from "@/i18n";
 import { formatShortDateTime } from "@/i18n/format";
 import { cockpitApi, type CockpitSecret } from "@/lib/api";
