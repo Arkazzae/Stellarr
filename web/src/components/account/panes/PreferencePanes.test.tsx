@@ -113,11 +113,44 @@ describe("PrivacyPane", () => {
 
     await user.click(screen.getByRole("switch", { name: "Wiadomości prywatne od osób z serwera" }));
     await user.click(screen.getByRole("switch", { name: "Zaproszenia do znajomych" }));
-    await user.click(screen.getByRole("switch", { name: "Pokazuj mój status" }));
+    await user.click(screen.getByRole("switch", { name: "Pokazuj moją dostępność" }));
 
     expect(onChange).toHaveBeenNthCalledWith(1, { allowDirectMessages: false });
     expect(onChange).toHaveBeenNthCalledWith(2, { allowFriendRequests: true });
     expect(onChange).toHaveBeenNthCalledWith(3, { showPresence: false });
+  });
+
+  it("lists the blocked people and unblocks the one asked for", async () => {
+    const user = userEvent.setup();
+    const onUnblock = vi.fn();
+    render(
+      <PrivacyPane
+        preferences={preferences}
+        onChange={vi.fn()}
+        blocked={{
+          people: [
+            { id: "u-ola", displayName: "Ola", username: "ola" },
+            { id: "u-nils", displayName: "", username: "nils" },
+          ],
+          onUnblock,
+        }}
+      />,
+    );
+
+    expect(screen.getByText("@ola")).toBeVisible();
+    // Without a display name the handle stands in for it.
+    expect(screen.getByText("nils")).toBeVisible();
+    await user.click(screen.getByRole("button", { name: "Odblokuj: nils" }));
+
+    expect(onUnblock).toHaveBeenCalledExactlyOnceWith("u-nils");
+  });
+
+  it("says where blocking happens when nobody is blocked", () => {
+    render(
+      <PrivacyPane preferences={preferences} onChange={vi.fn()} blocked={{ people: [], onUnblock: vi.fn() }} />,
+    );
+
+    expect(screen.getByText(/Nikogo nie blokujesz/)).toBeVisible();
   });
 });
 
