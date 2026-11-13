@@ -252,6 +252,16 @@
     padding-bottom: 16px;
   }
 
+  /* Removing a picture is rarer than changing one, so it is a quiet row under
+     the card rather than a control on it. */
+  .pf-remove {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+
   /* Both pictures: a button that is only a picture, with a veil that arrives
      on hover and on keyboard focus. Nothing about them reads as a button until
      you are on them — the card has to look like the card. */
@@ -351,6 +361,11 @@
 
   .pf-bio {
     min-height: 120px;
+  }
+
+  /* The card's own pronoun marker, which sits in a flex row with a gap there. */
+  .pf-face-txt .mp-pronouns {
+    margin-left: 8px;
   }
 
   .pf-preview-bio {

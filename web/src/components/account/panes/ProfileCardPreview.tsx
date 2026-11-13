@@ -13,6 +13,8 @@ interface ProfileCardPreviewProps {
   account: Account;
   /** The bio being edited, which the card shows before it is saved. */
   bio: string;
+  /** The same for the pronouns, printed beside the handle as the card does. */
+  pronouns?: string;
   customEmoji: readonly CustomEmoji[];
   onPickImage: (kind: ImageKind, file: File) => void;
 }
@@ -25,6 +27,7 @@ interface ProfileCardPreviewProps {
 export function ProfileCardPreview({
   account,
   bio,
+  pronouns = "",
   customEmoji,
   onPickImage,
 }: ProfileCardPreviewProps) {
@@ -89,7 +92,12 @@ export function ProfileCardPreview({
               visible result and does not need to repeat it. */}
           <span className="pf-face-txt">
             <b>{account.displayName}</b>
-            <span>@{account.username}</span>
+            <span>
+              @{account.username}
+              {pronouns.trim().length === 0 ? null : (
+                <span className="mp-pronouns">{pronouns.trim()}</span>
+              )}
+            </span>
           </span>
         </div>
 
