@@ -28,6 +28,7 @@ import {
   SecurityPane,
   type SecurityPaneProps,
 } from "@/components/account/panes/SecurityPane";
+import { SoundsPane, type SoundsPaneProps } from "@/components/account/panes/SoundsPane";
 import { VoicePane, type VoicePaneProps } from "@/components/account/panes/VoicePane";
 import { Icon } from "@stellarr/ui/icons";
 import { Avatar } from "@/components/primitives/Avatar";
@@ -66,6 +67,7 @@ export interface UserSettingsProps {
   /** The people this account blocked, listed under privacy. */
   blocked?: BlockedPeopleProps;
   systemNotifications?: SystemNotificationPreferenceProps;
+  sounds: SoundsPaneProps;
   keybinds: KeybindsPaneProps & { cancelRecording: () => void };
   startup?: StartupPreferenceProps;
   appearance: AppearancePaneProps;
@@ -96,6 +98,7 @@ export function UserSettings({
   preferences,
   blocked,
   systemNotifications,
+  sounds,
   keybinds,
   startup,
   appearance,
@@ -170,6 +173,8 @@ export function UserSettings({
             systemNotifications={systemNotifications}
           />
         );
+      case "dzwieki":
+        return <SoundsPane {...sounds} />;
       case "glos":
         return <VoicePane {...voice} />;
       case "skroty":

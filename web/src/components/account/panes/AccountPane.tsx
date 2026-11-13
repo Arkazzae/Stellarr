@@ -4,17 +4,10 @@ import { useEffect, useId, useRef, useState } from "react";
 
 import { Button } from "@stellarr/ui";
 import { Icon } from "@stellarr/ui/icons";
-import type {
-  Account,
-  AccountPatch,
-  CustomEmoji,
-  ImageKind,
-  JoinSoundPicker,
-} from "@/ports";
+import type { Account, AccountPatch, CustomEmoji, ImageKind } from "@/ports";
 import { useLanguage } from "@/state/hooks";
 
 import { BioEditor } from "./BioEditor";
-import { JoinSoundSection } from "./JoinSoundSection";
 import { ProfileCardPreview } from "./ProfileCardPreview";
 
 /** How long the save button keeps showing its tick. */
@@ -24,8 +17,6 @@ const PRONOUNS_MAX = 32;
 
 export interface AccountPaneProps {
   account: Account;
-  /** The arrival sound, saved on its own the moment it changes. */
-  joinSound?: JoinSoundPicker;
   customEmoji?: readonly CustomEmoji[];
   onSave: (patch: AccountPatch) => Promise<void> | void;
   onPickImage: (kind: ImageKind, file: File) => Promise<void> | void;
@@ -37,14 +28,13 @@ export interface AccountPaneProps {
  * The profile pane.
  *
  * Public identity stays together: name, pronouns and bio share one preview and
- * one save action. Pictures and the arrival sound take effect the moment they
- * are chosen, because there is nothing to type and nothing to half-finish. Login credentials are a different task and live in the
+ * one save action. Pictures take effect the moment they are chosen, because
+ * there is nothing to type and nothing to half-finish. Login credentials are a different task and live in the
  * security pane, so a profile save cannot carry a half-edited recovery address
  * or password with it.
  */
 export function AccountPane({
   account,
-  joinSound,
   customEmoji = [],
   onSave,
   onPickImage,
@@ -210,8 +200,6 @@ export function AccountPane({
           {saveError}
         </p>
       )}
-
-      {joinSound ? <JoinSoundSection joinSound={joinSound} /> : null}
     </>
   );
 }

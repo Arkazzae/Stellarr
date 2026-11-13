@@ -45,11 +45,12 @@ describe("UserNotificationsPane", () => {
     expect(screen.queryByRole("switch", { name: "Powiadomienia push" })).toBeNull();
     expect(screen.queryByRole("switch", { name: "Powiadomienia e-mail" })).toBeNull();
 
-    await user.click(screen.getByRole("switch", { name: "Dźwięk wiadomości" }));
-    await user.click(screen.getByRole("switch", { name: "Dźwięk wejścia i wyjścia" }));
+    // Hearing others come and go is a sound of the call, on the sounds pane.
+    expect(screen.queryByRole("switch", { name: "Dźwięk wejścia i wyjścia" })).toBeNull();
 
-    expect(onChange).toHaveBeenCalledWith({ messageSound: false });
-    expect(onChange).toHaveBeenCalledWith({ joinLeaveSound: false });
+    await user.click(screen.getByRole("switch", { name: "Dźwięk wiadomości" }));
+
+    expect(onChange).toHaveBeenCalledExactlyOnceWith({ messageSound: false });
   });
 
   it("chooses what the message sound plays for, with mentions as the default", async () => {

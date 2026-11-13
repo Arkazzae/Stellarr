@@ -439,12 +439,6 @@
    * A sound picked from a name alone is a sound nobody has heard, so the
    * audition button never wraps away from the select it belongs to.
    */
-  /* Apart from the profile form above it: it saves on its own, the moment it
-     changes, and must not read as one more field of that form. */
-  .acc-join-sound {
-    margin-top: 28px;
-  }
-
   .join-sound-row {
     display: flex;
     align-items: center;

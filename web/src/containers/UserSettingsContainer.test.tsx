@@ -201,7 +201,21 @@ describe("UserSettingsContainer", () => {
       output: { marker: "output" },
       camera: { marker: "camera" },
     });
-    expect(dialog().accountPane.joinSound).toMatchObject({ marker: "join-sound" });
+    expect(dialog().sounds.joinSound).toMatchObject({ marker: "join-sound" });
+    expect(dialog().accountPane).not.toHaveProperty("joinSound");
+  });
+
+  it("hands the sounds pane the arrivals switch from the account and the soundboard level from the device", () => {
+    world.account = { ...world.account, preferences: { vadSensitivity: 50, joinLeaveSound: false } };
+    render(<UserSettingsContainer />);
+    const voice = world.ports["voiceSettings"] as ReturnType<typeof voiceStore>;
+
+    expect(dialog().sounds).toMatchObject({ arrivalsAudible: false, soundboardVolume: 100 });
+    dialog().sounds.onArrivalsAudibleChange(true);
+    expect(setPreferences()).toHaveBeenCalledWith({ joinLeaveSound: true });
+    act(() => dialog().sounds.onSoundboardVolumeChange(35));
+    expect(voice.update).toHaveBeenCalledWith({ soundboardVolume: 35 });
+    expect(dialog().sounds.soundboardVolume).toBe(35);
   });
 
   describe("sensitivity", () => {
