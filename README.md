@@ -33,7 +33,7 @@ Full documentation lives in [`docs/`](docs/README.md):
 | `server/` | ASP.NET Core API, SignalR hub, operator CLI, and integration tests |
 | `media/` | [Stellarr Media](media/README.md), the Rust WebRTC SFU (`stellarr-media`) |
 | `infra/` | Container entrypoint, Nginx, coturn, supervisord, and TLS scripts |
-| `deploy/` | [Platform templates](deploy/README.md) for the production container, such as Unraid's |
+| `deploy/` | [Platform templates](deploy/README.md) for the production container, such as Unraid's, and the optional [Cloudflare backup relay](deploy/cloudflare/backup-relay/README.md) |
 | `docs/` | VitePress documentation site |
 | `branding/` | [Logo, mascot, and brand guidelines](branding/README.md), and the [README film](branding/film/README.md) |
 

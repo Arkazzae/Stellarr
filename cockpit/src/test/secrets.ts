@@ -6,6 +6,7 @@ const VARIABLES: Record<CockpitSecretName, string> = {
   "giphy.api-key": "GIPHY_API_KEY",
   "cloudflare.r2.access-key": "STELLARR_CLOUDFLARE_R2_ACCESS_KEY",
   "cloudflare.r2.secret-key": "STELLARR_CLOUDFLARE_R2_SECRET_KEY",
+  "cloudflare.r2.worker-token": "STELLARR_CLOUDFLARE_R2_WORKER_TOKEN",
 };
 
 /** The state of one secret as the server reports it. */

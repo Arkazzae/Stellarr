@@ -1,0 +1,15 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "stellarr-backup-relay",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-11-13",
+  "observability": {
+    "enabled": true
+  },
+  "r2_buckets": [
+    {
+      "binding": "BACKUPS",
+      "bucket_name": "stellarr-backups"
+    }
+  ]
+}

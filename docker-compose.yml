@@ -76,11 +76,13 @@ services:
       Backups__RetryMinutes: ${STELLARR_BACKUP_RETRY_MINUTES:-15}
       Backups__InitialDelayMinutes: ${STELLARR_BACKUP_INITIAL_DELAY_MINUTES:-5}
       Cloudflare__R2__Enabled: ${STELLARR_CLOUDFLARE_R2_ENABLED:-false}
+      Cloudflare__R2__Mode: ${STELLARR_CLOUDFLARE_R2_MODE:-s3}
       Cloudflare__R2__Endpoint: ${STELLARR_CLOUDFLARE_R2_ENDPOINT:-}
       Cloudflare__R2__Region: ${STELLARR_CLOUDFLARE_R2_REGION:-auto}
       Cloudflare__R2__Bucket: ${STELLARR_CLOUDFLARE_R2_BUCKET:-}
       Cloudflare__R2__AccessKey: ${STELLARR_CLOUDFLARE_R2_ACCESS_KEY:-}
       Cloudflare__R2__SecretKey: ${STELLARR_CLOUDFLARE_R2_SECRET_KEY:-}
+      Cloudflare__R2__WorkerToken: ${STELLARR_CLOUDFLARE_R2_WORKER_TOKEN:-}
       Cloudflare__R2__Prefix: ${STELLARR_CLOUDFLARE_R2_PREFIX:-stellarr}
       Uploads__MaxStoredBytesPerUser: ${STELLARR_UPLOAD_USER_BYTES:-2147483648}
       Uploads__MaxStoredBytes: ${STELLARR_UPLOAD_TOTAL_BYTES:-21474836480}

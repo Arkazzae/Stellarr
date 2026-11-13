@@ -20,7 +20,7 @@ Stellarr is a self-hosted text, voice, and video chat for small groups, packaged
 ## Administration
 
 - [Automatic backups](admin/backups.md): schedules, verification, the local checkpoint, and a recovery drill.
-- [Cloudflare R2 offsite backups](admin/cloudflare-r2.md): the R2 integration, bucket policies, and why a Deploy to Cloudflare button needs a companion Worker.
+- [Cloudflare R2 offsite backups](admin/cloudflare-r2.md): the R2 integration, its Worker relay, bucket policies, and a Deploy to Cloudflare button.
 
 ## Reference
 

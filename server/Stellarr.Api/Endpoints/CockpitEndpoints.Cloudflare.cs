@@ -8,27 +8,32 @@ namespace Stellarr.Api.Endpoints;
 
 public static partial class CockpitEndpoints
 {
-    private static async Task<IResult> GetCloudflareR2Async(CloudflareR2PolicyStore policies)
-    {
-        var settings = policies.Current;
-        return Results.Ok(new CloudflareR2Dto(
-            settings.Enabled, settings.Endpoint, settings.Region, settings.Bucket, settings.Prefix, policies.Source));
-    }
+    private static async Task<IResult> GetCloudflareR2Async(CloudflareR2PolicyStore policies) =>
+        Results.Ok(CloudflareR2Of(policies.Current, policies.Source));
 
     private static async Task<IResult> UpdateCloudflareR2Async(CloudflareR2Request request,
         HttpContext http, AppDbContext db, CloudflareR2PolicyStore policies, InstanceSecrets secrets,
         Messages messages, CancellationToken cancellationToken)
     {
         var problems = new Dictionary<string, string[]>();
-        if (request.Endpoint is null || request.Region is null || request.Bucket is null || request.Prefix is null ||
-            request.Endpoint.Length > 2048 || request.Region.Length > 100 || request.Bucket.Length > 255 || request.Prefix.Length > 512)
+        if (request.Mode is null || request.Endpoint is null || request.Region is null ||
+            request.Bucket is null || request.Prefix is null ||
+            request.Mode.Length > 16 || request.Endpoint.Length > 2048 || request.Region.Length > 100 ||
+            request.Bucket.Length > 255 || request.Prefix.Length > 512 ||
+            !CloudflareR2Modes.IsKnown(request.Mode))
             problems["settings"] = [messages.Get(MessageKey.CockpitCloudflareR2FieldsInvalid)];
         if (problems.Count > 0) return Results.ValidationProblem(problems);
 
         var policy = CloudflareR2PolicyStore.FromRequest(request);
         var resolved = await secrets.ReadAsync(cancellationToken);
-        if (policy.Enabled && (!policy.IsValid(requireCredentials: false) ||
-            !resolved[SecretNames.CloudflareR2AccessKey].IsSet || !resolved[SecretNames.CloudflareR2SecretKey].IsSet))
+        var missingCredentials = policy.Mode switch
+        {
+            CloudflareR2Modes.S3 => !resolved[SecretNames.CloudflareR2AccessKey].IsSet ||
+                !resolved[SecretNames.CloudflareR2SecretKey].IsSet,
+            CloudflareR2Modes.Worker => !resolved[SecretNames.CloudflareR2WorkerToken].IsSet,
+            _ => true,
+        };
+        if (policy.Enabled && (!policy.IsValid(requireCredentials: false) || missingCredentials))
             problems["destination"] = [messages.Get(MessageKey.CockpitCloudflareR2Invalid)];
         if (problems.Count > 0) return Results.ValidationProblem(problems);
 
@@ -37,8 +42,7 @@ public static partial class CockpitEndpoints
         await StageAuditAsync(db, server.Id, http.User.RequireUserId(), messages.Get(MessageKey.AuditSettingsUpdated), cancellationToken);
         if (!await db.TrySaveChangesAsync(cancellationToken)) return Results.Conflict();
         policies.Publish(policy);
-        return Results.Ok(new CloudflareR2Dto(
-            policy.Enabled, policy.Endpoint, policy.Region, policy.Bucket, policy.Prefix, policies.Source));
+        return Results.Ok(CloudflareR2Of(policy, policies.Source));
     }
 
     private static async Task<IResult> ResetCloudflareR2Async(HttpContext http, AppDbContext db,
@@ -49,8 +53,10 @@ public static partial class CockpitEndpoints
         await StageAuditAsync(db, server.Id, http.User.RequireUserId(), messages.Get(MessageKey.AuditSettingsUpdated), cancellationToken);
         if (!await db.TrySaveChangesAsync(cancellationToken)) return Results.Conflict();
         policies.Reset();
-        var settings = policies.Current;
-        return Results.Ok(new CloudflareR2Dto(
-            settings.Enabled, settings.Endpoint, settings.Region, settings.Bucket, settings.Prefix, policies.Source));
+        return Results.Ok(CloudflareR2Of(policies.Current, policies.Source));
     }
+
+    private static CloudflareR2Dto CloudflareR2Of(CloudflareR2Options settings, string source) => new(
+        settings.Enabled, settings.Mode, settings.Endpoint, settings.Region,
+        settings.Bucket, settings.Prefix, source);
 }

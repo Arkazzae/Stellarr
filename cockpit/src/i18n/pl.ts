@@ -439,14 +439,23 @@ export const pl = {
   "integrations.cloudflare.enabled": "Wysyłaj kopie do Cloudflare R2",
   "integrations.cloudflare.enabledDescription":
     "Cykl jest udany tylko wtedy, gdy archiwum dotrze do tego bucketu. Kopie lokalne zostają na serwerze.",
+  "integrations.cloudflare.mode": "Połączenie",
+  "integrations.cloudflare.mode.s3": "Poświadczenia S3 API R2",
+  "integrations.cloudflare.mode.s3Hint": "Stellarr wysyła pliki bezpośrednio, używając ograniczonego klucza i sekretu R2.",
+  "integrations.cloudflare.mode.worker": "Worker pośredniczący w kopiach",
+  "integrations.cloudflare.mode.workerHint": "Stellarr wywołuje Workera z deploy/cloudflare/backup-relay, który zapisuje pliki w R2 przez binding.",
   "integrations.cloudflare.endpoint": "Adres API S3 (HTTPS)",
+  "integrations.cloudflare.workerEndpoint": "Adres Workera (HTTPS)",
   "integrations.cloudflare.region": "Region",
   "integrations.cloudflare.bucket": "Nazwa bucketu",
   "integrations.cloudflare.prefix": "Prefiks obiektów",
   "integrations.cloudflare.accessKey": "R2 Access Key ID",
   "integrations.cloudflare.secretKey": "R2 Secret Access Key",
+  "integrations.cloudflare.workerToken": "Token wysyłki Workera",
   "integrations.cloudflare.credentialsHint":
     "Najpierw zapisz oba poświadczenia, następnie włącz wysyłkę i zapisz połączenie. Puste pola sekretów nie zmieniają zapisanych wartości.",
+  "integrations.cloudflare.workerHint":
+    "Wdróż Workera z deploy/cloudflare/backup-relay, wklej tutaj jego adres i token, a następnie włącz wysyłkę. Token jest szyfrowany jak każdy inny sekret.",
   "integrations.cloudflare.cloudPolicies":
     "Retencja zdalna, blokady bucketu, reguły cyklu życia i sprzątanie nieukończonych uploadów pozostają w Cloudflare. Lokalna retencja nie usuwa obiektów z R2. Archiwa ZIP zawierają sekrety i nie są szyfrowane przez aplikację.",
   "integrations.cloudflare.environment": "Obowiązują domyślne ustawienia wdrożenia. Zapis w panelu ma pierwszeństwo.",

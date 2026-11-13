@@ -83,7 +83,7 @@ public sealed partial class AccountSecurityFlowTests
         var backupPolicy = new Stellarr.Api.Backups.BackupPolicyRequest(false, 24, 15, 5, 14);
         using var backupSettings = await owner.PutAsJsonAsync("/api/cockpit/backups/settings", backupPolicy);
         using var resetBackupSettings = await owner.DeleteAsync("/api/cockpit/backups/settings");
-        var cloudflare = new Stellarr.Api.Integrations.Cloudflare.CloudflareR2Request(false, "", "auto", "", "stellarr");
+        var cloudflare = new Stellarr.Api.Integrations.Cloudflare.CloudflareR2Request(false, "s3", "", "auto", "", "stellarr");
         using var cloudflareSettings = await owner.PutAsJsonAsync("/api/cockpit/integrations/cloudflare/r2", cloudflare);
         using var resetCloudflareSettings = await owner.DeleteAsync("/api/cockpit/integrations/cloudflare/r2");
 

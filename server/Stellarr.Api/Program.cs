@@ -122,8 +122,15 @@ builder.Services.AddOptions<AutomaticBackupOptions>()
 builder.Services.AddOptions<CloudflareR2Options>()
     .Bind(builder.Configuration.GetSection(CloudflareR2Options.SectionName))
     .Validate(settings => settings.IsValid(requireCredentials: false),
-        "Cloudflare R2 requires HTTPS, bucket, region and a safe prefix.")
+        "Cloudflare R2 requires HTTPS, a safe prefix and the credentials of its connection mode.")
     .ValidateOnStart();
+builder.Services.AddHttpClient(R2BackupDestination.WorkerClientName, http =>
+{
+    // A large archive may take a while to cross a slow link. The request
+    // itself streams from disk; this only stops a stuck connection.
+    http.Timeout = TimeSpan.FromHours(2);
+    http.DefaultRequestHeaders.UserAgent.ParseAdd("Stellarr/2.0");
+});
 builder.Services.AddSingleton<IBackupDestination, R2BackupDestination>();
 builder.Services.AddSingleton<CloudflareR2PolicyStore>();
 builder.Services.AddSingleton<BackupPolicyStore>();

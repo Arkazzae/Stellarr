@@ -22,7 +22,7 @@ vi.mock("@/lib/api", async (importOriginal) => {
 });
 
 const settings: CockpitCloudflareR2Settings = {
-  enabled: false, endpoint: "", region: "auto", bucket: "", prefix: "stellarr", source: "environment",
+  enabled: false, mode: "s3", endpoint: "", region: "auto", bucket: "", prefix: "stellarr", source: "environment",
 };
 
 beforeEach(() => {
@@ -66,6 +66,31 @@ it("asks for both credentials before offsite copies can be enabled", async () =>
   await user.click(cloudflare.getByRole("button", { name: "Zapisz połączenie" }));
 
   expect((await cloudflare.findByRole("alert")).textContent).toContain("obu poświadczeń");
+});
+
+
+it("switches to the relay Worker and asks for its token instead of S3 keys", async () => {
+  const user = userEvent.setup();
+  const changed = vi.fn();
+  render(<CloudflareSettings secrets={secrets({ "cloudflare.r2.worker-token": "environment" })} onSecretChanged={changed} />);
+  const cloudflare = await card();
+
+  await user.selectOptions(cloudflare.getByLabelText("Połączenie"), "worker");
+
+  expect(cloudflare.queryByLabelText("R2 Access Key ID")).toBeNull();
+  expect(cloudflare.queryByLabelText("R2 Secret Access Key")).toBeNull();
+  expect(cloudflare.getByLabelText("Token wysyłki Workera")).toBeTruthy();
+  await user.type(cloudflare.getByLabelText("Adres Workera (HTTPS)"), "https://relay.example.workers.dev");
+  await user.click(cloudflare.getByRole("switch", { name: "Wysyłaj kopie do Cloudflare R2" }));
+  await user.click(cloudflare.getByRole("button", { name: "Zapisz połączenie" }));
+
+  expect(cockpitApi.updateCloudflareR2).toHaveBeenCalledWith({
+    ...settings,
+    mode: "worker",
+    endpoint: "https://relay.example.workers.dev",
+    enabled: true,
+  });
+  expect(await cloudflare.findByText("Zapisano. Następna wysyłka kopii użyje tego połączenia.")).toBeTruthy();
 });
 
 it("restores deployment defaults from the panel", async () => {

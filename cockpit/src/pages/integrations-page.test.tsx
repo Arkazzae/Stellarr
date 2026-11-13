@@ -44,7 +44,7 @@ const cloudflareMock = vi.mocked(cockpitApi.cloudflareR2);
 const updateCloudflareMock = vi.mocked(cockpitApi.updateCloudflareR2);
 
 const cloudflare: CockpitCloudflareR2Settings = {
-  enabled: false, endpoint: "", region: "auto", bucket: "", prefix: "stellarr", source: "environment",
+  enabled: false, mode: "s3", endpoint: "", region: "auto", bucket: "", prefix: "stellarr", source: "environment",
 };
 
 const stored: CockpitSettings = {
