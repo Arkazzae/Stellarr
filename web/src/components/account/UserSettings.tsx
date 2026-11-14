@@ -16,13 +16,16 @@ import {
   type LanguagePaneProps,
 } from "@/components/account/panes/LanguagePane";
 import {
+  UserNotificationsPane,
+  type MutedChannelsProps,
+  type SystemNotificationPreferenceProps,
+} from "@/components/account/panes/NotificationsPane";
+import {
   AdvancedPane,
   PrivacyPane,
-  UserNotificationsPane,
   type BlockedPeopleProps,
   type PreferencePaneProps,
   type StartupPreferenceProps,
-  type SystemNotificationPreferenceProps,
 } from "@/components/account/panes/PreferencePanes";
 import {
   SecurityPane,
@@ -72,6 +75,10 @@ export interface UserSettingsProps {
   /** The people this account blocked, listed under privacy. */
   blocked?: BlockedPeopleProps;
   systemNotifications?: SystemNotificationPreferenceProps;
+  /** The muted channels of the server in view, listed under notifications. */
+  mutedChannels?: MutedChannelsProps;
+  /** Plays the message sound once, from the notifications pane. */
+  onPlayMessageSound?: () => void;
   sounds: SoundsPaneProps;
   keybinds: KeybindsPaneProps & { cancelRecording: () => void };
   startup?: StartupPreferenceProps;
@@ -106,6 +113,8 @@ export function UserSettings({
   preferences,
   blocked,
   systemNotifications,
+  mutedChannels,
+  onPlayMessageSound,
   sounds,
   keybinds,
   startup,
@@ -180,6 +189,8 @@ export function UserSettings({
           <UserNotificationsPane
             {...preferences}
             systemNotifications={systemNotifications}
+            muted={mutedChannels}
+            onPlaySound={onPlayMessageSound}
           />
         );
       case "dzwieki":

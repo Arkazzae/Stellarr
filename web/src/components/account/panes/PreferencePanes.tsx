@@ -4,7 +4,6 @@ import type { ReactNode } from "react";
 
 import { Button } from "@stellarr/ui";
 import { Avatar } from "@/components/primitives/Avatar";
-import { Segmented } from "@/components/primitives/Segmented";
 import { Switch } from "@/components/primitives/Switch";
 import type { UserPreferences } from "@/ports";
 import { useLanguage } from "@/state/hooks";
@@ -12,25 +11,17 @@ import { useLanguage } from "@/state/hooks";
 import { VoiceSection } from "./VoiceFields";
 
 /**
- * The switch panes: notifications, privacy and advanced.
+ * The switch panes: privacy and advanced.
  *
  * They share one shape, a card of switches each with a sentence saying what it
  * changes, so they share this file and its row. Everything here is stored on
- * the account and follows the person to every device.
+ * the account and follows the person to every device. Notifications grew out
+ * of that shape and have their own file.
  */
 
 export interface PreferencePaneProps {
   preferences: UserPreferences;
   onChange: (patch: Partial<UserPreferences>) => void;
-}
-
-/** Desktop notifications are a browser permission, not a stored preference alone. */
-export interface SystemNotificationPreferenceProps {
-  supported: boolean;
-  permission: NotificationPermission | "unsupported";
-  pending: boolean;
-  error: boolean;
-  onChange(enabled: boolean): void;
 }
 
 /** Someone this account blocked, as the privacy pane lists them. */
@@ -85,75 +76,6 @@ function SwitchCard({ title, lone, children }: { title: string; lone?: boolean; 
     <VoiceSection title={title} lone={lone}>
       <div className="frm">{children}</div>
     </VoiceSection>
-  );
-}
-
-export function UserNotificationsPane({
-  preferences,
-  onChange,
-  systemNotifications,
-}: PreferencePaneProps & { systemNotifications?: SystemNotificationPreferenceProps }) {
-  const { t } = useLanguage();
-
-  const systemDetail =
-    systemNotifications?.permission === "denied"
-      ? t("preference.desktopNotificationsDenied")
-      : systemNotifications?.supported === false
-        ? t("preference.desktopNotificationsUnsupported")
-        : t("preference.desktopNotificationsDetail");
-
-  return (
-    <>
-      <SwitchCard title={t("preference.notifications")} lone>
-        {systemNotifications === undefined ? null : (
-          <PreferenceRow
-            label={t("preference.desktopNotifications")}
-            detail={systemDetail}
-            error={systemNotifications.error ? t("preference.desktopNotificationsFailed") : null}
-            checked={
-              systemNotifications.permission === "granted" && preferences.desktopNotifications
-            }
-            disabled={!systemNotifications.supported || systemNotifications.pending}
-            onChange={systemNotifications.onChange}
-          />
-        )}
-        <PreferenceRow
-          label={t("preference.messageSound")}
-          detail={t("preference.messageSoundDetail")}
-          checked={preferences.messageSound}
-          onChange={(messageSound) => onChange({ messageSound })}
-        />
-        {/* What the sound is for, so it waits on the switch above: with the
-            sound off there is nothing for the choice to change. A mention
-            always sounds, even in the channel being read. */}
-        <div className="frm-row">
-          <span className="frm-lab">
-            {t("preference.messageSoundFor")}
-            <span>{t("preference.messageSoundForDetail")}</span>
-          </span>
-          <div className="frm-ctl">
-            <Segmented
-              label={t("preference.messageSoundFor")}
-              value={preferences.mentionsOnly ? "mentions" : "all"}
-              disabled={!preferences.messageSound}
-              onChange={(value) => onChange({ mentionsOnly: value === "mentions" })}
-              options={[
-                {
-                  value: "mentions",
-                  label: t("preference.soundMentions"),
-                  detail: t("preference.soundMentionsDetail"),
-                },
-                {
-                  value: "all",
-                  label: t("preference.soundAll"),
-                  detail: t("preference.soundAllDetail"),
-                },
-              ]}
-            />
-          </div>
-        </div>
-      </SwitchCard>
-    </>
   );
 }
 

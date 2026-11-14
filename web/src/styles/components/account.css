@@ -936,6 +936,248 @@
     }
   }
 
+  /* ---------- POWIADOMIENIA ---------- */
+  /*
+   * What reaches you: the settings below drawn as their outcomes, one row per
+   * everyday event and one column per way it can reach you. A table, because
+   * that is what it is: the eye reads down a column ("what makes a sound") as
+   * often as along a row ("what does a mention do").
+   */
+  .nt-stage {
+    margin-bottom: 30px;
+    background: var(--set-group);
+    border: 1px solid var(--line-subtle);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+
+  .nt-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+  }
+
+  .nt-table col.nt-col {
+    width: 112px;
+  }
+
+  .nt-table thead th {
+    padding: 14px 8px 12px;
+    font-size: var(--text-12);
+    font-weight: 500;
+    color: var(--text-faint);
+    text-align: center;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--line-subtle);
+  }
+
+  /* The first heading names the table, so it reads as the group's title. */
+  .nt-table thead th:first-child {
+    padding-left: 20px;
+    text-align: left;
+    font-size: var(--text-14);
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .nt-head {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .nt-table tbody th {
+    padding: 12px 8px 12px 20px;
+    text-align: left;
+    font-weight: 400;
+  }
+
+  .nt-table tbody tr + tr > * {
+    border-top: 1px solid var(--line-subtle);
+  }
+
+  .nt-table td {
+    text-align: center;
+    vertical-align: middle;
+  }
+
+  .nt-who {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .nt-who > span:last-child {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .nt-who b {
+    font-size: var(--text-14);
+    font-weight: 550;
+    color: var(--text);
+    overflow-wrap: anywhere;
+  }
+
+  .nt-who small {
+    font-size: var(--text-12);
+    color: var(--text-faint);
+  }
+
+  /* An event that is not a person, a call or a muted channel, in a disc the
+     size of the small avatar beside it, so the names line up. */
+  .nt-glyph {
+    flex: none;
+    display: grid;
+    place-items: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--surface-hover);
+    color: var(--text-muted);
+  }
+
+  /* Yes is a tick on the accent, the colour a switch turns when it is on; no
+     is a short rule, quieter than any mark, so the yeses are what the eye
+     finds. */
+  .nt-mark {
+    display: inline-grid;
+    place-items: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    vertical-align: middle;
+  }
+
+  .nt-mark[data-on="true"] {
+    background: var(--accent);
+    color: var(--on-accent);
+  }
+
+  .nt-mark[data-on="false"]::before {
+    content: "";
+    width: 10px;
+    height: 1.5px;
+    border-radius: 1px;
+    background: var(--text-faint);
+    opacity: 0.6;
+  }
+
+  /* A cell a change has just turned over answers once, so the link between
+     the control and its outcome is seen rather than inferred. */
+  .nt-mark.changed {
+    animation: nt-turn 700ms var(--ease-standard);
+  }
+
+  @keyframes nt-turn {
+    from {
+      box-shadow: 0 0 0 6px var(--accent-soft);
+    }
+
+    to {
+      box-shadow: 0 0 0 0 transparent;
+    }
+  }
+
+  /* The permission row: a button before the device was asked, a test beside
+     the switch once it said yes, a word in the warning colour once it said no. */
+  .nt-ctl {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+  }
+
+  .sv-pane .frm-row.nt-solo {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .nt-state {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: var(--text-13);
+    font-weight: 500;
+    color: var(--warn-text);
+    white-space: nowrap;
+  }
+
+  /* The group's own action, "play", sits at the end of its heading. */
+  .sc-h.nt-h {
+    justify-content: space-between;
+    padding-right: 0;
+  }
+
+  /* Three cards under the label, across the group's width, as the voice
+     pane's choices are. */
+  .nt-sound .frm-row:not(:has(> .frm-switch)) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .nt-sound .frm-lab {
+    padding-top: 0;
+  }
+
+  .nt-sound-choice {
+    --ui-segmented-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .nt-hash {
+    margin-right: 3px;
+    color: var(--text-faint);
+    font-weight: 500;
+  }
+
+  .nt-note {
+    margin: 0;
+    padding: 14px 0 16px;
+    border-top: 1px solid var(--line-subtle);
+    font-size: var(--text-13);
+    line-height: 1.5;
+    color: var(--text-faint);
+  }
+
+  @media (max-width: 767px) {
+    .nt-table col.nt-col {
+      width: 58px;
+    }
+
+    .nt-table thead th {
+      padding-inline: 2px;
+      white-space: normal;
+      line-height: 1.25;
+    }
+
+    .nt-head {
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .nt-table thead th:first-child,
+    .nt-table tbody th {
+      padding-left: 14px;
+    }
+
+    /* The faces are decoration; on a phone the event's name needs their room. */
+    .nt-who > :first-child {
+      display: none;
+    }
+
+    /* The permission's controls, a test and a switch, go under the sentence
+       instead of squeezing it into a third of the row. */
+    .sv-pane .frm-row:has(> .nt-ctl) {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .nt-sound-choice {
+      --ui-segmented-columns: minmax(0, 1fr);
+    }
+  }
+
   /* ---------- SKRÓTY KLAWISZOWE ---------- */
   .kb-list {
     display: flex;
@@ -1565,7 +1807,8 @@
 
   @media (prefers-reduced-motion: reduce) {
     .pf-format,
-    .acc-pop {
+    .acc-pop,
+    .nt-mark.changed {
       transition: none;
       animation: none;
     }

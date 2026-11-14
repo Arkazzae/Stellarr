@@ -25,6 +25,10 @@ const world = vi.hoisted(() => ({
     unblock: vi.fn(),
   },
   joinSoundOpen: vi.fn(),
+  directory: {} as Record<string, unknown>,
+  playSystemFx: vi.fn(),
+  showTestNotification: vi.fn(),
+  android: false,
 }));
 
 vi.mock("@/components/account/UserSettings", () => ({
@@ -38,8 +42,20 @@ vi.mock("@/hooks/useBrowserNotifications", () => ({
   useBrowserNotifications: () => world.notifications,
 }));
 
+vi.mock("@/lib/audio/systemFx", () => ({
+  playSystemFx: (name: string) => world.playSystemFx(name),
+}));
+vi.mock("@/lib/notifications/android", () => ({
+  androidNotificationsSupported: () => world.android,
+}));
+vi.mock("@/lib/notifications/browser", () => ({
+  browserNotificationsSupported: () => true,
+  showTestNotification: (title: string, body: string) => world.showTestNotification(title, body),
+}));
+
 vi.mock("@/state/hooks", () => ({
   useAccount: () => world.account,
+  useDirectory: () => world.directory,
   useEmoji: () => ({ emoji: [] }),
   useFriends: () => world.friends,
   useKeybinds: () => ({}),
@@ -103,7 +119,7 @@ function voiceStore() {
 function setAccount(vadSensitivity: number) {
   world.account = {
     account: { id: "u1", displayName: "Maja" },
-    preferences: { vadSensitivity },
+    preferences: { vadSensitivity, mutedChannelIds: [] as string[] },
     supported: { profile: true, uploads: true, password: true, preferences: true },
     update: vi.fn(),
     setPreferences: vi.fn(async () => undefined),
@@ -128,6 +144,22 @@ beforeEach(() => {
   world.closeModal = vi.fn();
   world.logout = vi.fn(async () => undefined);
   world.joinSoundOpen = vi.fn();
+  world.playSystemFx = vi.fn();
+  world.showTestNotification = vi.fn();
+  world.android = false;
+  world.directory = {
+    server: { id: "s1", name: "Stellarr" },
+    channels: [
+      { id: "c-general", name: "ogólny" },
+      { id: "c-memes", name: "memy" },
+      { id: "v-lobby", name: "poczekalnia" },
+    ],
+    textChannels: [
+      { id: "c-general", name: "ogólny" },
+      { id: "c-memes", name: "memy", sectionId: "sec-fun" },
+    ],
+    sections: [{ id: "sec-fun", name: "Luźne" }],
+  };
   world.notifications = {
     supported: true,
     permission: "default",
@@ -185,7 +217,7 @@ describe("UserSettingsContainer", () => {
   });
 
   it("hands the appearance pane the account's reduced motion and stores a change", () => {
-    world.account = { ...world.account, preferences: { vadSensitivity: 50, reducedMotion: true } };
+    world.account = { ...world.account, preferences: { vadSensitivity: 50, mutedChannelIds: [], reducedMotion: true } };
     render(<UserSettingsContainer />);
 
     expect(dialog().appearance.motion?.reducedMotion).toBe(true);
@@ -206,7 +238,7 @@ describe("UserSettingsContainer", () => {
   });
 
   it("hands the sounds pane the arrivals switch from the account and the soundboard level from the device", () => {
-    world.account = { ...world.account, preferences: { vadSensitivity: 50, joinLeaveSound: false } };
+    world.account = { ...world.account, preferences: { vadSensitivity: 50, mutedChannelIds: [], joinLeaveSound: false } };
     render(<UserSettingsContainer />);
     const voice = world.ports["voiceSettings"] as ReturnType<typeof voiceStore>;
 
@@ -300,6 +332,25 @@ describe("UserSettingsContainer", () => {
       expect(setPreferences()).not.toHaveBeenCalled();
     });
 
+    it("offers a test and mentions only where the web can pop them up", () => {
+      render(<UserSettingsContainer />);
+
+      expect(dialog().systemNotifications?.mentions).toBe(true);
+      dialog().systemNotifications?.onTest?.();
+      expect(world.showTestNotification).toHaveBeenCalledExactlyOnceWith(
+        "Stellarr",
+        "preference.desktopNotificationsTestBody",
+      );
+    });
+
+    it("leaves mentions and the test out inside the Android app", () => {
+      world.android = true;
+      render(<UserSettingsContainer />);
+
+      expect(dialog().systemNotifications?.mentions).toBe(false);
+      expect(dialog().systemNotifications?.onTest).toBeUndefined();
+    });
+
     it("switches off without asking the browser", async () => {
       render(<UserSettingsContainer />);
 
@@ -307,6 +358,40 @@ describe("UserSettingsContainer", () => {
 
       expect(world.notifications["request"]).not.toHaveBeenCalled();
       expect(setPreferences()).toHaveBeenCalledWith({ desktopNotifications: false });
+    });
+  });
+
+  describe("notifications", () => {
+    it("names this server's muted channels and counts the rest", () => {
+      (world.account["preferences"] as Record<string, unknown>)["mutedChannelIds"] =
+        ["c-memes", "c-gone", "c-other-server"];
+      render(<UserSettingsContainer />);
+
+      expect(dialog().mutedChannels).toMatchObject({
+        serverName: "Stellarr",
+        channels: [{ id: "c-memes", name: "memy", section: "Luźne" }],
+        elsewhere: 2,
+      });
+    });
+
+    it("unmutes one channel and keeps the others", async () => {
+      (world.account["preferences"] as Record<string, unknown>)["mutedChannelIds"] =
+        ["c-memes", "c-other-server"];
+      render(<UserSettingsContainer />);
+
+      await act(async () => dialog().mutedChannels?.onUnmute("c-memes"));
+
+      expect(setPreferences()).toHaveBeenCalledExactlyOnceWith({
+        mutedChannelIds: ["c-other-server"],
+      });
+    });
+
+    it("plays the message sound for the pane", () => {
+      render(<UserSettingsContainer />);
+
+      dialog().onPlayMessageSound?.();
+
+      expect(world.playSystemFx).toHaveBeenCalledExactlyOnceWith("notification");
     });
   });
 
