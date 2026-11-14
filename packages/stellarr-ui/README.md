@@ -171,6 +171,7 @@ A button changes under the pointer only where the pointer can hover, and never w
 | `--ui-segmented-item-gap` | `4` units | The space between a card's label, leading mark and second line |
 | `--ui-segmented-item-padding` | `13` and `15` units | The space inside a card |
 | `--ui-segmented-pill-item-gap` | none | The space between a `pill` segment's leading mark and its label |
+| `--ui-segmented-pill-item-height` | `26` units | The height of a `pill` segment, which a touch screen raises |
 | `--ui-segmented-pill-item-padding` | `0` and `4` units | The space inside a `pill` segment |
 | `--ui-segmented-item-font-size` | `14` units | A card's label |
 | `--ui-segmented-item-text` | `--ui-text-muted` | The label of a card that is neither hovered nor checked. A `pill` segment draws its own and has no token |

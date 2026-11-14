@@ -314,7 +314,6 @@ export const pl = {
   "language.translation.autoWaiting": "Dostępne, gdy model będzie już na tym urządzeniu.",
   "language.search": "Szukaj języka",
   "language.searchEmpty": "Żaden język nie pasuje do „{query}”.",
-  "language.count": "Języki: {count}",
   "language.coverage": "Przetłumaczono {percent}%, reszta jest po angielsku",
   "language.demo.original": "Are you joining the call tonight?",
   "language.demo.translated": "Wpadasz dziś wieczorem na rozmowę?",
