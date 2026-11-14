@@ -1,3 +1,4 @@
+import { OPUS_PROFILE_KBPS } from "./opusRates";
 import type { NoiseSuppressionMode, OpusProfileId, VoiceSettings } from "./settings";
 
 /**
@@ -42,14 +43,14 @@ function speechProfile(
 }
 
 export const AUDIO_PROFILES: Record<AudioProfileId, AudioProfile> = {
-  economy: speechProfile("economy", 32_000, 16_000, true),
-  balanced: speechProfile("balanced", 64_000, 24_000),
-  clarity: speechProfile("clarity", 96_000, 32_000),
-  premium: speechProfile("premium", 128_000, 64_000),
+  economy: speechProfile("economy", OPUS_PROFILE_KBPS.economy * 1000, 16_000, true),
+  balanced: speechProfile("balanced", OPUS_PROFILE_KBPS.balanced * 1000, 24_000),
+  clarity: speechProfile("clarity", OPUS_PROFILE_KBPS.clarity * 1000, 32_000),
+  premium: speechProfile("premium", OPUS_PROFILE_KBPS.premium * 1000, 64_000),
   // Opus can spend roughly 256 kb/s on one full-band mono channel. Above that a
   // voice microphone gains no useful detail, and stereo would only encode room
   // position while doubling what every listener has to receive.
-  studio: speechProfile("studio", 256_000, 96_000),
+  studio: speechProfile("studio", OPUS_PROFILE_KBPS.studio * 1000, 96_000),
   // Shared screen audio is music, a video soundtrack or a game, not speech. DTX
   // would clip the quiet passages it is meant to carry, and stereo is part of
   // the content rather than a luxury.

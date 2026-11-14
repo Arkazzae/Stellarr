@@ -21,17 +21,19 @@ function setup(overrides: Partial<VoicePaneProps> = {}) {
 }
 
 describe("VoicePane", () => {
-  it("lays the settings out in the order things go wrong, sound before picture", () => {
+  it("lays out what you send, then what you hear, then the checks with the picture last", () => {
     setup();
 
     const controls = [
       screen.getByLabelText("Mikrofon"),
-      screen.getByLabelText("Urządzenie wyjściowe"),
       screen.getByRole("radiogroup", { name: "Redukcja szumu" }),
-      screen.getByRole("radiogroup", { name: "Profil dźwięku" }),
+      screen.getByRole("slider", { name: /Jakość dźwięku/ }),
+      screen.getByLabelText("Urządzenie wyjściowe"),
+      screen.getByRole("radiogroup", { name: "Brzmienie rozmowy" }),
+      screen.getByRole("button", { name: "Przywróć domyślne" }),
+      screen.getByRole("button", { name: "Sprawdź mikrofon" }),
+      screen.getByRole("button", { name: "Odtwórz dźwięk" }),
       screen.getByLabelText("Kamera"),
-      screen.getByRole("radiogroup", { name: "Jakość udostępniania ekranu" }),
-      screen.getByRole("button", { name: "Przywróć" }),
     ];
 
     controls.slice(1).forEach((control, index) => {
@@ -157,15 +159,15 @@ describe("VoicePane", () => {
     expect(screen.queryByText(/mikrofon czyści teraz/)).toBeNull();
   });
 
-  it("changes the audio profile and the screen-share quality", async () => {
-    const user = userEvent.setup();
+  it("changes the audio profile, and leaves the screen-share quality to the call's bar", () => {
     const props = setup();
 
-    await user.click(screen.getByRole("radio", { name: "Zrównoważony" }));
-    await user.click(screen.getByRole("radio", { name: "Ultra" }));
+    fireEvent.change(screen.getByRole("slider", { name: /Jakość dźwięku/ }), {
+      target: { value: "1" },
+    });
 
     expect(props.onChange).toHaveBeenCalledWith({ opusProfile: "balanced" });
-    expect(props.onChange).toHaveBeenCalledWith({ screenShareQuality: "ultra" });
+    expect(screen.queryByRole("radiogroup", { name: "Jakość udostępniania ekranu" })).toBeNull();
   });
 });
 
@@ -174,24 +176,26 @@ describe("VoicePane reset", () => {
     const user = userEvent.setup();
     const props = setup();
 
-    await user.click(screen.getByRole("button", { name: "Przywróć" }));
+    await user.click(screen.getByRole("button", { name: "Przywróć domyślne" }));
     expect(props.onReset).not.toHaveBeenCalled();
+    // While it asks, the foot says what goes back.
+    expect(screen.getByText(/wrócą do stanu wyjściowego/)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: "Tak, przywróć" }));
     expect(props.onReset).toHaveBeenCalledOnce();
     // Confirmed, so the pane is back to asking from the start.
-    expect(screen.getByRole("button", { name: "Przywróć" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Przywróć domyślne" })).toBeInTheDocument();
   });
 
   it("drops the question without resetting when it is cancelled", async () => {
     const user = userEvent.setup();
     const props = setup();
 
-    await user.click(screen.getByRole("button", { name: "Przywróć" }));
+    await user.click(screen.getByRole("button", { name: "Przywróć domyślne" }));
     await user.click(screen.getByRole("button", { name: "Anuluj" }));
 
     expect(props.onReset).not.toHaveBeenCalled();
     expect(screen.queryByRole("button", { name: "Tak, przywróć" })).toBeNull();
-    expect(screen.getByRole("button", { name: "Przywróć" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Przywróć domyślne" })).toBeInTheDocument();
   });
 });

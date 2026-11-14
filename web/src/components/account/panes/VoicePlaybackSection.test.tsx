@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { OutputTest, VoiceSettings } from "@/ports";
 
-import { VoicePlaybackSection } from "./VoicePlaybackSection";
+import { SpeakerCheck, VoicePlaybackSection } from "./VoicePlaybackSection";
 import { idleOutput, voiceSettings } from "./voiceTestFixtures";
 
 function setup(options: { settings?: Partial<VoiceSettings>; output?: Partial<OutputTest> } = {}) {
@@ -17,6 +17,11 @@ function setup(options: { settings?: Partial<VoiceSettings>; output?: Partial<Ou
     />,
   );
   return { onChange, ...view };
+}
+
+/** The speaker test now stands in the pane's check panel, apart from the rows. */
+function setupCheck(options: { output?: Partial<OutputTest> } = {}) {
+  return render(<SpeakerCheck output={{ ...idleOutput, ...options.output }} />);
 }
 
 const profiles = () => screen.getByRole("radiogroup", { name: "Brzmienie rozmowy" });
@@ -64,18 +69,14 @@ describe("VoicePlaybackSection speaker test", () => {
     const user = userEvent.setup();
     const start = vi.fn();
     const stop = vi.fn();
-    const { rerender } = setup({ output: { start, stop } });
+    const { rerender } = setupCheck({ output: { start, stop } });
 
     expect(screen.getByText("Test gotowy.")).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Odtwórz dźwięk" }));
     expect(start).toHaveBeenCalledOnce();
 
     rerender(
-      <VoicePlaybackSection
-        settings={voiceSettings}
-        onChange={vi.fn()}
-        output={{ ...idleOutput, playing: true, start, stop }}
-      />,
+      <SpeakerCheck output={{ ...idleOutput, playing: true, start, stop }} />,
     );
     expect(screen.getByText(/Odtwarzam nagranie w pętli/)).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Zatrzymaj dźwięk" }));
@@ -85,7 +86,7 @@ describe("VoicePlaybackSection speaker test", () => {
   it("shows a failure with a retry instead of the status line", async () => {
     const user = userEvent.setup();
     const start = vi.fn();
-    setup({ output: { error: "Nie udało się otworzyć głośników.", start } });
+    setupCheck({ output: { error: "Nie udało się otworzyć głośników.", start } });
 
     expect(screen.getByText("Nie udało się otworzyć głośników.")).toBeInTheDocument();
     expect(screen.queryByText("Test gotowy.")).toBeNull();

@@ -11,7 +11,7 @@ import {
 } from "@/ports";
 import { useLanguage } from "@/state/hooks";
 
-import { SwitchRow, VoiceSection } from "./VoiceFields";
+import { SwitchRow } from "./VoiceFields";
 import { Ladder, type Rung } from "./VoiceLadder";
 
 const NOISE_ORDER: readonly NoiseSuppressionMode[] = [
@@ -25,27 +25,22 @@ const NOISE_ORDER: readonly NoiseSuppressionMode[] = [
 /** The artwork is shared with the noise button in the voice dock. */
 const NOISE_RUNGS: Record<NoiseSuppressionMode, Rung> = {
   browser: {
-    icon: "noiseBrowser",
     label: NOISE_MODE_LABEL.browser,
     hint: NOISE_MODE_HINT.browser,
   },
   rnnoise: {
-    icon: "noiseRnnoise",
     label: NOISE_MODE_LABEL.rnnoise,
     hint: NOISE_MODE_HINT.rnnoise,
   },
   gtcrn: {
-    icon: "noiseGtcrn",
     label: NOISE_MODE_LABEL.gtcrn,
     hint: NOISE_MODE_HINT.gtcrn,
   },
   speex: {
-    icon: "noiseSpeex",
     label: NOISE_MODE_LABEL.speex,
     hint: NOISE_MODE_HINT.speex,
   },
   off: {
-    icon: "noiseOff",
     label: NOISE_MODE_LABEL.off,
     hint: NOISE_MODE_HINT.off,
   },
@@ -80,7 +75,10 @@ export interface VoiceProcessingSectionProps {
   mic: MicTest;
 }
 
-/** Noise suppression, echo cancellation and automatic volume. */
+/**
+ * Noise suppression, echo cancellation and automatic volume: rows of the "your
+ * voice" group, after the microphone's own.
+ */
 export function VoiceProcessingSection({
   settings,
   onChange,
@@ -90,16 +88,19 @@ export function VoiceProcessingSection({
   const active = mic.activeNoiseSuppression;
 
   return (
-    <VoiceSection title={t("voice.processing")}>
-      <span className="fld-lab">{t("voice.noiseReduction")}</span>
-      <Ladder
-        order={NOISE_ORDER}
-        rungs={NOISE_RUNGS}
-        value={settings.noiseSuppression}
-        onChange={(noiseSuppression) => onChange({ noiseSuppression })}
-        label={t("voice.noiseReduction")}
-        iconSize={24}
-      />
+    <>
+      <div className="frm-row">
+        <span className="frm-lab">{t("voice.noiseReduction")}</span>
+        <div className="frm-ctl">
+          <Ladder
+            order={NOISE_ORDER}
+            rungs={NOISE_RUNGS}
+            value={settings.noiseSuppression}
+            onChange={(noiseSuppression) => onChange({ noiseSuppression })}
+            label={t("voice.noiseReduction")}
+          />
+        </div>
+      </div>
 
       {/* What was picked is a request. RNNoise can fail to load, and the
           pipeline then puts the browser's own suppressor back, or fails at
@@ -116,35 +117,33 @@ export function VoiceProcessingSection({
         </p>
       ) : null}
 
-      <div className="frm">
-        <SwitchRow
-          label={t("voice.echoCancellation")}
-          detail={t("voice.echoCancellationDetail")}
-          checked={settings.echoCancellation}
-          onChange={(echoCancellation) => onChange({ echoCancellation })}
-        />
-        <SwitchRow
-          label={t("voice.autoGain")}
-          detail={t("voice.autoGainDetail")}
-          checked={settings.autoGainControl}
-          onChange={(autoGainControl) => onChange({ autoGainControl })}
-        />
-        {/* Ours learns only from speech while the browser's turns the room up
-            too, and a switch that is on while neither runs is a lie. */}
-        {settings.autoGainControl && mic.autoGain === "browser" ? (
-          <p className="acc-answer mic-truth" role="status">
-            {t("voice.autoGainBrowser")}
-          </p>
-        ) : settings.autoGainControl && mic.autoGain === "none" ? (
-          <p className="acc-answer bad mic-truth" role="status">
-            {t("voice.autoGainUnavailable")}
-          </p>
-        ) : null}
-      </div>
+      <SwitchRow
+        label={t("voice.echoCancellation")}
+        detail={t("voice.echoCancellationDetail")}
+        checked={settings.echoCancellation}
+        onChange={(echoCancellation) => onChange({ echoCancellation })}
+      />
+      <SwitchRow
+        label={t("voice.autoGain")}
+        detail={t("voice.autoGainDetail")}
+        checked={settings.autoGainControl}
+        onChange={(autoGainControl) => onChange({ autoGainControl })}
+      />
+      {/* Ours learns only from speech while the browser's turns the room up
+          too, and a switch that is on while neither runs is a lie. */}
+      {settings.autoGainControl && mic.autoGain === "browser" ? (
+        <p className="acc-answer mic-truth" role="status">
+          {t("voice.autoGainBrowser")}
+        </p>
+      ) : settings.autoGainControl && mic.autoGain === "none" ? (
+        <p className="acc-answer bad mic-truth" role="status">
+          {t("voice.autoGainUnavailable")}
+        </p>
+      ) : null}
 
       {/* Reopening the device is what these choices cost, and the test is what
           holds it open, so say so where it happens. */}
       {mic.running ? <p className="fld-note mic-recapture">{t("voice.micRecapture")}</p> : null}
-    </VoiceSection>
+    </>
   );
 }

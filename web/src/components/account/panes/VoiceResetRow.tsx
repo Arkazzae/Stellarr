@@ -3,29 +3,29 @@
 import { useState } from "react";
 
 import { Button } from "@stellarr/ui";
+import { Icon } from "@stellarr/ui/icons";
 import { useLanguage } from "@/state/hooks";
 
 /**
- * The way out of a pane that has been taken apart.
+ * The foot of the voice pane: where its settings are kept, and the way out of
+ * a pane that has been taken apart.
  *
  * Two clicks rather than a dialog: this resets the settings of one device and
  * nothing anyone else can see, which is too small a consequence for a modal on
- * top of a modal and too large a one for a single stray click.
+ * top of a modal and too large a one for a single stray click. While it asks,
+ * the note says what goes back.
  */
 export function VoiceResetRow({ onReset }: { onReset: () => void }) {
   const { t } = useLanguage();
   const [confirming, setConfirming] = useState(false);
 
   return (
-    <div className="set-row danger mic-reset">
-      <span className="set-lab">
-        <b>{t("voice.resetSettings")}</b>
-        <span>{t("voice.resetSettingsDetail")}</span>
-      </span>
+    <div className="vc-foot">
+      <p>{confirming ? t("voice.resetSettingsDetail") : t("voice.settingsNote")}</p>
       {confirming ? (
-        <>
-          <Button type="button" variant="secondary" size="sm" onClick={() => setConfirming(false)}>
-            Anuluj
+        <span className="vc-foot-ask">
+          <Button type="button" variant="quiet" size="sm" onClick={() => setConfirming(false)}>
+            {t("common.cancel")}
           </Button>
           <Button
             type="button"
@@ -38,10 +38,11 @@ export function VoiceResetRow({ onReset }: { onReset: () => void }) {
           >
             {t("voice.resetConfirm")}
           </Button>
-        </>
+        </span>
       ) : (
-        <Button type="button" variant="secondary" size="sm" onClick={() => setConfirming(true)}>
-          {t("common.reset")}
+        <Button type="button" variant="quiet" size="sm" onClick={() => setConfirming(true)}>
+          <Icon name="refresh" size={15} />
+          {t("common.resetDefaults")}
         </Button>
       )}
     </div>

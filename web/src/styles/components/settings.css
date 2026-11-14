@@ -311,31 +311,17 @@
   /*
    * A ladder, laid out as one.
    *
-   * Three, four and five choices that differ only in degree are one row of
-   * equal tiles — the eye reads the order off the line. The old two-column
-   * grid broke five profiles into 2+2+1 and, with a sentence of explanation
-   * inside every tile, made a wall of text out of a scale. The sentence is
-   * still there, once, under the row: it describes the choice that is on, and
-   * a tile carries the whole thing as a tooltip.
+   * Three, four and five choices that differ only in degree are one pill of
+   * equal segments: the eye reads the order off the line. The sentence that
+   * explains a rung is there once, under the row, for the choice that is on,
+   * and every segment carries its own as a tooltip.
    */
   .ladder{
-    display:flex;flex-wrap:wrap;
-    --ui-segmented-gap:8px;
-    --ui-segmented-item-gap:7px;
-    --ui-segmented-item-padding:11px 8px;
-    --ui-segmented-item-font-size:var(--text-13);
+    --ui-segmented-columns:repeat(5,minmax(0,1fr));
+    --ui-segmented-pill-item-padding:0 8px;
   }
-  .ladder > button{flex:1 1 92px;min-width:0;align-items:center;text-align:center}
-  .ladder-ico{
-    display:flex;align-items:center;justify-content:center;flex:none;
-    width:28px;height:28px;border-radius:9px;
-    color:var(--text-faint);background:var(--surface-field);
-    font-size:var(--text-12);font-weight:400;font-variant-numeric:tabular-nums;
-    transition:color var(--dur-fast) var(--ease-standard), background var(--dur-fast) var(--ease-standard);
-  }
-  .ladder > button:hover .ladder-ico{color:var(--text-muted)}
-  .ladder > button[data-state="checked"] .ladder-ico{color:var(--accent-text);background:var(--accent-soft)}
-  .ladder > button:disabled .ladder-ico{opacity:0.6}
+  .ladder:has(> :nth-child(4):last-child){--ui-segmented-columns:repeat(4,minmax(0,1fr))}
+  .ladder:has(> :nth-child(3):last-child){--ui-segmented-columns:repeat(3,minmax(0,1fr))}
   /* The one line the row costs: what the current choice actually means. */
   .ladder-note{
     margin-top:10px;color:var(--text-faint);font-size:var(--text-12);line-height:1.45;

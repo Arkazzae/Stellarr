@@ -12,6 +12,9 @@ import {
   type ScreenShareQualityId,
 } from "./screenShare";
 
+/** The encoder is built from these, and the settings name them under each stop. */
+export { OPUS_PROFILE_KBPS } from "./opusRates";
+
 /**
  * Bump when the shape changes incompatibly. A stored object from another
  * version is discarded wholesale rather than migrated field by field: these are

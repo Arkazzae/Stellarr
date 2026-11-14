@@ -4,13 +4,13 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { CameraTest, VoiceSettings } from "@/ports";
 
-import { VoiceCameraSection } from "./VoiceCameraSection";
+import { VoiceCameraCheck } from "./VoiceCameraSection";
 import { idleCamera, voiceSettings } from "./voiceTestFixtures";
 
 function setup(options: { settings?: Partial<VoiceSettings>; camera?: Partial<CameraTest> } = {}) {
   const onChange = vi.fn();
   const view = render(
-    <VoiceCameraSection
+    <VoiceCameraCheck
       settings={{ ...voiceSettings, ...options.settings }}
       onChange={onChange}
       camera={{ ...idleCamera, ...options.camera }}
@@ -19,7 +19,7 @@ function setup(options: { settings?: Partial<VoiceSettings>; camera?: Partial<Ca
   return { onChange, ...view };
 }
 
-describe("VoiceCameraSection", () => {
+describe("VoiceCameraCheck", () => {
   it("stores a chosen camera by id and the default as null", async () => {
     const user = userEvent.setup();
     const { onChange } = setup();
@@ -48,7 +48,7 @@ describe("VoiceCameraSection", () => {
     expect(start).toHaveBeenCalledOnce();
 
     rerender(
-      <VoiceCameraSection
+      <VoiceCameraCheck
         settings={voiceSettings}
         onChange={vi.fn()}
         camera={{ ...idleCamera, running: true, start, stop }}
@@ -69,7 +69,7 @@ describe("VoiceCameraSection", () => {
     expect(screen.getByText("Podgląd jest wyłączony")).toBeInTheDocument();
 
     rerender(
-      <VoiceCameraSection
+      <VoiceCameraCheck
         settings={voiceSettings}
         onChange={vi.fn()}
         camera={{ ...idleCamera, running: true }}
@@ -106,7 +106,7 @@ describe("VoiceCameraSection", () => {
     const video = screen.getByLabelText("Podgląd z kamery") as HTMLVideoElement;
 
     rerender(
-      <VoiceCameraSection
+      <VoiceCameraCheck
         settings={voiceSettings}
         onChange={vi.fn()}
         camera={{ ...idleCamera, running: true, stream: second }}
