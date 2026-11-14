@@ -344,94 +344,154 @@
 
   /* ---------- WYGLĄD ---------- */
   /*
-   * The cards in this pane are working instances of what they offer: a preset
-   * carries `data-theme`/`data-scheme`, and every token below is read from the
-   * card rather than from the page. That is why nothing here names a colour —
-   * a swatch painted by the same rules as the app cannot show a colour the app
-   * will not use.
+   * The pane opens on the app in miniature (`.ap-stage`), drawn with the live
+   * tokens and laid out by the transcript's own rules, so every choice under
+   * it shows there as it is made. The choices then take a line each.
+   *
+   * The theme tiles are working instances of what they offer: a preset
+   * carries `data-theme`/`data-scheme`, and every token in it is read from the
+   * tile rather than from the page. That is why nothing here names a colour.
    */
-  /* One line of text and a 32px button: centred on each other, not top-aligned.
-     The note drops its own bottom margin here — the row owns the spacing, and
-     two margins would put the button off the sentence it belongs to. */
-  .ap-intro{display:flex;align-items:center;gap:16px;margin:-4px 0 16px}
-  .ap-intro .set-note{flex:1;margin:0}
-
-  /* Motywy: a board of miniatures, not a column of banners. Six presets sit
-     three per row, so the whole set reads as two compact rows and everything
-     below it stays above the fold. */
-  .ap-themes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
-  .ap-tile{
-    position:relative;display:flex;flex-direction:column;gap:8px;text-align:left;
-    padding:8px;border-radius:var(--radius-md);
-    border:1px solid var(--line-subtle);background:var(--surface-raised);
-    transition:border-color var(--dur-fast) var(--ease-standard), box-shadow var(--dur-fast) var(--ease-standard);
+  .ap-stage{
+    display:grid;grid-template-columns:60px 176px minmax(0,1fr);
+    height:268px;margin:0 0 30px;overflow:hidden;
+    border:1px solid var(--line-subtle);border-radius:var(--radius-lg);
+    background:var(--surface-room);
   }
-  .ap-tile:hover{border-color:var(--line-strong)}
+  .ap-stage-rail{
+    display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 0;
+    background:var(--surface-canvas);
+  }
+  .ap-stage-rail i{
+    position:relative;width:36px;height:36px;display:grid;place-items:center;border-radius:12px;
+    font-style:normal;font-size:var(--text-12);font-weight:600;color:var(--text-muted);
+    background:var(--surface-overlay);
+  }
+  .ap-stage-rail i.on{background:var(--accent);color:var(--on-accent)}
+  .ap-stage-rail i.on::before{
+    content:"";position:absolute;left:-12px;top:9px;bottom:9px;width:4px;
+    border-radius:0 3px 3px 0;background:var(--text);
+  }
+  .ap-stage-side{
+    min-width:0;display:flex;flex-direction:column;gap:2px;padding:12px 8px;
+    background:var(--surface-sidebar);border-right:1px solid var(--line-subtle);
+  }
+  .ap-stage-side b{padding:3px 8px 10px;font-size:var(--text-15);font-weight:600}
+  .ap-stage-ch{
+    height:30px;display:flex;align-items:center;gap:6px;padding:0 8px;border-radius:8px;
+    font-size:var(--text-14);color:var(--text-faint);white-space:nowrap;overflow:hidden;
+  }
+  .ap-stage-ch em,.ap-stage-head em{font-style:normal;font-weight:400;color:var(--text-faint)}
+  .ap-stage-ch.on{background:var(--surface-overlay);color:var(--text)}
+  .ap-stage-ch.unread{color:var(--text);font-weight:550}
+  .ap-stage-room{min-width:0;min-height:0;overflow:hidden;display:flex;flex-direction:column}
+  .ap-stage-head{
+    flex:none;height:44px;display:flex;align-items:center;gap:6px;padding:0 16px;
+    border-bottom:1px solid var(--line-subtle);font-size:var(--text-15);font-weight:600;
+  }
+  /* Anchored to the bottom like a room: what does not fit leaves at the top. */
+  .ap-stage-feed{
+    flex:1;min-height:0;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;
+    padding-bottom:8px;
+  }
+  .ap-stage-feed .msg-group:hover{background:none}
+  .ap-stage-composer{
+    flex:none;height:40px;margin:0 14px 14px;display:flex;align-items:center;padding:0 14px;
+    border:1px solid var(--line-subtle);border-radius:var(--radius-md);
+    background:var(--surface-field);font-size:var(--text-14);color:var(--text-faint);
+  }
+
+  /* Themes: six swatches in a row, each painted by its own palette. */
+  .sv-pane .ap-theme{padding-bottom:0}
+  .ap-themes{
+    display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;
+    padding-bottom:20px;border-bottom:1px solid var(--line-subtle);
+  }
+  .ap-tile{
+    position:relative;min-width:0;display:flex;flex-direction:column;gap:8px;text-align:left;
+    padding:5px 5px 9px;border:1px solid var(--line);border-radius:12px;
+    background:var(--surface-base);color:var(--text);
+    transition:border-color var(--dur-fast) var(--ease-standard), translate var(--dur-fast) var(--ease-standard);
+  }
+  .ap-tile:hover{translate:0 -1px;border-color:var(--line-strong)}
   /* An inset ring, not an elevation shadow: it thickens the border the tile
      already has instead of putting a second system beside it. */
   .ap-tile.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
   .ap-tile:disabled{opacity:0.5;cursor:default}
+  .ap-sw{
+    position:relative;height:46px;display:grid;grid-template-columns:22% 30% 1fr;
+    overflow:hidden;border-radius:8px;
+  }
+  .ap-sw i:nth-child(1){background:var(--surface-canvas)}
+  .ap-sw i:nth-child(2){background:var(--surface-sidebar)}
+  .ap-sw i:nth-child(3){background:var(--surface-room)}
+  .ap-sw b{
+    position:absolute;left:calc(52% + 8px);right:10px;bottom:9px;height:6px;
+    border-radius:3px;background:var(--accent);
+  }
+  .ap-sw b::before{
+    content:"";position:absolute;left:0;right:30%;bottom:12px;height:5px;
+    border-radius:3px;background:var(--text-faint);opacity:0.6;
+  }
   .ap-name{
-    display:block;min-width:0;padding:0 1px;
-    font-size:var(--text-12);font-weight:600;color:var(--text-muted);
+    display:block;min-width:0;padding:0 4px;
+    font-size:var(--text-13);font-weight:550;
     overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
   }
-  .ap-tile.on .ap-name{color:var(--text)}
-  /* On a tile the mark is a corner badge: it costs no row of its own, and the
-     ring around it is the tile's own surface, so it reads as cut out of it. */
-  .ap-tile .ap-tick{
-    position:absolute;top:-6px;right:-6px;width:18px;height:18px;border-radius:999px;
-    display:inline-flex;align-items:center;justify-content:center;
+  /* The mark is a corner badge: it costs no row, and the ring around it is
+     the group's surface, so it reads as cut out of the tile. */
+  .ap-tick{
+    position:absolute;top:-7px;right:-7px;width:20px;height:20px;border-radius:999px;
+    display:grid;place-items:center;
     background:var(--accent);color:var(--on-accent);
-    box-shadow:0 0 0 2px var(--surface-raised);
+    box-shadow:0 0 0 2px var(--set-group,var(--surface-base));
   }
 
-  .ap-accent-row{align-items:center}
-  .ap-accent-control{display:flex;align-items:center;justify-content:flex-end;gap:10px;flex-wrap:wrap}
-  .ap-accent-control input[type="color"]{
-    width:42px;height:42px;flex:none;padding:3px;
-    border:1px solid var(--line);border-radius:var(--radius-md);
-    background:var(--surface-field);cursor:pointer;
+  /* One line per choice: the control at the row's end, as wide as it needs. */
+  .sv-pane .frm-row.ap-row{grid-template-columns:minmax(0,1fr) auto;align-items:center}
+  .sv-pane .frm-row.ap-row .frm-lab{padding-top:0}
+  .ap-end{display:flex;justify-content:flex-end;align-items:center}
+  .ap-seg{
+    --ui-segmented-columns:repeat(3,auto);
+    --ui-segmented-pill-item-gap:7px;--ui-segmented-pill-item-padding:0 12px;
   }
-  .ap-accent-control input[type="color"]::-webkit-color-swatch-wrapper{padding:0}
-  .ap-accent-control input[type="color"]::-webkit-color-swatch,
-  .ap-accent-control input[type="color"]::-moz-color-swatch{
-    border:0;border-radius:calc(var(--radius-md) - 3px);
-  }
-  .ap-accent-control input[type="color"]:disabled{opacity:0.5;cursor:default}
-  .ap-accent-control output{
-    min-width:76px;color:var(--text-muted);font-family:var(--font-mono);
-    font-size:var(--text-12);font-variant-numeric:tabular-nums;text-transform:uppercase;
-  }
+  .ap-seg:has(> :nth-child(2):last-child){--ui-segmented-columns:repeat(2,auto)}
+  .ap-aa{min-width:22px;font-size:var(--msg-size);font-weight:600;line-height:1;letter-spacing:-0.01em}
 
-  /* The app in miniature: sidebar, room, three lines of a message — the same
-     elevation order the window has, so a tile is recognisable as the thing it
-     will turn into rather than as a row of paint samples. */
-  .ap-mini{
-    display:flex;height:50px;border-radius:8px;overflow:hidden;
-    background:var(--surface-sidebar);border:1px solid var(--line-subtle);
+  /* The accent: the theme's own colour, a rule, the curated hues, then your
+     own. The swatch shows the colour, the ring says it is the one in use. */
+  .ap-accents{gap:8px}
+  .ap-swatches{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+  .ap-acc{
+    position:relative;flex:none;display:block;width:26px;height:26px;border-radius:50%;
+    background:var(--sw);
+    box-shadow:inset 0 0 0 1px color-mix(in oklab, var(--text) 14%, transparent);
+    cursor:pointer;transition:scale var(--dur-fast) var(--ease-standard);
   }
-  .ap-mini-rail{
-    flex:none;width:19px;display:flex;flex-direction:column;
-    align-items:center;justify-content:center;gap:5px;
+  .ap-acc:hover{scale:1.08}
+  .ap-acc.on{box-shadow:0 0 0 2px var(--set-group,var(--surface-base)), 0 0 0 4px var(--sw)}
+  .ap-acc.theme{margin-right:9px}
+  .ap-acc.theme::after{
+    content:"";position:absolute;top:4px;bottom:4px;right:-9px;width:1px;background:var(--line);
   }
-  .ap-mini-rail i{width:8px;height:8px;border-radius:999px;background:var(--surface-active)}
-  .ap-mini-rail i:first-child{background:var(--accent)}
-  .ap-mini-room{
-    flex:1;min-width:0;display:flex;flex-direction:column;justify-content:center;gap:5px;
-    padding:0 9px 0 8px;border-radius:7px 0 0 7px;background:var(--surface-room);
+  /* Your own colour opens the system picker. A hue wheel says "any colour"
+     before it is used; once it is, it fills with that colour. */
+  .ap-acc.custom{background:conic-gradient(in oklch longer hue, oklch(0.68 0.19 25), oklch(0.68 0.19 25))}
+  .ap-acc.custom::before{
+    content:"";position:absolute;inset:5px;border-radius:50%;background:var(--set-group,var(--surface-base));
   }
-  .ap-mini-room i{display:block;height:4px;border-radius:2px;background:var(--text-faint);opacity:0.5}
-  .ap-mini-room i:first-child{width:50%;background:var(--accent-text);opacity:0.95}
-  .ap-mini-room i:nth-child(2){width:100%}
-  .ap-mini-room i:last-child{width:72%}
+  .ap-acc.custom.on::before{inset:0;background:var(--sw)}
+  .ap-acc:focus-visible,.ap-acc.custom:has(:focus-visible){outline:2px solid var(--accent-quiet);outline-offset:4px}
 
-  /*
-   * Podgląd: the transcript's own classes, so size and density are shown by
-   * the rules that will actually lay out the room — not by a copy of them.
-   */
-  .ap-preview .msg-group{padding-left:0;padding-right:0}
-  .ap-preview .msg-group:hover{background:none}
+  .ap-foot{
+    display:flex;align-items:center;justify-content:space-between;gap:16px;
+    margin-top:-12px;padding:0 4px;font-size:var(--text-13);color:var(--text-faint);
+  }
+  .ap-foot p{margin:0;line-height:1.45}
+
+  @media (max-width:1100px){
+    .ap-themes{grid-template-columns:repeat(3,minmax(0,1fr))}
+  }
 
   /* listy */
   /* ---------- INTEGRACJE · KANAŁY · ROLE ---------- */
@@ -1167,7 +1227,6 @@
     .set-input,.set-select,.set-area{font-size:var(--text-16)}
     .dlg-search{min-height:44px}
     .dlg-search .dlg-input{height:42px}
-    .ap-accent-control input[type="color"]{width:44px;height:44px}
     .int-move button{width:44px;height:44px}
     .perm-tri > button{height:44px}
     .emoji-tile.editable{padding-right:48px}
@@ -1247,6 +1306,11 @@
     .sc-h{padding:0 2px 8px}
     .sc-b{padding:16px}
     .sv-pane > .frm{padding:0 16px}
+    .ap-stage{grid-template-columns:minmax(0,1fr);height:216px;margin-bottom:24px}
+    .ap-stage-rail,.ap-stage-side{display:none}
+    .sv-pane .frm-row.ap-row{grid-template-columns:minmax(0,1fr)}
+    .ap-end{justify-content:flex-start}
+    .ap-foot{flex-direction:column;align-items:flex-start;gap:8px}
     .set-item{gap:8px}
     .set-item-act{
       min-width:44px;min-height:44px;padding-inline:6px;
@@ -1282,10 +1346,6 @@
     }
     /* Both boards already reflow on their own; the phone only needs the
        controls to reach a comfortable tap target. */
-    .ap-intro{flex-direction:column;gap:0}
-    .ap-reset{align-self:flex-start;margin:0 0 14px;min-height:44px}
-    .ap-accent-row{align-items:stretch}
-    .ap-accent-control{justify-content:flex-start;--ui-button-min-height:44px}
     .role-editor-fields{grid-template-columns:minmax(0,1fr)}
     .emoji-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
     .emoji-tile.editable{padding-right:48px}

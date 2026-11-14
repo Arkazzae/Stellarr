@@ -25,26 +25,47 @@ describe("AppearancePane controls", () => {
     await user.click(within(screen.getByRole("radiogroup", { name: "Jasność" })).getByRole("radio", { name: /Jasny/ }));
     expect(p.onChange).toHaveBeenLastCalledWith({ scheme: "light" });
 
-    await user.click(within(screen.getByRole("radiogroup", { name: "Kontrast" })).getByRole("radio", { name: /Wysoki/ }));
+    await user.click(screen.getByRole("switch", { name: "Wysoki kontrast" }));
     expect(p.onChange).toHaveBeenLastCalledWith({ contrast: "high" });
 
     await user.click(within(screen.getByRole("radiogroup", { name: "Rozmiar tekstu" })).getByRole("radio", { name: /Większy/ }));
     expect(p.onChange).toHaveBeenLastCalledWith({ size: "lg" });
   });
 
-  it("offers the preset colour back only while the accent differs from it", () => {
+  it("marks the theme's own colour while it is in use, and none of the swatches otherwise", () => {
     const { rerender } = render(<AppearancePane {...props()} />);
-    expect(screen.getByRole("button", { name: "Kolor motywu" })).toBeDisabled();
+    const accents = () => screen.getByRole("radiogroup", { name: "Kolor akcentu" });
+    expect(within(accents()).getByRole("radio", { name: "Kolor motywu" })).toBeChecked();
 
     rerender(<AppearancePane {...props({ theme: { ...DEFAULT_THEME, accent: "#ff3366" } })} />);
-    expect(screen.getByRole("button", { name: "Kolor motywu" })).toBeEnabled();
+    expect(within(accents()).queryByRole("radio", { checked: true })).toBeNull();
   });
 
-  it("shows the personal accent in the field, not the preset's", () => {
+  it("shows the personal accent in the picker, not the preset's", () => {
     render(<AppearancePane {...props({ theme: { ...DEFAULT_THEME, accent: "#ff3366" } })} />);
 
-    expect(screen.getByLabelText("Kolor akcentu")).toHaveValue("#ff3366");
-    expect(screen.getByText("#ff3366", { selector: "output" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Własny kolor")).toHaveValue("#ff3366");
+  });
+
+  it("does not offer the theme's own colour twice among the swatches", () => {
+    render(<AppearancePane {...props()} />);
+
+    // Midnight's accent is the Stellarr indigo, so the indigo swatch stands down.
+    const accents = screen.getByRole("radiogroup", { name: "Kolor akcentu" });
+    expect(within(accents).queryByRole("radio", { name: "Indygo" })).toBeNull();
+  });
+
+  it("moves through the swatches with the arrow keys, choosing as it goes", async () => {
+    const user = userEvent.setup();
+    const p = props();
+    render(<AppearancePane {...p} />);
+
+    within(screen.getByRole("radiogroup", { name: "Kolor akcentu" }))
+      .getByRole("radio", { name: "Kolor motywu" })
+      .focus();
+    await user.keyboard("{ArrowRight}");
+    expect(p.onChange).toHaveBeenLastCalledWith({ accent: "#9146ff" });
+    expect(screen.getByRole("radio", { name: "Fiolet" })).toHaveFocus();
   });
 
   it("sets reduced motion with contrast and text size, and resets it with them", async () => {

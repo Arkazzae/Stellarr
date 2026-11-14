@@ -251,6 +251,25 @@ type Palette = (typeof PALETTES)[number];
 export type PaletteId = Palette["id"];
 
 /** Only message text and the composer move; the chrome keeps its own scale. */
+/**
+ * Accents offered beside the theme's own. The presets' colours first, then
+ * hues none of them has, so a swatch row reads as one wheel. Any other colour
+ * is still a click away through the picker; these only spare the trip.
+ */
+export const ACCENT_SWATCHES = [
+  { id: "indigo", hex: STELLARR_ACCENT },
+  { id: "violet", hex: "#9146ff" },
+  { id: "pink", hex: "#e93d82" },
+  { id: "red", hex: "#e5484d" },
+  { id: "orange", hex: "#f76b15" },
+  { id: "green", hex: "#1db954" },
+  { id: "teal", hex: "#12a594" },
+  { id: "blue", hex: "#1a9fff" },
+  { id: "sky", hex: "#58a6ff" },
+] as const;
+
+export type AccentSwatchId = (typeof ACCENT_SWATCHES)[number]["id"];
+
 export const SIZES = [{ id: "sm" }, { id: "md" }, { id: "lg" }] as const;
 
 export type SizePreference = (typeof SIZES)[number]["id"];
