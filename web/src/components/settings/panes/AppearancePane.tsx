@@ -1,12 +1,13 @@
 "use client";
 
-import { useRef, type CSSProperties, type KeyboardEvent } from "react";
+import type { CSSProperties } from "react";
 
 import { Button } from "@stellarr/ui";
 import { Icon, type IconName } from "@stellarr/ui/icons";
 import { Avatar } from "@/components/primitives/Avatar";
 import { Segmented, type SegmentedOption } from "@/components/primitives/Segmented";
 import { Switch } from "@/components/primitives/Switch";
+import { useRovingRadio } from "@/components/primitives/useRovingRadio";
 import {
   ACCENT_SWATCHES,
   DEFAULT_THEME,
@@ -60,18 +61,9 @@ interface Swatch {
   theme?: boolean;
 }
 
-const ARROW_STEP: Partial<Record<string, number>> = {
-  ArrowRight: 1,
-  ArrowDown: 1,
-  ArrowLeft: -1,
-  ArrowUp: -1,
-};
-
 /**
- * A row of colour swatches as one radio group: one tab stop, and the arrow
- * keys move and choose in the same step, like every other choice in the app.
- * A swatch is the colour itself, so the name is its accessible name and its
- * tooltip.
+ * A row of colour swatches as one radio group. A swatch is the colour itself,
+ * so the name is its accessible name and its tooltip.
  */
 function SwatchGroup({
   label,
@@ -84,26 +76,11 @@ function SwatchGroup({
   value: string;
   onChange: (value: string) => void;
 }) {
-  const buttons = useRef<(HTMLButtonElement | null)[]>([]);
-  const selected = swatches.findIndex((swatch) => swatch.value === value);
-  const tabStop = Math.max(selected, 0);
-
-  const onKeyDown = (event: KeyboardEvent<HTMLButtonElement>, from: number) => {
-    const step = ARROW_STEP[event.key];
-    const to =
-      event.key === "Home"
-        ? 0
-        : event.key === "End"
-          ? swatches.length - 1
-          : step === undefined
-            ? null
-            : (from + step + swatches.length) % swatches.length;
-    const swatch = to === null ? undefined : swatches[to];
-    if (to === null || swatch === undefined) return;
-    event.preventDefault();
-    buttons.current[to]?.focus();
-    onChange(swatch.value);
-  };
+  const roving = useRovingRadio(
+    swatches.length,
+    swatches.findIndex((swatch) => swatch.value === value),
+    (index) => onChange(swatches[index]!.value),
+  );
 
   return (
     <div className="ap-swatches" role="radiogroup" aria-label={label}>
@@ -112,19 +89,17 @@ function SwatchGroup({
         return (
           <button
             key={swatch.value}
-            ref={(node) => {
-              buttons.current[index] = node;
-            }}
+            ref={roving.ref(index)}
             type="button"
             role="radio"
             aria-checked={on}
             aria-label={swatch.label}
             title={swatch.label}
-            tabIndex={index === tabStop ? 0 : -1}
+            tabIndex={roving.tabIndex(index)}
             className={["ap-acc", swatch.theme ? "theme" : "", on ? "on" : ""].filter(Boolean).join(" ")}
             style={{ "--sw": swatch.hex } as CSSProperties}
             onClick={() => onChange(swatch.value)}
-            onKeyDown={(event) => onKeyDown(event, index)}
+            onKeyDown={(event) => roving.onKeyDown(event, index)}
           />
         );
       })}
