@@ -81,6 +81,7 @@
     --ui-switch-hit-inset: -9px 0;
     --ui-dropdown-min-height: 44px;
     --ui-dropdown-option-min-height: 44px;
+    --ui-segmented-pill-item-height: 44px;
   }
 }
 

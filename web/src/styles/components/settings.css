@@ -468,6 +468,10 @@
   }
   .ap-acc.custom.on::before{inset:0;background:var(--sw)}
   .ap-acc:focus-visible,.ap-acc.custom:has(:focus-visible){outline:2px solid var(--accent-quiet);outline-offset:4px}
+  /* A finger needs more than a 26px dot. */
+  @media (pointer:coarse){
+    .ap-acc{width:36px;height:36px}
+  }
 
   .ap-foot{
     display:flex;align-items:center;justify-content:space-between;gap:16px;
@@ -1106,10 +1110,7 @@
     color:var(--accent-text);background:var(--accent-soft);
     border:1px solid var(--accent-quiet);
   }
-  .ch-settings-form{padding-top:14px}
   .ch-settings-form > .frm{border-top:0}
-  .ch-settings-form .frm-row:first-child{padding-top:0}
-  .ch-settings-form .frm-row:last-child{padding-bottom:0;border-bottom:0}
   .ch-settings{--ui-button-gap:7px}
   .ch-settings .danger-section > .sc-b{
     border-color:color-mix(in oklab, var(--danger-line) 60%, var(--line-subtle));
@@ -1277,6 +1278,7 @@
     .sv-bar .dlg-x{margin-top:0;align-self:center}
     .dlg-x{width:44px;height:44px}
     .sv-save-slot{left:12px;right:12px;bottom:max(12px, env(safe-area-inset-bottom))}
+    .sv-main:has(.sv-save) .sv-panes{padding-bottom:168px}
     .sv-save{flex-wrap:wrap;padding:12px}
     .sv-save-txt{flex-basis:100%}
     .sv-save > button{flex:1}

@@ -316,7 +316,6 @@ export const en = {
   "language.translation.autoWaiting": "Available once the model is on this device.",
   "language.search": "Search languages",
   "language.searchEmpty": "No language matches “{query}”.",
-  "language.count": "{count} languages",
   "language.coverage": "{percent}% translated; the rest shows in English",
   "language.demo.original": "Hej, wpadasz dziś wieczorem na call?",
   "language.demo.translated": "Hey, are you joining the call tonight?",
