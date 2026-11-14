@@ -16,7 +16,7 @@ flowchart TD
         Cockpit["Stellarr Cockpit (/cockpit/)"]
         Api["ASP.NET Core API & SignalR (:5000)"]
         Sqlite[("SQLite WAL (stellarr.db)")]
-        RustFS[("RustFS S3 (:9000)")]
+        Files[("Uploaded files (files/)")]
         Coturn["coturn STUN / TURN (:3478 / :5349)"]
         Media["Stellarr Media SFU (:49000/udp)"]
 
@@ -24,7 +24,7 @@ flowchart TD
         Nginx -->|"Static SPA"| Cockpit
         Nginx -->|"/api, /hubs/app, /assets"| Api
         Api --> Sqlite
-        Api --> RustFS
+        Api --> Files
         Api -->|"HTTP Control API (127.0.0.1:5200)"| Media
         Coturn -->|"Internal UDP relay"| Media
     end
@@ -41,7 +41,7 @@ flowchart TD
 - **ASP.NET Core (`server/Stellarr.Api`)**: Application server handling authentication, sessions, servers, channels, public and direct messages, uploads, presence, and SignalR signaling. It also opens and closes media sessions on `stellarr-media` via its loopback HTTP API and relays SDP/ICE negotiation between browsers and the media server.
 - **Operator CLI (`server/Stellarr.Cli`)**: The `stellarr` binary included in the container image. It inspects instance health and manages settings, encrypted secrets, and user sessions directly against the data volume without starting a second API process. See [Operator CLI](./install/cli.md).
 - **SQLite**: Stores relational application state in WAL mode (`stellarr.db`). Binary attachments are never stored in SQLite.
-- **RustFS**: S3-compatible object store bound to loopback (`127.0.0.1:9000`) holding uploaded images, audio, video, and documents. Clients never connect to RustFS directly; the API authorizes and streams all downloads.
+- **Uploaded files**: Images, audio, video, and documents are plain files under `/data/stellarr/files/`, each at the path its object key names (for example `audio/2026/11/<id>.webm`). The API writes a file to `files/.incoming/`, flushes it to disk, and only then moves it into place, so a half-written upload never appears under its key. The database records what each file is; clients never read the folder directly, and the API authorizes and streams every download.
 - **coturn**: Provides STUN and short-lived HMAC-authenticated TURN relay. It holds no room or application state and relays TURN allocations directly to the local `stellarr-media` UDP socket.
 - **Stellarr Media (`media/`, Rust)**: Selective Forwarding Unit (SFU) that carries all call media. It listens on a single UDP port (`49000/udp`) using ICE-lite, terminates DTLS/SRTP per client, and forwards microphone, camera, and screen-share RTP packets without transcoding or mixing while handling per-leg RTCP feedback (NACK, RTX, TWCC, PLI/FIR). Controlled by the API over `127.0.0.1:5200`.
 
@@ -58,7 +58,7 @@ The API reads revoked sessions and role or policy changes from the database at m
 
 ## Single-container deployment
 
-`supervisord` (`infra/supervisord.conf`) supervises all runtime processes (RustFS, Stellarr Media, ASP.NET Core, Next.js, `coturn`, Nginx, and `stellarr-tls-maintenance`) inside one container image backed by `/data/stellarr`. Nginx exposes a single HTTPS origin externally.
+`supervisord` (`infra/supervisord.conf`) supervises all runtime processes (Stellarr Media, ASP.NET Core, Next.js, `coturn`, Nginx, and `stellarr-tls-maintenance`) inside one container image backed by `/data/stellarr`. Nginx exposes a single HTTPS origin externally.
 
 > [!TIP]
 > Keeping all services in one container simplifies self-hosting and backups to a single Docker volume. If you ever need to split media onto a separate machine, `stellarr-media` and `coturn` communicate with the API only over their network protocols and can be moved without changing the browser client.

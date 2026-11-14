@@ -75,10 +75,9 @@ instance before relying on the copies:
    contents of `instance/` into `DataRoot`, preserving relative paths and limiting
    file access to the service account. Restore deployment environment secrets
    separately. Missing keys prevent decrypting stored secrets.
-5. Start the object store with the recovered storage credentials. Upload every
-   file under `objects/` to the configured live bucket using the relative path
-   as its key. The ZIP holds logical objects, not the object store's raw disk layout.
-   Complete this while the API remains stopped; then start the API.
+5. Copy every file under `objects/` into `files/` under `DataRoot`, keeping its
+   relative path: the archive's `objects/` folder has the same layout as
+   `files/`. Complete this while the API remains stopped; then start the API.
 6. Verify owner login, historical messages, downloads, avatars, integrations,
    and a newly created backup. Record recovery time and the last recovered data.
 

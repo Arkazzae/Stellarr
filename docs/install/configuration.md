@@ -159,9 +159,6 @@ The container entrypoint and TLS maintenance scripts read the following variable
 | `STELLARR_MEDIA_LOG` | `info` | `tracing` filter for `stellarr-media` (e.g. `info,stellarr_media=debug`). |
 | `STELLARR_MEDIA_CONTROL_SECRET` | `/data/stellarr/secrets/media-control-secret` | Overrides the shared bearer secret between the API and `stellarr-media`. |
 | `TURN_SHARED_SECRET` | `/data/stellarr/secrets/turn-shared-secret` | Overrides the shared HMAC secret between the API and `coturn`. |
-| `RUSTFS_SECRET_KEY` | `/data/stellarr/secrets/rustfs-secret` | Overrides the shared S3 secret key between the API and RustFS. |
-| `RUSTFS_ACCESS_KEY` | `stellarr` | S3 access key for RustFS. |
-| `RUSTFS_BUCKET` | `stellarr-images` | S3 bucket name in RustFS. |
 
 > [!IMPORTANT]
 > On first start, generated secrets are written to `/data/stellarr/secrets/` and must be backed up as part of the `/data/stellarr` volume.
@@ -175,7 +172,6 @@ The container entrypoint and TLS maintenance scripts read the following variable
 | `STELLARR_DEV_WEB_PORT` | `3000` | Host port for Next.js (`next dev`). |
 | `STELLARR_DEV_COCKPIT_PORT` | `3001` | Host port for Cockpit (`vite`). |
 | `STELLARR_DEV_API_PORT` | `5000` | Host port for the ASP.NET Core API (`dotnet watch`). |
-| `STELLARR_DEV_S3_PORT` | `9000` | Host port for RustFS. |
 | `STELLARR_DEV_MEDIA_PORT` | `49100` | Host UDP port for `stellarr-media` (advertised on `127.0.0.1`). |
 | `STELLARR_DEV_MEDIA_CONTROL_PORT` | `5200` | Host loopback TCP port (`127.0.0.1:5200`) for the `stellarr-media` control API. |
 | `STELLARR_ALLOWED_DEV_ORIGINS` | empty | Comma-separated hostnames allowed to load Next.js dev chunks (`127.0.0.1` is always allowed). |

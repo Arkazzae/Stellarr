@@ -1,5 +1,5 @@
-# Production stack: one container runs Nginx, the API, the web client, RustFS
-# object storage, coturn and the Stellarr Media server.
+# Production stack: one container runs Nginx, the API, the web client, coturn
+# and the Stellarr Media server.
 #
 #   docker compose up -d           pulls the published image
 #   docker compose up -d --build   builds the image from this checkout

@@ -126,23 +126,6 @@ internal static class ContainerSettings
                 : "configuration");
     }
 
-    /// <summary>
-    /// The entrypoint always points the API and RustFS at the loopback object
-    /// store, overriding any Storage__Endpoint from Compose. The display says so
-    /// instead of pretending that variable can change the address.
-    /// </summary>
-    internal static StartupValue StorageEndpoint() => new("http://127.0.0.1:9000", "entrypoint");
-
-    internal static StartupValue StorageBucket(StartupContext context)
-    {
-        // The entrypoint always exports Storage__Bucket from RUSTFS_BUCKET or
-        // its own default, overwriting any Storage__Bucket from Compose.
-        var bucket = EnvironmentValue(context.Environment, "RUSTFS_BUCKET");
-        return bucket is null
-            ? new StartupValue("stellarr-images", "default")
-            : new StartupValue(bucket, "environment");
-    }
-
     private static string PublicUrlFor(string host, string publicPort)
     {
         // The shell wraps any host containing a colon, matching the entrypoint.

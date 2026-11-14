@@ -94,8 +94,6 @@ Startup settings are read-only. `config list` displays their current source and 
 - `oidc.trust-provider-mfa`, `oidc.provider-mfa-amr`
 - `oidc.providers` (the ids of the providers under `Oidc__Providers__<id>__*`, each marked when its second step is trusted; no secrets)
 - `rtc.public-host`, `rtc.turn-port`, `rtc.turns-port`, `rtc.turns-enabled`, `rtc.turn-tcp-enabled`, `rtc.media-port`
-- `storage.endpoint` (always set to `http://127.0.0.1:9000` by the entrypoint)
-- `storage.bucket` (`RUSTFS_BUCKET`, default `stellarr-images`)
 
 For nullable integrations, `value` is the stored preference (`null` means automatic) and `effectiveValue` reflects current availability. For example, `giphy.enabled` can be stored as `true` while `effectiveValue` remains `false` until a GIPHY API key is configured. `source` is `database` only when that field was explicitly saved; a `null` flag stays `default` even when the settings row exists.
 

@@ -29,7 +29,7 @@ Uploads are governed by two storage quotas and a free-space check: 2 GiB per acc
 | `3478` | TCP | TURN over TCP (enabled with `STELLARR_TURN_TCP_ENABLED=true`) | Optional | `STELLARR_TURN_PORT` |
 | `5349` | TCP, UDP | TURN over TLS/DTLS (enabled with `STELLARR_TURNS_ENABLED=true`; requires a trusted TLS certificate) | Optional | `STELLARR_TURNS_PORT` |
 
-Internal services (SQLite, RustFS, ASP.NET Core, Next.js, and the media control API) listen only inside the container. See [RTC and ports](../rtc-and-ports.md) for relay sizing and troubleshooting.
+Internal services (SQLite, ASP.NET Core, Next.js, and the media control API) listen only inside the container. See [RTC and ports](../rtc-and-ports.md) for relay sizing and troubleshooting.
 
 ## Behind NAT
 

@@ -32,7 +32,6 @@ To expand the relay range for larger instances or TURN/TCP, update `min-port`/`m
 | --- | --- |
 | `3000/tcp` | Next.js standalone server (`127.0.0.1`) |
 | `5000/tcp` | ASP.NET Core API and SignalR (`127.0.0.1`) |
-| `9000/tcp` | RustFS S3 API (`127.0.0.1`) |
 | `5200/tcp` | `stellarr-media` HTTP control API (`127.0.0.1`, authenticated via `secrets/media-control-secret`) |
 
 Nginx routes `/api/`, `/assets/`, `/health`, `/hubs/`, and `/.well-known/stellarr/client` to ASP.NET Core, serves Cockpit statically from `/cockpit/`, proxies `/bergamot-models-gcs/` to the Bergamot model bucket, and forwards all other HTTP paths to Next.js.

@@ -31,12 +31,12 @@ CUTS=0.3,1.9,3.8,5.9,6.2,9,12.5,19.55,20.8,22,24.97,28,30.6,30.85,33,34.95,36.4,
 down() {
   compose down 2>/dev/null || true
   # the instance's data goes, so the next capture starts empty; npm, NuGet and build caches stay
-  docker volume rm "${PROJECT}_stellarr_dev_data" "${PROJECT}_stellarr_dev_objects" >/dev/null 2>&1 || true
+  docker volume rm "${PROJECT}_stellarr_dev_data" >/dev/null 2>&1 || true
 }
 
 up() {
   down
-  compose up -d --no-deps rustfs api web cockpit
+  compose up -d --no-deps api web cockpit
   echo "waiting for the instance (the first start installs packages and builds the API, a few minutes)"
   for _ in $(seq 1 300); do
     a=$(curl -s -o /dev/null -w '%{http_code}' "$API/api/bootstrap" || true)

@@ -182,12 +182,6 @@ internal static class SettingsCatalog
         new("rtc.media-port", "STELLARR_MEDIA_PORT / Rtc__MediaPort",
             "Set STELLARR_MEDIA_PORT in .env/Compose and recreate the container.",
             context => ContainerSettings.EnvironmentOrConfig(context, "Rtc__MediaPort", "Rtc:MediaPort", "49000")),
-        new("storage.endpoint", null,
-            "The entrypoint sets Storage__Endpoint to http://127.0.0.1:9000 on every start, overwriting Compose. Change the entrypoint/Compose build to use another object store.",
-            _ => ContainerSettings.StorageEndpoint()),
-        new("storage.bucket", "RUSTFS_BUCKET",
-            "Set RUSTFS_BUCKET in .env/Compose and recreate the container.",
-            ContainerSettings.StorageBucket),
     ];
 
     private static WriteSetting Scalar(
