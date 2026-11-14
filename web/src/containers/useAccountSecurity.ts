@@ -24,7 +24,8 @@ import { challengeErrorMessage } from "./challengeErrors";
 
 /** What to do once the proof it needed is in hand. */
 type Change =
-  | { kind: "enroll" }
+  /** Starts on the way the person picked in the pane, the app's when none was. */
+  | { kind: "enroll"; mode?: EnrollMode }
   | { kind: "remove"; methodId: string }
   | { kind: "regenerate" }
   /** Linking ends on the provider's page, after a full page load. */
@@ -152,7 +153,7 @@ export function useAccountSecurity(open: boolean) {
           const challenge: MfaChallenge = await security.startEnrollment(password);
           setError(null);
           setEmailWait(null);
-          setStep({ kind: "enroll", challenge, mode: "totp", enrollment: null });
+          setStep({ kind: "enroll", challenge, mode: next.mode ?? "totp", enrollment: null });
           return;
         }
         if (next.kind === "remove") {
@@ -276,7 +277,7 @@ export function useAccountSecurity(open: boolean) {
       loadError,
       actionError,
       busy,
-      onAddMethod: () => start({ kind: "enroll" }),
+      onAddMethod: (mode?: EnrollMode) => start({ kind: "enroll", ...(mode ? { mode } : {}) }),
       onRemoveMethod: (method: MfaMethod) => start({ kind: "remove", methodId: method.id }),
       onRegenerateCodes: () => start({ kind: "regenerate" }),
       onLinkIdentity: (provider: IdentityProvider) => start({ kind: "link", providerId: provider.id }),

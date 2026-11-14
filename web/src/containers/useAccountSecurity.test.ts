@@ -124,6 +124,20 @@ describe("useAccountSecurity", () => {
     await waitFor(() => expect(mocks.challenge.startTotp).toHaveBeenCalledWith("c-enrollment", expect.any(String)));
   });
 
+  it("opens the setup on the way picked in the pane, and on the app's when none was", async () => {
+    const { result } = await mounted();
+
+    act(() => result.current.sections.onAddMethod("passkey"));
+    await waitFor(() => expect(result.current.dialog.step?.kind).toBe("enroll"));
+    expect(result.current.dialog.step).toMatchObject({ kind: "enroll", mode: "passkey" });
+    // Only the app's way fetches a key up front.
+    expect(mocks.challenge.startTotp).not.toHaveBeenCalled();
+
+    act(() => result.current.dialog.onClose());
+    act(() => result.current.sections.onAddMethod());
+    await waitFor(() => expect(result.current.dialog.step).toMatchObject({ kind: "enroll", mode: "totp" }));
+  });
+
   it("takes a passkey as the fresh proof, without trusting the device, then opens the setup", async () => {
     vi.mocked(mocks.security.startEnrollment).mockRejectedValueOnce(forbidden());
     const { result } = await mounted();

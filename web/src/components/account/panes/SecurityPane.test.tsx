@@ -3,8 +3,10 @@ import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import type { Account, EmailChangeResult, PasswordChangeResult } from "@/ports";
+import { renderWithConfirm } from "@/test/confirm";
 
 import { SecurityPane, type SecurityPaneProps } from "./SecurityPane";
+import { SECURITY, securityProps } from "./securityTestFixtures";
 
 const account: Account = {
   id: "u-maja-9",
@@ -240,9 +242,51 @@ describe("SecurityPane password", () => {
     setup();
 
     await fillPasswords(user);
-    await user.click(screen.getByRole("button", { name: "Anuluj zmianę hasła" }));
+    await user.click(screen.getByRole("button", { name: "Anuluj" }));
     await user.click(screen.getByRole("button", { name: "Zmień hasło" }));
 
     expect(screen.getByLabelText(/Obecne hasło/)).toHaveValue("");
+  });
+
+  it("keeps one credential open at a time and drops the other's draft", async () => {
+    const user = userEvent.setup();
+    setup();
+
+    await fillPasswords(user);
+    await user.click(screen.getByRole("button", { name: "Zmień e-mail" }));
+
+    expect(screen.queryByLabelText(/Powtórz nowe hasło/)).toBeNull();
+    expect(screen.getByRole("textbox", { name: "Nowy adres e-mail" })).toBeVisible();
+    // The row's own button hides while its form is open: one way to cancel.
+    expect(screen.queryByRole("button", { name: "Zmień e-mail" })).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: "Zmień hasło" }));
+    expect(screen.getByLabelText(/Obecne hasło/)).toHaveValue("");
+    expect(screen.queryByRole("textbox", { name: "Nowy adres e-mail" })).toBeNull();
+  });
+
+  it("warns that a forgotten password cannot be reset without an address", () => {
+    setup({ account: { ...account, email: undefined } });
+
+    expect(screen.getByText("Bez adresu nie odzyskasz zapomnianego hasła sam.")).toHaveAttribute("data-tone", "warn");
+  });
+});
+
+describe("SecurityPane order", () => {
+  it("leads with the second step, then the password and address, then the providers", () => {
+    renderWithConfirm(
+      <SecurityPane
+        account={account}
+        emailSupported
+        onChangeEmail={vi.fn()}
+        onChangePassword={vi.fn()}
+        twoStep={securityProps({
+          security: { ...SECURITY, identityProviders: [{ id: "work", displayName: "Work" }] },
+        })}
+      />,
+    );
+
+    const headings = [...document.querySelectorAll(".sc-h")].map((header) => header.textContent);
+    expect(headings).toEqual(["Logowanie dwuetapowe", "Hasło i e-mail", "Logowanie przez dostawcę"]);
   });
 });
