@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -42,6 +42,39 @@ describe("LanguagePane", () => {
       .toBeDisabled();
 
     await userEvent.click(screen.getAllByRole("radio", { name: /English/ })[0]!);
+    expect(update).toHaveBeenCalledWith({ locale: "en" });
+  });
+
+  it("shows how the chosen language writes a date, and moves through the list with the arrows", async () => {
+    const update = vi.fn();
+    render(
+      <LanguagePane
+        locale="pl"
+        chatTranslationEnabled={false}
+        chatAutoTranslateEnabled={false}
+        chatTranslationTargetLanguage="en"
+        update={update}
+        t={(key, values) => translateMessage("pl", key, values)}
+      />,
+    );
+
+    const list = screen.getByRole("radiogroup", { name: "Język interfejsu" });
+    const polish = within(list).getByRole("radio", { name: /Polski/ });
+    const written = new Intl.DateTimeFormat("pl", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(new Date(2026, 10, 14, 19, 4));
+    expect(polish).toHaveTextContent(written);
+    // The other row names its language in the interface's tongue instead.
+    expect(within(list).getByRole("radio", { name: /English/ })).toHaveTextContent("Angielski");
+    // Two languages read at a glance; there is nothing to search.
+    expect(screen.queryByRole("searchbox")).toBeNull();
+
+    polish.focus();
+    await userEvent.keyboard("{ArrowDown}");
     expect(update).toHaveBeenCalledWith({ locale: "en" });
   });
 
