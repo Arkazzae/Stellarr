@@ -38,6 +38,7 @@ import { useAttachmentQueue } from "./chat/useAttachmentQueue";
 import { useChannelPages } from "./chat/useChannelPages";
 import { useChatComposer } from "./chat/useChatComposer";
 import { useChatFeed } from "./chat/useChatFeed";
+import { useMentionNotifications } from "./chat/useMentionNotifications";
 import { useMessageActions } from "./chat/useMessageActions";
 import { useMessageEdit } from "./chat/useMessageEdit";
 import { useReadMarks } from "./chat/useReadMarks";
@@ -231,6 +232,15 @@ export function ChatProvider({ children }: { children: ReactNode }) {
     selfUsername: user?.username ?? null,
     openChannelId: channelId,
     preferences,
+  });
+  useMentionNotifications({
+    chat: ports.chat,
+    selfId: user?.id ?? null,
+    selfUsername: user?.username ?? null,
+    preferences,
+    channelName: (id) => textChannels.find((channel) => channel.id === id)?.name ?? null,
+    openChannel: selectTextChannel,
+    t,
   });
   useThreadCatalogue(ports.chat, textChannelIds, data.threadsLoaded, dispatch);
   const { loadOlder } = useChannelPages({

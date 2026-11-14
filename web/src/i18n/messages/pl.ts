@@ -421,6 +421,7 @@ export const pl = {
   "notifications.inviteJoining": "Dołączanie…",
   "notifications.inviteJoinFailed": "Zaproszenie wygasło albo nie udało się go przyjąć.",
   "notifications.mentionTitle": "{author} oznacza Cię w wiadomości",
+  "notifications.systemMention": "{author} oznacza Cię na #{channel}",
 
   "presence.online": "W sieci",
   "presence.idle": "Zaraz wracam",
@@ -552,7 +553,7 @@ export const pl = {
   "account.passwordSame": "Nowe hasło jest takie samo jak obecne.",
   "preference.notifications": "Powiadomienia",
   "preference.desktopNotifications": "Powiadomienia systemowe",
-  "preference.desktopNotificationsDetail": "Połączenia przychodzące pojawią się nad innymi aplikacjami, gdy Stellarr jest otwarty w tle.",
+  "preference.desktopNotificationsDetail": "Połączenia i wzmianki wyskakują nad innymi aplikacjami, gdy Stellarr jest w tle.",
   "preference.desktopNotificationsDenied": "Powiadomienia są zablokowane w ustawieniach przeglądarki lub systemu.",
   "preference.desktopNotificationsUnsupported": "To urządzenie nie obsługuje powiadomień systemowych.",
   "preference.desktopNotificationsFailed": "Nie udało się włączyć powiadomień systemowych.",

@@ -423,6 +423,7 @@ export const en = {
   "notifications.inviteJoining": "Joining…",
   "notifications.inviteJoinFailed": "The invitation is no longer valid or could not be accepted.",
   "notifications.mentionTitle": "{author} mentioned you in a message",
+  "notifications.systemMention": "{author} mentioned you in #{channel}",
 
   "presence.online": "Online",
   "presence.idle": "Idle",
@@ -554,7 +555,7 @@ export const en = {
   "account.passwordSame": "The new password is the same as the current one.",
   "preference.notifications": "Notifications",
   "preference.desktopNotifications": "Desktop notifications",
-  "preference.desktopNotificationsDetail": "Incoming calls appear over other apps while Stellarr remains open in the background.",
+  "preference.desktopNotificationsDetail": "Calls and mentions pop up over other apps while Stellarr is in the background.",
   "preference.desktopNotificationsDenied": "Notifications are blocked in your browser or system settings.",
   "preference.desktopNotificationsUnsupported": "This device does not support system notifications.",
   "preference.desktopNotificationsFailed": "System notifications could not be switched on.",
