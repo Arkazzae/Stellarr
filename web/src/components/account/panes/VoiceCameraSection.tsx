@@ -8,67 +8,61 @@ import { ErrorNotice } from "@/components/primitives/ErrorNotice";
 import type { CameraTest, VoiceSettings } from "@/ports";
 import { useLanguage } from "@/state/hooks";
 
-import { DeviceSelect, FormRow, VoiceSection } from "./VoiceFields";
+import { DeviceSelect } from "./VoiceFields";
 
-export interface VoiceCameraSectionProps {
+export interface VoiceCameraCheckProps {
   settings: VoiceSettings;
   onChange: (patch: Partial<VoiceSettings>) => void;
   camera: CameraTest;
 }
 
-/** Which camera, and a preview that stays on this device. */
-export function VoiceCameraSection({ settings, onChange, camera }: VoiceCameraSectionProps) {
+/**
+ * Which camera, and a preview that stays on this device: the last part of
+ * the voice pane's check panel. The picture is what someone adds to a call
+ * that already works, so it closes the panel.
+ */
+export function VoiceCameraCheck({ settings, onChange, camera }: VoiceCameraCheckProps) {
   const { t } = useLanguage();
   const deviceId = useId();
 
   return (
-    <VoiceSection title={t("voice.camera")}>
+    <>
       <CameraPreview camera={camera} />
-      <div className="frm camera-controls">
-        <FormRow
-          label={t("voice.device")}
-          detail={t("voice.cameraDetail")}
-          htmlFor={deviceId}
-        >
-          <DeviceSelect
-            id={deviceId}
-            label={t("voice.camera")}
-            devices={camera.devices}
-            value={settings.videoDeviceId}
-            defaultLabel={t("voice.systemDefault")}
-            onChange={(videoDeviceId) => onChange({ videoDeviceId })}
-          />
-          {camera.labelsKnown ? null : <p className="pf-count">{t("voice.cameraNamesHint")}</p>}
-        </FormRow>
-
-        <FormRow label={t("voice.preview")} detail={t("voice.cameraPreviewDetail")}>
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            className={camera.running ? "test-toggle on" : "test-toggle"}
-            disabled={camera.starting}
-            onClick={() => (camera.running ? camera.stop() : camera.start())}
-          >
-            <Icon name={camera.running ? "pause" : "camera"} size={15} />
-            {camera.running
-              ? t("voice.stopPreview")
-              : camera.starting
-                ? t("voice.openCamera")
-                : t("voice.checkCamera")}
-          </Button>
-          {camera.error === null ? null : (
-            <ErrorNotice
-              compact
-              title={t("voice.cameraNotWorking")}
-              message={camera.error}
-              icon="camera"
-              actions={[{ label: t("common.tryAgain"), onClick: camera.start }]}
-            />
-          )}
-        </FormRow>
-      </div>
-    </VoiceSection>
+      <DeviceSelect
+        id={deviceId}
+        label={t("voice.camera")}
+        devices={camera.devices}
+        value={settings.videoDeviceId}
+        defaultLabel={t("voice.systemDefault")}
+        onChange={(videoDeviceId) => onChange({ videoDeviceId })}
+      />
+      {camera.labelsKnown ? null : <p className="pf-count">{t("voice.cameraNamesHint")}</p>}
+      <Button
+        type="button"
+        variant="secondary"
+        size="sm"
+        className={camera.running ? "test-toggle on" : "test-toggle"}
+        disabled={camera.starting}
+        onClick={() => (camera.running ? camera.stop() : camera.start())}
+      >
+        <Icon name={camera.running ? "pause" : "camera"} size={15} />
+        {camera.running
+          ? t("voice.stopPreview")
+          : camera.starting
+            ? t("voice.openCamera")
+            : t("voice.checkCamera")}
+      </Button>
+      {camera.error === null ? null : (
+        <ErrorNotice
+          compact
+          title={t("voice.cameraNotWorking")}
+          message={camera.error}
+          icon="camera"
+          actions={[{ label: t("common.tryAgain"), onClick: camera.start }]}
+        />
+      )}
+      <p className="pf-count">{t("voice.cameraPreviewDetail")}</p>
+    </>
   );
 }
 

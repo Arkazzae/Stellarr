@@ -806,7 +806,7 @@ describe("UserSettings", () => {
     const props = setup();
 
     await user.click(screen.getByRole("button", { name: /Głos i wideo/ }));
-    await user.click(screen.getByRole("button", { name: "Przywróć" }));
+    await user.click(screen.getByRole("button", { name: "Przywróć domyślne" }));
 
     expect(props.voice.onReset).not.toHaveBeenCalled();
 

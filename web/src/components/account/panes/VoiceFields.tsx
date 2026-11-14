@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 
 import { Switch } from "@/components/primitives/Switch";
 import type { MediaDeviceChoice } from "@/ports";
@@ -89,6 +89,8 @@ export interface RangeFieldProps {
   display: string;
   /** Names the slider when no visible label points at it. */
   label?: string;
+  /** What a screen reader says for the value, when the number alone says little. */
+  valueText?: string;
   onChange: (value: number) => void;
   /** The adjustment is over: the pointer lifted, a key was released or focus left. */
   onRelease?: () => void;
@@ -102,9 +104,12 @@ export function RangeField({
   value,
   display,
   label,
+  valueText,
   onChange,
   onRelease,
 }: RangeFieldProps) {
+  // How far along the track the thumb is, for the part drawn in the accent.
+  const fill = max === min ? 0 : ((value - min) / (max - min)) * 100;
   return (
     <span className="vad-row">
       <input
@@ -112,6 +117,8 @@ export function RangeField({
         className="vad-range"
         type="range"
         aria-label={label}
+        aria-valuetext={valueText}
+        style={{ "--fill": `${fill}%` } as CSSProperties}
         min={min}
         max={max}
         step={step}

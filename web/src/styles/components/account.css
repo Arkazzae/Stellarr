@@ -575,12 +575,6 @@
     margin-top: 12px;
   }
 
-  /* The one destructive thing on the pane, so it keeps the settings' own
-     danger row rather than inventing a shape of its own. */
-  .mic-reset {
-    margin-top: 4px;
-  }
-
   .vad-row {
     display: flex;
     align-items: center;
@@ -689,8 +683,257 @@
     color: var(--text-muted);
   }
 
-  .camera-controls {
-    margin-top: 18px;
+  /*
+   * The pane's layout: the settings in two groups on the left, the checks in
+   * one panel on the right that stays in view while they scroll, so the meter
+   * answers while noise reduction or gain is being changed.
+   */
+  .vc-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 272px;
+    gap: 20px;
+    align-items: start;
+  }
+
+  .vc-main {
+    min-width: 0;
+  }
+
+  /* In the narrower column a slider or a pill gets the group's whole width,
+     under its label, rather than half of it beside the label. */
+  .vc-group .frm-row:not(:has(> .frm-switch)) {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .vc-group .frm-lab {
+    padding-top: 0;
+  }
+
+  .vc-group .set-select {
+    max-width: none;
+  }
+
+  .vc-check {
+    position: sticky;
+    top: 6px;
+    margin-top: 30px;
+    display: flex;
+    flex-direction: column;
+    background: var(--set-group);
+    border: 1px solid var(--line-subtle);
+    border-radius: var(--radius-lg);
+  }
+
+  .vc-check-part {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px;
+  }
+
+  .vc-check-part + .vc-check-part {
+    border-top: 1px solid var(--line-subtle);
+  }
+
+  .vc-check-part h3 {
+    margin: 0;
+    font-size: var(--text-14);
+    font-weight: 600;
+  }
+
+  /* The meter over its button: the bar wants the panel's whole width. */
+  .vc-check .mic-test {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .vc-check .mic-bar {
+    order: -1;
+    flex: none;
+    align-self: stretch;
+    height: 10px;
+  }
+
+  .vc-check-part > button {
+    align-self: flex-start;
+  }
+
+  .vc-check .pf-count,
+  .vc-check .output-status {
+    margin: 0;
+  }
+
+  .vc-check .set-select {
+    max-width: none;
+  }
+
+  .vc-check .camera-preview {
+    max-height: none;
+  }
+
+  .vc-check .camera-empty {
+    gap: 6px;
+    font-size: var(--text-12);
+  }
+
+  /* Voice quality: the slider's stops name their bitrate under the track,
+     each centred where the thumb lands. The reading beside the slider is a
+     word here, so it keeps one width and the track does not move. */
+  .frm-row:has(.vc-ticks) .vad-value {
+    min-width: 104px;
+  }
+
+  .vc-ticks {
+    position: relative;
+    display: block;
+    height: 14px;
+    margin: -6px 116px 0 0;
+  }
+
+  .vc-ticks i {
+    position: absolute;
+    left: calc(9px + (100% - 18px) * var(--k) / var(--stops));
+    translate: -50% 0;
+    font-size: var(--text-11);
+    font-style: normal;
+    color: var(--text-faint);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .vc-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    margin-top: -12px;
+    padding: 0 4px;
+    font-size: var(--text-13);
+    color: var(--text-faint);
+  }
+
+  .vc-foot p {
+    margin: 0;
+    line-height: 1.45;
+  }
+
+  .vc-foot-ask {
+    flex: none;
+    display: flex;
+    gap: 8px;
+  }
+
+  /*
+   * One slider for the settings: the part up to the thumb in the accent, the
+   * rest a quiet track, a round thumb that grows a halo under the pointer.
+   * `RangeField` writes how far along it is as `--fill`.
+   */
+  .sv .vad-range {
+    --fill: 50%;
+    height: 20px;
+    margin: 0;
+    background: none;
+    cursor: pointer;
+    appearance: none;
+  }
+
+  .sv .vad-range::-webkit-slider-runnable-track {
+    height: 6px;
+    border-radius: 3px;
+    background: linear-gradient(to right, var(--accent) var(--fill), var(--set-select) var(--fill));
+  }
+
+  .sv .vad-range::-moz-range-track {
+    height: 6px;
+    border-radius: 3px;
+    background: var(--set-select);
+  }
+
+  .sv .vad-range::-moz-range-progress {
+    height: 6px;
+    border-radius: 3px;
+    background: var(--accent);
+  }
+
+  .sv .vad-range::-webkit-slider-thumb {
+    width: 18px;
+    height: 18px;
+    margin-top: -6px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--text);
+    box-shadow: 0 1px 3px color-mix(in oklab, var(--surface-canvas) 70%, transparent);
+    transition: box-shadow var(--dur-fast) var(--ease-standard);
+    appearance: none;
+  }
+
+  .sv .vad-range::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border: 0;
+    border-radius: 50%;
+    background: var(--text);
+    box-shadow: 0 1px 3px color-mix(in oklab, var(--surface-canvas) 70%, transparent);
+  }
+
+  .sv .vad-range:hover::-webkit-slider-thumb {
+    box-shadow:
+      0 1px 3px color-mix(in oklab, var(--surface-canvas) 70%, transparent),
+      0 0 0 5px color-mix(in oklab, var(--accent) 25%, transparent);
+  }
+
+  .sv .vad-range:focus-visible {
+    outline: none;
+  }
+
+  .sv .vad-range:focus-visible::-webkit-slider-thumb {
+    box-shadow: 0 0 0 3px var(--accent-quiet);
+  }
+
+  .sv .vad-range:focus-visible::-moz-range-thumb {
+    box-shadow: 0 0 0 3px var(--accent-quiet);
+  }
+
+  .sv .vad-range:disabled {
+    cursor: default;
+    opacity: 0.5;
+  }
+
+  @media (max-width: 1000px) {
+    .vc-layout {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .vc-check {
+      position: static;
+      order: -1;
+      margin: 0 0 30px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .vc-check-part + .vc-check-part {
+      border-top: 0;
+      border-left: 1px solid var(--line-subtle);
+    }
+  }
+
+  @media (max-width: 767px) {
+    .vc-check {
+      grid-template-columns: minmax(0, 1fr);
+    }
+
+    .vc-check-part + .vc-check-part {
+      border-left: 0;
+      border-top: 1px solid var(--line-subtle);
+    }
+
+    .vc-foot {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 8px;
+    }
   }
 
   /* ---------- SKRÓTY KLAWISZOWE ---------- */

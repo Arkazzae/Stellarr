@@ -13,14 +13,7 @@ import {
 import type { MicTest, VoiceSettings } from "@/ports";
 import { useLanguage } from "@/state/hooks";
 
-import {
-  DeviceSelect,
-  FormRow,
-  RangeField,
-  SwitchRow,
-  VoiceSection,
-  formatDb,
-} from "./VoiceFields";
+import { DeviceSelect, FormRow, RangeField, SwitchRow, formatDb } from "./VoiceFields";
 
 export interface VoiceMicrophoneSectionProps {
   settings: VoiceSettings;
@@ -31,10 +24,10 @@ export interface VoiceMicrophoneSectionProps {
 }
 
 /**
- * Which microphone, whether it works, and how loud speech has to be.
- *
- * Sensitivity and gain sit under the level meter they are judged against: "is
- * it loud enough" and "is it speech" are two questions the one bar answers.
+ * Which microphone and how loud speech has to be: the first rows of the "your
+ * voice" group. Whether it works is `MicrophoneCheck`, in the pane's check
+ * panel, which stays in view while these rows are adjusted: "is it loud
+ * enough" and "is it speech" are two questions its one bar answers.
  */
 export function VoiceMicrophoneSection({
   settings,
@@ -56,95 +49,90 @@ export function VoiceMicrophoneSection({
   }, [settings.vadSensitivity]);
 
   return (
-    <VoiceSection title={t("voice.microphone")}>
-      <div className="frm">
-        <FormRow
-          label={t("voice.device")}
-          detail={t("voice.deviceImmediateDetail")}
-          htmlFor={deviceId}
-        >
-          <DeviceSelect
-            id={deviceId}
-            label={t("voice.microphone")}
-            devices={mic.devices}
-            value={settings.inputDeviceId}
-            defaultLabel={t("voice.systemDefault")}
-            onChange={(inputDeviceId) => onChange({ inputDeviceId })}
-          />
-          {/* Before permission the browser hands out entries with empty
-              labels, so the list is numbered and says why. */}
-          {mic.labelsKnown ? null : (
-            <p className="pf-count">{t("voice.microphoneNamesHint")}</p>
-          )}
-          {/* The system default names a rule, not a microphone. While the test
-              is open the rule has picked one, and that is the part people are
-              surprised by. */}
-          {settings.inputDeviceId === null && mic.activeDeviceLabel !== null ? (
-            <p className="pf-count">
-              {t("voice.currentDevice", { device: mic.activeDeviceLabel })}
-            </p>
-          ) : null}
-        </FormRow>
-
-        <FormRow label={t("voice.test")} detail={t("voice.testDetail")}>
-          <MicrophoneCheck mic={mic} />
-        </FormRow>
-
-        <FormRow
-          label={t("voice.speechSensitivity")}
-          detail={t("voice.speechSensitivityDetail")}
-          htmlFor={vadId}
-        >
-          <RangeField
-            id={vadId}
-            min={0}
-            max={100}
-            step={5}
-            value={settings.vadSensitivity}
-            display={String(settings.vadSensitivity)}
-            onChange={(vadSensitivity) => {
-              draggedVad.current = vadSensitivity;
-              onChange({ vadSensitivity });
-            }}
-            onRelease={() => onVadCommit(draggedVad.current)}
-          />
-        </FormRow>
-
-        <FormRow
-          label={t("voice.inputGain")}
-          detail={t("voice.inputGainDetail")}
-          htmlFor={gainId}
-        >
-          <RangeField
-            id={gainId}
-            min={INPUT_GAIN_MIN_DB}
-            max={INPUT_GAIN_MAX_DB}
-            step={INPUT_GAIN_STEP_DB}
-            value={settings.inputGainDb}
-            display={formatDb(settings.inputGainDb)}
-            onChange={(inputGainDb) => onChange({ inputGainDb })}
-          />
-        </FormRow>
-
-        <SwitchRow
-          label={t("voice.inputGate")}
-          detail={t("voice.inputGateDetail")}
-          checked={settings.inputGate}
-          onChange={(inputGate) => onChange({ inputGate })}
+    <>
+      <FormRow
+        label={t("voice.device")}
+        detail={t("voice.deviceImmediateDetail")}
+        htmlFor={deviceId}
+      >
+        <DeviceSelect
+          id={deviceId}
+          label={t("voice.microphone")}
+          devices={mic.devices}
+          value={settings.inputDeviceId}
+          defaultLabel={t("voice.systemDefault")}
+          onChange={(inputDeviceId) => onChange({ inputDeviceId })}
         />
-        {/* A switch that is on while the browser cannot build the gate would
-            be a lie, the same as the suppressor line further down. */}
-        {settings.inputGate && mic.gateActive === false ? (
-          <p className="acc-answer bad mic-truth" role="status">
-            {t("voice.inputGateUnavailable")}
+        {/* Before permission the browser hands out entries with empty
+            labels, so the list is numbered and says why. */}
+        {mic.labelsKnown ? null : (
+          <p className="pf-count">{t("voice.microphoneNamesHint")}</p>
+        )}
+        {/* The system default names a rule, not a microphone. While the test
+            is open the rule has picked one, and that is the part people are
+            surprised by. */}
+        {settings.inputDeviceId === null && mic.activeDeviceLabel !== null ? (
+          <p className="pf-count">
+            {t("voice.currentDevice", { device: mic.activeDeviceLabel })}
           </p>
         ) : null}
-      </div>
-    </VoiceSection>
+      </FormRow>
+
+      <FormRow
+        label={t("voice.speechSensitivity")}
+        detail={t("voice.speechSensitivityDetail")}
+        htmlFor={vadId}
+      >
+        <RangeField
+          id={vadId}
+          min={0}
+          max={100}
+          step={5}
+          value={settings.vadSensitivity}
+          display={String(settings.vadSensitivity)}
+          onChange={(vadSensitivity) => {
+            draggedVad.current = vadSensitivity;
+            onChange({ vadSensitivity });
+          }}
+          onRelease={() => onVadCommit(draggedVad.current)}
+        />
+      </FormRow>
+
+      <FormRow
+        label={t("voice.inputGain")}
+        detail={t("voice.inputGainDetail")}
+        htmlFor={gainId}
+      >
+        <RangeField
+          id={gainId}
+          min={INPUT_GAIN_MIN_DB}
+          max={INPUT_GAIN_MAX_DB}
+          step={INPUT_GAIN_STEP_DB}
+          value={settings.inputGainDb}
+          display={formatDb(settings.inputGainDb)}
+          onChange={(inputGainDb) => onChange({ inputGainDb })}
+        />
+      </FormRow>
+
+      <SwitchRow
+        label={t("voice.inputGate")}
+        detail={t("voice.inputGateDetail")}
+        checked={settings.inputGate}
+        onChange={(inputGate) => onChange({ inputGate })}
+      />
+      {/* A switch that is on while the browser cannot build the gate would
+          be a lie, the same as the suppressor line further down. */}
+      {settings.inputGate && mic.gateActive === false ? (
+        <p className="acc-answer bad mic-truth" role="status">
+          {t("voice.inputGateUnavailable")}
+        </p>
+      ) : null}
+    </>
   );
 }
 
-function MicrophoneCheck({ mic }: { mic: MicTest }) {
+/** Whether the microphone works: the test, its level meter and its verdict. */
+export function MicrophoneCheck({ mic }: { mic: MicTest }) {
   const { t } = useLanguage();
   const level = Math.round(mic.level * 100);
 

@@ -3,11 +3,11 @@
 import type { CameraTest, MicTest, OutputTest, VoiceSettings } from "@/ports";
 import { useLanguage } from "@/state/hooks";
 
-import { VoiceCameraSection } from "./VoiceCameraSection";
-import { VoiceMicrophoneSection } from "./VoiceMicrophoneSection";
-import { VoicePlaybackSection } from "./VoicePlaybackSection";
+import { VoiceCameraCheck } from "./VoiceCameraSection";
+import { MicrophoneCheck, VoiceMicrophoneSection } from "./VoiceMicrophoneSection";
+import { SpeakerCheck, VoicePlaybackSection } from "./VoicePlaybackSection";
 import { VoiceProcessingSection } from "./VoiceProcessingSection";
-import { VoiceAudioQualitySection, VoiceScreenSharingSection } from "./VoiceQualitySections";
+import { VoiceAudioQualityRow } from "./VoiceQualitySections";
 import { VoiceResetRow } from "./VoiceResetRow";
 
 export interface VoicePaneProps {
@@ -25,11 +25,13 @@ export interface VoicePaneProps {
 /**
  * Voice and video: the person's settings, not the server's.
  *
- * Ordered by what goes wrong. The microphone comes first, because a call on the
- * wrong one is not a quality problem but silence, then what is heard, then the
- * processing and codecs that matter to someone who can already be heard. The
- * picture follows the sound rather than interleaving with it: the camera and
- * the screen are what someone adds to a call that already works.
+ * Two groups and a check. "Your voice" is the microphone, what is done to the
+ * voice and what it costs on the connection; "what you hear" is the output,
+ * its volume and how other voices are shaped. The checks (the microphone's
+ * meter, a test clip and the camera's preview) sit beside them in one panel
+ * that stays in view, so the meter answers while noise reduction or gain is
+ * being changed rather than three screens away. The picture comes last: the
+ * camera is what someone adds to a call that already works.
  *
  * Every setting is backed by the voice settings store, which the audio pipeline
  * reads live, so a change lands on a call in progress without dropping it. The
@@ -48,20 +50,50 @@ export function VoicePane({
   const { t } = useLanguage();
 
   return (
-    <>
-      <p className="set-note">{t("voice.settingsNote")}</p>
-      <VoiceMicrophoneSection
-        settings={settings}
-        onChange={onChange}
-        onVadCommit={onVadCommit}
-        mic={mic}
-      />
-      <VoicePlaybackSection settings={settings} onChange={onChange} output={output} />
-      <VoiceProcessingSection settings={settings} onChange={onChange} mic={mic} />
-      <VoiceAudioQualitySection settings={settings} onChange={onChange} />
-      <VoiceCameraSection settings={settings} onChange={onChange} camera={camera} />
-      <VoiceScreenSharingSection settings={settings} onChange={onChange} />
-      <VoiceResetRow onReset={onReset} />
-    </>
+    <div className="vc-layout">
+      <div className="vc-main">
+        <section className="sc" aria-label={t("voice.yourVoice")}>
+          <header className="sc-h">{t("voice.yourVoice")}</header>
+          <div className="sc-b vc-group">
+            <div className="frm">
+              <VoiceMicrophoneSection
+                settings={settings}
+                onChange={onChange}
+                onVadCommit={onVadCommit}
+                mic={mic}
+              />
+              <VoiceProcessingSection settings={settings} onChange={onChange} mic={mic} />
+              <VoiceAudioQualityRow settings={settings} onChange={onChange} />
+            </div>
+          </div>
+        </section>
+
+        <section className="sc" aria-label={t("voice.whatYouHear")}>
+          <header className="sc-h">{t("voice.whatYouHear")}</header>
+          <div className="sc-b vc-group">
+            <div className="frm">
+              <VoicePlaybackSection settings={settings} onChange={onChange} output={output} />
+            </div>
+          </div>
+        </section>
+
+        <VoiceResetRow onReset={onReset} />
+      </div>
+
+      <aside className="vc-check" aria-label={t("voice.checkDevices")}>
+        <div className="vc-check-part">
+          <h3>{t("voice.microphone")}</h3>
+          <MicrophoneCheck mic={mic} />
+        </div>
+        <div className="vc-check-part">
+          <h3>{t("voice.speakers")}</h3>
+          <SpeakerCheck output={output} />
+        </div>
+        <div className="vc-check-part">
+          <h3>{t("voice.camera")}</h3>
+          <VoiceCameraCheck settings={settings} onChange={onChange} camera={camera} />
+        </div>
+      </aside>
+    </div>
   );
 }

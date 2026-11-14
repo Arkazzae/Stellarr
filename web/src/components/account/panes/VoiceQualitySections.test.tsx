@@ -1,47 +1,40 @@
-import { render, screen } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
-import { VoiceAudioQualitySection, VoiceScreenSharingSection } from "./VoiceQualitySections";
+import { VoiceAudioQualityRow } from "./VoiceQualitySections";
 import { voiceSettings } from "./voiceTestFixtures";
 
-describe("VoiceAudioQualitySection", () => {
-  it("offers the profiles from thrifty to studio and marks the one in use", () => {
-    render(<VoiceAudioQualitySection settings={voiceSettings} onChange={vi.fn()} />);
+const slider = () => screen.getByRole("slider", { name: /Jakość dźwięku/ });
 
-    const names = screen.getAllByRole("radio").map((radio) => radio.textContent);
-    expect(names).toEqual(["Oszczędny", "Zrównoważony", "Wyrazisty", "Premium", "Studio"]);
-    expect(screen.getByRole("radio", { name: "Premium" })).toBeChecked();
+describe("VoiceAudioQualityRow", () => {
+  it("is one slider from thrifty to studio, on the profile in use", () => {
+    render(<VoiceAudioQualityRow settings={voiceSettings} onChange={vi.fn()} />);
+
+    expect(slider()).toHaveAttribute("min", "0");
+    expect(slider()).toHaveAttribute("max", "4");
+    expect(slider()).toHaveValue("3");
+    // The stop is spoken by its name and its cost, not by its index.
+    expect(slider()).toHaveAttribute("aria-valuetext", "Premium, 128 kb/s");
     expect(screen.getByText(/128 kb\/s, FEC i ciągła transmisja/)).toBeInTheDocument();
   });
 
-  it("changes the profile the encoder uses", async () => {
-    const user = userEvent.setup();
+  it("names the bitrate of every stop under the track", () => {
+    const { container } = render(
+      <VoiceAudioQualityRow settings={voiceSettings} onChange={vi.fn()} />,
+    );
+
+    const ticks = Array.from(container.querySelectorAll(".vc-ticks i"), (tick) => tick.textContent);
+    expect(ticks).toEqual(["32", "64", "96", "128", "256"]);
+  });
+
+  it("changes the profile the encoder uses", () => {
     const onChange = vi.fn();
-    render(<VoiceAudioQualitySection settings={voiceSettings} onChange={onChange} />);
+    render(<VoiceAudioQualityRow settings={voiceSettings} onChange={onChange} />);
 
-    await user.click(screen.getByRole("radio", { name: "Studio" }));
-
+    fireEvent.change(slider(), { target: { value: "4" } });
     expect(onChange).toHaveBeenCalledWith({ opusProfile: "studio" });
-  });
-});
 
-describe("VoiceScreenSharingSection", () => {
-  it("offers the screen qualities and marks the one in use", () => {
-    render(<VoiceScreenSharingSection settings={voiceSettings} onChange={vi.fn()} />);
-
-    const names = screen.getAllByRole("radio").map((radio) => radio.textContent);
-    expect(names).toEqual(["Oszczędna", "Zrównoważona", "Wyraźna", "Ultra"]);
-    expect(screen.getByRole("radio", { name: "Zrównoważona" })).toBeChecked();
-  });
-
-  it("changes the quality of shared screens", async () => {
-    const user = userEvent.setup();
-    const onChange = vi.fn();
-    render(<VoiceScreenSharingSection settings={voiceSettings} onChange={onChange} />);
-
-    await user.click(screen.getByRole("radio", { name: "Ultra" }));
-
-    expect(onChange).toHaveBeenCalledWith({ screenShareQuality: "ultra" });
+    fireEvent.change(slider(), { target: { value: "1" } });
+    expect(onChange).toHaveBeenCalledWith({ opusProfile: "balanced" });
   });
 });

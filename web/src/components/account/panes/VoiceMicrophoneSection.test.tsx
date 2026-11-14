@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import type { MicTest, VoiceSettings } from "@/ports";
 
-import { VoiceMicrophoneSection } from "./VoiceMicrophoneSection";
+import { MicrophoneCheck, VoiceMicrophoneSection } from "./VoiceMicrophoneSection";
 import { idleMic, voiceSettings } from "./voiceTestFixtures";
 
 function setup(options: { settings?: Partial<VoiceSettings>; mic?: Partial<MicTest> } = {}) {
@@ -19,6 +19,11 @@ function setup(options: { settings?: Partial<VoiceSettings>; mic?: Partial<MicTe
     />,
   );
   return { onChange, onVadCommit, ...view };
+}
+
+/** The check now stands in the pane's check panel, apart from the rows. */
+function setupCheck(options: { mic?: Partial<MicTest> } = {}) {
+  return render(<MicrophoneCheck mic={{ ...idleMic, ...options.mic }} />);
 }
 
 describe("VoiceMicrophoneSection device", () => {
@@ -76,32 +81,27 @@ describe("VoiceMicrophoneSection test", () => {
     const user = userEvent.setup();
     const start = vi.fn();
     const stop = vi.fn();
-    const { rerender } = setup({ mic: { start, stop } });
+    const { rerender } = setupCheck({ mic: { start, stop } });
 
     await user.click(screen.getByRole("button", { name: "Sprawdź mikrofon" }));
     expect(start).toHaveBeenCalledOnce();
     expect(screen.getByText("Test wyłączony.")).toBeInTheDocument();
 
     rerender(
-      <VoiceMicrophoneSection
-        settings={voiceSettings}
-        onChange={vi.fn()}
-        onVadCommit={vi.fn()}
-        mic={{ ...idleMic, running: true, start, stop }}
-      />,
+      <MicrophoneCheck mic={{ ...idleMic, running: true, start, stop }} />,
     );
     await user.click(screen.getByRole("button", { name: "Zatrzymaj" }));
     expect(stop).toHaveBeenCalledOnce();
   });
 
   it("cannot be clicked twice while the microphone is opening", () => {
-    setup({ mic: { starting: true } });
+    setupCheck({ mic: { starting: true } });
 
     expect(screen.getByRole("button", { name: "Otwieram…" })).toBeDisabled();
   });
 
   it("reads the level and the detector's verdict off the meter", () => {
-    const { rerender } = setup({
+    const { rerender } = setupCheck({
       mic: { running: true, speaking: true, level: 0.75, peak: 0.9 },
     });
     expect(screen.getByRole("meter", { name: "Poziom mikrofonu" })).toHaveAttribute(
@@ -111,12 +111,7 @@ describe("VoiceMicrophoneSection test", () => {
     expect(screen.getByText(/To trafiłoby do rozmowy/)).toBeInTheDocument();
 
     rerender(
-      <VoiceMicrophoneSection
-        settings={voiceSettings}
-        onChange={vi.fn()}
-        onVadCommit={vi.fn()}
-        mic={{ ...idleMic, running: true, speaking: false, level: 0.1 }}
-      />,
+      <MicrophoneCheck mic={{ ...idleMic, running: true, speaking: false, level: 0.1 }} />,
     );
     expect(screen.getByText(/To zostałoby uznane za tło/)).toBeInTheDocument();
   });
@@ -124,7 +119,7 @@ describe("VoiceMicrophoneSection test", () => {
   it("shows the failure with a retry in place of the status line", async () => {
     const user = userEvent.setup();
     const start = vi.fn();
-    setup({ mic: { error: "Brak zgody na mikrofon.", start } });
+    setupCheck({ mic: { error: "Brak zgody na mikrofon.", start } });
 
     expect(screen.getByText("Brak zgody na mikrofon.")).toBeInTheDocument();
     expect(screen.queryByText("Test wyłączony.")).toBeNull();
