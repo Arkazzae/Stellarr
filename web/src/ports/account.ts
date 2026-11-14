@@ -75,8 +75,12 @@ export type ImageKind = "avatar" | "banner";
  * Listing them here as well would give one setting two owners.
  */
 export interface UserPreferences {
-  /** Notifications */
+  /** Notifications. `desktopNotifications` pops up incoming calls. */
   desktopNotifications: boolean;
+  /** A mention pops up over other apps while the app is in the background. */
+  mentionPopups: boolean;
+  /** An incoming call rings while the app is open. */
+  callRingtone: boolean;
   emailNotifications: boolean;
   pushNotifications: boolean;
   mentionsOnly: boolean;

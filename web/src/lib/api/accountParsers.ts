@@ -51,6 +51,8 @@ type FlagPreference = {
 /** What a switch reads as when an older server does not send it. */
 const PREFERENCE_DEFAULTS: Readonly<Record<FlagPreference, boolean>> = {
   desktopNotifications: true,
+  mentionPopups: true,
+  callRingtone: true,
   emailNotifications: false,
   pushNotifications: false,
   mentionsOnly: true,
@@ -74,6 +76,8 @@ export function parsePreferences(value: unknown, path: string): AccountPreferenc
   const vad = record["vadSensitivity"];
   return {
     desktopNotifications: flag("desktopNotifications"),
+    mentionPopups: flag("mentionPopups"),
+    callRingtone: flag("callRingtone"),
     emailNotifications: flag("emailNotifications"),
     pushNotifications: flag("pushNotifications"),
     mentionsOnly: flag("mentionsOnly"),

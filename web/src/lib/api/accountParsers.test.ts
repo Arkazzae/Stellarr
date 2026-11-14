@@ -94,6 +94,8 @@ describe("parsePreferences", () => {
       parsePreferences(
         {
           desktopNotifications: false,
+          mentionPopups: false,
+          callRingtone: false,
           emailNotifications: true,
           pushNotifications: true,
           mentionsOnly: false,
@@ -112,6 +114,8 @@ describe("parsePreferences", () => {
       ),
     ).toStrictEqual({
       desktopNotifications: false,
+      mentionPopups: false,
+      callRingtone: false,
       emailNotifications: true,
       pushNotifications: true,
       mentionsOnly: false,
@@ -131,6 +135,9 @@ describe("parsePreferences", () => {
   it("falls back to the defaults for what an older server does not send", () => {
     expect(parsePreferences({}, "/p")).toStrictEqual({
       desktopNotifications: true,
+      // Mentions and calls got their own switches on: what they did before.
+      mentionPopups: true,
+      callRingtone: true,
       emailNotifications: false,
       pushNotifications: false,
       mentionsOnly: true,

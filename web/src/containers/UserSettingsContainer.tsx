@@ -10,6 +10,7 @@ import {
   browserNotificationsSupported,
   showTestNotification,
 } from "@/lib/notifications/browser";
+import type { PopupPatch } from "@/components/account/panes/NotificationsPane";
 import type { UserPreferences } from "@/ports";
 import {
   useAccount,
@@ -85,24 +86,26 @@ export function UserSettingsContainer() {
     void account.setPreferences(patch).catch(() => undefined);
   };
 
-  const changeSystemNotifications = (enabled: boolean) => {
-    if (!enabled) {
-      persistPreferences({ desktopNotifications: false });
+  // Turning a pop-up on before the device agreed asks it first. The prompt
+  // has to start in the switch's click, and the switch is stored only once the
+  // device confirms it can deliver.
+  const changePopups = (patch: PopupPatch) => {
+    const enabling = Object.values(patch).some((value) => value === true);
+    if (!enabling || browserNotifications.permission === "granted") {
+      persistPreferences(patch);
       return;
     }
-    // The permission prompt has to start in this switch's click, and the
-    // preference is stored only once the browser confirms it can deliver.
     void browserNotifications
       .request()
-      .then((granted) =>
-        granted ? account.setPreferences({ desktopNotifications: true }) : undefined,
-      )
+      .then((granted) => (granted ? account.setPreferences(patch) : undefined))
       .catch(() => undefined);
   };
 
-  // Inside the Android app the bridge rings calls only; a mention and a test
-  // need the web Notification API, which its WebView does not have.
-  const webPopups = !androidNotificationsSupported() && browserNotificationsSupported();
+  // Inside the Android app the bridge rings calls only, with the system's own
+  // sound; a mention and a test need the web Notification API, which its
+  // WebView does not have.
+  const androidBridge = androidNotificationsSupported();
+  const webPopups = !androidBridge && browserNotificationsSupported();
 
   // Muted ids are the account's, across servers; only this server's channels
   // can be named, so the rest are counted.
@@ -173,7 +176,10 @@ export function UserSettingsContainer() {
           pending: browserNotifications.pending,
           error: browserNotifications.error,
           mentions: webPopups,
-          onChange: changeSystemNotifications,
+          // Allowing changes no switch: what pops up is the account's choice,
+          // already made in the table, perhaps on another device.
+          onAllow: () => void browserNotifications.request().catch(() => undefined),
+          onChange: changePopups,
           ...(webPopups
             ? {
                 onTest: () => {
@@ -195,6 +201,7 @@ export function UserSettingsContainer() {
             }),
         }}
         onPlayMessageSound={() => playSystemFx("notification")}
+        ownRingtone={!androidBridge}
         sounds={{
           joinSound,
           arrivalsAudible: account.preferences.joinLeaveSound,

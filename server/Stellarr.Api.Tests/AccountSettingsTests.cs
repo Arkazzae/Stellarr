@@ -67,8 +67,29 @@ public sealed class AccountSettingsTests
         Assert.True(preferences.GetProperty("showPresence").GetBoolean());
         Assert.Equal(60, preferences.GetProperty("vadSensitivity").GetInt32());
         Assert.Equal(JsonValueKind.Null, preferences.GetProperty("joinSoundId").ValueKind);
+        Assert.True(preferences.GetProperty("mentionPopups").GetBoolean());
+        Assert.True(preferences.GetProperty("callRingtone").GetBoolean());
         await using var scope = factory.OpenScope(out var db);
         Assert.Equal(1, await db.UserPreferences.CountAsync(x => x.User.Username == "nils"));
+    }
+
+    [Fact]
+    public async Task MentionPopupsAndTheCallRingtoneChangeApartFromCallPopups()
+    {
+        using var factory = new StellarrWebApplicationFactory();
+        using var client = await SignInAsync(factory, "nils", "Zenith!2026");
+
+        var response = await client.PatchAsJsonAsync(
+            "/api/me/preferences",
+            new { mentionPopups = false, callRingtone = false });
+
+        response.EnsureSuccessStatusCode();
+        var preferences = await ReadJsonAsync(response);
+        Assert.False(preferences.GetProperty("mentionPopups").GetBoolean());
+        Assert.False(preferences.GetProperty("callRingtone").GetBoolean());
+        Assert.True(preferences.GetProperty("desktopNotifications").GetBoolean());
+        var account = await ReadJsonAsync(await client.GetAsync("/api/me"));
+        Assert.False(account.GetProperty("preferences").GetProperty("mentionPopups").GetBoolean());
     }
 
     [Fact]

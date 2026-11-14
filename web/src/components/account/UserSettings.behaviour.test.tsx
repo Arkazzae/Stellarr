@@ -26,6 +26,8 @@ const account: Account = {
 
 const preferences: UserPreferences = {
   desktopNotifications: false,
+  mentionPopups: true,
+  callRingtone: true,
   emailNotifications: false,
   pushNotifications: false,
   mentionsOnly: false,

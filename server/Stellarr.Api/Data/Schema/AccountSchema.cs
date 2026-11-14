@@ -34,6 +34,10 @@ internal static class AccountSchema
         ("LanguageSettingsJson", """ALTER TABLE "UserPreferences" ADD COLUMN "LanguageSettingsJson" TEXT NULL;"""),
         ("KeybindSettingsJson", """ALTER TABLE "UserPreferences" ADD COLUMN "KeybindSettingsJson" TEXT NULL;"""),
         ("VoiceSettingsJson", """ALTER TABLE "UserPreferences" ADD COLUMN "VoiceSettingsJson" TEXT NULL;"""),
+        // Mentions got their own pop-up switch and calls their own ringtone;
+        // both were on before, so an upgraded account keeps them on.
+        ("MentionPopups", """ALTER TABLE "UserPreferences" ADD COLUMN "MentionPopups" INTEGER NOT NULL DEFAULT 1;"""),
+        ("CallRingtone", """ALTER TABLE "UserPreferences" ADD COLUMN "CallRingtone" INTEGER NOT NULL DEFAULT 1;"""),
     ];
 
     internal static async Task UpgradeAsync(AppDbContext db, CancellationToken cancellationToken)
@@ -61,6 +65,8 @@ internal static class AccountSchema
             CREATE TABLE IF NOT EXISTS "UserPreferences" (
                 "UserId" TEXT NOT NULL CONSTRAINT "PK_UserPreferences" PRIMARY KEY,
                 "DesktopNotifications" INTEGER NOT NULL DEFAULT 1,
+                "MentionPopups" INTEGER NOT NULL DEFAULT 1,
+                "CallRingtone" INTEGER NOT NULL DEFAULT 1,
                 "EmailNotifications" INTEGER NOT NULL DEFAULT 0,
                 "PushNotifications" INTEGER NOT NULL DEFAULT 0,
                 "MentionsOnly" INTEGER NOT NULL DEFAULT 1,

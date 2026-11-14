@@ -26,7 +26,9 @@ public sealed record UpdatePreferencesRequest(
     int? VadSensitivity,
     // A soundboard sound id to announce this account's arrivals with. Empty
     // clears the choice; absent leaves it alone, like every field around it.
-    string? JoinSoundId = null);
+    string? JoinSoundId = null,
+    bool? MentionPopups = null,
+    bool? CallRingtone = null);
 
 /// <summary>
 /// The client's own settings, one object per section, or null for a section no
@@ -59,7 +61,9 @@ public sealed record UserPreferencesDto(
     IReadOnlyList<string> MutedChannelIds,
     int VadSensitivity,
     // Null when arrivals use the shared chime.
-    string? JoinSoundId = null);
+    string? JoinSoundId = null,
+    bool MentionPopups = true,
+    bool CallRingtone = true);
 
 public sealed record AccountDto(
     string Id,
@@ -108,7 +112,9 @@ public static class AccountContractMappings
         preferences?.ReducedMotion ?? false,
         ReadMutedChannelIds(preferences),
         preferences?.VadSensitivity ?? 60,
-        preferences?.JoinSoundId?.ToString());
+        preferences?.JoinSoundId?.ToString(),
+        preferences?.MentionPopups ?? true,
+        preferences?.CallRingtone ?? true);
 
     /// <remarks>The account's preferences must be loaded.</remarks>
     public static AccountDto ToAccountDto(this User user) => new(

@@ -195,6 +195,19 @@ describe("IncomingCallContainer", () => {
 
       expect(showIncomingCallNotification).not.toHaveBeenCalled();
     });
+
+    it("offers the call without ringing when the account silenced the ringtone", () => {
+      setStubs({
+        account: {
+          preferences: { ...stubs.account.preferences, callRingtone: false },
+        },
+      });
+      setConversations(ringing());
+      render(<IncomingCallContainer />);
+
+      expect(screen.getByRole("dialog", { name: "Połączenie od Ola" })).toBeInTheDocument();
+      expect(playSystemFx).not.toHaveBeenCalledWith("calling");
+    });
   });
 
   describe("inside the Android shell", () => {

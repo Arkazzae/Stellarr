@@ -1040,24 +1040,63 @@
     color: var(--text-muted);
   }
 
-  /* Yes is a tick on the accent, the colour a switch turns when it is on; no
-     is a short rule, quieter than any mark, so the yeses are what the eye
-     finds. */
+  /* A circle is a switch: filled with the accent when on, an empty ring when
+     off, the way a checkbox reads. A bare tick or a short rule is a fact of
+     how the app works, quieter than any circle, so what can be changed is
+     what the eye finds first. */
   .nt-mark {
     display: inline-grid;
     place-items: center;
-    width: 24px;
-    height: 24px;
+    width: 26px;
+    height: 26px;
     border-radius: 50%;
     vertical-align: middle;
   }
 
-  .nt-mark[data-on="true"] {
-    background: var(--accent);
+  .nt-switch {
+    position: relative;
+    padding: 0;
+    border: 1.5px solid var(--line-strong);
+    background: transparent;
     color: var(--on-accent);
+    cursor: pointer;
+    transition:
+      background-color var(--dur-fast) var(--ease-standard),
+      border-color var(--dur-fast) var(--ease-standard);
   }
 
-  .nt-mark[data-on="false"]::before {
+  /* A finger's reach around a small circle. */
+  .nt-switch::after {
+    content: "";
+    position: absolute;
+    inset: -9px;
+  }
+
+  .nt-switch:hover:not(:disabled) {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+
+  .nt-switch[data-on="true"] {
+    border-color: var(--accent);
+    background: var(--accent);
+  }
+
+  .nt-switch[data-on="true"]:hover:not(:disabled) {
+    border-color: var(--accent-hover);
+    background: var(--accent-hover);
+  }
+
+  .nt-switch:disabled {
+    cursor: default;
+    opacity: 0.5;
+  }
+
+  .nt-fact[data-on="true"] {
+    color: var(--accent-text);
+  }
+
+  .nt-fact[data-on="false"]::before {
     content: "";
     width: 10px;
     height: 1.5px;
@@ -1105,25 +1144,25 @@
     white-space: nowrap;
   }
 
-  /* The group's own action, "play", sits at the end of its heading. */
-  .sc-h.nt-h {
+  /* Under the table: how to read it, and the sound to hear. */
+  .nt-stage-foot {
+    display: flex;
+    align-items: center;
     justify-content: space-between;
-    padding-right: 0;
+    gap: 12px 20px;
+    padding: 10px 12px 10px 20px;
+    border-top: 1px solid var(--line-subtle);
   }
 
-  /* Three cards under the label, across the group's width, as the voice
-     pane's choices are. */
-  .nt-sound .frm-row:not(:has(> .frm-switch)) {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 12px;
+  .nt-stage-foot p {
+    margin: 0;
+    font-size: var(--text-12);
+    line-height: 1.45;
+    color: var(--text-faint);
   }
 
-  .nt-sound .frm-lab {
-    padding-top: 0;
-  }
-
-  .nt-sound-choice {
-    --ui-segmented-columns: repeat(3, minmax(0, 1fr));
+  .nt-stage-foot > button {
+    flex: none;
   }
 
   .nt-hash {
@@ -1173,8 +1212,10 @@
       grid-template-columns: minmax(0, 1fr);
     }
 
-    .nt-sound-choice {
-      --ui-segmented-columns: minmax(0, 1fr);
+    .nt-stage-foot {
+      flex-direction: column;
+      align-items: flex-start;
+      padding-left: 14px;
     }
   }
 

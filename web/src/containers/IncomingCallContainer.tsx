@@ -67,7 +67,7 @@ export function IncomingCallContainer() {
   const [androidAction, setAndroidAction] = useState<AndroidCallAction | null>(null);
   const handledAndroidAction = useRef<string | null>(null);
   const pageVisible = usePageVisible();
-  const { desktopNotifications } = preferences;
+  const { desktopNotifications, callRingtone } = preferences;
   // Android has no Web Notification API inside its WebView, so it goes through
   // the native bridge instead of the browser.
   const native = androidNotificationsSupported();
@@ -110,14 +110,15 @@ export function IncomingCallContainer() {
   const declinedOnPhone = androidAction?.action === "decline" ? androidAction.callId : null;
   const visible = callId !== null && callId !== declinedCallId && callId !== declinedOnPhone;
 
+  // The banner stays either way; the ringtone is the person's to silence.
   useEffect(() => {
-    if (!visible || native) {
+    if (!visible || native || !callRingtone) {
       stopSystemFx("calling");
       return;
     }
     playSystemFx("calling");
     return () => stopSystemFx("calling");
-  }, [visible, callId, native]);
+  }, [visible, callId, native, callRingtone]);
 
   const notify = visible && callerName !== null && desktopNotifications;
 

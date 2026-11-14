@@ -51,6 +51,8 @@ function defaults(): HookStubs {
       account: { customStatus: "" },
       preferences: {
         desktopNotifications: true,
+        mentionPopups: true,
+        callRingtone: true,
         developerMode: false,
         mutedChannelIds: [],
       },
