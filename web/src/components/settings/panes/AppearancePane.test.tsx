@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
@@ -95,11 +95,15 @@ describe("AppearancePane", () => {
     const p = props({ theme: { ...DEFAULT_THEME, accent: "#ff3366" } });
     render(<AppearancePane {...p} />);
 
-    const accent = screen.getByLabelText("Kolor akcentu");
-    fireEvent.change(accent, { target: { value: "#1db954" } });
+    const own = screen.getByLabelText("Własny kolor");
+    fireEvent.change(own, { target: { value: "#123456" } });
+    expect(p.onChange).toHaveBeenLastCalledWith({ accent: "#123456" });
+
+    const accents = screen.getByRole("radiogroup", { name: "Kolor akcentu" });
+    await user.click(within(accents).getByRole("radio", { name: "Zieleń" }));
     expect(p.onChange).toHaveBeenLastCalledWith({ accent: "#1db954" });
 
-    await user.click(screen.getByRole("button", { name: "Kolor motywu" }));
+    await user.click(within(accents).getByRole("radio", { name: "Kolor motywu" }));
     expect(p.onChange).toHaveBeenLastCalledWith({ accent: DEFAULT_THEME.accent });
   });
 });

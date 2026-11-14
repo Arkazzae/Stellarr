@@ -425,9 +425,9 @@
     flex-direction: row;
     align-items: center;
     justify-content: center;
-    gap: 0;
+    gap: var(--ui-segmented-pill-item-gap, 0);
     height: calc(26 * var(--ui-unit));
-    padding: 0 calc(4 * var(--ui-unit));
+    padding: var(--ui-segmented-pill-item-padding, 0 calc(4 * var(--ui-unit)));
     border: 0;
     border-radius: calc(999 * var(--ui-unit));
     color: var(--ui-text-faint);
