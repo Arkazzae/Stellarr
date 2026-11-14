@@ -156,6 +156,30 @@ describe("UserSettings", () => {
     expect(onClose).toHaveBeenCalledTimes(2);
   });
 
+  it("keeps an unsaved profile: no pane change, close or log out until it is saved or reset", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    const onLogout = vi.fn();
+    render(<UserSettings {...props({ onClose, onLogout })} />);
+
+    await user.type(screen.getByLabelText(/Nazwa wyświetlana/), "!");
+    await user.click(screen.getByRole("button", { name: "Wygląd" }));
+    await user.click(screen.getByRole("button", { name: "Zamknij ustawienia" }));
+    await user.keyboard("{Escape}");
+    await user.click(screen.getByRole("button", { name: "Wyloguj się" }));
+
+    expect(onClose).not.toHaveBeenCalled();
+    expect(onLogout).not.toHaveBeenCalled();
+    expect(screen.getByLabelText(/Nazwa wyświetlana/)).toHaveValue("Maja!");
+    expect(screen.getByRole("region", { name: "Zmiany" })).toHaveTextContent(
+      "Najpierw zapisz albo przywróć",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Przywróć" }));
+    await user.click(screen.getByRole("button", { name: "Wygląd" }));
+    expect(screen.queryByLabelText(/Nazwa wyświetlana/)).toBeNull();
+  });
+
   it("stops a pending shortcut recording as soon as its pane is left", async () => {
     const user = userEvent.setup();
     const cancelRecording = vi.fn();

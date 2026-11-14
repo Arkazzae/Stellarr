@@ -104,7 +104,12 @@ describe("ChannelSettings", () => {
     const user = userEvent.setup();
     render(<ChannelSettings {...props()} />);
 
-    expect(screen.getByRole("button", { name: "Zapisz zmiany" })).toBeDisabled();
+    // The overview offers a save once something on it changed, and only then.
+    expect(screen.queryByRole("button", { name: "Zapisz zmiany" })).toBeNull();
+    await user.type(screen.getByRole("textbox", { name: /Nazwa/ }), "x");
+    expect(screen.getByRole("button", { name: "Zapisz zmiany" })).toBeEnabled();
+    await user.click(screen.getByRole("button", { name: "Przywróć" }));
+
     for (const pane of ["Powiadomienia", "Uprawnienia", "Strefa zagrożenia"]) {
       await user.click(screen.getByRole("button", { name: pane }));
       expect(screen.queryByRole("button", { name: "Zapisz zmiany" })).toBeNull();
@@ -183,12 +188,12 @@ describe("ChannelSettings", () => {
     const p = props();
     render(<ChannelSettings {...p} />);
 
-    const save = screen.getByRole("button", { name: "Zapisz zmiany" });
-    expect(save).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Zapisz zmiany" })).toBeNull();
 
     const name = screen.getByRole("textbox", { name: /Nazwa/ });
     await user.clear(name);
     await user.type(name, "  aktualnosci  ");
+    const save = screen.getByRole("button", { name: "Zapisz zmiany" });
     expect(save).toBeEnabled();
     await user.click(save);
 

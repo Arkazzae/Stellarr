@@ -18,6 +18,7 @@ import {
 } from "@/components/settings/channelSettingsModel";
 import type { PermissionOverridePatch } from "@/components/settings/PermissionOverrideEditor";
 import { SettingsShell } from "@/components/settings/SettingsShell";
+import { SettingsGuardProvider, useSettingsGuardHost } from "@/components/settings/settingsGuard";
 import type { ChannelPatch, PermissionOverride, Role } from "@/ports";
 import { useLanguage } from "@/state/hooks";
 
@@ -69,6 +70,7 @@ export function ChannelSettings({
 }: ChannelSettingsProps) {
   const { t } = useLanguage();
   const titleId = useId();
+  const guard = useSettingsGuardHost();
   const [active, setActive] = useState<ChannelSettingsPaneKey>(() =>
     initialPane(channel, canManageChannel),
   );
@@ -127,27 +129,34 @@ export function ChannelSettings({
   const readOnly = resolvedActive !== "notifications" && !supported;
 
   return (
-    <Modal open={open} onClose={onClose} labelledBy={titleId} className="sv-wrap">
-      <SettingsShell
-        titleId={titleId}
-        brand={{
-          name: label,
-          detail: t("channel.settings"),
-          label: t("channel.settingsLabel", { name: label }),
-        }}
-        title={selected?.label ?? ""}
-        detail={selected?.detail ?? ""}
-        closeLabel={t("common.closeChannelSettings")}
-        onClose={onClose}
-        navLabel={t("channel.settingsSections")}
-        groups={navigation}
-        active={resolvedActive}
-        onSelect={setActive}
-        className="ch-settings"
-      >
-        {readOnly ? <p className="set-note">{t("channel.settingsUnsupported")}</p> : null}
-        {pane()}
-      </SettingsShell>
+    <Modal
+      open={open}
+      onClose={() => guard.attempt(onClose)}
+      labelledBy={titleId}
+      className="sv-wrap"
+    >
+      <SettingsGuardProvider guard={guard}>
+        <SettingsShell
+          titleId={titleId}
+          brand={{
+            name: label,
+            detail: t("channel.settings"),
+            label: t("channel.settingsLabel", { name: label }),
+          }}
+          title={selected?.label ?? ""}
+          detail={selected?.detail ?? ""}
+          closeLabel={t("common.closeChannelSettings")}
+          onClose={onClose}
+          navLabel={t("channel.settingsSections")}
+          groups={navigation}
+          active={resolvedActive}
+          onSelect={setActive}
+          className="ch-settings"
+        >
+          {readOnly ? <p className="set-note">{t("channel.settingsUnsupported")}</p> : null}
+          {pane()}
+        </SettingsShell>
+      </SettingsGuardProvider>
     </Modal>
   );
 }

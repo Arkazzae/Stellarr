@@ -294,11 +294,11 @@ describe("UserSettings", () => {
     const user = userEvent.setup();
     const props = setup();
 
-    const save = screen.getByRole("button", { name: "Zapisz zmiany" });
-    expect(save).toBeDisabled();
+    // Nothing to save yet, so there is no save bar.
+    expect(screen.queryByRole("button", { name: "Zapisz zmiany" })).toBeNull();
 
     await user.type(screen.getByLabelText(/Nazwa wyświetlana/), "!");
-    await user.click(save);
+    await user.click(screen.getByRole("button", { name: "Zapisz zmiany" }));
 
     // A save carries the whole profile, so an untouched field keeps its value.
     expect(props.accountPane.onSave).toHaveBeenCalledWith({

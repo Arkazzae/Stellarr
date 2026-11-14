@@ -6,6 +6,7 @@ import { Button } from "@stellarr/ui";
 import { Icon } from "@stellarr/ui/icons";
 import { Switch } from "@/components/primitives/Switch";
 import { countedNoun, formatShortDate } from "@/components/settings/panes/paneFormat";
+import { SettingsSaveBar } from "@/components/settings/SettingsSaveBar";
 import { SettingsSection } from "@/components/settings/SettingsSection";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
 import type { Translator } from "@/i18n";
@@ -290,31 +291,21 @@ export function OverviewPane({
           </div>
         </div>
 
-        <div className="frm-actions">
-          {saveAction.failed ? (
-            <p className="set-note sound-error" role="alert">
-              {t("settings.serverSaveFailed")}
-            </p>
-          ) : null}
-          <Button
-            type="button"
-            variant="primary"
-            disabled={!supported || !dirty || saveAction.pending}
-            onClick={() => void save()}
-          >
-            {saved ? (
-              <span className="sv-tick" aria-hidden="true">
-                <Icon name="tick" size={15} />
-              </span>
-            ) : null}
-            {saveAction.pending
-              ? t("common.saving")
-              : saved
-                ? t("common.saved")
-                : t("common.saveChanges")}
-          </Button>
-        </div>
+        {saveAction.failed ? (
+          <p className="set-note sound-error ov-save-error" role="alert">
+            {t("settings.serverSaveFailed")}
+          </p>
+        ) : null}
       </SettingsSection>
+
+      <SettingsSaveBar
+        dirty={dirty}
+        saving={saveAction.pending}
+        saved={saved}
+        saveDisabled={!supported}
+        onSave={() => void save()}
+        onReset={() => setDraft(profile)}
+      />
     </>
   );
 }

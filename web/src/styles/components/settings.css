@@ -130,6 +130,40 @@
   }
   .sv-pane{display:none}
   .sv-pane.on{display:block;animation:viewIn var(--dur-base) var(--ease-standard)}
+  /*
+   * The save bar of a pane that is typed into (`SettingsSaveBar`), at the
+   * foot of the pane column and outside the scroller, so it is on screen
+   * however long the form is. The pane keeps room under its last row so the
+   * bar never covers it.
+   */
+  .sv-save-slot{
+    position:absolute;left:var(--set-pad);right:var(--set-pad);bottom:16px;z-index:2;
+    pointer-events:none;
+  }
+  .sv-main:has(.sv-save) .sv-panes{padding-bottom:104px}
+  .sv-save{
+    display:flex;align-items:center;gap:8px;
+    padding:10px 10px 10px 18px;
+    background:var(--surface-pop);border:1px solid var(--line);border-radius:var(--radius-lg);
+    box-shadow:var(--elev-pop);pointer-events:auto;
+    animation:set-save-in var(--dur-slow) var(--ease-standard);
+  }
+  .sv-save-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+  .sv-save-txt b{display:inline-flex;align-items:center;gap:7px;font-size:var(--text-14);font-weight:600}
+  .sv-save-txt span{font-size:var(--text-13);color:var(--text-faint)}
+  .sv-save[data-state="saved"] .sv-save-txt b{color:var(--live)}
+  .sv-save[data-state="blocked"]{border-color:var(--warn-line)}
+  .sv-save[data-state="blocked"] .sv-save-txt b{color:var(--warn-text)}
+  .sv-save[data-nudge="a"]{animation:set-nudge-a 0.32s var(--ease-standard)}
+  .sv-save[data-nudge="b"]{animation:set-nudge-b 0.32s var(--ease-standard)}
+  @keyframes set-save-in{from{opacity:0;translate:0 12px}}
+  @keyframes set-nudge-a{25%{translate:-6px 0}60%{translate:5px 0}}
+  @keyframes set-nudge-b{25%{translate:-6px 0}60%{translate:5px 0}}
+  @media (prefers-reduced-motion: reduce){
+    .sv-save,.sv-save[data-nudge]{animation:none}
+  }
+  /* What is left of the form's own foot once its save moved to the bar. */
+  .ov-save-error{margin:14px 0 0}
   /* What is left of the old title row: the action that used to sit beside the
      title, now that the title has moved into `.sv-bar`. */
   .sv-head{display:flex;align-items:center;justify-content:flex-end;gap:12px;margin-bottom:16px}
@@ -1197,6 +1231,10 @@
     .sv-bar-txt p{font-size:var(--text-12)}
     .sv-bar .dlg-x{margin-top:0;align-self:center}
     .dlg-x{width:44px;height:44px}
+    .sv-save-slot{left:12px;right:12px;bottom:max(12px, env(safe-area-inset-bottom))}
+    .sv-save{flex-wrap:wrap;padding:12px}
+    .sv-save-txt{flex-basis:100%}
+    .sv-save > button{flex:1}
     .sv-panes{
       padding:18px 16px max(36px, env(safe-area-inset-bottom));
       overscroll-behavior:contain;scrollbar-gutter:stable;
