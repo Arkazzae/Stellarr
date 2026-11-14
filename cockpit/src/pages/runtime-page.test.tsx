@@ -55,7 +55,7 @@ function runtimeWith(overrides: Partial<CockpitRuntime> = {}): CockpitRuntime {
     ],
     services: [
       { name: "SQLite", state: "healthy", detail: "Zapytanie testowe wykonane", id: "database" },
-      { name: "Magazyn obiektów", state: "warning", detail: "Bucket nie odpowiedział", id: "storage" },
+      { name: "Magazyn obiektów", state: "warning", detail: "Magazyn obiektów nie odpowiedział", id: "storage" },
     ],
     ...overrides,
   };
@@ -145,7 +145,7 @@ describe("RuntimePage", () => {
     expect(within(sqlite).getByText("100%")).toBeTruthy();
     const storage = screen.getByRole("group", { name: "Magazyn obiektów" });
     expect(within(storage).getByText("Wymaga uwagi")).toBeTruthy();
-    expect(within(storage).getByText("Bucket nie odpowiedział")).toBeTruthy();
+    expect(within(storage).getByText("Magazyn obiektów nie odpowiedział")).toBeTruthy();
     // No sample checked the store, so there is nothing to show yet rather than a made-up 100%.
     expect(within(storage).getByText("brak danych")).toBeTruthy();
   });

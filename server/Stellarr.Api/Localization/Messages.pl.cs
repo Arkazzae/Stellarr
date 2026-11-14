@@ -91,8 +91,8 @@ public sealed partial class Messages
         MessageKey.CockpitBackupRunning => "Kopia już się tworzy. Poczekaj, aż się skończy.",
         MessageKey.CockpitBackupNoSpace => "Na dysku brakuje miejsca na kopię: potrzeba około {needed}, wolne jest {free}.",
         MessageKey.CockpitBackupStorageUnreadable => "Nie udało się odczytać magazynu obiektów: {reason}",
-        MessageKey.CockpitStorageAnswering => "Bucket odpowiada na sprawdzenie co 30 s.",
-        MessageKey.CockpitStorageDown => "Bucket nie odpowiedział na ostatnie sprawdzenie.",
+        MessageKey.CockpitStorageAnswering => "Magazyn obiektów odpowiada na sprawdzenie co 30 s.",
+        MessageKey.CockpitStorageDown => "Magazyn obiektów nie odpowiedział na ostatnie sprawdzenie.",
         MessageKey.CockpitServerIsInstance => "Serwera instancji nie można usunąć ani przekazać z Cockpitu.",
         MessageKey.CockpitAuditServerDeleted => "usunął(a) serwer {name}",
         MessageKey.CockpitCannotRecoverSelf => "Własnego konta nie odzyskasz w Cockpicie. Użyj CLI: stellarr security recover.",
@@ -124,7 +124,7 @@ public sealed partial class Messages
         MessageKey.CockpitMaintenanceRunning => "Retencja jest uruchomiona.",
         MessageKey.CockpitMaintenanceOff => "Wyłączony w konfiguracji.",
         MessageKey.CockpitStorageInitializationOff => "Inicjalizacja wyłączona.",
-        MessageKey.CockpitStorageChecked => "Bucket został sprawdzony podczas startu.",
+        MessageKey.CockpitStorageChecked => "Magazyn obiektów został sprawdzony podczas startu.",
 
         // Uploads and images
         MessageKey.FileEmpty => "Plik jest pusty.",

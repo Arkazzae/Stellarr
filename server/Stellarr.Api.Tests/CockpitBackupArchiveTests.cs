@@ -179,18 +179,6 @@ public sealed class CockpitBackupArchiveTests
         Assert.True(File.Exists(kept));
     }
 
-    [Theory]
-    [InlineData("attachments/a/b.png", true)]
-    [InlineData("../escape", false)]
-    [InlineData("a/../../b", false)]
-    [InlineData("/absolute", false)]
-    [InlineData("a//b", false)]
-    [InlineData("a\\b", false)]
-    public void OnlyKeysThatStayInsideTheObjectsFolderAreArchived(string key, bool safe)
-    {
-        Assert.Equal(safe, BackupArchive.IsSafeKey(key));
-    }
-
     private static StellarrWebApplicationFactory Factory(IObjectStorage storage) => new(
         loadTestData: true,
         configureServices: services =>

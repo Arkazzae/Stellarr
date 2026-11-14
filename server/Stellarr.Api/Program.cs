@@ -91,19 +91,35 @@ builder.Services.AddSignalR(options =>
     options.ClientTimeoutInterval = TimeSpan.FromSeconds(45);
 });
 
-builder.Services.Configure<StorageOptions>(builder.Configuration.GetSection(StorageOptions.SectionName));
-builder.Services.AddSingleton<IAmazonS3>(services =>
+// Uploads are files on the data volume. An S3-compatible store can hold them
+// instead, for an instance whose disk is too small.
+var storageSection = builder.Configuration.GetSection(StorageOptions.SectionName);
+builder.Services.Configure<StorageOptions>(storageSection);
+if (storageSection.GetValue(nameof(StorageOptions.Provider), StorageProvider.FileSystem) == StorageProvider.S3)
 {
-    var options = services.GetRequiredService<IOptions<StorageOptions>>().Value;
-    var config = new AmazonS3Config
+    builder.Services.AddSingleton<IAmazonS3>(services =>
     {
-        ServiceURL = options.Endpoint,
-        ForcePathStyle = true,
-        AuthenticationRegion = "us-east-1",
-    };
-    return new AmazonS3Client(new BasicAWSCredentials(options.AccessKey, options.SecretKey), config);
-});
-builder.Services.AddSingleton<IObjectStorage, S3ObjectStorage>();
+        var options = services.GetRequiredService<IOptions<StorageOptions>>().Value;
+        if (string.IsNullOrWhiteSpace(options.Endpoint) || string.IsNullOrWhiteSpace(options.Bucket))
+        {
+            throw new InvalidOperationException("Storage:Provider is S3, so Storage:Endpoint and Storage:Bucket are required.");
+        }
+
+        var config = new AmazonS3Config
+        {
+            ServiceURL = options.Endpoint,
+            ForcePathStyle = true,
+            AuthenticationRegion = "us-east-1",
+        };
+        return new AmazonS3Client(new BasicAWSCredentials(options.AccessKey, options.SecretKey), config);
+    });
+    builder.Services.AddSingleton<IObjectStorage, S3ObjectStorage>();
+}
+else
+{
+    builder.Services.AddSingleton<IObjectStorage>(
+        new FileSystemObjectStorage(Path.Combine(dataRoot, FileSystemObjectStorage.FolderName)));
+}
 builder.Services.Configure<UploadOptions>(builder.Configuration.GetSection(UploadOptions.SectionName));
 builder.Services.AddSingleton<UploadAdmissionGate>();
 builder.Services.AddScoped<MediaStorage>();

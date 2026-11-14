@@ -113,7 +113,7 @@ public static class BackupArchive
 
     /// <summary>
     /// The folders of the data volume that make up the instance files. The
-    /// database, the keys, the object store's own data, the logs and the
+    /// database, the keys, the uploaded files, the logs and the
     /// backups are elsewhere in the archive or not wanted in it.
     /// </summary>
     public static readonly IReadOnlyList<string> InstanceFolders = ["secrets", "tls", "releases"];
@@ -165,7 +165,7 @@ public static class BackupArchive
                 foreach (var item in sources.Objects)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
-                    if (!IsSafeKey(item.Key) || await TryOpenAsync(sources.Storage, item.Key, cancellationToken) is not { } stored)
+                    if (!ObjectKeys.IsSafe(item.Key) || await TryOpenAsync(sources.Storage, item.Key, cancellationToken) is not { } stored)
                     {
                         missing.Add(item.Key);
                         progress.ObjectDone();
@@ -381,11 +381,4 @@ public static class BackupArchive
             }
         }
     }
-
-    /// <summary>A key that unpacks inside the objects folder: no absolute path and no step up.</summary>
-    internal static bool IsSafeKey(string key) =>
-        key.Length > 0 &&
-        !key.StartsWith('/') &&
-        !key.Contains('\\', StringComparison.Ordinal) &&
-        !key.Split('/').Any(segment => segment is "" or "." or "..");
 }
