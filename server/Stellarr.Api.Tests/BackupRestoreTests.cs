@@ -144,6 +144,59 @@ public sealed class BackupRestoreTests : IDisposable
     }
 
     [Fact]
+    public async Task ASwapThatFailsPartWayPutsEveryFolderBack()
+    {
+        using var fixture = CliFixture.CreateUnstarted();
+        await WriteTargetAsync(fixture.Root);
+        // The last folder a restore replaces cannot be replaced: a file holds its name.
+        await WriteFileAsync(Path.Combine(fixture.Root, "releases"), "in the way");
+        File.Copy(await WriteArchiveAsync(BackupParts.All), Stage(fixture.Root));
+
+        var apply = await fixture.RunWithEnvironmentAsync(NoApi, "--json", "backup", "apply", "--yes");
+
+        Assert.Equal(4, apply.ExitCode);
+        Assert.Contains("could not be put in place", ErrorMessage(apply), StringComparison.Ordinal);
+        AssertUntouched(fixture.Root);
+        Assert.Equal("in the way", await File.ReadAllTextAsync(Path.Combine(fixture.Root, "releases")));
+        var restore = Path.Combine(fixture.Root, "restore");
+        Assert.Empty(Directory.GetDirectories(restore, "previous-*"));
+        Assert.Empty(Directory.GetDirectories(restore, ".unpacking-*"));
+        Assert.False(File.Exists(Path.Combine(restore, BackupRestore.BrokenMarkerName)));
+    }
+
+    [Fact]
+    public async Task WhatAnInterruptedRestoreLeftIsClearedByTheNextOne()
+    {
+        using var fixture = CliFixture.CreateUnstarted();
+        await WriteTargetAsync(fixture.Root);
+        File.Copy(await WriteArchiveAsync(BackupParts.All), Stage(fixture.Root));
+        var restore = Path.Combine(fixture.Root, "restore");
+        await WriteFileAsync(Path.Combine(restore, ".unpacking-cut-short", "db", "stellarr.db"), "half");
+        await WriteFileAsync(Path.Combine(restore, ".verify-cut-short.partial"), "half");
+        await WriteFileAsync(Path.Combine(restore, "staged.zip.cut-short.partial"), "half");
+
+        var apply = await fixture.RunWithEnvironmentAsync(NoApi, "--json", "backup", "apply", "--yes");
+
+        Assert.Equal(0, apply.ExitCode);
+        Assert.Equal("source", Marker(fixture.Root));
+        Assert.Empty(Directory.GetDirectories(restore, ".unpacking-*"));
+        Assert.Empty(Directory.GetFiles(restore, "*.partial"));
+    }
+
+    [Fact]
+    public async Task ADatabaseOnlyBackupIsRefusedWithWhereToRestoreItByHand()
+    {
+        using var fixture = CliFixture.CreateUnstarted();
+        var database = await CreateDatabaseAsync(Path.Combine(_scratch, "database-only"), "source");
+
+        var verify = await fixture.RunWithEnvironmentAsync(NoApi, "--json", "backup", "verify", database);
+
+        Assert.Equal(4, verify.ExitCode);
+        Assert.Contains("database-only", ErrorMessage(verify), StringComparison.Ordinal);
+        Assert.Contains("docs/admin/backups.md", ErrorMessage(verify), StringComparison.Ordinal);
+    }
+
+    [Fact]
     public async Task AnArchiveFromANewerBackupFormatIsRefused()
     {
         using var fixture = CliFixture.CreateUnstarted();

@@ -100,6 +100,12 @@ previous folders cannot be moved back, the start leaves `restore/broken`, and
 the container refuses to start until the volume is repaired and that file is
 removed. `stellarr backup cancel` drops a staged archive before the restart.
 
+The volume needs room for the instance's data, the staged archive and the
+unpacked copy at once. `restore/previous-<time>/` and `restore/refused-<time>.zip`
+are never removed automatically. A restore moves whole folders, so it refuses
+when one of them is a mount of its own, such as `files/` on a separate disk;
+restore such an instance by hand, as below.
+
 Restore with the release that made the backup or a newer one: a newer release
 upgrades the restored database at start, but an older one cannot read a
 database a newer release has changed. Secrets read from the environment are not

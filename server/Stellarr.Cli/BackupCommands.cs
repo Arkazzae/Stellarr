@@ -61,6 +61,7 @@ internal static class BackupCommands
 
         var folder = Path.GetDirectoryName(staged)!;
         Directory.CreateDirectory(folder);
+        BackupRestore.ClearLeftovers(runtime.DataRoot);
         var size = new FileInfo(path).Length;
         var available = new DriveInfo(folder).AvailableFreeSpace;
         if (available < size)
