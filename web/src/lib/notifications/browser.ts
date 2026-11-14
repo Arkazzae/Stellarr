@@ -61,6 +61,49 @@ export async function showIncomingCallNotification(
   }
 }
 
+export interface MessageNotification {
+  /** The message's id: the same message never pops up twice. */
+  id: string;
+  title: string;
+  body: string;
+  /** Pressing the notification brings the window forward and calls this. */
+  onOpen?: () => void;
+}
+
+export function messageNotificationTag(id: string): string {
+  return `stellarr-message:${id}`;
+}
+
+/**
+ * Pops a message up over other apps, as `showIncomingCallNotification` does a
+ * call, and only for a live page. Unlike a call it goes away on its own.
+ */
+export function showMessageNotification(message: MessageNotification): boolean {
+  if (browserNotificationPermission() !== "granted") return false;
+
+  try {
+    const notification = new window.Notification(message.title, {
+      body: message.body,
+      tag: messageNotificationTag(message.id),
+      icon: "/icon.svg",
+      data: { url: "/", type: "message", messageId: message.id },
+    });
+    notification.onclick = () => {
+      window.focus();
+      message.onOpen?.();
+      notification.close();
+    };
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** The one a settings pane sends so the person sees what the others will look like. */
+export function showTestNotification(title: string, body: string): boolean {
+  return showMessageNotification({ id: "test", title, body });
+}
+
 export async function closeIncomingCallNotification(id: string): Promise<void> {
   shown.get(id)?.close();
   shown.delete(id);

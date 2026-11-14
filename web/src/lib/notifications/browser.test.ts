@@ -3,9 +3,11 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   closeIncomingCallNotification,
   incomingCallNotificationTag,
+  messageNotificationTag,
   requestBrowserNotificationPermission,
   resetNotificationWorkerForTests,
   showIncomingCallNotification,
+  showMessageNotification,
 } from "./browser";
 
 const originalNotification = Object.getOwnPropertyDescriptor(window, "Notification");
@@ -76,6 +78,38 @@ describe("browser notifications", () => {
       caller: "Ada",
       body: "Dzwoni do Ciebie",
     })).resolves.toBe(false);
+    expect(instances).toHaveLength(0);
+  });
+
+  it("pops a message up once under its own tag and opens it when pressed", () => {
+    const { instances } = installPlatform("granted");
+    const onOpen = vi.fn();
+    const focus = vi.spyOn(window, "focus").mockImplementation(() => undefined);
+
+    expect(showMessageNotification({
+      id: "m-1",
+      title: "Nils oznacza Cię na #projekt",
+      body: "@ada spójrz",
+      onOpen,
+    })).toBe(true);
+    expect(instances[0]?.options).toMatchObject({
+      body: "@ada spójrz",
+      tag: messageNotificationTag("m-1"),
+    });
+    expect(instances[0]?.options?.requireInteraction).toBeUndefined();
+
+    instances[0]?.onclick?.(new Event("click"));
+
+    expect(focus).toHaveBeenCalledOnce();
+    expect(onOpen).toHaveBeenCalledOnce();
+    expect(instances[0]?.close).toHaveBeenCalledOnce();
+    focus.mockRestore();
+  });
+
+  it("does not pop a message up before permission is granted", () => {
+    const { instances } = installPlatform("denied");
+
+    expect(showMessageNotification({ id: "m-1", title: "Nils", body: "hej" })).toBe(false);
     expect(instances).toHaveLength(0);
   });
 });
