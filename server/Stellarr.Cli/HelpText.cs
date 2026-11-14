@@ -40,6 +40,10 @@ internal static class HelpText
                                          Revoke security and issue one enrollment-only recovery credential.
           security unlink <id-or-username> <identity-id>
                                          Remove one identity-provider link from an account.
+          backup verify <archive>        Check that an archive is a full backup this release can restore.
+          backup restore <archive>       Verify an archive and stage it; the next container start restores it.
+          backup cancel                  Drop the staged archive.
+          backup apply                   Restore the staged archive now. Run by the container at start.
 
         Global options:
           --data-root <path>   Data root holding db/stellarr.db and keys/.
@@ -58,11 +62,12 @@ internal static class HelpText
           1  unexpected failure or an unhealthy status/doctor result
           2  invalid usage, invalid value, refused confirmation or cancellation
           3  not found (database, user, session or setting)
-          4  conflict, read-only setting or an incompatible schema
+          4  conflict, read-only setting, an incompatible schema or a backup that cannot be restored
           5  unavailable (reserved for a database that cannot be opened)
 
         Safety:
-          The CLI never creates the database, runs migrations or seeds an instance. A new
+          The CLI never creates the database, runs migrations or seeds an instance, and replaces
+          it only through `backup apply`, which the container runs at start. A new
           schema is installed by a normal API start. Mutations write an operator audit entry
           as local-cli in the same transaction. Secret values, hashes, cookies and tokens are
           never printed, except a newly issued MFA recovery credential, which is shown once.
@@ -75,6 +80,7 @@ internal static class HelpText
           docker compose exec stellarr stellarr config set time-zone Europe/Warsaw --yes
           printf '%s\n' "$SECRET" | docker compose exec -T stellarr stellarr secrets set mail.smtp-password --stdin --yes
           docker compose stop && docker compose run --rm --entrypoint stellarr stellarr status
+          docker compose exec stellarr stellarr backup restore backup-20261114-030000-<id>.zip --yes
         """;
 
     internal static string ForCommand(string command) => command switch
@@ -141,6 +147,27 @@ internal static class HelpText
             POST /api/auth/recovery/redeem; it never grants an ordinary session or disables
             an enforced policy. Disabled accounts stay disabled. A recovery keeps the
             account's identity-provider links; `show` lists them and `unlink` removes one.
+            """,
+        "backup" => """
+            Usage:
+              stellarr backup verify <archive> [--json]
+              stellarr backup restore <archive> [--yes] [--json]
+              stellarr backup cancel [--yes] [--json]
+              stellarr backup apply [--yes] [--json]
+
+            <archive> is a path inside the container, or the name of an archive in the
+            instance's backups folder, as Cockpit lists it. Only a full backup (database,
+            uploaded files, keys and instance files) is restored.
+
+            `restore` checks every byte of the archive and copies it to restore/staged.zip
+            on the data volume. The container's next start restores it before any service
+            starts: the database, files, keys, secrets, TLS files and desktop releases are
+            replaced, and the folders they replace are kept in restore/previous-<time>.
+            An archive refused at start leaves the data as it was and is kept as
+            restore/refused-<time>.zip; restore/last-restore.json says what happened.
+
+            `apply` is what the start runs. It refuses while the API answers.
+            Secrets that came from the environment are not in an archive; keep .env.
             """,
         _ => Full,
     };

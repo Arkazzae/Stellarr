@@ -151,6 +151,24 @@ Verified addresses can receive an account security alert. That mail is sent only
 
 The recovery credential is the only secret-like value the CLI prints, and it is printed only when it is newly issued. Store it only long enough to complete enrollment.
 
+### Backups and restore
+
+| Command | Purpose |
+| --- | --- |
+| `backup verify <archive>` | Checks that an archive is a full backup this release can restore: its manifest, every entry name, the database's integrity and every entry's bytes. Changes nothing. |
+| `backup restore <archive>` | Verifies the archive and copies it to `restore/staged.zip` on the data volume. The container's next start restores it. |
+| `backup cancel` | Drops the staged archive before the restart. |
+| `backup apply` | Restores the staged archive now. The container's entrypoint runs it before any service starts; it refuses while the API answers. |
+
+`<archive>` is a path inside the container, or the name of an archive in `/data/stellarr/backups`, as Cockpit lists it. Only a full backup (database, uploaded files, keys and instance files) is restored this way.
+
+```sh
+docker compose exec stellarr stellarr backup restore backup-20261114-030000-<id>.zip --yes
+docker compose restart stellarr
+```
+
+At the restart, `db/`, `files/`, `keys/`, `secrets/`, `tls/` and `releases/` are replaced by the archive's, and the folders they replace are moved to `restore/previous-<time>/`. `restore/last-restore.json` records what the start did. An archive the start refuses leaves the data as it was and is kept as `restore/refused-<time>.zip`. See [Restoring a backup](../admin/backups.md#restoring-a-backup) for the whole procedure, partial backups included.
+
 ### Emergency use with a stopped instance
 
 Because `stellarr` accesses the data volume directly without calling the API, you can run it in a one-off container while the instance is stopped:
@@ -222,6 +240,6 @@ Error codes: `usage`, `database_not_found`, `database_locked`, `schema_incompati
 
 ## Audit and safety
 
-Every successful mutation inserts an `OperatorAuditEntries` row with actor `local-cli`, the operation name (`config.set`, `secrets.set`, `secrets.clear`, `sessions.revoke`, `sessions.revoke-all`, `security.unlink`, `security.recover`), its target, and a UTC timestamp in the same transaction as the change.
+Every successful mutation inserts an `OperatorAuditEntries` row with actor `local-cli`, the operation name (`config.set`, `secrets.set`, `secrets.clear`, `sessions.revoke`, `sessions.revoke-all`, `security.unlink`, `security.recover`), its target, and a UTC timestamp in the same transaction as the change. The backup commands write no audit row, because a restore replaces the database that would hold it; `restore/last-restore.json` records a restore instead.
 
-Read-only commands never modify settings, schema, or key files, and the CLI never creates or migrates a database. Secret values are left out of command output and audit records. Password resets, linking an identity provider, backup/restore, database repair, and service process supervision are not performed by the CLI.
+Read-only commands never modify settings, schema, or key files, and the CLI never creates or migrates a database. It replaces one only through `backup apply`, which the container runs at start to restore a staged full backup. Secret values are left out of command output and audit records. Password resets, linking an identity provider, database repair, and service process supervision are not performed by the CLI.
