@@ -110,24 +110,11 @@ media_port=$((10#$media_port))
 
 public_ip="$(resolve_public_ip)"
 
-mkdir -p "$data_root"/{db,keys,logs,objects,secrets,tls} /run/nginx
+mkdir -p "$data_root"/{db,files,keys,logs,secrets,tls} /run/nginx
 
-rustfs_secret="${RUSTFS_SECRET_KEY:-$(read_or_create_secret rustfs-secret)}"
 turn_secret="${TURN_SHARED_SECRET:-$(read_or_create_secret turn-shared-secret)}"
 media_control_secret="${STELLARR_MEDIA_CONTROL_SECRET:-$(read_or_create_secret media-control-secret)}"
 
-export RUSTFS_ACCESS_KEY="${RUSTFS_ACCESS_KEY:-stellarr}"
-export RUSTFS_SECRET_KEY="$rustfs_secret"
-export RUSTFS_VOLUMES="$data_root/objects"
-export RUSTFS_ADDRESS="127.0.0.1:9000"
-export RUSTFS_CONSOLE_ENABLE="false"
-export RUSTFS_OBS_LOGGER_LEVEL="warn"
-export RUSTFS_OBS_LOG_DIRECTORY="$data_root/logs"
-
-export Storage__Endpoint="http://127.0.0.1:9000"
-export Storage__AccessKey="$RUSTFS_ACCESS_KEY"
-export Storage__SecretKey="$RUSTFS_SECRET_KEY"
-export Storage__Bucket="${RUSTFS_BUCKET:-stellarr-images}"
 export ConnectionStrings__Database="Data Source=$data_root/db/stellarr.db;Cache=Shared;Pooling=True"
 export DataRoot="$data_root"
 export Rtc__PublicHost="$public_host"

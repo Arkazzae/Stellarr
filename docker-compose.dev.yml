@@ -8,7 +8,6 @@
 #   api     :5000  dotnet watch, reached by the browser through the web proxy
 #   media   :49100/udp  cargo run under watchexec, Stellarr Media; its control
 #                       API is published on 127.0.0.1:5200
-#   rustfs  :9000  object storage for uploads
 #   coturn  :3478  only behind the "turn" profile
 #
 #   docker compose -f docker-compose.dev.yml up
@@ -124,10 +123,6 @@ services:
       # `default-src 'none'`, which blocks the script that dotnet watch would
       # inject into HTML responses.
       DOTNET_WATCH_SUPPRESS_BROWSER_REFRESH: "1"
-      # appsettings.Development.json points at 127.0.0.1. In this stack the
-      # object store is a separate service.
-      Storage__Endpoint: http://rustfs:9000
-      Storage__SkipInitialization: "false"
       ConnectionStrings__Database: Data Source=/data/stellarr/stellarr-dev.db;Cache=Shared;Pooling=True
       DataRoot: /data/stellarr
       Rtc__PublicHost: ${PUBLIC_HOST:-localhost}
@@ -162,8 +157,6 @@ services:
       - nuget:/root/.nuget/packages
       - stellarr_dev_data:/data/stellarr
     depends_on:
-      rustfs:
-        condition: service_started
       media:
         condition: service_started
 
@@ -199,17 +192,6 @@ services:
       - media_target:/app/target
       - cargo_registry:/usr/local/cargo/registry
 
-  rustfs:
-    image: rustfs/rustfs:1.0.0-beta.11-preview.1
-    environment:
-      RUSTFS_ACCESS_KEY: stellarr
-      RUSTFS_SECRET_KEY: stellarr-development-secret
-      RUSTFS_ADDRESS: 0.0.0.0:9000
-    ports:
-      - "${STELLARR_DEV_S3_PORT:-9000}:9000"
-    volumes:
-      - stellarr_dev_objects:/data
-
   coturn:
     profiles: ["turn"]
     image: coturn/coturn:4.6
@@ -232,4 +214,3 @@ volumes:
   media_target:
   cargo_registry:
   stellarr_dev_data:
-  stellarr_dev_objects:

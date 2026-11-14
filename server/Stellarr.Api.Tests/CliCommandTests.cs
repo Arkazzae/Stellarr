@@ -302,36 +302,6 @@ public sealed class CliCommandTests
             Assert.Equal("environment", item.GetProperty("source").GetString());
         }
 
-        var storage = new Dictionary<string, string?>
-        {
-            ["STELLARR_DOMAIN"] = "chat.example.com",
-            ["RUSTFS_BUCKET"] = "custom-bucket",
-        };
-        using (var json = JsonDocument.Parse(
-            (await fixture.RunWithEnvironmentAsync(storage, "--json", "config", "get", "storage.endpoint")).Output))
-        {
-            var item = json.RootElement.GetProperty("data");
-            Assert.Equal("http://127.0.0.1:9000", item.GetProperty("value").GetString());
-            Assert.Equal("entrypoint", item.GetProperty("source").GetString());
-        }
-
-        using (var json = JsonDocument.Parse(
-            (await fixture.RunWithEnvironmentAsync(storage, "--json", "config", "get", "storage.bucket")).Output))
-        {
-            var item = json.RootElement.GetProperty("data");
-            Assert.Equal("custom-bucket", item.GetProperty("value").GetString());
-            Assert.Equal("environment", item.GetProperty("source").GetString());
-        }
-
-        var ignoredBucket = new Dictionary<string, string?> { ["Storage__Bucket"] = "ignored" };
-        using (var json = JsonDocument.Parse(
-            (await fixture.RunWithEnvironmentAsync(ignoredBucket, "--json", "config", "get", "storage.bucket")).Output))
-        {
-            var item = json.RootElement.GetProperty("data");
-            Assert.Equal("stellarr-images", item.GetProperty("value").GetString());
-            Assert.Equal("default", item.GetProperty("source").GetString());
-        }
-
         using (var json = JsonDocument.Parse(
             (await fixture.RunWithEnvironmentAsync(
                 new Dictionary<string, string?>(),

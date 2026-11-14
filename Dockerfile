@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1.8
 
-# One image runs the whole instance: nginx, the API, the Next.js server, RustFS
-# object storage, coturn and the Stellarr Media server, supervised by
-# supervisord. It builds for linux/amd64 and linux/arm64.
+# One image runs the whole instance: nginx, the API, the Next.js server, coturn
+# and the Stellarr Media server, supervised by supervisord. It builds for
+# linux/amd64 and linux/arm64.
 #
 # Stages that produce architecture-neutral output (the operator panel and the
 # portable API publish) run on the build machine's own platform, so a
@@ -123,7 +123,6 @@ COPY media/ ./
 RUN cargo build --release --locked --target "$(cat /etc/rust-target)" \
     && install -D "target/$(cat /etc/rust-target)/release/stellarr-media" /out/stellarr-media
 
-FROM rustfs/rustfs:1.0.0-beta.11-preview.1 AS rustfs-bin
 FROM node:26-bookworm-slim AS node-runtime
 
 # Target of docker-compose.dev.yml: the SDK with the source bind-mounted.
@@ -140,13 +139,11 @@ WORKDIR /app
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble AS final
 
-# musl: the RustFS binary comes from an Alpine-based image.
 # libatomic1: the Node binary copied below links against it.
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends ca-certificates coturn curl libatomic1 musl nginx openssl supervisor \
+    && apt-get install -y --no-install-recommends ca-certificates coturn curl libatomic1 nginx openssl supervisor \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=rustfs-bin /usr/bin/rustfs /usr/bin/rustfs
 COPY --from=node-runtime /usr/local/bin/node /usr/local/bin/node
 
 COPY infra/nginx.conf /etc/nginx/nginx.conf.template
