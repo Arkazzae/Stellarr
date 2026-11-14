@@ -114,23 +114,23 @@ public sealed class HealthEndpointTests(StellarrWebApplicationFactory factory)
         var response = await client.GetAsync("/health/ready");
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal(3, storage.BucketChecks);
+        Assert.Equal(3, storage.Preparations);
     }
 
-    /// <summary>An object store whose bucket check fails until it has finished starting.</summary>
+    /// <summary>An object store that cannot be prepared until it has finished starting.</summary>
     private sealed class StartingUpObjectStorage(int failures) : IObjectStorage
     {
-        public int BucketChecks { get; private set; }
+        public int Preparations { get; private set; }
 
-        public Task EnsureBucketAsync(CancellationToken cancellationToken)
+        public Task PrepareAsync(CancellationToken cancellationToken)
         {
-            BucketChecks++;
-            return BucketChecks <= failures
+            Preparations++;
+            return Preparations <= failures
                 ? Task.FromException(new HttpRequestException("connection refused"))
                 : Task.CompletedTask;
         }
 
-        public Task PutAsync(string key, Stream data, string contentType, CancellationToken cancellationToken) =>
+        public Task PutAsync(string key, Stream data, CancellationToken cancellationToken) =>
             throw new NotSupportedException();
 
         public Task<StoredObject> GetAsync(string key, ByteRange? range, CancellationToken cancellationToken) =>

@@ -168,38 +168,49 @@ internal sealed class FakeEmailDelivery : IEmailDelivery
 
 internal sealed class FakeObjectStorage : IObjectStorage
 {
-    private readonly Dictionary<string, (byte[] Bytes, string ContentType)> _objects = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, byte[]> _objects = new(StringComparer.Ordinal);
     internal bool RejectDeletes { get; set; }
 
-    public Task EnsureBucketAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+    public Task PrepareAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
-    public async Task PutAsync(string key, Stream data, string contentType, CancellationToken cancellationToken)
+    public async Task PutAsync(string key, Stream data, CancellationToken cancellationToken)
     {
-        await using var output = new MemoryStream();
+        if (_objects.ContainsKey(key))
+        {
+            throw new IOException($"An object is already stored under '{key}'.");
+        }
+
+        using var output = new MemoryStream();
         await data.CopyToAsync(output, cancellationToken);
-        _objects[key] = (output.ToArray(), contentType);
+        _objects[key] = output.ToArray();
     }
 
     public Task<StoredObject> GetAsync(string key, ByteRange? range, CancellationToken cancellationToken)
     {
-        var stored = _objects[key];
-        var total = stored.Bytes.LongLength;
-
-        if (range is not { } wanted)
+        if (!_objects.TryGetValue(key, out var bytes))
         {
-            return Task.FromResult(new StoredObject(
-                new MemoryStream(stored.Bytes), stored.ContentType, total, total, null));
+            throw new ObjectNotFoundException(key);
         }
 
-        // Mirrors the storage backend: inclusive at both ends, clamped to the
-        // object, and the caller is told which slice it actually got.
-        var from = Math.Min(wanted.From, total);
-        var to = Math.Min(wanted.To ?? total - 1, total - 1);
-        var length = Math.Max(0, to - from + 1);
-        var slice = new MemoryStream(stored.Bytes, (int)from, (int)length);
+        var total = bytes.LongLength;
+        if (range is not { } wanted)
+        {
+            return Task.FromResult(new StoredObject(new MemoryStream(bytes, writable: false), total, total, null));
+        }
 
-        return Task.FromResult(new StoredObject(
-            slice, stored.ContentType, length, total, new ByteRange(from, to)));
+        // Mirrors the stores: inclusive at both ends, an end clamped to the
+        // object, a start past it refused, and the caller is told which slice
+        // it actually got.
+        if (wanted.From >= total)
+        {
+            throw new RangeNotSatisfiableException(key);
+        }
+
+        var to = Math.Min(wanted.To ?? total - 1, total - 1);
+        var length = to - wanted.From + 1;
+        var slice = new MemoryStream(bytes, (int)wanted.From, (int)length, writable: false);
+
+        return Task.FromResult(new StoredObject(slice, length, total, new ByteRange(wanted.From, to)));
     }
 
     public Task DeleteAsync(string key, CancellationToken cancellationToken)
@@ -216,10 +227,10 @@ internal sealed class FakeObjectStorage : IObjectStorage
         [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
     {
         // A snapshot, so a test may change the store while a listing runs.
-        foreach (var (key, stored) in _objects.OrderBy(x => x.Key, StringComparer.Ordinal).ToArray())
+        foreach (var (key, bytes) in _objects.OrderBy(x => x.Key, StringComparer.Ordinal).ToArray())
         {
             cancellationToken.ThrowIfCancellationRequested();
-            yield return new StoredObjectInfo(key, stored.Bytes.LongLength);
+            yield return new StoredObjectInfo(key, bytes.LongLength);
             await Task.Yield();
         }
     }

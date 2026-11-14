@@ -173,8 +173,8 @@ public sealed class MediaStorageTests(StellarrWebApplicationFactory factory)
         await using var scope = isolated.OpenScope(out var db);
         var storage = (FakeObjectStorage)scope.ServiceProvider.GetRequiredService<IObjectStorage>();
         var mediaStorage = scope.ServiceProvider.GetRequiredService<MediaStorage>();
-        await storage.PutAsync("rollback/removable", new MemoryStream([1]), "text/plain", default);
-        await storage.PutAsync("rollback/stuck", new MemoryStream([1]), "text/plain", default);
+        await storage.PutAsync("rollback/removable", new MemoryStream([1]), default);
+        await storage.PutAsync("rollback/stuck", new MemoryStream([1]), default);
 
         await mediaStorage.RollbackAsync(["rollback/removable", null, "rollback/removable"]);
 
@@ -201,7 +201,7 @@ public sealed class MediaStorageTests(StellarrWebApplicationFactory factory)
         var stored = Upload(uploader);
         db.ImageAttachments.Add(stored);
         await db.SaveChangesAsync();
-        await storage.PutAsync(stored.ObjectKey, new MemoryStream([1]), "text/plain", default);
+        await storage.PutAsync(stored.ObjectKey, new MemoryStream([1]), default);
         storage.RejectDeletes = true;
 
         // Another row for the same object cannot be saved, as after a failed upload.
@@ -226,7 +226,7 @@ public sealed class MediaStorageTests(StellarrWebApplicationFactory factory)
         string[] keys = ["drain/oldest", "drain/middle", "drain/newest"];
         foreach (var (key, index) in keys.Select((key, index) => (key, index)))
         {
-            await storage.PutAsync(key, new MemoryStream([1]), "text/plain", default);
+            await storage.PutAsync(key, new MemoryStream([1]), default);
             await mediaStorage.QueueDeletionAsync([key], start.AddMinutes(index), default);
         }
 

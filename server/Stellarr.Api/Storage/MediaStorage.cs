@@ -47,14 +47,10 @@ public sealed class MediaStorage(AppDbContext db, IObjectStorage storage, ILogge
         CancellationToken cancellationToken) =>
         InspectAsync(file, null, spec => AttachmentValidation.MaxBytes(spec, options), cancellationToken);
 
-    public async Task StoreAsync(
-        string objectKey,
-        IFormFile file,
-        string contentType,
-        CancellationToken cancellationToken)
+    public async Task StoreAsync(string objectKey, IFormFile file, CancellationToken cancellationToken)
     {
         await using var input = file.OpenReadStream();
-        await storage.PutAsync(objectKey, input, contentType, cancellationToken);
+        await storage.PutAsync(objectKey, input, cancellationToken);
     }
 
     /// <summary>

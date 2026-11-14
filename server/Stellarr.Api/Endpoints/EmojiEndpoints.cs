@@ -1,6 +1,4 @@
-using System.Net;
 using System.Text.RegularExpressions;
-using Amazon.S3;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
@@ -119,7 +117,7 @@ public static partial class EmojiEndpoints
         var saved = false;
         try
         {
-            await mediaStorage.StoreAsync(key, file, inspection.Spec.ContentType, cancellationToken);
+            await mediaStorage.StoreAsync(key, file, cancellationToken);
             db.ServerEmoji.Add(emoji);
             // Another upload may have taken the shortcode since the check above.
             saved = await db.TrySaveChangesAsync(cancellationToken);
@@ -196,7 +194,7 @@ public static partial class EmojiEndpoints
             await body.CopyToAsync(http.Response.Body, cancellationToken);
             return Results.Empty;
         }
-        catch (AmazonS3Exception exception) when (exception.StatusCode == HttpStatusCode.NotFound)
+        catch (ObjectNotFoundException)
         {
             return Results.NotFound();
         }

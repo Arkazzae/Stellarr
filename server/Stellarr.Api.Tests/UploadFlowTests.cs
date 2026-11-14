@@ -441,12 +441,12 @@ public sealed partial class UploadFlowTests(StellarrWebApplicationFactory factor
     /// <summary>Stores everything except posters, which it refuses as an unreachable store would.</summary>
     private sealed class PosterRejectingStorage(FakeObjectStorage inner) : IObjectStorage
     {
-        public Task EnsureBucketAsync(CancellationToken cancellationToken) => inner.EnsureBucketAsync(cancellationToken);
+        public Task PrepareAsync(CancellationToken cancellationToken) => inner.PrepareAsync(cancellationToken);
 
-        public Task PutAsync(string key, Stream data, string contentType, CancellationToken cancellationToken) =>
+        public Task PutAsync(string key, Stream data, CancellationToken cancellationToken) =>
             key.StartsWith("posters/", StringComparison.Ordinal)
                 ? throw new IOException("The object store went away.")
-                : inner.PutAsync(key, data, contentType, cancellationToken);
+                : inner.PutAsync(key, data, cancellationToken);
 
         public Task<StoredObject> GetAsync(string key, ByteRange? range, CancellationToken cancellationToken) =>
             inner.GetAsync(key, range, cancellationToken);

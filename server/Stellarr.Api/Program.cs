@@ -312,19 +312,19 @@ static async Task InitializeApplicationAsync(WebApplication app)
         return;
     }
 
-    // The object store usually starts next to this process and needs a moment.
+    // A store on another host may still be starting, or briefly unreachable.
     const int maxAttempts = 30;
     var storage = app.Services.GetRequiredService<IObjectStorage>();
     for (var attempt = 1; ; attempt++)
     {
         try
         {
-            await storage.EnsureBucketAsync(stopping);
+            await storage.PrepareAsync(stopping);
             return;
         }
         catch (Exception exception) when (attempt < maxAttempts && !stopping.IsCancellationRequested)
         {
-            StartupLog.RustFsNotReady(app.Logger, attempt, maxAttempts, exception.Message);
+            StartupLog.StorageNotReady(app.Logger, attempt, maxAttempts, exception.Message);
             await Task.Delay(TimeSpan.FromSeconds(1), stopping);
         }
     }

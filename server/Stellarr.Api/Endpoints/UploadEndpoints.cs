@@ -114,14 +114,10 @@ public static class UploadEndpoints
 
         try
         {
-            await mediaStorage.StoreAsync(key, file, spec.ContentType, cancellationToken);
+            await mediaStorage.StoreAsync(key, file, cancellationToken);
             if (posterUpload is not null)
             {
-                await mediaStorage.StoreAsync(
-                    posterUpload.Key,
-                    posterUpload.File,
-                    posterUpload.Spec.ContentType,
-                    cancellationToken);
+                await mediaStorage.StoreAsync(posterUpload.Key, posterUpload.File, cancellationToken);
             }
 
             db.ImageAttachments.Add(attachment);

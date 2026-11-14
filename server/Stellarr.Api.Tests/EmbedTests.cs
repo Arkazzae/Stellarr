@@ -297,7 +297,7 @@ public sealed class EmbedBuilderLifecycleTests
         var objectKey = $"embeds/tests/{attachmentId:N}.png";
         using (var content = new MemoryStream([1, 2, 3]))
         {
-            await storage.PutAsync(objectKey, content, "image/png", CancellationToken.None);
+            await storage.PutAsync(objectKey, content, CancellationToken.None);
         }
 
         db.Messages.Add(new Message
@@ -335,7 +335,7 @@ public sealed class EmbedBuilderLifecycleTests
         Assert.Empty(await builder.BuildAsync(messageId, CancellationToken.None));
         Assert.False(await db.MessageEmbeds.AnyAsync(x => x.MessageId == messageId));
         Assert.False(await db.ImageAttachments.AnyAsync(x => x.Id == attachmentId));
-        await Assert.ThrowsAsync<KeyNotFoundException>(
+        await Assert.ThrowsAsync<ObjectNotFoundException>(
             () => storage.GetAsync(objectKey, null, CancellationToken.None));
     }
 
@@ -359,7 +359,7 @@ public sealed class EmbedBuilderLifecycleTests
                 .Select(x => x.Id)
                 .SingleAsync();
             using var content = new MemoryStream([1, 2, 3]);
-            await storage.PutAsync(objectKey, content, "image/png", CancellationToken.None);
+            await storage.PutAsync(objectKey, content, CancellationToken.None);
             db.Messages.Add(new Message
             {
                 Id = messageId,
@@ -399,7 +399,7 @@ public sealed class EmbedBuilderLifecycleTests
         var verificationDb = verificationScope.ServiceProvider.GetRequiredService<AppDbContext>();
         var verificationStorage = verificationScope.ServiceProvider.GetRequiredService<IObjectStorage>();
         Assert.False(await verificationDb.ImageAttachments.AnyAsync(x => x.Id == attachmentId));
-        await Assert.ThrowsAsync<KeyNotFoundException>(
+        await Assert.ThrowsAsync<ObjectNotFoundException>(
             () => verificationStorage.GetAsync(objectKey, null, CancellationToken.None));
     }
 }

@@ -157,7 +157,7 @@ public sealed class EmbedBuilder(
         try
         {
             using var content = new MemoryStream(fetched.Bytes, writable: false);
-            await storage.PutAsync(objectKey, content, fetched.ContentType, cancellationToken);
+            await storage.PutAsync(objectKey, content, cancellationToken);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {

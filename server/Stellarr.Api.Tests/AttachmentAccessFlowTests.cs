@@ -60,7 +60,7 @@ public sealed class AttachmentAccessFlowTests : IClassFixture<StellarrWebApplica
                 Attachments = [new MessageAttachment { AttachmentId = attachmentId, Attachment = attachment }],
             });
             await db.SaveChangesAsync();
-            await storage.PutAsync(objectKey, new MemoryStream(Bytes), "image/png", CancellationToken.None);
+            await storage.PutAsync(objectKey, new MemoryStream(Bytes), CancellationToken.None);
         }
 
         Assert.Equal(Bytes, await maja.GetByteArrayAsync($"/assets/{attachmentId}"));
@@ -104,7 +104,7 @@ public sealed class AttachmentAccessFlowTests : IClassFixture<StellarrWebApplica
                 ],
             });
             await db.SaveChangesAsync();
-            await storage.PutAsync(objectKey, new MemoryStream(Bytes), "image/png", CancellationToken.None);
+            await storage.PutAsync(objectKey, new MemoryStream(Bytes), CancellationToken.None);
         }
 
         using var ada = Client();

@@ -207,7 +207,7 @@ public sealed class CockpitBackupArchiveTests
     }
 
     private static Task PutAsync(FakeObjectStorage storage, string key, string text) =>
-        storage.PutAsync(key, new MemoryStream(Encoding.UTF8.GetBytes(text)), "application/octet-stream", CancellationToken.None);
+        storage.PutAsync(key, new MemoryStream(Encoding.UTF8.GetBytes(text)), CancellationToken.None);
 
     private static async Task<string> StartAsync(HttpClient owner, object parts)
     {
@@ -272,10 +272,10 @@ public sealed class CockpitBackupArchiveTests
     /// <summary>A store that lists an object it then cannot give.</summary>
     private sealed class FailingKeyStorage(FakeObjectStorage inner, string failingKey) : IObjectStorage
     {
-        public Task EnsureBucketAsync(CancellationToken cancellationToken) => inner.EnsureBucketAsync(cancellationToken);
+        public Task PrepareAsync(CancellationToken cancellationToken) => inner.PrepareAsync(cancellationToken);
 
-        public Task PutAsync(string key, Stream data, string contentType, CancellationToken cancellationToken) =>
-            inner.PutAsync(key, data, contentType, cancellationToken);
+        public Task PutAsync(string key, Stream data, CancellationToken cancellationToken) =>
+            inner.PutAsync(key, data, cancellationToken);
 
         public Task<StoredObject> GetAsync(string key, ByteRange? range, CancellationToken cancellationToken) =>
             key == failingKey ? throw new IOException("Gone.") : inner.GetAsync(key, range, cancellationToken);
@@ -294,10 +294,10 @@ public sealed class CockpitBackupArchiveTests
 
         public TaskCompletionSource Release { get; } = new(TaskCreationOptions.RunContinuationsAsynchronously);
 
-        public Task EnsureBucketAsync(CancellationToken cancellationToken) => inner.EnsureBucketAsync(cancellationToken);
+        public Task PrepareAsync(CancellationToken cancellationToken) => inner.PrepareAsync(cancellationToken);
 
-        public Task PutAsync(string key, Stream data, string contentType, CancellationToken cancellationToken) =>
-            inner.PutAsync(key, data, contentType, cancellationToken);
+        public Task PutAsync(string key, Stream data, CancellationToken cancellationToken) =>
+            inner.PutAsync(key, data, cancellationToken);
 
         public async Task<StoredObject> GetAsync(string key, ByteRange? range, CancellationToken cancellationToken)
         {
@@ -316,9 +316,9 @@ public sealed class CockpitBackupArchiveTests
     /// <summary>A store that is down when the backup lists it.</summary>
     private sealed class UnlistableStorage : IObjectStorage
     {
-        public Task EnsureBucketAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task PrepareAsync(CancellationToken cancellationToken) => Task.CompletedTask;
 
-        public Task PutAsync(string key, Stream data, string contentType, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task PutAsync(string key, Stream data, CancellationToken cancellationToken) => Task.CompletedTask;
 
         public Task<StoredObject> GetAsync(string key, ByteRange? range, CancellationToken cancellationToken) =>
             throw new IOException("The store is down.");

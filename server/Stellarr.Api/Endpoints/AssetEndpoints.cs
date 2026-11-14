@@ -1,7 +1,5 @@
 using System.Globalization;
-using System.Net;
 using System.Security.Claims;
-using Amazon.S3;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Primitives;
 using Stellarr.Api.Auth;
@@ -61,7 +59,7 @@ public static class AssetEndpoints
 
             // Without this a browser does not even try to ask for a range.
             response.Headers.AcceptRanges = "bytes";
-            response.ContentType = stored.ContentType;
+            response.ContentType = attachment.ContentType;
             response.ContentLength = stored.Length;
             response.Headers.XContentTypeOptions = "nosniff";
             if (IsGenericFile(attachment))
@@ -82,11 +80,11 @@ public static class AssetEndpoints
             await body.CopyToAsync(response.Body, cancellationToken);
             return Results.Empty;
         }
-        catch (AmazonS3Exception exception) when (exception.StatusCode == HttpStatusCode.RequestedRangeNotSatisfiable)
+        catch (RangeNotSatisfiableException)
         {
             return Results.StatusCode(StatusCodes.Status416RangeNotSatisfiable);
         }
-        catch (AmazonS3Exception exception) when (exception.StatusCode == HttpStatusCode.NotFound)
+        catch (ObjectNotFoundException)
         {
             return Results.NotFound();
         }
@@ -101,7 +99,8 @@ public static class AssetEndpoints
         CancellationToken cancellationToken)
     {
         var attachment = await FindReadableAsync(db, principal, attachmentId, cancellationToken);
-        if (attachment?.PosterObjectKey is not { } posterKey)
+        // The upload records a poster's key and type together.
+        if (attachment?.PosterObjectKey is not { } posterKey || attachment.PosterContentType is not { } posterType)
         {
             return Results.NotFound();
         }
@@ -109,13 +108,13 @@ public static class AssetEndpoints
         try
         {
             var stored = await storage.GetAsync(posterKey, null, cancellationToken);
-            http.Response.ContentType = attachment.PosterContentType ?? stored.ContentType;
+            http.Response.ContentType = posterType;
             http.Response.ContentLength = attachment.PosterSizeBytes ?? stored.Length;
             await using var body = stored.Stream;
             await body.CopyToAsync(http.Response.Body, cancellationToken);
             return Results.Empty;
         }
-        catch (AmazonS3Exception exception) when (exception.StatusCode == HttpStatusCode.NotFound)
+        catch (ObjectNotFoundException)
         {
             return Results.NotFound();
         }

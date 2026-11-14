@@ -48,10 +48,10 @@ public sealed class AutomaticBackupTests
         (await owner.PostAsJsonAsync("/api/auth/login", new { username = "maja", password = "Aurora!2026" })).EnsureSuccessStatusCode();
         var storage = factory.Services.GetRequiredService<IObjectStorage>();
         using var content = new MemoryStream([1, 2, 3]);
-        await storage.PutAsync("safe/object", content, "application/octet-stream", default);
+        await storage.PutAsync("safe/object", content, default);
         content.Position = 0;
         // The archive deliberately skips unsafe keys and records them as missing.
-        await storage.PutAsync("../unsafe", content, "application/octet-stream", default);
+        await storage.PutAsync("../unsafe", content, default);
         var destination = new RecordingDestination();
         using var worker = Create(factory, new BackupClock(), destination);
 
