@@ -57,29 +57,69 @@ The backup domain knows only an `IBackupDestination` contract. Concrete
 destinations live under `Integrations`; enabling Cloudflare R2 does not change
 the backup schedule or the local retention policy.
 
-## Recovery drill
+## Restoring a backup
 
-There is currently no automatic restore command. Test recovery on an isolated
-instance before relying on the copies:
+The operator CLI restores a full backup: an archive with all four parts. Test
+the copies by restoring one on an isolated instance before relying on them.
 
-1. Download a completed archive from Cockpit or the private offsite bucket.
-   Compare its SHA-256 with the remote `sha256` metadata if downloaded from R2.
-2. Inspect `manifest.json`: format `stellarr-backup`, version 1, all four parts,
-   no `missingObjects`. Verify the ZIP and the extracted database using
-   `sqlite3 database/stellarr.db 'PRAGMA integrity_check;'`.
-3. Stop the destination instance and keep a separate copy of its original data
-   volume. Use the same Stellarr release initially. Restore the database to the
-   path configured in `ConnectionStrings:Database`; do not retain old SQLite
-   `-wal`/`-shm` files from the destination database.
-4. Restore `keys/` into the API's data-protection key directory. Restore the
-   contents of `instance/` into `DataRoot`, preserving relative paths and limiting
-   file access to the service account. Restore deployment environment secrets
-   separately. Missing keys prevent decrypting stored secrets.
-5. Copy every file under `objects/` into `files/` under `DataRoot`, keeping its
-   relative path: the archive's `objects/` folder has the same layout as
-   `files/`. Complete this while the API remains stopped; then start the API.
-6. Verify owner login, historical messages, downloads, avatars, integrations,
-   and a newly created backup. Record recovery time and the last recovered data.
+1. Put the archive in the instance's backups folder if Cockpit does not already
+   list it. If you downloaded it from R2, first compare its SHA-256 with the
+   remote `sha256` metadata.
+
+   ```sh
+   docker compose cp ./backup-20261114-030000-<id>.zip stellarr:/data/stellarr/backups/
+   ```
+
+2. Stage it. The CLI checks the manifest, every entry name, the database's
+   integrity and every entry's bytes, then copies the archive to
+   `restore/staged.zip` on the data volume. Nothing is replaced yet.
+
+   ```sh
+   docker compose exec stellarr stellarr backup restore backup-20261114-030000-<id>.zip --yes
+   ```
+
+3. Restart the container. Before any service starts, the entrypoint replaces
+   `db/`, `files/`, `keys/`, `secrets/`, `tls/` and `releases/` with the
+   archive's and moves the folders it replaces to `restore/previous-<time>/`.
+   `logs/`, `backups/` and the automatic backup checkpoint stay as they are.
+
+   ```sh
+   docker compose restart stellarr
+   ```
+
+4. Verify owner login, historical messages, downloads, avatars, integrations
+   and a newly created backup. Record the recovery time and the last recovered
+   data. Then delete `restore/previous-<time>/`; until then, moving its folders
+   back undoes the restore.
+
+`restore/last-restore.json` records what the last start did. An archive the
+start refuses, for example one damaged since it was staged, leaves the data as
+it was and is kept as `restore/refused-<time>.zip`; the instance then starts on
+its previous data. If putting the archive in place fails part-way and the
+previous folders cannot be moved back, the start leaves `restore/broken`, and
+the container refuses to start until the volume is repaired and that file is
+removed. `stellarr backup cancel` drops a staged archive before the restart.
+
+Restore with the release that made the backup or a newer one: a newer release
+upgrades the restored database at start, but an older one cannot read a
+database a newer release has changed. Secrets read from the environment are not
+in the archive, so keep a copy of `.env` with the backups.
+
+### Restoring a partial backup
+
+A database-only backup (a single `.db` file) and an archive without all four
+parts are restored by hand, into a stopped instance:
+
+1. Stop the instance and keep a separate copy of its data volume.
+2. Put the database at `db/stellarr.db`, with no `stellarr.db-wal` or
+   `stellarr.db-shm` left beside it.
+3. Put the contents of `keys/` into `keys/`. A database without the keys it was
+   written with cannot read the secrets stored in it.
+4. Copy every file under `objects/` into `files/`, keeping its relative path:
+   the archive's `objects/` folder has the same layout as `files/`.
+5. Put the contents of `instance/` into the data root, keeping relative paths,
+   and make the files under `secrets/` and `tls/` readable by their owner only.
+6. Start the instance and verify it as above.
 
 SQLite is a consistent online snapshot; the object store and instance files are
 read over time. This is not a transaction spanning SQLite and the object store.

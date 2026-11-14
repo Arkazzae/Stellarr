@@ -133,11 +133,49 @@ public static class CliApplication
             case "security":
                 return await DispatchSecurityAsync(runtime, invocation, cancellationToken);
 
+            case "backup":
+                return await DispatchBackupAsync(runtime, invocation, cancellationToken);
+
             default:
                 throw new CliException(
                     "unknown_command",
                     $"Unknown command '{command}'. Run 'stellarr help' for the command list.",
                     CliExit.Usage);
+        }
+    }
+
+    private static async Task<CliResult> DispatchBackupAsync(
+        CliRuntime runtime,
+        CliInvocation invocation,
+        CancellationToken cancellationToken)
+    {
+        var positions = invocation.Positionals;
+        if (positions.Count < 2)
+        {
+            throw Usage("backup needs a subcommand: verify, restore, cancel or apply.");
+        }
+
+        var action = positions[1].ToLowerInvariant();
+        switch (action)
+        {
+            case "verify":
+                EnsureReadOnly(invocation, "backup verify <archive>", exact: 3);
+                return await BackupCommands.VerifyAsync(runtime, positions[2], cancellationToken);
+
+            case "restore":
+                EnsureMutation(invocation, "backup restore <archive>", exact: 3, allowStdin: false, allowAll: false);
+                return await BackupCommands.RestoreAsync(runtime, positions[2], cancellationToken);
+
+            case "cancel":
+                EnsureMutation(invocation, "backup cancel", exact: 2, allowStdin: false, allowAll: false);
+                return await BackupCommands.CancelAsync(runtime);
+
+            case "apply":
+                EnsureMutation(invocation, "backup apply", exact: 2, allowStdin: false, allowAll: false);
+                return await BackupCommands.ApplyAsync(runtime, cancellationToken);
+
+            default:
+                throw Usage($"Unknown backup subcommand '{action}'. Use verify, restore, cancel or apply.");
         }
     }
 

@@ -26,7 +26,7 @@ Always take a full volume backup while the container is stopped so SQLite (`stel
 The archive contains the SQLite database, uploaded objects, session keys, shared secrets, and TLS private key. Store it securely off-host.
 
 > [!TIP]
-> You can also create backups from Cockpit (**Backups**) while the instance is running. A database-only backup produces a single SQLite file; a full backup creates a `.zip` archive containing the database, uploaded objects, data-protection keys, and instance files (`secrets/`, `tls/`, desktop releases) with a `manifest.json`. Because Cockpit stores backups in `/data/stellarr/backups` on the same volume, download copies off-host and keep a copy of your `.env` file alongside them. To restore a Cockpit full backup, unpack the archive into a stopped data volume.
+> You can also create backups from Cockpit (**Backups**) while the instance is running. A database-only backup produces a single SQLite file; a full backup creates a `.zip` archive containing the database, uploaded objects, data-protection keys, and instance files (`secrets/`, `tls/`, desktop releases) with a `manifest.json`. Because Cockpit stores backups in `/data/stellarr/backups` on the same volume, download copies off-host and keep a copy of your `.env` file alongside them. To restore a Cockpit full backup, stage it with `stellarr backup restore` and restart the container; see [Restoring a backup](../admin/backups.md#restoring-a-backup).
 
 ## 2. Pull and start the new version
 

@@ -110,6 +110,25 @@ media_port=$((10#$media_port))
 
 public_ip="$(resolve_public_ip)"
 
+# A backup staged with `stellarr backup restore` replaces the instance's data
+# here, before any service starts and before the secrets below are read, so
+# every service sees the restored instance. An archive the restore refuses
+# leaves the data as it was. A restore that failed part-way and could not undo
+# itself leaves a marker, and the instance does not start on that volume.
+restore_dir="$data_root/restore"
+[[ ! -e "$restore_dir/broken" ]] ||
+  fail "A restore failed part-way and could not put the previous data back; see $restore_dir/last-restore.json. Repair the data volume, then remove $restore_dir/broken."
+if [[ -f "$restore_dir/staged.zip" ]]; then
+  echo "Restoring the backup staged in $restore_dir/staged.zip." >&2
+  restore_status=0
+  /usr/local/bin/stellarr --data-root "$data_root" backup apply --yes || restore_status=$?
+  case "$restore_status" in
+    0) ;;
+    4) echo "The staged backup was not restored, and the instance starts with its previous data; see $restore_dir/last-restore.json." >&2 ;;
+    *) fail "Restoring the staged backup failed; see $restore_dir/last-restore.json." ;;
+  esac
+fi
+
 mkdir -p "$data_root"/{db,files,keys,logs,secrets,tls} /run/nginx
 
 turn_secret="${TURN_SHARED_SECRET:-$(read_or_create_secret turn-shared-secret)}"
