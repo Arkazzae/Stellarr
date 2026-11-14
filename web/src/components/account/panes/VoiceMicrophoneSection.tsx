@@ -56,7 +56,7 @@ export function VoiceMicrophoneSection({
   }, [settings.vadSensitivity]);
 
   return (
-    <VoiceSection icon="mic" title={t("voice.microphone")}>
+    <VoiceSection title={t("voice.microphone")}>
       <div className="frm">
         <FormRow
           label={t("voice.device")}

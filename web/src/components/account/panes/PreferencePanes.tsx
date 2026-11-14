@@ -3,7 +3,6 @@
 import type { ReactNode } from "react";
 
 import { Button } from "@stellarr/ui";
-import { Icon, type IconName } from "@stellarr/ui/icons";
 import { Avatar } from "@/components/primitives/Avatar";
 import { Segmented } from "@/components/primitives/Segmented";
 import { Switch } from "@/components/primitives/Switch";
@@ -81,9 +80,9 @@ function PreferenceRow({ label, detail, error, checked, disabled, onChange }: Pr
   );
 }
 
-function SwitchCard({ title, icon, children }: { title: string; icon: IconName; children: ReactNode }) {
+function SwitchCard({ title, lone, children }: { title: string; lone?: boolean; children: ReactNode }) {
   return (
-    <VoiceSection icon={icon} title={title}>
+    <VoiceSection title={title} lone={lone}>
       <div className="frm">{children}</div>
     </VoiceSection>
   );
@@ -105,7 +104,7 @@ export function UserNotificationsPane({
 
   return (
     <>
-      <SwitchCard title={t("preference.notifications")} icon="bell">
+      <SwitchCard title={t("preference.notifications")} lone>
         {systemNotifications === undefined ? null : (
           <PreferenceRow
             label={t("preference.desktopNotifications")}
@@ -166,7 +165,7 @@ export function PrivacyPane({
   const { t } = useLanguage();
   return (
     <>
-      <SwitchCard title={t("preference.contactVisibility")} icon="shield">
+      <SwitchCard title={t("preference.contactVisibility")}>
         {/* The details say what turning a switch off takes away, because the
             off side is the one with consequences. */}
         <PreferenceRow
@@ -202,9 +201,6 @@ function BlockedCard({ people, onUnblock }: BlockedPeopleProps) {
   return (
     <section className="sc acc-security">
       <header className="sc-h">
-        <span className="sc-ico" aria-hidden="true">
-          <Icon name="ban" size={17} />
-        </span>
         {t("preference.blocked")}
       </header>
       <div className="sc-b acc-security-list">
@@ -255,7 +251,7 @@ export function AdvancedPane({
       {startup === undefined ? null : (
         // Autostart lives in the operating system, not in the stored
         // preferences.
-        <SwitchCard title={t("preference.system")} icon="gear">
+        <SwitchCard title={t("preference.system")}>
           <PreferenceRow
             label={t("preference.startup")}
             detail={t("preference.startupDetail")}
@@ -268,7 +264,7 @@ export function AdvancedPane({
       )}
       {/* Reduced motion used to live here; it is a question of how the app
           looks and reads, so it sits with contrast and text size now. */}
-      <SwitchCard title={t("preference.advanced")} icon="sliders">
+      <SwitchCard title={t("preference.advanced")} lone={startup === undefined}>
         <PreferenceRow
           label={t("preference.developerMode")}
           detail={t("preference.developerModeDetail")}

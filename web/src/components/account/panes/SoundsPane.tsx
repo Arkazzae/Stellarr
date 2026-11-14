@@ -43,7 +43,7 @@ export function SoundsPane({
     <>
       {joinSound ? <JoinSoundSection joinSound={joinSound} /> : null}
 
-      <VoiceSection icon="headphones" title={t("sounds.inCall")}>
+      <VoiceSection title={t("sounds.inCall")}>
         <div className="frm">
           {/* One switch covers both halves of a comings-and-goings sound: the
               shared chime and the clip someone chose for their own arrival

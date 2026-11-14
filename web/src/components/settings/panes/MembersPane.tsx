@@ -28,7 +28,6 @@ export function MembersPane({ supported, members, roles, onAssignRole }: Members
       {supported ? null : <p className="set-note">{t("settings.membersUnsupported")}</p>}
       <SettingsSection
         title={t("server.members")}
-        icon="users"
         count={members.length}
         countLabel={t("settings.membersCount", { count: members.length })}
       >

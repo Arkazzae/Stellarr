@@ -32,7 +32,7 @@
     gap: var(--ui-button-gap, normal);
     min-height: var(--ui-button-min-height, auto);
     white-space: var(--ui-button-white-space, inherit);
-    border-radius: calc(infinity * 1px);
+    border-radius: var(--ui-button-radius, calc(infinity * 1px));
     font-size: var(--ui-button-font-size, calc(13 * var(--ui-unit)));
     line-height: var(--ui-button-line-height, inherit);
     font-weight: var(--ui-button-font-weight, 600);

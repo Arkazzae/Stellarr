@@ -64,9 +64,6 @@ function UploadEditor({
   return (
     <section className="sc emoji-editor-card" aria-busy={busy}>
       <header className="sc-h">
-        <span className="sc-ico" aria-hidden="true">
-          <Icon name="image" size={17} />
-        </span>
         {t("common.add")} emoji
       </header>
       <div className="sc-b emoji-editor-body">
@@ -217,7 +214,6 @@ export function EmojiPane({ supported, emoji, onUpload, onDelete }: EmojiPanePro
 
       <SettingsSection
         title={t("server.emoji")}
-        icon="smiley"
         count={`${emoji.length}/${MAX_EMOJI}`}
         countLabel={t("settings.emojiCount", { count: emoji.length, max: MAX_EMOJI })}
         action={

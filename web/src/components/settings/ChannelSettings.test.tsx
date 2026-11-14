@@ -85,8 +85,8 @@ describe("ChannelSettings", () => {
       screen.getByRole("dialog", { name: "Ustawienia kanału: #ogolny" }),
     ).toBeInTheDocument();
     expect(container.querySelector(".sv.ch-settings")).toBeInTheDocument();
-    expect(screen.getByText("OGÓLNE")).toBeVisible();
-    expect(screen.getByText("ZARZĄDZANIE")).toBeVisible();
+    expect(screen.getByText("Ogólne")).toBeVisible();
+    expect(screen.getByText("Zarządzanie")).toBeVisible();
 
     for (const name of ["Przegląd", "Powiadomienia", "Uprawnienia", "Strefa zagrożenia"]) {
       expect(screen.getByRole("button", { name }).querySelector("svg")).not.toBeNull();

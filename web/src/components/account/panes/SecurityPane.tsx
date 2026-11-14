@@ -3,7 +3,6 @@
 import { useId, useState, type ChangeEvent } from "react";
 
 import { Button } from "@stellarr/ui";
-import { Icon } from "@stellarr/ui/icons";
 import type { Translator } from "@/i18n";
 import type { Account, EmailChangeResult, PasswordChangeResult } from "@/ports";
 import { useLanguage } from "@/state/hooks";
@@ -405,9 +404,6 @@ export function SecurityPane({
     <>
       <section className="sc acc-security">
         <header className="sc-h">
-          <span className="sc-ico" aria-hidden="true">
-            <Icon name="lock" size={17} />
-          </span>
           {t("account.loginSecurity")}
         </header>
         <div className="sc-b acc-security-list">

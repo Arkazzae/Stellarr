@@ -90,7 +90,7 @@ export function VoiceProcessingSection({
   const active = mic.activeNoiseSuppression;
 
   return (
-    <VoiceSection icon="wave" title={t("voice.processing")}>
+    <VoiceSection title={t("voice.processing")}>
       <span className="fld-lab">{t("voice.noiseReduction")}</span>
       <Ladder
         order={NOISE_ORDER}

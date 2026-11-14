@@ -2,28 +2,40 @@
   /*
    * USTAWIENIA UŻYTKOWNIKA
    *
-   * The shell is the server settings' — `.sv-wrap`, `.sv`, `.sv-nav`,
+   * The shell is every settings dialog's — `.sv-wrap`, `.sv`, `.sv-nav`,
    * `.sv-panes`, `.frm`, `.sc`. Only what this modal adds lives here, so the
-   * two dialogs cannot drift apart on the parts they share.
+   * dialogs cannot drift apart on the parts they share.
    */
 
   /* Your face beside your name, where the server's settings put its name. */
-  .us-brand {
-    display: flex;
-    align-items: center;
-    gap: 12px;
+  .us-brand .av {
+    width: 36px;
+    height: 36px;
   }
 
   /* Log out is the one nav item that opens no pane, so it sits below a rule
-     and outside every group rather than at the end of the last one. */
+     and outside every group rather than at the end of the last one. It is
+     there on every pane and quiet until it is meant: red only under the
+     pointer. */
   .us-out {
     margin-top: auto;
-    padding: 8px;
+    padding: 8px 12px 12px;
     border-top: 1px solid var(--line-subtle);
   }
 
   .us-out .sv-item {
     width: 100%;
+  }
+
+  .us-out .sv-item.danger,
+  .us-out .sv-item.danger .sv-ico {
+    color: var(--text-muted);
+  }
+
+  .us-out .sv-item.danger:hover,
+  .us-out .sv-item.danger:hover .sv-ico,
+  .us-out .sv-item.danger:focus-visible .sv-ico {
+    color: var(--danger-text);
   }
 
   /* ---------- MOJE KONTO ---------- */
@@ -43,16 +55,12 @@
 
   /* Login details are facts first, forms second. The current e-mail stays
      visible while each credential editor opens independently underneath it. */
-  .acc-security {
-    margin-bottom: 0;
-  }
-
   .acc-security-list {
     padding-block: 0;
   }
 
   .acc-security-item {
-    padding: 18px 0;
+    padding: 16px 0;
   }
 
   .acc-security-item + .acc-security-item {
@@ -252,9 +260,10 @@
    * profile, which is what makes the preview worth its height.
    */
   .pf-preview {
+    border: 1px solid var(--line-subtle);
     border-radius: var(--radius-lg);
     overflow: hidden;
-    background: var(--surface-raised);
+    background: var(--set-group);
     margin-bottom: 10px;
     padding-bottom: 16px;
   }

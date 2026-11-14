@@ -1,72 +1,112 @@
 @layer components {
-  /* ---------- USTAWIENIA SERWERA (pełny ekran) ---------- */
+  /* ---------- OKNA USTAWIEŃ (użytkownik, serwer, kanał) ---------- */
   .sv-wrap{
     position:fixed;inset:0;z-index:95;display:none;
-    align-items:center;justify-content:center;padding:32px;
+    align-items:center;justify-content:center;padding:24px;
     background:var(--scrim-strong);
     backdrop-filter:blur(12px) saturate(0.9);-webkit-backdrop-filter:blur(12px) saturate(0.9);
   }
   .sv-wrap.open{display:flex;animation:viewIn var(--dur-base) var(--ease-standard)}
+  /*
+   * One sheet for the pane, a deeper column for the navigation, and the
+   * groups lifted off the sheet. The dialog used to paint the nav, the title
+   * band and the pane on three surfaces, so the title read as a toolbar of
+   * its own instead of the head of the page under it.
+   *
+   * The buttons inside are soft filled tiles with the text at full strength,
+   * cornered like the rows beside them. The app's outlined pill with muted
+   * text read as disabled on these sheets.
+   */
   .sv{
-    display:grid;grid-template-columns:264px minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);
-    width:min(1080px, 100%);height:min(720px, calc(100vh - 64px));
-    background:var(--surface-canvas);border:1px solid var(--line);
-    border-radius:20px;overflow:hidden;
+    --set-sheet:var(--surface-raised);
+    --set-side:color-mix(in oklab, var(--surface-canvas) 55%, var(--surface-raised));
+    --set-group:var(--surface-base);
+    --set-hover:color-mix(in oklab, var(--text) 5%, transparent);
+    --set-select:color-mix(in oklab, var(--text) 9%, transparent);
+    --set-pad:40px;
+    --ui-button-radius:8px;
+    --ui-button-secondary-bg:color-mix(in oklab, var(--text) 8%, transparent);
+    --ui-button-secondary-border:transparent;
+    --ui-button-secondary-text:var(--text);
+    --ui-button-secondary-hover-bg:color-mix(in oklab, var(--text) 13%, transparent);
+    --ui-button-secondary-hover-border:transparent;
+    --ui-button-quiet-text:var(--text-muted);
+    --ui-button-quiet-hover-bg:color-mix(in oklab, var(--text) 8%, transparent);
+    --ui-button-font-weight:550;
+    --ui-button-padding-x:16px;
+    --ui-button-sm-padding-x:12px;
+    --ui-button-gap:7px;
+    --ui-button-disabled-opacity:0.45;
+    display:grid;grid-template-columns:252px minmax(0,1fr);grid-template-rows:auto minmax(0,1fr);
+    width:min(1120px, 100%);
+    height:min(800px, calc(100vh - 48px));height:min(800px, calc(100dvh - 48px));
+    background:var(--set-sheet);border:1px solid var(--line);
+    border-radius:18px;overflow:hidden;
     box-shadow:var(--elev-modal);
+    timeline-scope:--set-scroll;
     animation:actIn var(--dur-slow) var(--ease-standard);
   }
   .sv-nav{
     grid-column:1;grid-row:1/-1;
-    background:var(--surface-raised);border-right:1px solid var(--line);
+    background:var(--set-side);border-right:1px solid var(--line-subtle);
     display:flex;flex-direction:column;min-height:0;
   }
-  .sv-brand{display:flex;align-items:center;gap:12px;padding:20px 20px 18px;flex:none}
-  .sv-brand-txt{min-width:0;display:flex;flex-direction:column;gap:2px}
-  .sv-brand-txt b{font-size:var(--text-16);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .sv-brand-txt span{font-size:var(--text-12);color:var(--text-faint)}
-  .sv-nav-scroll{flex:1;min-height:0;overflow-y:auto;padding:0 12px 24px}
-  .sv-cap{
-    font-size:var(--text-11);font-weight:700;letter-spacing:0.1em;color:var(--text-faint);
-    padding:18px 10px 8px;
+  /* The two lines are as tall as a face beside them: on a 24px line the name
+     pushed the caption away and the pair off the face's centre. */
+  .sv-brand{display:flex;align-items:center;gap:10px;padding:20px 20px 8px;flex:none}
+  .sv-brand-txt{min-width:0;display:flex;flex-direction:column;gap:1px}
+  .sv-brand-txt b{font-size:var(--text-15);font-weight:600;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sv-brand-txt span{font-size:var(--text-12);line-height:1.3;color:var(--text-faint)}
+  .sv-nav-scroll{
+    flex:1;min-height:0;overflow-y:auto;padding:0 12px 16px;
+    scrollbar-width:thin;scrollbar-color:var(--line) transparent;
   }
-  .sv-nav-scroll .sv-cap:first-child{padding-top:6px}
+  /* A caption names a group; it does not shout over its items. */
+  .sv-cap{
+    font-size:var(--text-12);font-weight:600;color:var(--text-faint);
+    padding:18px 10px 6px;
+  }
+  .sv-nav-scroll .sv-cap:first-child{padding-top:10px}
+  /* 34px rows: eleven panes, two captions and the way out fit a 650px dialog
+     without the list scrolling. The selection is a neutral fill and the
+     accent stays on the icon, so the row says "here" without a stripe. */
   .sv-item{
-    position:relative;width:100%;height:40px;padding:0 12px;border-radius:var(--radius-md);
-    display:flex;align-items:center;gap:12px;text-align:left;
-    font-size:var(--text-14);color:var(--text-muted);
+    position:relative;width:100%;height:34px;padding:0 10px;border-radius:8px;
+    display:flex;align-items:center;gap:11px;text-align:left;
+    font-size:var(--text-14);font-weight:450;color:var(--text-muted);
     transition:background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
   }
   .sv-item .sv-ico{display:inline-flex;flex:none;color:var(--text-faint);transition:color var(--dur-fast) var(--ease-standard)}
-  .sv-item:hover{background:var(--surface-overlay);color:var(--text)}
+  .sv-item:hover{background:var(--set-hover);color:var(--text)}
   .sv-item:hover .sv-ico{color:var(--text-muted)}
-  .sv-item.on{background:var(--accent-soft);color:var(--text);font-weight:550}
+  .sv-item.on{background:var(--set-select);color:var(--text);font-weight:550}
   .sv-item.on .sv-ico{color:var(--accent-text)}
-  .sv-item.on::before{
-    content:"";position:absolute;left:-12px;top:8px;bottom:8px;width:3px;
-    background:var(--accent);border-radius:0 2px 2px 0;
-  }
   .sv-item.danger{color:var(--danger-text)}
   .sv-item.danger .sv-ico{color:var(--danger-text)}
   .sv-item.danger:hover{background:var(--danger-soft)}
   .sv-main{grid-column:2;grid-row:2;position:relative;min-width:0;min-height:0;overflow:hidden;display:flex;flex-direction:column}
   /*
-   * The title bar, outside the scroller.
+   * The head of the pane, outside the scroller.
    *
-   * The pane's name used to be the first thing in the scrolling column, which
-   * meant scrolling three screens of roles left nothing on screen saying which
-   * pane they belonged to — and put the close button next to whatever happened
-   * to be under it. Now the name, the sentence under it and the way out are one
-   * fixed band, and only the content moves.
+   * Scrolling three screens of roles must still leave the pane's name on
+   * screen, so the name, the sentence under it and the way out stay put and
+   * only the content moves. It stands on the sheet, aligned with the column
+   * under it, and its lower edge shows only once something scrolls beneath.
    */
   .sv-bar{
-    grid-column:2;grid-row:1;display:flex;align-items:center;gap:20px;
-    padding:14px 26px 14px 34px;
-    border-bottom:1px solid var(--line-subtle);
-    background:var(--surface-base);
+    grid-column:2;grid-row:1;position:relative;z-index:1;
+    display:flex;align-items:center;gap:16px;
+    padding:26px 18px 18px var(--set-pad);
+    background:var(--set-sheet);border-bottom:1px solid transparent;
   }
-  .sv-bar-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
-  .sv-bar-txt h2{font-size:var(--text-18);font-weight:600;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sv-bar-txt{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+  .sv-bar-txt h2{font-size:var(--text-20);font-weight:600;letter-spacing:-0.01em;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .sv-bar-txt p{font-size:var(--text-13);color:var(--text-faint);line-height:1.35;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .sv-bar .dlg-x{align-self:flex-start;margin-top:-10px}
+  @supports (animation-timeline: scroll()){
+    .sv-bar{animation:set-bar-edge linear both;animation-timeline:--set-scroll;animation-range:0 24px}
+  }
+  @keyframes set-bar-edge{to{border-bottom-color:var(--line-subtle)}}
   /*
    * The way out of every dialog (`DialogClose`): a bare cross on the
    * dialog's own surface, which only takes a tile under the pointer. It used
@@ -81,7 +121,13 @@
   }
   .dlg-x:hover:not(:disabled){background:var(--surface-overlay);color:var(--text)}
   .dlg-x:disabled{opacity:0.4;cursor:default}
-  .sv-panes{flex:1;min-height:0;overflow-y:auto;padding:24px 34px 48px;width:100%}
+  /* The pane fills the sheet to its right margin: a capped column left a
+     strip of empty sheet beside every group. */
+  .sv-panes{
+    flex:1;min-height:0;overflow-y:auto;padding:6px var(--set-pad) 56px;width:100%;
+    scroll-timeline:--set-scroll block;scrollbar-gutter:stable;
+    scrollbar-width:thin;scrollbar-color:var(--line) transparent;
+  }
   .sv-pane{display:none}
   .sv-pane.on{display:block;animation:viewIn var(--dur-base) var(--ease-standard)}
   /* What is left of the old title row: the action that used to sit beside the
@@ -152,21 +198,48 @@
   .frm-row:has(> .frm-switch) .frm-lab{padding-top:0}
   .frm-ctl.frm-switch{display:flex;align-items:center;justify-content:flex-end;padding-top:0}
   .frm-actions{display:flex;justify-content:flex-end;padding-top:20px;--ui-button-disabled-opacity:0.45}
+  /* In a settings pane the label column grows with the group: a fixed 200px
+     broke a two-line explanation into four beside a control that did not
+     need the room. A form standing straight on the pane is a group itself. */
+  .sv-pane .frm-row:not(:has(> .frm-switch)){grid-template-columns:minmax(0,1fr) minmax(0,1.25fr)}
+  .sv-pane .frm-row{padding:16px 0}
+  .sv-pane .frm-lab{font-weight:500}
+  .sc-b > .frm,.sv-pane > .frm{border-top:0}
+  .sc-b .frm-row:last-child,.sv-pane > .frm > .frm-row:last-child{border-bottom:0}
+  .sv-pane > .frm{
+    padding:0 20px;background:var(--set-group);
+    border:1px solid var(--line-subtle);border-radius:var(--radius-lg);
+  }
 
   /* One column once the label column costs more than it explains. */
   @media (max-width:760px){
-    .frm-row{grid-template-columns:minmax(0,1fr);gap:10px}
+    .frm-row,.sv-pane .frm-row:not(:has(> .frm-switch)){grid-template-columns:minmax(0,1fr);gap:10px}
     .frm-lab{padding-top:0}
     .frm-ctl.frm-switch{padding-top:0}
   }
-  /* karty ustawień */
-  .sc{background:var(--surface-base);border:1px solid var(--line-subtle);border-radius:var(--radius-lg);margin-bottom:18px;overflow:hidden}
+  /*
+   * A settings section is a heading over a group. The heading stands on the
+   * sheet and the rows share one lifted box, the way a list of settings is
+   * read: the group's name once, then its rows. The old card put an icon, a
+   * title and a rule inside the box, which repeated the nav's icon and, on a
+   * pane of one section, the pane's own title.
+   */
+  .sc{margin-bottom:30px}
   .sc-h{
-    display:flex;align-items:center;gap:10px;padding:16px 20px;
-    border-bottom:1px solid var(--line-subtle);font-size:var(--text-15);font-weight:600;
+    display:flex;align-items:center;gap:8px;min-height:30px;padding:0 4px 8px;
+    font-size:var(--text-14);font-weight:600;color:var(--text);
   }
-  .sc-ico{display:inline-flex;color:var(--accent-text);flex:none}
-  .sc-b{padding:18px 20px 20px}
+  .sc-b{
+    padding:20px;background:var(--set-group,var(--surface-base));
+    border:1px solid var(--line-subtle);border-radius:var(--radius-lg);
+  }
+  .sc-b:has(> .frm:first-child){padding-block:0}
+  /* A pane of one section names it in its own head; the section heading stays
+     for screen readers only. */
+  .sc-lone > .sc-h{
+    position:absolute;width:1px;height:1px;overflow:hidden;
+    clip-path:inset(50%);white-space:nowrap;
+  }
   .sc-row{display:flex;align-items:center;gap:20px;padding:10px 0}
   .sc-row + .sc-row{border-top:1px solid var(--line-subtle);margin-top:4px;padding-top:14px}
   .fld-lab{display:block;font-size:var(--text-11);font-weight:700;letter-spacing:0.09em;color:var(--text-faint);margin-bottom:9px}
@@ -685,9 +758,8 @@
   .sound-rules{display:flex;flex-direction:column}
   .sound-rule-row{display:flex;align-items:center;gap:20px;padding:15px 2px}
   .sound-rule-row + .sound-rule-row{border-top:1px solid var(--line-subtle)}
-  .danger-section{border-color:color-mix(in oklab,var(--danger-line) 55%,var(--line-subtle))}
-  .danger-section .sc-h{border-bottom-color:color-mix(in oklab,var(--danger-line) 40%,var(--line-subtle))}
-  .danger-section .sc-ico{color:var(--danger-text)}
+  .danger-section > .sc-h{color:var(--danger-text)}
+  .danger-section > .sc-b{border-color:color-mix(in oklab,var(--danger-line) 55%,var(--line-subtle))}
 
   /* ---------- WYDANIE DESKTOPOWE ---------- */
   .desktop-release{max-width:760px}
@@ -959,18 +1031,13 @@
   .ch-settings-form .frm-row:first-child{padding-top:0}
   .ch-settings-form .frm-row:last-child{padding-bottom:0;border-bottom:0}
   .ch-settings{--ui-button-gap:7px}
-  .ch-settings .danger-section{
+  .ch-settings .danger-section > .sc-b{
     border-color:color-mix(in oklab, var(--danger-line) 60%, var(--line-subtle));
   }
-  .ch-settings .danger-section .sc-h{
-    color:var(--danger-text);
-    border-bottom-color:color-mix(in oklab, var(--danger-line) 42%, var(--line-subtle));
-  }
-  .ch-settings .danger-section .sc-ico{color:var(--danger-text)}
   .ch-settings-foot{
     flex:none;display:flex;align-items:center;justify-content:flex-end;gap:10px;
-    padding:14px 34px 16px;border-top:1px solid var(--line-subtle);
-    background:var(--surface-base);
+    padding:14px var(--set-pad) 16px;border-top:1px solid var(--line-subtle);
+    background:var(--set-sheet);
   }
   /* ---------- NOWY KANAŁ ---------- */
   /*
@@ -1097,8 +1164,8 @@
       grid-column:1;grid-row:2;
       display:grid;grid-template-columns:minmax(0,1fr) auto;
       grid-template-rows:auto;min-height:0;max-height:none;
-      border-right:none;border-bottom:1px solid var(--line);
-      background:var(--surface-raised);
+      border-right:none;border-bottom:1px solid var(--line-subtle);
+      background:var(--set-sheet);
     }
     /* The title bar already names the current settings pane and owns the
        close action. Repeating the account/server identity between it and the
@@ -1116,7 +1183,6 @@
       width:auto;height:44px;min-height:44px;flex:none;padding:0 13px;gap:8px;
       scroll-snap-align:nearest;white-space:nowrap;font-size:var(--text-13);
     }
-    .sv-item.on::before{display:none}
     .sv-nav:has(.us-out) .sv-nav-scroll{grid-column:1;grid-row:1}
     .sv-nav .us-out{
       grid-column:2;grid-row:1;margin:0;padding:5px 8px 8px 4px;
@@ -1126,8 +1192,10 @@
       width:44px;padding:0;justify-content:center;gap:0;font-size:0;
     }
     .sv-main{grid-column:1;grid-row:3;min-height:0}
-    .sv-bar{grid-column:1;grid-row:1;min-height:68px;padding:10px 12px 10px 16px;gap:10px}
+    .sv-bar{grid-column:1;grid-row:1;min-height:68px;padding:12px 8px 12px 16px;gap:10px}
+    .sv-bar-txt h2{font-size:var(--text-18)}
     .sv-bar-txt p{font-size:var(--text-12)}
+    .sv-bar .dlg-x{margin-top:0;align-self:center}
     .dlg-x{width:44px;height:44px}
     .sv-panes{
       padding:18px 16px max(36px, env(safe-area-inset-bottom));
@@ -1137,9 +1205,10 @@
     .ov-id{align-items:flex-start;flex-wrap:wrap}
     .ov-icon-actions{width:calc(100% - 58px);margin-left:58px}
     .ov-icon-note{margin-left:58px}
-    .sc{margin-bottom:14px}
-    .sc-h{padding:14px 16px}
+    .sc{margin-bottom:24px}
+    .sc-h{padding:0 2px 8px}
     .sc-b{padding:16px}
+    .sv-pane > .frm{padding:0 16px}
     .set-item{gap:8px}
     .set-item-act{
       min-width:44px;min-height:44px;padding-inline:6px;

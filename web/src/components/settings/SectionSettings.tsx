@@ -166,7 +166,7 @@ export function SectionSettings({
     switch (active) {
       case "general":
         return (
-          <SettingsSection title={t("section.name")} icon="folder" bodyClassName="ch-settings-form">
+          <SettingsSection title={t("section.name")} bodyClassName="ch-settings-form">
             <div className="frm">
               <div className="frm-row">
                 <label className="frm-lab" htmlFor={nameFieldId}>
@@ -190,7 +190,7 @@ export function SectionSettings({
         );
       case "permissions":
         return (
-          <SettingsSection title={t("channel.channelPermissions")} icon="shield">
+          <SettingsSection title={t("channel.channelPermissions")}>
             <p className="fld-note">{t("section.permissionsDetailText")}</p>
             {roles.length === 0 ? (
               <p className="fld-note">{t("channel.noRoles")}</p>
@@ -210,7 +210,7 @@ export function SectionSettings({
         );
       case "danger":
         return (
-          <SettingsSection title={t("section.delete")} icon="trash" className="danger-section">
+          <SettingsSection title={t("section.delete")} className="danger-section">
             <p className="fld-note">{t("section.deleteWarning")}</p>
             {deleteBlocked ? (
               <p className="set-note sound-error" role="alert">

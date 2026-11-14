@@ -79,7 +79,6 @@ export function RolesPane({ supported, roles, onCreate, onUpdate, onDelete }: Ro
       {supported ? null : <p className="set-note">{t("settings.rolesUnsupported")}</p>}
       <SettingsSection
         title={t("server.roles")}
-        icon="shield"
         count={roles.length}
         countLabel={t("settings.rolesCount", { count: roles.length })}
         action={
@@ -187,7 +186,6 @@ function RoleEditor({ role, draft, supported, busy, onChange, onSave, onDelete }
   return (
     <SettingsSection
       title={t("settings.rolePermissionsTitle", { name: role.name })}
-      icon={roleIcon(role)}
       className="role-editor"
     >
       <div className="role-editor-fields">

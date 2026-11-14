@@ -48,9 +48,6 @@ export function DesktopReleasePane({ loadRelease }: DesktopReleasePaneProps) {
   return (
     <section className="sc desktop-release">
       <header className="sc-h">
-        <span className="sc-ico" aria-hidden="true">
-          <Icon name="download" size={17} />
-        </span>
         {t("desktopRelease.sectionTitle")}
       </header>
       <div className="sc-b desktop-release-body">

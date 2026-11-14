@@ -71,7 +71,6 @@ export function ChannelsPane({
       {supported ? null : <p className="set-note">{t("settings.unsupported")}</p>}
       <SettingsSection
         title={t("server.railSections")}
-        icon="folder"
         count={sections.length}
         countLabel={t("settings.sectionsCount", { count: sections.length })}
         action={
@@ -150,7 +149,6 @@ export function ChannelsPane({
       </SettingsSection>
       <SettingsSection
         title={t("server.channels")}
-        icon="hash2"
         count={channels.length}
         countLabel={t("settings.channelsCount", { count: channels.length })}
         action={

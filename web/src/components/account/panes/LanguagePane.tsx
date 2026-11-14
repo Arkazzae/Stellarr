@@ -158,9 +158,6 @@ export function LanguagePane({
     <>
       <section className="sc">
         <header className="sc-h">
-          <span className="sc-ico" aria-hidden="true">
-            <Icon name="language" size={17} />
-          </span>
           {t("language.interface.title")}
         </header>
         <div className="sc-b lang-section">
@@ -176,9 +173,6 @@ export function LanguagePane({
 
       <section className="sc">
         <header className="sc-h">
-          <span className="sc-ico" aria-hidden="true">
-            <Icon name="sparkle" size={17} />
-          </span>
           {t("language.translation.title")}
         </header>
         <div className="sc-b">

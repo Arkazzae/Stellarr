@@ -1,6 +1,5 @@
 "use client";
 
-import { Icon } from "@stellarr/ui/icons";
 import { Avatar } from "@/components/primitives/Avatar";
 import { formatShortDate } from "@/components/settings/panes/paneFormat";
 import { useAsyncAction } from "@/hooks/useAsyncAction";
@@ -22,9 +21,6 @@ export function BansPane({ supported, bans, onUnban }: BansPaneProps) {
       {supported ? null : <p className="set-note">{t("settings.bansUnsupported")}</p>}
       <section className="sc">
         <header className="sc-h">
-          <span className="sc-ico" aria-hidden="true">
-            <Icon name="ban" size={17} />
-          </span>
           {t("settings.bansList", { count: bans.length })}
         </header>
         <div className="sc-b">

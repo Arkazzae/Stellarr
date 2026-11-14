@@ -129,6 +129,7 @@ The tables show each fallback. A fallback that names another token follows it, s
 | Token | Fallback | Used for |
 | --- | --- | --- |
 | `--ui-button-min-height` | `auto` | The least height, which a touch screen raises |
+| `--ui-button-radius` | a pill | The corner of a button with a label; the icon sizes keep `--ui-button-icon-only-radius` |
 | `--ui-button-gap` | `normal` | The space between an icon and the label |
 | `--ui-button-sm-gap` | `--ui-button-gap` | The same in the `sm` size |
 | `--ui-button-icon-size` | `auto` | The width and height of an icon, which `auto` leaves at the size of its own attributes |

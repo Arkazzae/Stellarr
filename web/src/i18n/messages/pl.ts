@@ -1,6 +1,6 @@
 export const pl = {
-  "settings.group.account": "KONTO",
-  "settings.group.app": "APLIKACJA",
+  "settings.group.account": "Konto",
+  "settings.group.app": "Aplikacja",
   "settings.account.title": "Profil",
   "settings.account.detail": "Jak widzą Cię inni: nazwa, zaimki, zdjęcia i opis",
   "settings.security.title": "Logowanie i bezpieczeństwo",
@@ -829,9 +829,9 @@ export const pl = {
   "theme.contrast.high": "Wysoki",
   "theme.contrast.highDetail": "Mocniejszy tekst, wyraźniejsze linie",
 
-  "server.general": "OGÓLNE",
-  "server.management": "ZARZĄDZANIE",
-  "server.moderation": "MODERACJA",
+  "server.general": "Ogólne",
+  "server.management": "Zarządzanie",
+  "server.moderation": "Moderacja",
   "server.overview": "Przegląd",
   "server.overviewDetail": "Nazwa, opis i widoczność serwera",
   "server.channels": "Kanały serwera",
