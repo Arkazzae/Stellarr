@@ -73,7 +73,6 @@ public sealed class MaintenanceTests
         await storage.PutAsync(
             objectKey,
             new MemoryStream([1]),
-            "application/octet-stream",
             default);
         storage.RejectDeletes = true;
 
@@ -143,7 +142,7 @@ public sealed class MaintenanceTests
 
             foreach (var key in new[] { orphanKey, posterKey, referencedKey, avatarKey, recentKey })
             {
-                await storage.PutAsync(key, new MemoryStream([1]), "application/octet-stream", default);
+                await storage.PutAsync(key, new MemoryStream([1]), default);
             }
         }
 

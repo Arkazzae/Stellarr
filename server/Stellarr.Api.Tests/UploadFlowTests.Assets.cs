@@ -1,6 +1,4 @@
 using System.Net;
-using Amazon.Runtime;
-using Amazon.S3;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Stellarr.Api.Domain;
@@ -169,10 +167,10 @@ public sealed partial class UploadFlowTests
         var url = upload.GetProperty("url").GetString()!;
         var posterUrl = upload.GetProperty("posterUrl").GetString()!;
 
-        storage.Fault = HttpStatusCode.RequestedRangeNotSatisfiable;
+        storage.Fault = key => new RangeNotSatisfiableException(key);
         Assert.Equal(HttpStatusCode.RequestedRangeNotSatisfiable, (await maja.SendAsync(Get(url, "bytes=900-"))).StatusCode);
 
-        storage.Fault = HttpStatusCode.NotFound;
+        storage.Fault = key => new ObjectNotFoundException(key);
         Assert.Equal(HttpStatusCode.NotFound, (await maja.GetAsync(url)).StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, (await maja.GetAsync(posterUrl)).StatusCode);
     }
@@ -191,19 +189,19 @@ public sealed partial class UploadFlowTests
         return (await ReadAsync(response)).GetProperty("url").GetString()!;
     }
 
-    /// <summary>Reads like an object store that fails on demand with the status it would answer.</summary>
+    /// <summary>Reads like an object store that fails on demand with the error it would raise.</summary>
     private sealed class FaultyReadStorage(FakeObjectStorage inner) : IObjectStorage
     {
-        public HttpStatusCode? Fault { get; set; }
+        public Func<string, Exception>? Fault { get; set; }
 
-        public Task EnsureBucketAsync(CancellationToken cancellationToken) => inner.EnsureBucketAsync(cancellationToken);
+        public Task PrepareAsync(CancellationToken cancellationToken) => inner.PrepareAsync(cancellationToken);
 
-        public Task PutAsync(string key, Stream data, string contentType, CancellationToken cancellationToken) =>
-            inner.PutAsync(key, data, contentType, cancellationToken);
+        public Task PutAsync(string key, Stream data, CancellationToken cancellationToken) =>
+            inner.PutAsync(key, data, cancellationToken);
 
         public Task<StoredObject> GetAsync(string key, ByteRange? range, CancellationToken cancellationToken) =>
-            Fault is { } status
-                ? throw new AmazonS3Exception("The store refused.", ErrorType.Unknown, "Fault", "request", status)
+            Fault is { } fault
+                ? throw fault(key)
                 : inner.GetAsync(key, range, cancellationToken);
 
         public Task DeleteAsync(string key, CancellationToken cancellationToken) =>

@@ -330,7 +330,7 @@ public sealed class EmbedPipelineTests
         var objectKey = $"embeds/tests/{attachmentId:N}.png";
         using (var content = new MemoryStream(FakeUnfurler.Png))
         {
-            await storage.PutAsync(objectKey, content, "image/png", CancellationToken.None);
+            await storage.PutAsync(objectKey, content, CancellationToken.None);
         }
 
         db.Messages.Add(new Message

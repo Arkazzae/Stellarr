@@ -86,7 +86,7 @@ public static class ServerEndpoints
 
         var id = Guid.NewGuid();
         var key = $"servers/{server.Id:N}/icon/{id:N}{inspection.Spec.Extension}";
-        await mediaStorage.StoreAsync(key, file, inspection.Spec.ContentType, cancellationToken);
+        await mediaStorage.StoreAsync(key, file, cancellationToken);
 
         db.ImageAttachments.Add(new ImageAttachment
         {

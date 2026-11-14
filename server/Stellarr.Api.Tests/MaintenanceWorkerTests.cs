@@ -175,7 +175,7 @@ public sealed class MaintenanceWorkerTests
 
     private static async Task QueueObjectAsync(StellarrWebApplicationFactory factory, string key)
     {
-        await Storage(factory).PutAsync(key, new MemoryStream([1]), "application/octet-stream", default);
+        await Storage(factory).PutAsync(key, new MemoryStream([1]), default);
         await using var scope = factory.OpenScope(out var db);
         db.ObjectDeletions.Add(new ObjectDeletion { ObjectKey = key, QueuedAt = DateTime.UtcNow });
         await db.SaveChangesAsync();

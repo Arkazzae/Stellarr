@@ -242,7 +242,7 @@ public sealed class MaintenanceRetentionTests
     }
 
     private static Task PutAsync(FakeObjectStorage storage, string key) =>
-        storage.PutAsync(key, new MemoryStream([1]), "application/octet-stream", default);
+        storage.PutAsync(key, new MemoryStream([1]), default);
 
     private static ImageAttachment Attachment(Guid id, User uploader, string key, DateTime createdAt)
     {

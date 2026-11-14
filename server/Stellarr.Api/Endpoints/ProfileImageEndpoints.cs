@@ -69,7 +69,7 @@ public static class ProfileImageEndpoints
         var user = await AccountEndpoints.FindCurrentAsync(principal, db, cancellationToken);
         var id = Guid.NewGuid();
         var key = $"profiles/{user.Id:N}/{image.Name}/{id:N}{inspection.Spec.Extension}";
-        await mediaStorage.StoreAsync(key, file, inspection.Spec.ContentType, cancellationToken);
+        await mediaStorage.StoreAsync(key, file, cancellationToken);
 
         db.ImageAttachments.Add(new ImageAttachment
         {
