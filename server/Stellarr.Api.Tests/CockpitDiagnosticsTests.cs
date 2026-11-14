@@ -91,7 +91,7 @@ public sealed partial class CockpitDiagnosticsTests : IClassFixture<StellarrWebA
 
         Assert.Equal("healthy", answering.State);
         Assert.Equal("error", down.State);
-        Assert.Equal("Bucket nie odpowiedział na ostatnie sprawdzenie.", down.Detail);
+        Assert.Equal("Magazyn obiektów nie odpowiedział na ostatnie sprawdzenie.", down.Detail);
         var history = (await JsonAsync(await owner.GetAsync("/api/cockpit/runtime"))).GetProperty("history").EnumerateArray().ToArray();
         Assert.False(history[^1].GetProperty("storageUp").GetBoolean());
     }

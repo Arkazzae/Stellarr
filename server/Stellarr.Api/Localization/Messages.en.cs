@@ -93,8 +93,8 @@ public sealed partial class Messages
         MessageKey.CockpitBackupRunning => "A backup is already being made. Wait for it to finish.",
         MessageKey.CockpitBackupNoSpace => "There is not enough free disk space for the backup: it needs about {needed}, and {free} is free.",
         MessageKey.CockpitBackupStorageUnreadable => "The object store could not be read: {reason}",
-        MessageKey.CockpitStorageAnswering => "The bucket answers the check every 30 s.",
-        MessageKey.CockpitStorageDown => "The bucket did not answer the last check.",
+        MessageKey.CockpitStorageAnswering => "The object store answers the check every 30 s.",
+        MessageKey.CockpitStorageDown => "The object store did not answer the last check.",
         MessageKey.CockpitServerIsInstance => "The instance server cannot be deleted or handed over from Cockpit.",
         MessageKey.CockpitAuditServerDeleted => "deleted the server {name}",
         MessageKey.CockpitCannotRecoverSelf => "You cannot recover your own account in Cockpit. Use the CLI: stellarr security recover.",
@@ -126,7 +126,7 @@ public sealed partial class Messages
         MessageKey.CockpitMaintenanceRunning => "Retention is running.",
         MessageKey.CockpitMaintenanceOff => "Turned off in the configuration.",
         MessageKey.CockpitStorageInitializationOff => "Initialization is turned off.",
-        MessageKey.CockpitStorageChecked => "The bucket was checked at start-up.",
+        MessageKey.CockpitStorageChecked => "The object store was checked at start-up.",
 
         // Uploads and images
         MessageKey.FileEmpty => "The file is empty.",
