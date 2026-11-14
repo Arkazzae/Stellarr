@@ -77,6 +77,12 @@ public static class BackupRestore
         string workDirectory,
         CancellationToken cancellationToken)
     {
+        if (await IsDatabaseFileAsync(archivePath, cancellationToken))
+        {
+            throw new RestoreRefusedException(
+                "This is a database-only backup: a single SQLite file, not an archive. Only a full backup is restored as a whole; restore this one by hand, as docs/admin/backups.md describes.");
+        }
+
         BackupManifest manifest;
         try
         {
@@ -113,6 +119,7 @@ public static class BackupRestore
     {
         dataRoot = Path.GetFullPath(dataRoot);
         var restoreFolder = Path.Combine(dataRoot, FolderName);
+        ClearLeftovers(dataRoot);
         var manifest = await CheckAsync(archivePath, restoreFolder, cancellationToken);
         CheckFreeSpace(archivePath, dataRoot);
 
@@ -147,6 +154,32 @@ public static class BackupRestore
         return new RestoreResult(manifest, previous);
     }
 
+    /// <summary>
+    /// Removes what a staging or a restore cut short by a stop left in the
+    /// restore folder: a half-copied archive, the database copied out for its
+    /// check, a half-unpacked archive. None of them is data the instance reads,
+    /// and left there they would count against the next restore's space.
+    /// </summary>
+    public static void ClearLeftovers(string dataRoot)
+    {
+        var folder = Path.Combine(dataRoot, FolderName);
+        if (!Directory.Exists(folder))
+        {
+            return;
+        }
+
+        foreach (var directory in Directory.EnumerateDirectories(folder, ".unpacking-*"))
+        {
+            TryDeleteDirectory(directory);
+        }
+
+        foreach (var file in Directory.EnumerateFiles(folder, ".verify-*")
+                     .Concat(Directory.EnumerateFiles(folder, $"{StagedArchiveName}.*.partial")))
+        {
+            File.Delete(file);
+        }
+    }
+
     /// <summary>Records what the last restore did, beside the archives, for a person to read.</summary>
     public static async Task WriteResultAsync(string dataRoot, object result, CancellationToken cancellationToken)
     {
@@ -156,6 +189,16 @@ public static class BackupRestore
         var pending = path + ".partial";
         await File.WriteAllTextAsync(pending, JsonSerializer.Serialize(result, Json), cancellationToken);
         File.Move(pending, path, overwrite: true);
+    }
+
+    /// <summary>Whether the file starts as every SQLite database does, as Cockpit's database-only backups are.</summary>
+    private static async Task<bool> IsDatabaseFileAsync(string path, CancellationToken cancellationToken)
+    {
+        var header = "SQLite format 3\0"u8.ToArray();
+        var start = new byte[header.Length];
+        await using var file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 4096, useAsync: true);
+        var read = await file.ReadAtLeastAsync(start, start.Length, throwOnEndOfStream: false, cancellationToken);
+        return read == header.Length && start.AsSpan().SequenceEqual(header);
     }
 
     private static async Task<BackupManifest> ReadManifestAsync(ZipArchive zip, CancellationToken cancellationToken)
