@@ -55,7 +55,14 @@ public sealed class User
 public sealed class UserPreferenceSettings
 {
     public Guid UserId { get; set; }
+    /// <summary>Incoming calls pop up over other apps; mentions have their own switch.</summary>
     public bool DesktopNotifications { get; set; } = true;
+
+    /// <summary>A mention pops up over other apps while the client is in the background.</summary>
+    public bool MentionPopups { get; set; } = true;
+
+    /// <summary>An incoming call rings while the client is open.</summary>
+    public bool CallRingtone { get; set; } = true;
     public bool EmailNotifications { get; set; }
     public bool PushNotifications { get; set; }
     public bool MentionsOnly { get; set; } = true;

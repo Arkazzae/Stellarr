@@ -98,6 +98,8 @@ export type ClientSettingsSnapshot = Record<ClientSettingsSection, Record<string
 
 export interface AccountPreferences {
   desktopNotifications: boolean;
+  mentionPopups: boolean;
+  callRingtone: boolean;
   emailNotifications: boolean;
   pushNotifications: boolean;
   mentionsOnly: boolean;

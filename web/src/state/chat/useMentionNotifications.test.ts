@@ -12,7 +12,8 @@ vi.mock("@/lib/notifications/browser", () => ({ showMessageNotification: vi.fn()
 const t = (key: MessageKey, values?: MessageValues) => translateMessage("pl", key, values);
 
 const preferences = {
-  desktopNotifications: true,
+  desktopNotifications: false,
+  mentionPopups: true,
   mutedChannelIds: [] as string[],
 } as UserPreferences;
 
@@ -90,6 +91,23 @@ describe("useMentionNotifications", () => {
 
     expect(vi.mocked(showMessageNotification).mock.calls[0]![0].title)
       .toBe("Nils oznacza Cię w wiadomości");
+  });
+
+  it("follows the mention switch, not the call's", () => {
+    const { deliver, view, chat } = setup();
+
+    view.rerender({
+      chat,
+      selfId: "u-ada",
+      selfUsername: "ada",
+      preferences: { ...preferences, desktopNotifications: true, mentionPopups: false },
+      channelName: () => "projekt",
+      openChannel: vi.fn(),
+      t,
+    });
+    deliver(message("@ada spójrz"));
+
+    expect(showMessageNotification).not.toHaveBeenCalled();
   });
 
   it("stays quiet while the window has focus", () => {

@@ -309,25 +309,44 @@ describe("UserSettingsContainer", () => {
   });
 
   describe("system notifications", () => {
-    function change(enabled: boolean) {
+    function change(patch: { desktopNotifications?: boolean; mentionPopups?: boolean }) {
       const { onChange } = dialog().systemNotifications ?? {};
-      return act(async () => onChange?.(enabled));
+      return act(async () => onChange?.(patch));
     }
 
-    it("stores the switch only once the browser grants permission", async () => {
+    it("stores a pop-up switch only once the browser grants permission", async () => {
       render(<UserSettingsContainer />);
 
-      await change(true);
+      await change({ mentionPopups: true });
 
       expect(world.notifications["request"]).toHaveBeenCalledOnce();
+      expect(setPreferences()).toHaveBeenCalledWith({ mentionPopups: true });
+    });
+
+    it("stores a switch at once where the browser already agreed", async () => {
+      world.notifications["permission"] = "granted";
+      render(<UserSettingsContainer />);
+
+      await change({ desktopNotifications: true });
+
+      expect(world.notifications["request"]).not.toHaveBeenCalled();
       expect(setPreferences()).toHaveBeenCalledWith({ desktopNotifications: true });
+    });
+
+    it("asks the browser from the allow button and changes no switch", async () => {
+      render(<UserSettingsContainer />);
+
+      await act(async () => dialog().systemNotifications?.onAllow());
+
+      expect(world.notifications["request"]).toHaveBeenCalledOnce();
+      expect(setPreferences()).not.toHaveBeenCalled();
     });
 
     it("leaves the preference alone when permission is refused", async () => {
       world.notifications["request"] = vi.fn(async () => false);
       render(<UserSettingsContainer />);
 
-      await change(true);
+      await change({ desktopNotifications: true });
 
       expect(setPreferences()).not.toHaveBeenCalled();
     });
@@ -336,6 +355,7 @@ describe("UserSettingsContainer", () => {
       render(<UserSettingsContainer />);
 
       expect(dialog().systemNotifications?.mentions).toBe(true);
+      expect(dialog().ownRingtone).toBe(true);
       dialog().systemNotifications?.onTest?.();
       expect(world.showTestNotification).toHaveBeenCalledExactlyOnceWith(
         "Stellarr",
@@ -349,12 +369,14 @@ describe("UserSettingsContainer", () => {
 
       expect(dialog().systemNotifications?.mentions).toBe(false);
       expect(dialog().systemNotifications?.onTest).toBeUndefined();
+      // The system rings there, with its own sound.
+      expect(dialog().ownRingtone).toBe(false);
     });
 
     it("switches off without asking the browser", async () => {
       render(<UserSettingsContainer />);
 
-      await change(false);
+      await change({ desktopNotifications: false });
 
       expect(world.notifications["request"]).not.toHaveBeenCalled();
       expect(setPreferences()).toHaveBeenCalledWith({ desktopNotifications: false });

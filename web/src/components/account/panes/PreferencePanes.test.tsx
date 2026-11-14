@@ -8,6 +8,8 @@ import { AdvancedPane, PrivacyPane } from "./PreferencePanes";
 
 const preferences: UserPreferences = {
   desktopNotifications: true,
+  mentionPopups: true,
+  callRingtone: true,
   emailNotifications: false,
   pushNotifications: false,
   mentionsOnly: true,

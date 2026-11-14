@@ -79,6 +79,8 @@ export interface UserSettingsProps {
   mutedChannels?: MutedChannelsProps;
   /** Plays the message sound once, from the notifications pane. */
   onPlayMessageSound?: () => void;
+  /** Whether this app rings for a call itself; the Android app leaves it to the system. */
+  ownRingtone?: boolean;
   sounds: SoundsPaneProps;
   keybinds: KeybindsPaneProps & { cancelRecording: () => void };
   startup?: StartupPreferenceProps;
@@ -115,6 +117,7 @@ export function UserSettings({
   systemNotifications,
   mutedChannels,
   onPlayMessageSound,
+  ownRingtone,
   sounds,
   keybinds,
   startup,
@@ -191,6 +194,7 @@ export function UserSettings({
             systemNotifications={systemNotifications}
             muted={mutedChannels}
             onPlaySound={onPlayMessageSound}
+            ringtone={ownRingtone}
           />
         );
       case "dzwieki":

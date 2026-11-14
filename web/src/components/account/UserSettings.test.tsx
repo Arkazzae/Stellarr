@@ -96,6 +96,8 @@ const camera: CameraTest = {
 
 const preferences: UserPreferences = {
   desktopNotifications: true,
+  mentionPopups: true,
+  callRingtone: true,
   emailNotifications: false,
   pushNotifications: false,
   mentionsOnly: true,
@@ -533,7 +535,7 @@ describe("UserSettings", () => {
     await user.click(screen.getByRole("button", { name: /Powiadomienia/ }));
     expect(screen.queryByRole("switch", { name: "Powiadomienia push" })).toBeNull();
     expect(screen.queryByRole("switch", { name: "Powiadomienia e-mail" })).toBeNull();
-    await user.click(screen.getByRole("radio", { name: /Wyłączony/ }));
+    await user.click(screen.getByRole("switch", { name: "Dźwięk: Nils oznacza Cię" }));
 
     expect(onChange).toHaveBeenCalledWith({ messageSound: false });
   });

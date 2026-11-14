@@ -21,6 +21,8 @@ const BLANK_ACCOUNT: Account = {
 
 const DEFAULT_PREFERENCES: UserPreferences = {
   desktopNotifications: true,
+  mentionPopups: true,
+  callRingtone: true,
   emailNotifications: false,
   pushNotifications: false,
   mentionsOnly: true,

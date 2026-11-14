@@ -113,6 +113,11 @@ public sealed class AccountSchemaUpgradeTests
                     "ALTER TABLE \"UserPreferences\" DROP COLUMN \"KeybindSettingsJson\";");
                 await old.Database.ExecuteSqlRawAsync(
                     "ALTER TABLE \"UserPreferences\" DROP COLUMN \"VoiceSettingsJson\";");
+                // And from before mentions and calls had switches of their own.
+                await old.Database.ExecuteSqlRawAsync(
+                    "ALTER TABLE \"UserPreferences\" DROP COLUMN \"MentionPopups\";");
+                await old.Database.ExecuteSqlRawAsync(
+                    "ALTER TABLE \"UserPreferences\" DROP COLUMN \"CallRingtone\";");
             }
 
             await using (var upgraded = new AppDbContext(options))
@@ -134,6 +139,8 @@ public sealed class AccountSchemaUpgradeTests
                 Assert.Null(preferences.LanguageSettingsJson);
                 Assert.Null(preferences.KeybindSettingsJson);
                 Assert.Null(preferences.VoiceSettingsJson);
+                Assert.True(preferences.MentionPopups);
+                Assert.True(preferences.CallRingtone);
             }
         }
         finally

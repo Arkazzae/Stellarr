@@ -289,6 +289,8 @@ public static class AccountEndpoints
     private static void Apply(UpdatePreferencesRequest request, UserPreferenceSettings preferences)
     {
         preferences.DesktopNotifications = request.DesktopNotifications ?? preferences.DesktopNotifications;
+        preferences.MentionPopups = request.MentionPopups ?? preferences.MentionPopups;
+        preferences.CallRingtone = request.CallRingtone ?? preferences.CallRingtone;
         preferences.EmailNotifications = request.EmailNotifications ?? preferences.EmailNotifications;
         preferences.PushNotifications = request.PushNotifications ?? preferences.PushNotifications;
         preferences.MentionsOnly = request.MentionsOnly ?? preferences.MentionsOnly;

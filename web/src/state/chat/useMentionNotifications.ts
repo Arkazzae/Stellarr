@@ -27,9 +27,8 @@ function isAway(): boolean {
 
 /**
  * A mention pops up over other apps while the person is away from Stellarr,
- * when they allowed system notifications. The same switch and permission ring
- * a call; there is no second switch for mentions, because a pop-up for
- * someone calling and one for someone naming you answer the same question.
+ * when they allowed system notifications. It has its own switch beside the
+ * call's, so mentions can stay in the app while calls still pop up.
  *
  * It listens beside the chat feed rather than inside it: the feed puts the
  * message in the transcript and plays the sound, and neither needs to know
@@ -61,7 +60,7 @@ export function useMentionNotifications({
           content: message.content,
           selfId: now.selfId,
           selfUsername: now.selfUsername,
-          enabled: now.preferences.desktopNotifications,
+          enabled: now.preferences.mentionPopups,
           mutedChannelIds: now.preferences.mutedChannelIds,
           away: isAway(),
         })) {
