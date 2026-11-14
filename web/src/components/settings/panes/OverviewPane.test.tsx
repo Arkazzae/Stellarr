@@ -108,6 +108,6 @@ describe("OverviewPane server icon", () => {
       description: "Prywatna przestrzeń.",
       isPublic: false,
     }));
-    expect(screen.getByRole("button", { name: "Zapisano" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Zmiany" })).toHaveTextContent("Zapisano");
   });
 });

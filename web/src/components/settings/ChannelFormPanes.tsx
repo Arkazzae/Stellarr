@@ -2,8 +2,8 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 
-import { Button } from "@stellarr/ui";
 import { Icon } from "@stellarr/ui/icons";
+import { SettingsSaveBar } from "@/components/settings/SettingsSaveBar";
 import { SettingsSection } from "@/components/settings/SettingsSection";
 import {
   channelIcon,
@@ -308,30 +308,20 @@ export function ChannelOverviewPane({ channel, supported, onSave }: ChannelOverv
         />
       </div>
 
-      <div className="frm-actions">
-        {saveAction.failed ? (
-          <p className="set-note sound-error" role="alert">
-            {t("channel.settingsSaveFailed")}
-          </p>
-        ) : null}
-        <Button
-          type="button"
-          variant="primary"
-          disabled={!supported || !dirty || saveAction.pending}
-          onClick={() => void save()}
-        >
-          {saved ? (
-            <span className="sv-tick" aria-hidden="true">
-              <Icon name="tick" size={15} />
-            </span>
-          ) : null}
-          {saveAction.pending
-            ? t("common.saving")
-            : saved
-              ? t("common.saved")
-              : t("common.saveChanges")}
-        </Button>
-      </div>
+      {saveAction.failed ? (
+        <p className="set-note sound-error ov-save-error" role="alert">
+          {t("channel.settingsSaveFailed")}
+        </p>
+      ) : null}
+
+      <SettingsSaveBar
+        dirty={dirty}
+        saving={saveAction.pending}
+        saved={saved}
+        saveDisabled={!supported}
+        onSave={() => void save()}
+        onReset={() => setDraft(current)}
+      />
     </SettingsSection>
   );
 }

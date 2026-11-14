@@ -115,7 +115,8 @@ describe("ChannelSettings editing", () => {
 
     expect(screen.getByText(/Nie masz uprawnienia do zarządzania kanałami/)).toBeVisible();
     expect(screen.getByRole("textbox", { name: /Nazwa/ })).toBeDisabled();
-    expect(screen.getByRole("button", { name: "Zapisz zmiany" })).toBeDisabled();
+    // Nothing can be changed, so nothing is ever offered for saving.
+    expect(screen.queryByRole("button", { name: "Zapisz zmiany" })).toBeNull();
 
     await goTo(user, "Powiadomienia");
     expect(screen.queryByText(/Nie masz uprawnienia/)).toBeNull();
@@ -126,13 +127,36 @@ describe("ChannelSettings editing", () => {
     const rendered = render(<ChannelSettings {...props()} />);
 
     await user.type(screen.getByRole("textbox", { name: /Nazwa/ }), "-draft");
-    await goTo(user, "Uprawnienia");
 
     rendered.rerender(<ChannelSettings {...props({ channel: voiceChannel })} />);
 
     expect(screen.getByRole("dialog", { name: "Ustawienia kanału: Salon" })).toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: /Nazwa/ })).toHaveValue("Salon");
-    expect(screen.getByRole("button", { name: "Zapisz zmiany" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: "Zapisz zmiany" })).toBeNull();
+  });
+
+  it("holds the overview while it has unsaved changes, until they are reset", async () => {
+    const user = userEvent.setup();
+    const onClose = vi.fn();
+    render(<ChannelSettings {...props({ onClose })} />);
+
+    await user.type(screen.getByRole("textbox", { name: /Nazwa/ }), "-draft");
+    await goTo(user, "Uprawnienia");
+    await user.click(screen.getByRole("button", { name: "Zamknij ustawienia kanału" }));
+
+    // Neither the pane change nor the cross threw the draft away.
+    expect(screen.getByRole("textbox", { name: /Nazwa/ })).toHaveValue("ogolny-draft");
+    expect(onClose).not.toHaveBeenCalled();
+    expect(screen.getByRole("region", { name: "Zmiany" })).toHaveTextContent(
+      "Najpierw zapisz albo przywróć",
+    );
+
+    await user.click(screen.getByRole("button", { name: "Przywróć" }));
+    expect(screen.getByRole("textbox", { name: /Nazwa/ })).toHaveValue("ogolny");
+    expect(screen.queryByRole("region", { name: "Zmiany" })).toBeNull();
+
+    await goTo(user, "Uprawnienia");
+    expect(screen.queryByRole("textbox", { name: /Nazwa/ })).toBeNull();
   });
 });
 

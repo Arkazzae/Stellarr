@@ -3,14 +3,15 @@
 import { useEffect, useId, useRef, useState } from "react";
 
 import { Button } from "@stellarr/ui";
-import { Icon } from "@stellarr/ui/icons";
 import type { Account, AccountPatch, CustomEmoji, ImageKind } from "@/ports";
 import { useLanguage } from "@/state/hooks";
+
+import { SettingsSaveBar } from "@/components/settings/SettingsSaveBar";
 
 import { BioEditor } from "./BioEditor";
 import { ProfileCardPreview } from "./ProfileCardPreview";
 
-/** How long the save button keeps showing its tick. */
+/** How long the save bar keeps saying "Saved". */
 const SAVED_FLASH_MS = 1500;
 /** The server's limit; checking here keeps the field from promising more. */
 const PRONOUNS_MAX = 32;
@@ -77,6 +78,13 @@ export function AccountPane({
     displayName.trim() !== account.displayName.trim() ||
     pronouns.trim() !== account.pronouns.trim() ||
     bio.trim() !== account.bio.trim();
+
+  const reset = () => {
+    setDisplayName(account.displayName);
+    setPronouns(account.pronouns);
+    setBio(account.bio);
+    setSaveError(null);
+  };
 
   const save = async () => {
     setSaving(true);
@@ -180,26 +188,19 @@ export function AccountPane({
         <BioEditor value={bio} customEmoji={customEmoji} onChange={setBio} />
       </div>
 
-      <div className="frm-actions">
-        <Button
-          type="button"
-          variant="primary"
-          disabled={!dirty || saving}
-          onClick={() => void save()}
-        >
-          {saved ? (
-            <span className="sv-tick" aria-hidden="true">
-              <Icon name="tick" size={15} />
-            </span>
-          ) : null}
-          {saved ? t("common.saved") : t("common.saveChanges")}
-        </Button>
-      </div>
       {saveError === null ? null : (
         <p className="acc-answer bad" role="alert">
           {saveError}
         </p>
       )}
+
+      <SettingsSaveBar
+        dirty={dirty}
+        saving={saving}
+        saved={saved}
+        onSave={() => void save()}
+        onReset={reset}
+      />
     </>
   );
 }

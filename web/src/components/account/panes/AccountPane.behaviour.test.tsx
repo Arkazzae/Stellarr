@@ -89,7 +89,7 @@ describe("AccountPane", () => {
 
     expect(onSave).toHaveBeenCalledTimes(2);
     expect(screen.queryByRole("alert")).toBeNull();
-    expect(screen.getByRole("button", { name: "Zapisano" })).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Zmiany" })).toHaveTextContent("Zapisano");
   });
 
   it("takes the fields from the account again when it changes underneath", async () => {
@@ -105,7 +105,8 @@ describe("AccountPane", () => {
 
     expect(screen.getByLabelText(/Nazwa wyświetlana/)).toHaveValue("Patryk K.");
     expect(bioField()).toHaveValue("Cześć");
-    expect(screen.getByRole("button", { name: "Zapisz zmiany" })).toBeDisabled();
+    // Nothing is left to save, so the bar is gone.
+    expect(screen.queryByRole("button", { name: "Zapisz zmiany" })).toBeNull();
   });
 
   it("reports a picture that could not be uploaded", async () => {

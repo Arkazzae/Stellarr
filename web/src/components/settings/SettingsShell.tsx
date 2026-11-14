@@ -5,6 +5,8 @@ import { Fragment, useEffect, useRef, type ReactNode } from "react";
 import { Icon, type IconName } from "@stellarr/ui/icons";
 import { DialogClose } from "@/components/primitives/DialogClose";
 
+import { SettingsSaveSlot, useSettingsGuard } from "./settingsGuard";
+
 export interface SettingsShellItem<K extends string> {
   key: K;
   label: string;
@@ -68,6 +70,10 @@ export function SettingsShell<K extends string>({
 }: SettingsShellProps<K>) {
   const panesRef = useRef<HTMLDivElement>(null);
   const navRef = useRef<HTMLElement>(null);
+  // A pane holding unsaved changes keeps both the pane and the dialog open
+  // until they are saved or reset.
+  const guard = useSettingsGuard();
+  const leave = (action: () => void) => (guard ? guard.attempt(action) : action());
 
   useEffect(() => {
     // The panes share one scroll container; without this the second pane
@@ -100,7 +106,7 @@ export function SettingsShell<K extends string>({
           <h2>{title}</h2>
           <p>{detail}</p>
         </div>
-        <DialogClose label={closeLabel} onClose={onClose} disabled={!closable} />
+        <DialogClose label={closeLabel} onClose={() => leave(onClose)} disabled={!closable} />
       </div>
       <aside className="sv-nav">
         <div className="sv-brand">
@@ -127,7 +133,7 @@ export function SettingsShell<K extends string>({
                     className={classes("sv-item", on && "on", item.danger && "danger")}
                     data-pane={item.key}
                     aria-current={on ? "page" : undefined}
-                    onClick={() => onSelect(item.key)}
+                    onClick={() => leave(() => onSelect(item.key))}
                   >
                     <span className="sv-ico" aria-hidden="true">
                       <Icon name={item.icon} size={18} />
@@ -148,6 +154,7 @@ export function SettingsShell<K extends string>({
             {children}
           </section>
         </div>
+        <SettingsSaveSlot />
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ import { useId, useState } from "react";
 import type { IconName } from "@stellarr/ui/icons";
 import { Modal } from "@/components/primitives/Modal";
 import { SettingsShell } from "@/components/settings/SettingsShell";
+import { SettingsGuardProvider, useSettingsGuardHost } from "@/components/settings/settingsGuard";
 import { AuditPane, type AuditPaneProps } from "@/components/settings/panes/AuditPane";
 import { BansPane, type BansPaneProps } from "@/components/settings/panes/BansPane";
 import { ChannelsPane, type ChannelsPaneProps } from "@/components/settings/panes/ChannelsPane";
@@ -79,12 +80,22 @@ export interface ServerSettingsProps {
 /** The full-screen `.sv-wrap` settings dialog. */
 export function ServerSettings({ open, onClose, ...content }: ServerSettingsProps) {
   const titleId = useId();
+  // Escape and a press outside close through the same guard as the cross, so
+  // an unsaved overview is never thrown away by any of them.
+  const guard = useSettingsGuardHost();
 
   // The modal mounts its children only while it is open, so the layout below
   // starts on the overview every time the dialog is reopened.
   return (
-    <Modal open={open} onClose={onClose} labelledBy={titleId} className="sv-wrap">
-      <SettingsLayout titleId={titleId} onClose={onClose} {...content} />
+    <Modal
+      open={open}
+      onClose={() => guard.attempt(onClose)}
+      labelledBy={titleId}
+      className="sv-wrap"
+    >
+      <SettingsGuardProvider guard={guard}>
+        <SettingsLayout titleId={titleId} onClose={onClose} {...content} />
+      </SettingsGuardProvider>
     </Modal>
   );
 }

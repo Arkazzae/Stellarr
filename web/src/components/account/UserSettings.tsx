@@ -35,6 +35,11 @@ import { Avatar } from "@/components/primitives/Avatar";
 import { DialogClose } from "@/components/primitives/DialogClose";
 import { Modal } from "@/components/primitives/Modal";
 import {
+  SettingsGuardProvider,
+  SettingsSaveSlot,
+  useSettingsGuardHost,
+} from "@/components/settings/settingsGuard";
+import {
   AppearancePane,
   type AppearancePaneProps,
 } from "@/components/settings/panes/AppearancePane";
@@ -87,6 +92,9 @@ export interface UserSettingsProps {
  *
  * Log out sits alone below a rule at the bottom of the nav. It is the one item
  * that opens no pane, and inside a group it would look like one that does.
+ *
+ * A pane holding unsaved changes (the profile) keeps the dialog: changing
+ * pane, closing in any way and logging out wait until it is saved or reset.
  */
 export function UserSettings({
   open,
@@ -112,6 +120,7 @@ export function UserSettings({
   const panesRef = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState(initialPane);
   const { cancelRecording, ...recorder } = keybinds;
+  const guard = useSettingsGuardHost();
 
   // Opening goes to the pane that was asked for. Derived from `open` during
   // render, so the first paint is already on it, and on the way in rather than
@@ -189,82 +198,90 @@ export function UserSettings({
   const current = USER_SETTINGS_PANES[active];
 
   return (
-    <Modal open={open} onClose={onClose} labelledBy={titleId} className="sv-wrap">
-      <div className="sv">
-        {/* First in both visual and keyboard order. One real button also
-            avoids a mobile-only duplicate that could drift from the desktop
-            one. */}
-        <div className="sv-bar">
-          <div className="sv-bar-txt">
-            <h2>{t(current.title)}</h2>
-            <p>{t(current.detail)}</p>
-          </div>
-          <DialogClose label={t("settings.close")} onClose={onClose} />
-        </div>
-
-        <aside className="sv-nav">
-          {/* Whose settings these are, the way a server's settings open with
-              the server's name. */}
-          <div className="sv-brand us-brand">
-            <Avatar
-              id={account.id}
-              displayName={account.displayName || "?"}
-              avatarUrl={account.avatarUrl}
-              presence="online"
-            />
-            <span className="sv-brand-txt">
-              <b id={titleId}>{account.displayName}</b>
-              <span>{t("settings.userSettings")}</span>
-            </span>
+    <Modal
+      open={open}
+      onClose={() => guard.attempt(onClose)}
+      labelledBy={titleId}
+      className="sv-wrap"
+    >
+      <SettingsGuardProvider guard={guard}>
+        <div className="sv">
+          {/* First in both visual and keyboard order. One real button also
+              avoids a mobile-only duplicate that could drift from the desktop
+              one. */}
+          <div className="sv-bar">
+            <div className="sv-bar-txt">
+              <h2>{t(current.title)}</h2>
+              <p>{t(current.detail)}</p>
+            </div>
+            <DialogClose label={t("settings.close")} onClose={() => guard.attempt(onClose)} />
           </div>
 
-          <nav className="sv-nav-scroll" aria-label={t("settings.sections")} ref={navRef}>
-            {USER_SETTINGS_GROUPS.map((group) => (
-              <Fragment key={group.caption}>
-                <div className="sv-cap">{t(group.caption)}</div>
-                {group.panes.map((key) => (
-                  <button
-                    key={key}
-                    type="button"
-                    className={key === active ? "sv-item on" : "sv-item"}
-                    data-pane={key}
-                    aria-current={key === active ? "page" : undefined}
-                    onClick={() => setActive(key)}
-                  >
-                    <span className="sv-ico" aria-hidden="true">
-                      <Icon name={USER_SETTINGS_PANES[key].icon} size={18} />
-                    </span>
-                    {t(USER_SETTINGS_PANES[key].title)}
-                  </button>
-                ))}
-              </Fragment>
-            ))}
-          </nav>
-
-          <div className="us-out">
-            {/* The title is for the phone layout, where the label is hidden. */}
-            <button
-              type="button"
-              className="sv-item danger"
-              title={t("settings.logout")}
-              onClick={onLogout}
-            >
-              <span className="sv-ico" aria-hidden="true">
-                <Icon name="signout" size={18} />
+          <aside className="sv-nav">
+            {/* Whose settings these are, the way a server's settings open with
+                the server's name. */}
+            <div className="sv-brand us-brand">
+              <Avatar
+                id={account.id}
+                displayName={account.displayName || "?"}
+                avatarUrl={account.avatarUrl}
+                presence="online"
+              />
+              <span className="sv-brand-txt">
+                <b id={titleId}>{account.displayName}</b>
+                <span>{t("settings.userSettings")}</span>
               </span>
-              {t("settings.logout")}
-            </button>
-          </div>
-        </aside>
+            </div>
 
-        <div className="sv-main">
-          <div className="sv-panes" ref={panesRef}>
-            <section className="sv-pane on" data-pane={active} key={active}>
-              {renderPane()}
-            </section>
+            <nav className="sv-nav-scroll" aria-label={t("settings.sections")} ref={navRef}>
+              {USER_SETTINGS_GROUPS.map((group) => (
+                <Fragment key={group.caption}>
+                  <div className="sv-cap">{t(group.caption)}</div>
+                  {group.panes.map((key) => (
+                    <button
+                      key={key}
+                      type="button"
+                      className={key === active ? "sv-item on" : "sv-item"}
+                      data-pane={key}
+                      aria-current={key === active ? "page" : undefined}
+                      onClick={() => guard.attempt(() => setActive(key))}
+                    >
+                      <span className="sv-ico" aria-hidden="true">
+                        <Icon name={USER_SETTINGS_PANES[key].icon} size={18} />
+                      </span>
+                      {t(USER_SETTINGS_PANES[key].title)}
+                    </button>
+                  ))}
+                </Fragment>
+              ))}
+            </nav>
+
+            <div className="us-out">
+              {/* The title is for the phone layout, where the label is hidden. */}
+              <button
+                type="button"
+                className="sv-item danger"
+                title={t("settings.logout")}
+                onClick={() => guard.attempt(onLogout)}
+              >
+                <span className="sv-ico" aria-hidden="true">
+                  <Icon name="signout" size={18} />
+                </span>
+                {t("settings.logout")}
+              </button>
+            </div>
+          </aside>
+
+          <div className="sv-main">
+            <div className="sv-panes" ref={panesRef}>
+              <section className="sv-pane on" data-pane={active} key={active}>
+                {renderPane()}
+              </section>
+            </div>
+            <SettingsSaveSlot />
           </div>
         </div>
-      </div>
+      </SettingsGuardProvider>
     </Modal>
   );
 }
