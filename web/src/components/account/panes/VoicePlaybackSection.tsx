@@ -82,7 +82,7 @@ export function VoicePlaybackSection({ settings, onChange, output }: VoicePlayba
     });
 
   return (
-    <VoiceSection icon="headphones" title={t("voice.playback")}>
+    <VoiceSection title={t("voice.playback")}>
       <div className="frm">
         <FormRow
           label={t("voice.outputDevice")}

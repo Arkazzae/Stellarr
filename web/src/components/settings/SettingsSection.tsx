@@ -1,10 +1,7 @@
 import type { ReactNode } from "react";
 
-import { Icon, type IconName } from "@stellarr/ui/icons";
-
 export interface SettingsSectionProps {
   title: string;
-  icon: IconName;
   /** A badge beside the title, such as how many items the block holds. */
   count?: ReactNode;
   countLabel?: string;
@@ -16,10 +13,9 @@ export interface SettingsSectionProps {
   bodyClassName?: string;
 }
 
-/** The card every settings pane is made of: an icon and title, then a body. */
+/** The group every settings pane is made of: a heading, then a box of rows. */
 export function SettingsSection({
   title,
-  icon,
   count,
   countLabel,
   countTitle,
@@ -33,9 +29,6 @@ export function SettingsSection({
   return (
     <section className={classes("sc settings-section", className)} aria-label={title}>
       <header className="sc-h asset-head">
-        <span className="sc-ico" aria-hidden="true">
-          <Icon name={icon} size={17} />
-        </span>
         <span>{title}</span>
         {count === undefined ? null : (
           <span className="asset-count" aria-label={countLabel} title={countTitle}>

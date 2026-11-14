@@ -22,7 +22,7 @@ export function VoiceCameraSection({ settings, onChange, camera }: VoiceCameraSe
   const deviceId = useId();
 
   return (
-    <VoiceSection icon="camera" title={t("voice.camera")}>
+    <VoiceSection title={t("voice.camera")}>
       <CameraPreview camera={camera} />
       <div className="frm camera-controls">
         <FormRow

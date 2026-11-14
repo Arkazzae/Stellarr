@@ -233,7 +233,6 @@ export function SoundboardPane({
 
       <SettingsSection
         title={t("settings.soundboard")}
-        icon="wave"
         count={`${sounds.length}/${MAX_SOUNDS}`}
         countLabel={t("settings.soundCount", { count: sounds.length, max: MAX_SOUNDS })}
         countTitle={t("settings.soundCountTitle")}

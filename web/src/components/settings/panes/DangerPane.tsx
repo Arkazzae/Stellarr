@@ -21,7 +21,7 @@ export function DangerPane({ supported, serverName, onTransfer, onDelete }: Dang
   return (
     <>
       {supported ? null : <p className="set-note">{t("settings.dangerUnsupported")}</p>}
-      <SettingsSection title={t("server.danger")} icon="trash" className="danger-section">
+      <SettingsSection title={t("server.danger")} className="danger-section">
         {action.failed ? (
           <p className="set-note sound-error" role="alert">
             {t("settings.serverActionFailed")}

@@ -97,7 +97,7 @@ export function VoiceAudioQualitySection({ settings, onChange }: QualitySectionP
   const { t } = useLanguage();
 
   return (
-    <VoiceSection icon="signal" title={t("voice.audioQuality")}>
+    <VoiceSection title={t("voice.audioQuality")}>
       <p className="fld-note">{t("voice.audioQualityNote")}</p>
       <Ladder
         order={OPUS_ORDER}
@@ -118,7 +118,7 @@ export function VoiceScreenSharingSection({ settings, onChange }: QualitySection
   const { t } = useLanguage();
 
   return (
-    <VoiceSection icon="screencast" iconSize={19} title={t("voice.screenSharing")}>
+    <VoiceSection title={t("voice.screenSharing")}>
       <p className="fld-note">{t("voice.screenQualityNote")}</p>
       <Ladder
         order={SCREEN_ORDER}

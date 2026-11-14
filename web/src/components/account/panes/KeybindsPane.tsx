@@ -1,7 +1,6 @@
 "use client";
 
 import { Button } from "@stellarr/ui";
-import { Icon } from "@stellarr/ui/icons";
 import {
   DEFAULT_KEYBINDINGS,
   KEYBIND_ACTIONS,
@@ -111,7 +110,7 @@ export function KeybindsPane({
     <>
       <p className="set-note">{t("keybinds.customNote")}</p>
 
-      <VoiceSection icon="mic" title={t("keybinds.voiceControls")}>
+      <VoiceSection title={t("keybinds.voiceControls")}>
         <ul className="kb-list">
           {KEYBIND_ACTIONS.map((action) => {
             const binding = bindings[action];
@@ -178,9 +177,6 @@ export function KeybindsPane({
       {FIXED_SHORTCUTS.map((group) => (
         <section className="sc" key={group.caption}>
           <header className="sc-h">
-            <span className="sc-ico" aria-hidden="true">
-              <Icon name="sliders" size={17} />
-            </span>
             {t(group.caption)}
           </header>
           <div className="sc-b">

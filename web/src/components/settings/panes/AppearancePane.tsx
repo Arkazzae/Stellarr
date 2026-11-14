@@ -3,7 +3,7 @@
 import type { CSSProperties, ReactNode } from "react";
 
 import { Button } from "@stellarr/ui";
-import { Icon, type IconName } from "@stellarr/ui/icons";
+import { Icon } from "@stellarr/ui/icons";
 import { Avatar } from "@/components/primitives/Avatar";
 import { Segmented, type SegmentedOption } from "@/components/primitives/Segmented";
 import { Switch } from "@/components/primitives/Switch";
@@ -24,13 +24,11 @@ import {
 import { useLanguage } from "@/state/hooks";
 
 function Card({
-  icon,
   title,
   bodyClassName = "sc-b",
   decorative = false,
   children,
 }: {
-  icon: IconName;
   title: string;
   bodyClassName?: string;
   /** Hidden from assistive tech: the body describes nothing real. */
@@ -40,9 +38,6 @@ function Card({
   return (
     <section className="sc">
       <header className="sc-h">
-        <span className="sc-ico" aria-hidden="true">
-          <Icon name={icon} size={17} />
-        </span>
         {title}
       </header>
       <div className={bodyClassName} aria-hidden={decorative || undefined}>
@@ -85,7 +80,7 @@ function Tick() {
 function MessagePreview() {
   const { t } = useLanguage();
   return (
-    <Card icon="eye" title={t("theme.preview")} bodyClassName="sc-b ap-preview" decorative>
+    <Card title={t("theme.preview")} bodyClassName="sc-b ap-preview" decorative>
       <div className="msg-group">
         <Avatar id="podglad-ada" displayName="Ada" />
         <div className="g-main">
@@ -196,7 +191,7 @@ export function AppearancePane({
         </Button>
       </div>
 
-      <Card icon="sparkle" title={t("theme.theme")}>
+      <Card title={t("theme.theme")}>
         <div className="ap-themes" role="radiogroup" aria-label={t("theme.theme")}>
           {PALETTES.map((palette) => {
             const selected = palette.id === theme.palette;
@@ -284,7 +279,7 @@ export function AppearancePane({
 
       <MessagePreview />
 
-      <Card icon="brush" title={t("theme.readability")}>
+      <Card title={t("theme.readability")}>
         <ChoiceRow title={t("theme.textSize")} detail={t("theme.textSizeDetail")}>
           <Segmented
             options={sizeOptions}

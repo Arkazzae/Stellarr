@@ -27,7 +27,7 @@ export interface NotificationsPaneProps {
 export function NotificationsPane({ muted, onMutedChange }: NotificationsPaneProps) {
   const { t } = useLanguage();
   return (
-    <SettingsSection title={t("channel.notifications")} icon="bell">
+    <SettingsSection title={t("channel.notifications")}>
       <div className="frm ch-frm-flush">
         <div className="frm-row">
           <span className="frm-lab">
@@ -66,7 +66,6 @@ export function PermissionsPane({
   return (
     <SettingsSection
       title={t("channel.channelPermissions")}
-      icon="shield"
       action={
         <Button
           type="button"
@@ -112,7 +111,7 @@ export function DangerPane({ channel, supported, onDelete }: DangerPaneProps) {
   const [confirming, setConfirming] = useState(false);
 
   return (
-    <SettingsSection title={t("server.danger")} icon="trash" className="danger-section">
+    <SettingsSection title={t("server.danger")} className="danger-section">
       {action.failed ? (
         <p className="set-note sound-error" role="alert">
           {t("channel.deleteFailed")}

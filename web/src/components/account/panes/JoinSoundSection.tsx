@@ -31,9 +31,6 @@ export function JoinSoundSection({ joinSound }: { joinSound: JoinSoundPicker }) 
   return (
     <section className="sc">
       <header className="sc-h">
-        <span className="sc-ico" aria-hidden="true">
-          <Icon name="sound" size={17} />
-        </span>
         {t("voice.joinSound")}
       </header>
       <div className="sc-b">

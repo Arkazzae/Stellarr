@@ -161,7 +161,6 @@ export function OverviewPane({
 
       <SettingsSection
         title={t("settings.serverProfile")}
-        icon="server"
         className="overview-section"
       >
         <header className="ov-id">

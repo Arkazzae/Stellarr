@@ -47,7 +47,7 @@ export const USER_SETTINGS_PANES: Record<UserSettingsPaneKey, UserSettingsPane> 
     detail: "settings.privacy.detail",
   },
   wyglad: {
-    icon: "sparkle",
+    icon: "palette",
     title: "settings.appearance.title",
     detail: "settings.appearance.detail",
   },

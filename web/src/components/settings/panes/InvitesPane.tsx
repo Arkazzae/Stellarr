@@ -49,7 +49,6 @@ export function InvitesPane({ supported, invites, onCreate, onRevoke }: InvitesP
       {supported ? null : <p className="set-note">{t("settings.unsupported")}</p>}
       <SettingsSection
         title={t("server.invites")}
-        icon="link"
         count={invites.length}
         countLabel={t("settings.invitesCount", { count: invites.length })}
         action={

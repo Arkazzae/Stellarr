@@ -1,8 +1,8 @@
 import type { pl } from "./pl";
 
 export const en = {
-  "settings.group.account": "ACCOUNT",
-  "settings.group.app": "APP",
+  "settings.group.account": "Account",
+  "settings.group.app": "App",
   "settings.account.title": "Profile",
   "settings.account.detail": "How others see you: name, pronouns, pictures and bio",
   "settings.security.title": "Login and security",
@@ -831,9 +831,9 @@ export const en = {
   "theme.contrast.high": "High",
   "theme.contrast.highDetail": "Stronger text and clearer lines",
 
-  "server.general": "GENERAL",
-  "server.management": "MANAGEMENT",
-  "server.moderation": "MODERATION",
+  "server.general": "General",
+  "server.management": "Management",
+  "server.moderation": "Moderation",
   "server.overview": "Overview",
   "server.overviewDetail": "Server name, description and visibility",
   "server.channels": "Server channels",

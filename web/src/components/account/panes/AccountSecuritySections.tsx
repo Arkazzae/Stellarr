@@ -1,7 +1,6 @@
 "use client";
 
 import { Button } from "@stellarr/ui";
-import { Icon } from "@stellarr/ui/icons";
 import { useConfirm } from "@/components/primitives/ConfirmDialog";
 import { formatShortDate } from "@/components/settings/panes/paneFormat";
 import type {
@@ -98,9 +97,6 @@ export function AccountSecuritySections({
     <>
       <section className="sc acc-security">
         <header className="sc-h">
-          <span className="sc-ico" aria-hidden="true">
-            <Icon name="shield" size={17} />
-          </span>
           {t("security.twoStep.title")}
         </header>
         <div className="sc-b acc-security-list">
@@ -204,9 +200,6 @@ export function AccountSecuritySections({
       {security !== null && (security.identityProviders.length > 0 || security.identities.length > 0) ? (
         <section className="sc acc-security">
           <header className="sc-h">
-            <span className="sc-ico" aria-hidden="true">
-              <Icon name="link" size={17} />
-            </span>
             {t("security.identities.title")}
           </header>
           <div className="sc-b acc-security-list">

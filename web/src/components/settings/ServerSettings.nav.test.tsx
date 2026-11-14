@@ -111,16 +111,16 @@ describe("ServerSettings navigation", () => {
 
     const nav = screen.getByRole("navigation", { name: "Sekcje ustawień" });
     expect(Array.from(nav.children, (child) => child.textContent)).toEqual([
-      "OGÓLNE",
+      "Ogólne",
       "Przegląd",
-      "ZARZĄDZANIE",
+      "Zarządzanie",
       "Kanały serwera",
       "Role",
       "Osoby na serwerze",
       "Zaproszenia",
       "Emoji",
       "Soundboard",
-      "MODERACJA",
+      "Moderacja",
       "Dziennik zdarzeń",
       "Bany",
       "Strefa zagrożenia",

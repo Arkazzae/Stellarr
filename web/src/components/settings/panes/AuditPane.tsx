@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 
-import { Icon } from "@stellarr/ui/icons";
 import { formatShortDate } from "@/components/settings/panes/paneFormat";
 import type { InterfaceLocale, Translator } from "@/i18n";
 import { formatTime, isSameDay } from "@/lib/format";
@@ -37,9 +36,6 @@ export function AuditPane({ supported, entries }: AuditPaneProps) {
       {supported ? null : <p className="set-note">{t("settings.auditUnsupported")}</p>}
       <section className="sc">
         <header className="sc-h">
-          <span className="sc-ico" aria-hidden="true">
-            <Icon name="clipboard" size={17} />
-          </span>
           {t("settings.auditPeriod")}
         </header>
         <div className="sc-b">

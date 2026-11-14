@@ -1,7 +1,6 @@
 "use client";
 
 import { Button } from "@stellarr/ui";
-import { Icon } from "@stellarr/ui/icons";
 import { useConfirm } from "@/components/primitives/ConfirmDialog";
 import { formatShortDate } from "@/components/settings/panes/paneFormat";
 import type { MessageKey } from "@/i18n";
@@ -97,9 +96,6 @@ export function AccountActivitySections({
       {sessions !== null && sessions.length > 0 ? (
         <section className="sc acc-security">
           <header className="sc-h">
-            <span className="sc-ico" aria-hidden="true">
-              <Icon name="server" size={17} />
-            </span>
             {t("security.sessions.title")}
           </header>
           <div className="sc-b acc-security-list">
@@ -151,9 +147,6 @@ export function AccountActivitySections({
       {security !== null && (security.trustedDevices.length > 0 || hasSecondStep) ? (
         <section className="sc acc-security">
           <header className="sc-h">
-            <span className="sc-ico" aria-hidden="true">
-              <Icon name="mobile" size={17} />
-            </span>
             {t("security.devices.title")}
           </header>
           <div className="sc-b acc-security-list">
@@ -187,9 +180,6 @@ export function AccountActivitySections({
       {security !== null ? (
         <section className="sc acc-security">
           <header className="sc-h">
-            <span className="sc-ico" aria-hidden="true">
-              <Icon name="list" size={17} />
-            </span>
             {t("security.history.title")}
           </header>
           <div className="sc-b acc-security-list">

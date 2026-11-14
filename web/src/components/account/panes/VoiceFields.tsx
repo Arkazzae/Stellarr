@@ -2,7 +2,6 @@
 
 import type { ReactNode } from "react";
 
-import { Icon, type IconName } from "@stellarr/ui/icons";
 import { Switch } from "@/components/primitives/Switch";
 import type { MediaDeviceChoice } from "@/ports";
 
@@ -12,20 +11,20 @@ export function formatDb(value: number): string {
 }
 
 export interface VoiceSectionProps {
-  icon: IconName;
-  iconSize?: number;
   title: string;
+  /**
+   * The pane's only group: the pane's own head already names it, so the
+   * heading is kept for screen readers alone.
+   */
+  lone?: boolean;
   children: ReactNode;
 }
 
-/** One headed card of the voice pane. */
-export function VoiceSection({ icon, iconSize = 17, title, children }: VoiceSectionProps) {
+/** One headed group of the voice pane. */
+export function VoiceSection({ title, lone = false, children }: VoiceSectionProps) {
   return (
-    <section className="sc">
+    <section className={lone ? "sc sc-lone" : "sc"}>
       <header className="sc-h">
-        <span className="sc-ico" aria-hidden="true">
-          <Icon name={icon} size={iconSize} />
-        </span>
         {title}
       </header>
       <div className="sc-b">{children}</div>

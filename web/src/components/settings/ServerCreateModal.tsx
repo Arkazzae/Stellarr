@@ -203,7 +203,7 @@ export function ServerCreateModal({ open, onClose, onCreate }: ServerCreateModal
     switch (active) {
       case "basics":
         return (
-          <SettingsSection title={t("shell.serverBasics")} icon="server" bodyClassName="ch-settings-form">
+          <SettingsSection title={t("shell.serverBasics")} bodyClassName="ch-settings-form">
             <div className="frm">
               <FormRow
                 label={t("shell.serverName")}
@@ -253,7 +253,7 @@ export function ServerCreateModal({ open, onClose, onCreate }: ServerCreateModal
         );
       case "channels":
         return (
-          <SettingsSection title={t("shell.starterChannels")} icon="hash" bodyClassName="ch-settings-form">
+          <SettingsSection title={t("shell.starterChannels")} bodyClassName="ch-settings-form">
             <div className="frm">
               <FormRow
                 label={t("shell.starterTextChannel")}
@@ -326,7 +326,7 @@ export function ServerCreateModal({ open, onClose, onCreate }: ServerCreateModal
         );
       case "visibility":
         return (
-          <SettingsSection title={t("shell.serverVisibility")} icon="eye" bodyClassName="ch-settings-form">
+          <SettingsSection title={t("shell.serverVisibility")} bodyClassName="ch-settings-form">
             <div className="frm">
               <FormRow
                 label={t("shell.serverVisibility")}
@@ -348,7 +348,7 @@ export function ServerCreateModal({ open, onClose, onCreate }: ServerCreateModal
         );
       case "notifications":
         return (
-          <SettingsSection title={t("server.notifications")} icon="bell" bodyClassName="ch-settings-form">
+          <SettingsSection title={t("server.notifications")} bodyClassName="ch-settings-form">
             <div className="frm">
               <FormRow
                 label={t("shell.defaultNotifications")}

@@ -6,7 +6,7 @@ import { SettingsSection } from "./SettingsSection";
 describe("SettingsSection", () => {
   it("is a region named after its title, holding its body", () => {
     render(
-      <SettingsSection title="Uprawnienia" icon="shield">
+      <SettingsSection title="Uprawnienia">
         <p>Treść</p>
       </SettingsSection>,
     );
@@ -17,7 +17,7 @@ describe("SettingsSection", () => {
 
   it("shows a count badge, including zero, with its own accessible name", () => {
     render(
-      <SettingsSection title="Role" icon="shield" count={0} countLabel="Liczba ról">
+      <SettingsSection title="Role" count={0} countLabel="Liczba ról">
         <p>Treść</p>
       </SettingsSection>,
     );
@@ -27,7 +27,7 @@ describe("SettingsSection", () => {
 
   it("leaves the badge out when there is no count", () => {
     render(
-      <SettingsSection title="Role" icon="shield" countLabel="Liczba ról">
+      <SettingsSection title="Role" countLabel="Liczba ról">
         <p>Treść</p>
       </SettingsSection>,
     );
@@ -37,7 +37,7 @@ describe("SettingsSection", () => {
 
   it("puts the action in the header, not the body", () => {
     render(
-      <SettingsSection title="Role" icon="shield" action={<button type="button">Dodaj</button>}>
+      <SettingsSection title="Role" action={<button type="button">Dodaj</button>}>
         <p>Treść</p>
       </SettingsSection>,
     );
@@ -50,7 +50,7 @@ describe("SettingsSection", () => {
     render(
       <SettingsSection
         title="Usuń"
-        icon="trash"
+       
         className="danger-section"
         bodyClassName="ch-settings-form"
       >

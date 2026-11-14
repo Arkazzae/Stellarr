@@ -273,7 +273,6 @@ export function ChannelOverviewPane({ channel, supported, onSave }: ChannelOverv
   return (
     <SettingsSection
       title={t("channel.profile")}
-      icon={channelIcon(channel.kind)}
       className="overview-section"
     >
       <ChannelIdentity
