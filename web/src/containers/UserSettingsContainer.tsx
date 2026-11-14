@@ -4,9 +4,16 @@ import { useEffect, useRef, useSyncExternalStore } from "react";
 
 import { UserSettings } from "@/components/account/UserSettings";
 import { useBrowserNotifications } from "@/hooks/useBrowserNotifications";
+import { playSystemFx } from "@/lib/audio/systemFx";
+import { androidNotificationsSupported } from "@/lib/notifications/android";
+import {
+  browserNotificationsSupported,
+  showTestNotification,
+} from "@/lib/notifications/browser";
 import type { UserPreferences } from "@/ports";
 import {
   useAccount,
+  useDirectory,
   useEmoji,
   useFriends,
   useKeybinds,
@@ -41,6 +48,7 @@ export function UserSettingsContainer() {
   const account = useAccount();
   const { emoji: customEmoji } = useEmoji();
   const friends = useFriends();
+  const directory = useDirectory();
   const session = useSession();
   const language = useLanguage();
   const keybinds = useKeybinds();
@@ -91,6 +99,24 @@ export function UserSettingsContainer() {
       )
       .catch(() => undefined);
   };
+
+  // Inside the Android app the bridge rings calls only; a mention and a test
+  // need the web Notification API, which its WebView does not have.
+  const webPopups = !androidNotificationsSupported() && browserNotificationsSupported();
+
+  // Muted ids are the account's, across servers; only this server's channels
+  // can be named, so the rest are counted.
+  const mutedIds = account.preferences.mutedChannelIds;
+  const sectionNames = new Map(directory.sections.map((section) => [section.id, section.name]));
+  const sectionOf = (sectionId: string | undefined) =>
+    sectionId === undefined ? undefined : sectionNames.get(sectionId);
+  const mutedHere = directory.textChannels
+    .filter((channel) => mutedIds.includes(channel.id))
+    .map((channel) => {
+      const section = sectionOf(channel.sectionId);
+      return { id: channel.id, name: channel.name, ...(section ? { section } : {}) };
+    });
+  const known = new Set(directory.channels.map((channel) => channel.id));
 
   // The account row, "edit profile" on the card and the voice bar's device
   // pickers all land in this one dialog.
@@ -146,8 +172,29 @@ export function UserSettingsContainer() {
           permission: browserNotifications.permission,
           pending: browserNotifications.pending,
           error: browserNotifications.error,
+          mentions: webPopups,
           onChange: changeSystemNotifications,
+          ...(webPopups
+            ? {
+                onTest: () => {
+                  showTestNotification(
+                    "Stellarr",
+                    language.t("preference.desktopNotificationsTestBody"),
+                  );
+                },
+              }
+            : {}),
         }}
+        mutedChannels={{
+          serverName: directory.server.name,
+          channels: mutedHere,
+          elsewhere: mutedIds.filter((id) => !known.has(id)).length,
+          onUnmute: (channelId) =>
+            persistPreferences({
+              mutedChannelIds: mutedIds.filter((id) => id !== channelId),
+            }),
+        }}
+        onPlayMessageSound={() => playSystemFx("notification")}
         sounds={{
           joinSound,
           arrivalsAudible: account.preferences.joinLeaveSound,

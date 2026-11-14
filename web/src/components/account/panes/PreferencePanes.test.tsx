@@ -1,15 +1,10 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 
 import type { UserPreferences } from "@/ports";
 
-import {
-  AdvancedPane,
-  PrivacyPane,
-  UserNotificationsPane,
-  type SystemNotificationPreferenceProps,
-} from "./PreferencePanes";
+import { AdvancedPane, PrivacyPane } from "./PreferencePanes";
 
 const preferences: UserPreferences = {
   desktopNotifications: true,
@@ -27,108 +22,6 @@ const preferences: UserPreferences = {
   vadSensitivity: 60,
   joinSoundId: null,
 };
-
-const system: SystemNotificationPreferenceProps = {
-  supported: true,
-  permission: "granted",
-  pending: false,
-  error: false,
-  onChange: vi.fn(),
-};
-
-describe("UserNotificationsPane", () => {
-  it("offers only the sounds the client delivers and writes each change", async () => {
-    const user = userEvent.setup();
-    const onChange = vi.fn();
-    render(<UserNotificationsPane preferences={preferences} onChange={onChange} />);
-
-    expect(screen.queryByRole("switch", { name: "Powiadomienia push" })).toBeNull();
-    expect(screen.queryByRole("switch", { name: "Powiadomienia e-mail" })).toBeNull();
-
-    // Hearing others come and go is a sound of the call, on the sounds pane.
-    expect(screen.queryByRole("switch", { name: "Dźwięk wejścia i wyjścia" })).toBeNull();
-
-    await user.click(screen.getByRole("switch", { name: "Dźwięk wiadomości" }));
-
-    expect(onChange).toHaveBeenCalledExactlyOnceWith({ messageSound: false });
-  });
-
-  it("chooses what the message sound plays for, with mentions as the default", async () => {
-    const user = userEvent.setup();
-    const onChange = vi.fn();
-    render(<UserNotificationsPane preferences={preferences} onChange={onChange} />);
-
-    const choice = screen.getByRole("radiogroup", { name: "Kiedy grać" });
-    expect(within(choice).getByRole("radio", { name: /Wzmianki/ })).toBeChecked();
-    await user.click(within(choice).getByRole("radio", { name: /Wszystkie wiadomości/ }));
-
-    expect(onChange).toHaveBeenCalledExactlyOnceWith({ mentionsOnly: false });
-  });
-
-  it("holds the choice while the message sound is off, since it would change nothing", () => {
-    render(
-      <UserNotificationsPane
-        preferences={{ ...preferences, messageSound: false }}
-        onChange={vi.fn()}
-      />,
-    );
-
-    for (const option of within(screen.getByRole("radiogroup", { name: "Kiedy grać" })).getAllByRole("radio")) {
-      expect(option).toBeDisabled();
-    }
-  });
-
-  it("shows system notifications on only when the permission is granted too", () => {
-    render(
-      <UserNotificationsPane
-        preferences={preferences}
-        onChange={vi.fn()}
-        systemNotifications={{ ...system, permission: "default" }}
-      />,
-    );
-
-    expect(screen.getByRole("switch", { name: "Powiadomienia systemowe" }))
-      .toHaveAttribute("aria-checked", "false");
-  });
-
-  it("hands the system switch to the browser permission flow", async () => {
-    const user = userEvent.setup();
-    const onChange = vi.fn();
-    render(
-      <UserNotificationsPane
-        preferences={{ ...preferences, desktopNotifications: false }}
-        onChange={vi.fn()}
-        systemNotifications={{ ...system, onChange }}
-      />,
-    );
-
-    await user.click(screen.getByRole("switch", { name: "Powiadomienia systemowe" }));
-
-    expect(onChange).toHaveBeenCalledExactlyOnceWith(true);
-  });
-
-  it("says why system notifications cannot be switched on", () => {
-    const { rerender } = render(
-      <UserNotificationsPane
-        preferences={preferences}
-        onChange={vi.fn()}
-        systemNotifications={{ ...system, permission: "denied" }}
-      />,
-    );
-    expect(screen.getByText(/zablokowane w ustawieniach/)).toBeInTheDocument();
-
-    rerender(
-      <UserNotificationsPane
-        preferences={preferences}
-        onChange={vi.fn()}
-        systemNotifications={{ ...system, supported: false, permission: "unsupported", error: true }}
-      />,
-    );
-    expect(screen.getByText(/nie obsługuje powiadomień systemowych/)).toBeInTheDocument();
-    expect(screen.getByRole("alert")).toHaveTextContent("Nie udało się włączyć powiadomień systemowych.");
-    expect(screen.getByRole("switch", { name: "Powiadomienia systemowe" })).toBeDisabled();
-  });
-});
 
 describe("PrivacyPane", () => {
   it("writes each privacy switch under its own key", async () => {

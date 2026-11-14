@@ -533,7 +533,7 @@ describe("UserSettings", () => {
     await user.click(screen.getByRole("button", { name: /Powiadomienia/ }));
     expect(screen.queryByRole("switch", { name: "Powiadomienia push" })).toBeNull();
     expect(screen.queryByRole("switch", { name: "Powiadomienia e-mail" })).toBeNull();
-    await user.click(screen.getByRole("switch", { name: "Dźwięk wiadomości" }));
+    await user.click(screen.getByRole("radio", { name: /Wyłączony/ }));
 
     expect(onChange).toHaveBeenCalledWith({ messageSound: false });
   });
