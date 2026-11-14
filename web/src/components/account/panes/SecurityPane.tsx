@@ -8,7 +8,8 @@ import type { Account, EmailChangeResult, PasswordChangeResult } from "@/ports";
 import { useLanguage } from "@/state/hooks";
 
 import {
-  AccountSecuritySections,
+  IdentitiesSection,
+  TwoStepSection,
   type AccountSecuritySectionsProps,
 } from "./AccountSecuritySections";
 
@@ -26,13 +27,15 @@ export interface SecurityPaneProps {
   onChangePassword(current: string, next: string): Promise<PasswordChangeResult>;
   /**
    * Asks for a fresh second step; true once it is passed, false when the
-   * person closes it. The password change is then tried again.
+   * person closes it. The change is then tried again.
    */
   onConfirmSecondStep?(): Promise<boolean>;
 }
 
 type EmailAnswer = EmailChangeResult | "failed";
 type PasswordAnswer = PasswordChangeResult | "failed";
+/** The one credential being edited; opening the other closes it. */
+type Editor = "password" | "email" | null;
 
 function emailAnswerText(t: Translator, answer: Exclude<EmailAnswer, "sent">): string {
   switch (answer) {
@@ -68,51 +71,99 @@ function passwordAnswerText(t: Translator, answer: PasswordAnswer): string {
   }
 }
 
-function EmailSection({
+interface FieldProps {
+  label: string;
+  type: "email" | "password";
+  autoComplete: "email" | "current-password" | "new-password";
+  value: string;
+  /** Spans both columns of the form. */
+  full?: boolean;
+  hint?: string;
+  invalid?: boolean;
+  /** Shown under the field, for a problem the field itself can name. */
+  problem?: string;
+  maxLength?: number;
+  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
+}
+
+/** A label above its field, so a long label never squeezes the field beside it. */
+function Field({ label, type, autoComplete, value, full, hint, invalid, problem, maxLength, onChange }: FieldProps) {
+  const id = useId();
+  const hintId = useId();
+  return (
+    <div className={full ? "sec-field full" : "sec-field"}>
+      <label htmlFor={id}>{label}</label>
+      <input
+        id={id}
+        className="set-input"
+        type={type}
+        autoComplete={autoComplete}
+        value={value}
+        maxLength={maxLength}
+        required={type === "email" || undefined}
+        aria-invalid={invalid || undefined}
+        aria-describedby={hint === undefined ? undefined : hintId}
+        onChange={onChange}
+      />
+      {hint === undefined ? null : <small id={hintId}>{hint}</small>}
+      {problem === undefined ? null : (
+        <small data-tone="bad" role="alert">{problem}</small>
+      )}
+    </div>
+  );
+}
+
+interface EditorProps {
+  open: boolean;
+  onOpen(): void;
+  onClose(): void;
+  onConfirmSecondStep: SecurityPaneProps["onConfirmSecondStep"];
+}
+
+function EmailItem({
   savedEmail,
   supported,
   onChangeEmail,
   onConfirmSecondStep,
-}: {
+  open,
+  onOpen,
+  onClose,
+}: EditorProps & {
   savedEmail: string;
   supported: boolean;
   onChangeEmail: SecurityPaneProps["onChangeEmail"];
-  onConfirmSecondStep: SecurityPaneProps["onConfirmSecondStep"];
 }) {
   const { t } = useLanguage();
   const titleId = useId();
-  const fieldId = useId();
-  const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState(savedEmail);
   const [password, setPassword] = useState("");
   const [saving, setSaving] = useState(false);
   const [answer, setAnswer] = useState<EmailAnswer | null>(null);
   const [sentTo, setSentTo] = useState("");
 
-  // The account store publishes an accepted address. Adopt it at once and
-  // close the editor, so no stale draft outlives the value it was based on.
+  // The account store publishes an accepted address. Adopt it at once; the
+  // pane closes the editor, so no stale draft outlives the value it was based on.
   const [seenEmail, setSeenEmail] = useState(savedEmail);
   if (seenEmail !== savedEmail) {
     setSeenEmail(savedEmail);
     setDraft(savedEmail);
     setPassword("");
-    setOpen(false);
+  }
+
+  // Closed by the other editor or by cancelling, the draft goes with it.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (wasOpen !== open) {
+    setWasOpen(open);
+    if (!open) {
+      setDraft(savedEmail);
+      setPassword("");
+    }
+    if (open) setAnswer(null);
   }
 
   const value = draft.trim();
   const canSave = !saving && value.length > 0 && value !== savedEmail && password.length > 0;
-
-  const toggle = () => {
-    setOpen((wasOpen) => !wasOpen);
-    setAnswer(null);
-  };
-
-  const cancel = () => {
-    setDraft(savedEmail);
-    setPassword("");
-    setOpen(false);
-    setAnswer(null);
-  };
+  const empty = savedEmail.length === 0;
 
   const save = async () => {
     if (!canSave) return;
@@ -127,8 +178,7 @@ function EmailSection({
       setAnswer(result);
       if (result === "sent") {
         setSentTo(value);
-        setPassword("");
-        setOpen(false);
+        onClose();
       }
     } catch {
       setAnswer("failed");
@@ -138,50 +188,52 @@ function EmailSection({
   };
 
   return (
-    <section className="acc-security-item" aria-labelledby={titleId}>
-      <div className="acc-security-summary">
-        <span className="acc-security-copy">
-          <b id={titleId}>{t("account.recoveryEmail")}</b>
-          <span className={savedEmail.length === 0 ? "empty" : undefined}>
+    <section className="sec-item" aria-labelledby={titleId}>
+      <div className="sec-row">
+        <span className="sec-copy">
+          <b id={titleId}>{t("account.email")}</b>
+          <span className={empty ? "sec-value empty" : "sec-value"}>
             {savedEmail || t("account.emailNotSet")}
           </span>
-          <small>{t("account.recoveryEmailDetail")}</small>
+          {supported ? (
+            <small data-tone={empty ? "warn" : undefined}>
+              {t(empty ? "account.emailMissingDetail" : "account.recoveryEmailDetail")}
+            </small>
+          ) : (
+            <small>{t("account.emailChangeUnavailable")}</small>
+          )}
         </span>
-        {supported ? (
-          <Button type="button" variant="secondary" size="sm" aria-expanded={open} onClick={toggle}>
-            {savedEmail.length === 0 ? t("account.addEmail") : t("account.changeEmail")}
+        {supported && !open ? (
+          <Button type="button" variant="secondary" size="sm" onClick={onOpen}>
+            {empty ? t("account.addEmail") : t("account.changeEmail")}
           </Button>
         ) : null}
       </div>
 
-      {supported ? null : <p className="set-note">{t("account.emailChangeUnavailable")}</p>}
-
       {open ? (
         <form
-          className="acc-credential-form"
+          className="sec-form"
           onSubmit={(event) => {
             event.preventDefault();
             void save();
           }}
         >
-          <label className="frm-lab" htmlFor={fieldId}>
-            {t("account.newEmail")}
-          </label>
-          <input
-            id={fieldId}
-            className="set-input"
+          <Field
+            full
+            label={t("account.newEmail")}
             type="email"
             autoComplete="email"
             value={draft}
             maxLength={MAX_EMAIL_LENGTH}
-            required
             onChange={(event) => {
               setDraft(event.target.value);
               setAnswer(null);
             }}
           />
-          <PasswordField
+          <Field
+            full
             label={t("account.currentPassword")}
+            type="password"
             autoComplete="current-password"
             value={password}
             invalid={answer === "wrong-password"}
@@ -190,9 +242,9 @@ function EmailSection({
               setAnswer(null);
             }}
           />
-          <p className="set-note">{t("account.emailLinkNote")}</p>
-          <div className="acc-credential-actions">
-            <Button type="button" variant="secondary" onClick={cancel}>
+          <p className="sec-note">{t("account.emailLinkNote")}</p>
+          <div className="sec-form-actions">
+            <Button type="button" variant="quiet" onClick={onClose}>
               {t("common.cancel")}
             </Button>
             <Button type="submit" variant="primary" disabled={!canSave}>
@@ -203,74 +255,38 @@ function EmailSection({
       ) : null}
 
       {answer === "sent" ? (
-        <p className="acc-answer ok" role="status">{t("account.emailLinkSent", { email: sentTo })}</p>
+        <p className="sec-answer" data-tone="ok" role="status">
+          {t("account.emailLinkSent", { email: sentTo })}
+        </p>
       ) : answer !== null ? (
-        <p className="acc-answer bad" role="alert">{emailAnswerText(t, answer)}</p>
+        <p className="sec-answer" data-tone="bad" role="alert">{emailAnswerText(t, answer)}</p>
       ) : null}
     </section>
   );
 }
 
-interface PasswordFieldProps {
-  label: string;
-  hint?: string;
-  autoComplete: "current-password" | "new-password";
-  value: string;
-  invalid?: boolean;
-  /** Shown under the field, for a problem the field itself can name. */
-  problem?: string;
-  onChange: (event: ChangeEvent<HTMLInputElement>) => void;
-}
-
-function PasswordField({
-  label,
-  hint,
-  autoComplete,
-  value,
-  invalid,
-  problem,
-  onChange,
-}: PasswordFieldProps) {
-  const id = useId();
-  return (
-    <div className="frm-row">
-      <label className="frm-lab" htmlFor={id}>
-        {label}
-        {hint === undefined ? null : <span>{hint}</span>}
-      </label>
-      <div className="frm-ctl">
-        <input
-          id={id}
-          className="set-input"
-          type="password"
-          autoComplete={autoComplete}
-          value={value}
-          aria-invalid={invalid || undefined}
-          onChange={onChange}
-        />
-        {problem === undefined ? null : (
-          <p className="acc-answer bad" role="alert">{problem}</p>
-        )}
-      </div>
-    </div>
-  );
-}
-
 const NO_PASSWORDS = { current: "", next: "", confirm: "" };
 
-function PasswordSection({
+function PasswordItem({
   onChangePassword,
   onConfirmSecondStep,
-}: {
-  onChangePassword: SecurityPaneProps["onChangePassword"];
-  onConfirmSecondStep: SecurityPaneProps["onConfirmSecondStep"];
-}) {
+  open,
+  onOpen,
+  onClose,
+}: EditorProps & { onChangePassword: SecurityPaneProps["onChangePassword"] }) {
   const { t } = useLanguage();
   const titleId = useId();
-  const [open, setOpen] = useState(false);
   const [fields, setFields] = useState(NO_PASSWORDS);
   const [saving, setSaving] = useState(false);
   const [answer, setAnswer] = useState<PasswordAnswer | null>(null);
+
+  // Closed by the other editor or by cancelling, nothing typed is kept.
+  const [wasOpen, setWasOpen] = useState(open);
+  if (wasOpen !== open) {
+    setWasOpen(open);
+    setFields(NO_PASSWORDS);
+    if (open) setAnswer(null);
+  }
 
   const mismatch = fields.confirm.length > 0 && fields.next !== fields.confirm;
   const canChange =
@@ -284,20 +300,6 @@ function PasswordSection({
     setAnswer(null);
   };
 
-  const close = () => {
-    setOpen(false);
-    setFields(NO_PASSWORDS);
-    setAnswer(null);
-  };
-
-  const toggle = () => {
-    if (open) close();
-    else {
-      setOpen(true);
-      setAnswer(null);
-    }
-  };
-
   const submit = async () => {
     setSaving(true);
     setAnswer(null);
@@ -308,10 +310,7 @@ function PasswordSection({
         result = await onChangePassword(fields.current, fields.next);
       }
       setAnswer(result);
-      if (result === "changed") {
-        setOpen(false);
-        setFields(NO_PASSWORDS);
-      }
+      if (result === "changed") onClose();
     } catch {
       setAnswer("failed");
     } finally {
@@ -320,55 +319,55 @@ function PasswordSection({
   };
 
   return (
-    <section className="acc-security-item" aria-labelledby={titleId}>
-      <div className="acc-security-summary">
-        <span className="acc-security-copy">
+    <section className="sec-item" aria-labelledby={titleId}>
+      <div className="sec-row">
+        <span className="sec-copy">
           <b id={titleId}>{t("account.password")}</b>
-          <span>{t("account.passwordHidden")}</span>
           <small>{t("account.passwordDetail")}</small>
         </span>
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          aria-expanded={open}
-          onClick={toggle}
-        >
-          {open ? t("account.cancelPasswordChange") : t("account.changePassword")}
-        </Button>
+        {open ? null : (
+          <Button type="button" variant="secondary" size="sm" onClick={onOpen}>
+            {t("account.changePassword")}
+          </Button>
+        )}
       </div>
 
       {open ? (
         <form
-          className="frm acc-password-form"
+          className="sec-form"
           onSubmit={(event) => {
             event.preventDefault();
             if (canChange) void submit();
           }}
         >
-          <PasswordField
+          <Field
+            full
             label={t("account.currentPassword")}
+            type="password"
             autoComplete="current-password"
             value={fields.current}
+            invalid={answer === "wrong-current"}
             onChange={edit("current")}
           />
-          <PasswordField
+          <Field
             label={t("account.newPassword")}
-            hint={t("account.passwordMinLength")}
+            type="password"
             autoComplete="new-password"
+            hint={t("account.passwordMinLength")}
             value={fields.next}
             onChange={edit("next")}
           />
-          <PasswordField
+          <Field
             label={t("account.repeatNewPassword")}
+            type="password"
             autoComplete="new-password"
             value={fields.confirm}
             invalid={mismatch}
             problem={mismatch ? t("account.passwordMismatch") : undefined}
             onChange={edit("confirm")}
           />
-          <div className="acc-credential-actions">
-            <Button type="button" variant="secondary" onClick={close}>
+          <div className="sec-form-actions">
+            <Button type="button" variant="quiet" onClick={onClose}>
               {t("common.cancel")}
             </Button>
             <Button type="submit" variant="primary" disabled={!canChange}>
@@ -380,7 +379,8 @@ function PasswordSection({
 
       {answer === null ? null : (
         <p
-          className={answer === "changed" ? "acc-answer ok" : "acc-answer bad"}
+          className="sec-answer"
+          data-tone={answer === "changed" ? "ok" : "bad"}
           role={answer === "changed" ? "status" : "alert"}
         >
           {passwordAnswerText(t, answer)}
@@ -390,7 +390,15 @@ function PasswordSection({
   );
 }
 
-/** Login details stay apart from the public profile and are saved on their own. */
+/**
+ * How the account is signed in to, apart from the public profile.
+ *
+ * The second step leads, because it is the one choice here that decides what
+ * a stolen password is worth. The password and the address follow as two
+ * rows of one group, each editing in place and one at a time, so the pane
+ * never holds two half-filled forms. The providers come last, on an instance
+ * that has them.
+ */
 export function SecurityPane({
   account,
   emailSupported,
@@ -400,23 +408,48 @@ export function SecurityPane({
   onConfirmSecondStep,
 }: SecurityPaneProps) {
   const { t } = useLanguage();
+  const [editor, setEditor] = useState<Editor>(null);
+  const email = account.email ?? "";
+
+  // An answer that arrives after the other editor was opened leaves it alone.
+  const close = (which: Exclude<Editor, null>) =>
+    setEditor((current) => (current === which ? null : current));
+
+  // An address replaced from elsewhere (the link opened on another device)
+  // closes its editor: the draft was based on the address that is gone.
+  const [seenEmail, setSeenEmail] = useState(email);
+  if (seenEmail !== email) {
+    setSeenEmail(email);
+    if (editor === "email") setEditor(null);
+  }
+
   return (
     <>
-      <section className="sc acc-security">
-        <header className="sc-h">
-          {t("account.loginSecurity")}
-        </header>
-        <div className="sc-b acc-security-list">
-          <EmailSection
-            savedEmail={account.email ?? ""}
+      {twoStep ? <TwoStepSection {...twoStep} email={email} /> : null}
+
+      <section className="sc">
+        <header className="sc-h">{t("account.passwordAndEmail")}</header>
+        <div className="sc-b sec-list">
+          <PasswordItem
+            open={editor === "password"}
+            onOpen={() => setEditor("password")}
+            onClose={() => close("password")}
+            onChangePassword={onChangePassword}
+            onConfirmSecondStep={onConfirmSecondStep}
+          />
+          <EmailItem
+            open={editor === "email"}
+            onOpen={() => setEditor("email")}
+            onClose={() => close("email")}
+            savedEmail={email}
             supported={emailSupported}
             onChangeEmail={onChangeEmail}
             onConfirmSecondStep={onConfirmSecondStep}
           />
-          <PasswordSection onChangePassword={onChangePassword} onConfirmSecondStep={onConfirmSecondStep} />
         </div>
       </section>
-      {twoStep ? <AccountSecuritySections {...twoStep} /> : null}
+
+      {twoStep ? <IdentitiesSection {...twoStep} /> : null}
     </>
   );
 }

@@ -153,38 +153,6 @@
     overflow-wrap: anywhere;
   }
 
-  .acc-credential-form {
-    display: grid;
-    grid-template-columns: 200px minmax(0, 1fr);
-    gap: 12px 28px;
-    align-items: start;
-    margin-top: 16px;
-    padding-top: 16px;
-    border-top: 1px solid var(--line-subtle);
-  }
-
-  .acc-credential-form .frm-lab {
-    padding-top: 9px;
-  }
-
-  .acc-credential-actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-  }
-
-  .acc-credential-form .acc-credential-actions {
-    grid-column: 2;
-  }
-
-  .acc-password-form {
-    margin-top: 16px;
-  }
-
-  .acc-password-form > .acc-credential-actions {
-    padding-top: 16px;
-  }
-
   @media (max-width: 760px) {
     .acc-security-summary {
       align-items: stretch;
@@ -195,18 +163,254 @@
     .acc-security-summary > button {
       align-self: flex-start;
     }
+  }
 
-    .acc-credential-form {
+  /* ---------- LOGOWANIE I BEZPIECZEŃSTWO ---------- */
+  /*
+   * Rows without icons, like every other pane: a name, one line under it and
+   * the one thing to do. The second step leads, in a card whose first line
+   * says in a sentence what the account is protected by.
+   */
+  .sec-card {
+    padding: 0;
+  }
+
+  .sec-hero {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 18px 20px;
+  }
+
+  .sec-hero b {
+    font-size: var(--text-15);
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .sec-hero span {
+    font-size: var(--text-13);
+    line-height: 1.5;
+    color: var(--text-faint);
+  }
+
+  /* The ways to prove it is you, each starting its own setup. */
+  .sec-ways {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 10px;
+    padding: 0 20px 20px;
+  }
+
+  .sec-way {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 14px 15px;
+    border: 1px solid var(--line-subtle);
+    border-radius: var(--radius-md);
+    background: var(--surface-base);
+    color: var(--text);
+    text-align: left;
+    cursor: pointer;
+    transition:
+      border-color var(--dur-fast) var(--ease-standard),
+      background-color var(--dur-fast) var(--ease-standard);
+  }
+
+  .sec-way:hover:not(:disabled) {
+    border-color: var(--accent);
+    background: var(--accent-soft);
+  }
+
+  .sec-way:disabled {
+    cursor: default;
+    opacity: 0.5;
+  }
+
+  .sec-way svg {
+    color: var(--accent-text);
+  }
+
+  .sec-way b {
+    font-size: var(--text-14);
+    font-weight: 600;
+  }
+
+  .sec-way span {
+    font-size: var(--text-12);
+    line-height: 1.45;
+    color: var(--text-faint);
+  }
+
+  .sec-list {
+    padding-block: 0;
+  }
+
+  .sec-card > .sec-list {
+    padding: 0 20px;
+    border-top: 1px solid var(--line-subtle);
+  }
+
+  .sec-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 0;
+  }
+
+  .sec-row + .sec-row,
+  .sec-item + .sec-item {
+    border-top: 1px solid var(--line-subtle);
+  }
+
+  .sec-row > button {
+    flex: none;
+  }
+
+  .sec-copy {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .sec-copy b {
+    font-size: var(--text-14);
+    font-weight: 550;
+    color: var(--text);
+    overflow-wrap: anywhere;
+  }
+
+  .sec-copy small {
+    font-size: var(--text-12);
+    line-height: 1.45;
+    color: var(--text-faint);
+  }
+
+  .sec-copy small[data-tone="warn"] {
+    color: var(--warn-text);
+  }
+
+  .sec-copy small[data-tone="bad"] {
+    color: var(--danger-text);
+  }
+
+  .sec-value {
+    font-size: var(--text-14);
+    color: var(--text);
+    overflow-wrap: anywhere;
+  }
+
+  .sec-value.empty {
+    color: var(--text-muted);
+  }
+
+  .sec-add {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 0 16px;
+    border-top: 1px solid var(--line-subtle);
+  }
+
+  .sec-add > span {
+    margin-right: 4px;
+    font-size: var(--text-13);
+    color: var(--text-faint);
+  }
+
+  /* A credential edited in place: labels above their fields, so a long label
+     never squeezes the field beside it, and the two new passwords side by
+     side. */
+  .sec-form {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 16px;
+    padding: 2px 0 18px;
+  }
+
+  .sec-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+  }
+
+  .sec-field.full {
+    grid-column: 1 / -1;
+  }
+
+  .sec-field label {
+    font-size: var(--text-13);
+    font-weight: 500;
+    color: var(--text);
+  }
+
+  .sec-field small {
+    font-size: var(--text-12);
+    color: var(--text-faint);
+  }
+
+  .sec-field small[data-tone="bad"] {
+    color: var(--danger-text);
+  }
+
+  .sec-field .set-input[aria-invalid="true"] {
+    border-color: var(--danger-line);
+  }
+
+  .sec-note {
+    grid-column: 1 / -1;
+    margin: 0;
+    font-size: var(--text-13);
+    line-height: 1.5;
+    color: var(--text-faint);
+  }
+
+  .sec-form-actions {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .sec-answer {
+    margin: 0 0 14px;
+    font-size: var(--text-13);
+    line-height: 1.5;
+  }
+
+  .sec-answer[data-tone="ok"] {
+    color: var(--accent-text);
+  }
+
+  .sec-answer[data-tone="bad"] {
+    color: var(--danger-text);
+  }
+
+  .sec-card > .sec-answer {
+    margin: 0;
+    padding: 0 20px 16px;
+  }
+
+  @media (max-width: 767px) {
+    .sec-hero {
+      padding: 16px;
+    }
+
+    .sec-ways {
+      padding: 0 16px 16px;
+    }
+
+    .sec-card > .sec-list {
+      padding: 0 16px;
+    }
+
+    .sec-form {
       grid-template-columns: minmax(0, 1fr);
-      gap: 8px;
-    }
-
-    .acc-credential-form .frm-lab {
-      padding-top: 0;
-    }
-
-    .acc-credential-form .acc-credential-actions {
-      grid-column: 1;
     }
   }
 
