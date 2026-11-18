@@ -26,7 +26,7 @@ import type { CockpitOperator } from "../lib/api";
 import { COCKPIT_ROOT, cockpitHref } from "../lib/paths";
 import { useCockpit } from "../state/cockpit-context";
 
-const DOCUMENTATION_URL = "https://arkazzae.github.io/Stellarr/";
+const DOCUMENTATION_URL = "https://docs.stellarr.online/";
 
 interface NavigationItem {
   labelKey: MessageKey;

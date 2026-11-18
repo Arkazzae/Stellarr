@@ -8,7 +8,7 @@
 <p align="center">
   <a href="#try-it-locally">Try it locally</a> ·
   <a href="#inviting-friends-over-the-internet">Going online</a> ·
-  <a href="https://arkazzae.github.io/Stellarr/">Documentation</a> ·
+  <a href="https://docs.stellarr.online/">Documentation</a> ·
   <a href="docs/install/unraid.md">Unraid guide</a>
 </p>
 
@@ -61,7 +61,7 @@ Running on **Unraid**? Follow the [Unraid setup guide](docs/install/unraid.md). 
 
 ## Documentation
 
-Browse the full guides on the [**documentation site**](https://arkazzae.github.io/Stellarr/) or in [`docs/`](docs/README.md):
+Browse the full guides on the [**documentation site**](https://docs.stellarr.online/) or in [`docs/`](docs/README.md):
 
 - **Getting started**: [Quick start](docs/install/quick-start.md) · [Requirements](docs/install/requirements.md) · [Configuration](docs/install/configuration.md) · [Reverse proxy & TLS](docs/install/reverse-proxy-and-tls.md) · [Unraid](docs/install/unraid.md) · [Upgrading](docs/install/upgrading.md)
 - **Running your server**: [Account security](docs/admin/account-security.md) · [Automatic backups](docs/admin/backups.md) · [Cloudflare R2](docs/admin/cloudflare-r2.md) · [Notifications](docs/admin/notifications.md) · [Operator CLI](docs/admin/cli.md)
