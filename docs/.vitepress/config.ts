@@ -21,7 +21,7 @@ export default defineConfig({
   title: 'Stellarr',
   description: 'Documentation of Stellarr, a self-hosted text and voice chat for a small group of friends.',
   lang: 'en',
-  base: '/Stellarr/',
+  base: '/',
   cleanUrls: true,
   lastUpdated: true,
   // The documentation map is the home page; the file stays README.md for GitHub.

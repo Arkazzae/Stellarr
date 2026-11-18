@@ -7,7 +7,7 @@ const repository = 'https://github.com/Arkazzae/Stellarr'
 let md: MarkdownRenderer
 
 before(async () => {
-  md = await createMarkdownRenderer('/docs', { config: rewriteLinks(repository) }, '/Stellarr/')
+  md = await createMarkdownRenderer('/docs', { config: rewriteLinks(repository) }, '/')
 })
 after(() => disposeMdItInstance())
 
@@ -22,8 +22,8 @@ function render(markdown: string, relativePath: string) {
 }
 
 test('a link to the map goes to the home page, which is served as index', () => {
-  assert.deepEqual(render('[map](README.md#reference)', 'architecture.md').hrefs, ['/Stellarr/#reference'])
-  assert.deepEqual(render('[map](../README.md)', 'install/quick-start.md').hrefs, ['/Stellarr/'])
+  assert.deepEqual(render('[map](README.md#reference)', 'architecture.md').hrefs, ['/#reference'])
+  assert.deepEqual(render('[map](../README.md)', 'install/quick-start.md').hrefs, ['/'])
   // VitePress looks a README link up as a page named README, which the site does not have.
   assert.deepEqual(render('[map](../README.md)', 'install/quick-start.md').links, ['/'])
 })
@@ -46,6 +46,6 @@ test('links to other pages, anchors and external addresses are left to VitePress
     'install/quick-start.md',
   )
 
-  assert.deepEqual(hrefs, ['./../architecture', '#top', 'https://example.org/a', '/Stellarr/other'])
+  assert.deepEqual(hrefs, ['./../architecture', '#top', 'https://example.org/a', '/other'])
   assert.deepEqual(links, ['./../architecture', '/other'])
 })
