@@ -32,7 +32,7 @@ The logo, the astronaut, the icons and the fonts are read from [`branding/`](../
 
 ## Deploy
 
-The site is a Cloudflare Pages project named `stellarr`, with `main` as its production branch. Pages builds nothing itself; the site is built from a checkout of the repository and uploaded:
+The site is a Cloudflare Pages project named `stellarr`, with `main` as its production branch. Pages builds nothing itself; the site is built from a checkout of the repository and uploaded. CI does this on every push to `main` that changes the site (the `website-deploy` job in `.github/workflows/ci.yml`). For a one-off deploy from a checkout:
 
 ```bash
 cd website

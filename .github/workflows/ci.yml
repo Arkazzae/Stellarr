@@ -249,6 +249,34 @@ jobs:
       - run: npm ci
       - run: npm run build
 
+  # Publishes the site to Cloudflare Pages after a push to main that changed it.
+  # A pull request never deploys. One deployment at a time, and a deployment
+  # that has started is never cancelled by a newer push.
+  website-deploy:
+    needs: website
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: website
+    concurrency:
+      group: website-deploy
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: npm
+          cache-dependency-path: website/package-lock.json
+      - run: npm ci
+      - run: npm run build
+      - run: npx --yes wrangler@4.164.0 pages deploy dist --project-name stellarr --branch main --commit-hash ${{ github.sha }}
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
   # Builds the image without pushing it, when the Dockerfile, the container
   # configuration or a dependency list changes. On main it also refreshes the
   # build cache that the release workflow reuses.
