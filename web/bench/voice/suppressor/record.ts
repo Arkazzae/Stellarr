@@ -1,7 +1,7 @@
 /**
  * The suppressor record: what our noise suppressors' own binaries make of the
  * fixtures, checked against `records/suppressor/`, or written there when
- * STELLARR_VOICE_RECORD=1. Speex and RNNoise are the engines so far.
+ * STELLARR_VOICE_RECORD=1. Speex, RNNoise and GTCRN are the engines.
  *
  * The binary is the one the browser loads, web/public/audio/<engine>.wasm,
  * which artifacts/assemble.mjs has checked against the manifest, driven in
@@ -22,14 +22,19 @@
  * The header holds the frame, the latency and, for Speex, every setting of
  * the preprocessor as a new state reports it through speex_preprocess_ctl,
  * with denoise set on as the wrapper sets it. Speex's latency is measured on
- * the white-noise probe; RNNoise removes that noise, so its latency is
- * measured on a talker, and its output is digested as the float bits it
- * really is, not as int16.
+ * the white-noise probe; RNNoise and GTCRN remove that noise, so their
+ * latency is measured on a talker, and their output is digested as the float
+ * bits it really is, not as int16.
  */
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import {
+  FRAME as GTCRN_FRAME,
+  GtcrnDenoiser,
+  instantiateGtcrn,
+} from "../../../src/stellarr/lib/voice/capture/gtcrn/denoiser";
 import {
   FRAME,
   RnnoiseDenoiser,
@@ -90,7 +95,18 @@ export function runRnnoise(input: Float32Array): Float32Array {
   return output;
 }
 
-/** FNV-1a over the bit patterns of float32 values: RNNoise's output, exactly as it is. */
+/** `input` through a fresh denoiser, a render quantum at a time, as the worklet runs it. */
+export function runGtcrn(input: Float32Array): Float32Array {
+  const denoiser = new GtcrnDenoiser(instantiateGtcrn(moduleOf("gtcrn.wasm")));
+  const output = new Float32Array(input.length);
+  for (let at = 0; at + QUANTUM <= input.length; at += QUANTUM) {
+    denoiser.run(input.subarray(at, at + QUANTUM), output.subarray(at, at + QUANTUM));
+  }
+  denoiser.destroy();
+  return output;
+}
+
+/** FNV-1a over the bit patterns of float32 values: RNNoise's and GTCRN's output, exactly as it is. */
 function digestFloat32(values: Float32Array): string {
   const bits = new Uint32Array(values.buffer, values.byteOffset, values.length);
   let hash = 0x811c9dc5;
@@ -179,7 +195,7 @@ function settings(): string {
   return values.join(", ");
 }
 
-export type EngineName = "speex" | "rnnoise";
+export type EngineName = "speex" | "rnnoise" | "gtcrn";
 
 interface Engine {
   file: string;
@@ -203,12 +219,12 @@ function speexLatency(): number | null {
   });
 }
 
-/** RNNoise takes the probe's noise out, so its latency is read off a talker after a silent lead-in. */
-function rnnoiseLatency(): number {
+/** RNNoise and GTCRN take the probe's noise out, so their latency is read off a talker after a silent lead-in. */
+function talkerLatency(run: (input: Float32Array) => Float32Array): number {
   const talker = (TALKERS[1] as (typeof TALKERS)[number]).build();
   const input = new Float32Array(LEAD_IN + talker.length);
   input.set(talker, LEAD_IN);
-  return estimateLatency(input, runRnnoise(input));
+  return estimateLatency(input, run(input));
 }
 
 export const ENGINES: Record<EngineName, Engine> = {
@@ -236,16 +252,31 @@ export const ENGINES: Record<EngineName, Engine> = {
       ["frame", `${QUANTUM} samples in a render quantum, ${FRAME} to the library, at ${SAMPLE_RATE} Hz (${fixed((FRAME * 1000) / SAMPLE_RATE, 2)} ms)`],
       ["latency", latency === null ? "none" : `${latency} (${fixed(latency / 48, 2)} ms)`],
     ],
-    latency: rnnoiseLatency,
+    latency: () => talkerLatency(runRnnoise),
     run: runRnnoise,
     // What the binary is given: the fixture, as the int16-range floats the wrapper scales it to.
-    digestInput: (input) => digestInt16(rnnoiseInput(input)),
+    digestInput: (input) => digestInt16(fixtureIdentity(input)),
+    digestOutput: digestFloat32,
+  },
+  gtcrn: {
+    file: "gtcrn.txt",
+    binary: "web/public/audio/gtcrn.wasm, through capture/gtcrn/denoiser.ts",
+    title: "Suppressor record of GTCRN: what gtcrn.wasm makes of each fixture. See web/bench/voice/README.md.",
+    header: (latency) => [
+      ["binary", "web/public/audio/gtcrn.wasm, through capture/gtcrn/denoiser.ts"],
+      ["frame", `${QUANTUM} samples in a render quantum, ${GTCRN_FRAME} to the module, at ${SAMPLE_RATE} Hz (${fixed((GTCRN_FRAME * 1000) / SAMPLE_RATE, 2)} ms)`],
+      ["latency", latency === null ? "none" : `${latency} (${fixed(latency / 48, 2)} ms)`],
+    ],
+    latency: () => talkerLatency(runGtcrn),
+    run: runGtcrn,
+    // The fixture as the int16 it rounds to: its identity.
+    digestInput: (input) => digestInt16(fixtureIdentity(input)),
     digestOutput: digestFloat32,
   },
 };
 
-/** The fixture as the wrapper hands it over, to the int16 it rounds to: its identity, which is as far as the fixture matters. */
-function rnnoiseInput(input: Float32Array): Int16Array {
+/** The fixture to the int16 it rounds to: its identity, which is as far as the fixture matters. */
+function fixtureIdentity(input: Float32Array): Int16Array {
   const values = new Int16Array(input.length);
   for (let i = 0; i < input.length; i += 1) {
     values[i] = Math.max(-32768, Math.min(32767, Math.round((input[i] as number) * 32768)));

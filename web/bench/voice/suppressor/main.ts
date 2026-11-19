@@ -6,16 +6,20 @@
  * and binary from /audio/, exactly as a call does. "Before" is a worklet and
  * a binary the runner serves at /before/, started the way the app started
  * the published worklets: the processor name its registerProcessor call
- * gives, and `{ maxChannels: 1, wasmBinary }`. Both render the same fixture
+ * gives, and `{ maxChannels: 1, wasmBinary, module }`, which the published
+ * worklets and ours each read what they need from. Both render the same fixture
  * in an OfflineAudioContext at 48 kHz, one mono channel.
  */
 import {
+  PROCESSOR_NAME,
   attachSuppressor,
   resetSuppressorCacheForTests,
   type NoiseSuppressorHandle,
 } from "@/lib/voice/capture/noiseSuppression";
 import type { WorkletSuppressor } from "@/lib/voice/audioProfiles";
+import { GtcrnDenoiser, instantiateGtcrn } from "@/lib/voice/capture/gtcrn/denoiser";
 import { RnnoiseDenoiser, instantiateRnnoise } from "@/lib/voice/capture/rnnoise/denoiser";
+import { REMOTE_SUPPRESSOR, RemoteVoiceMixer } from "@/lib/voice/playback/remoteMixer";
 import { measureLatency } from "../capture/record";
 import { QUANTUM, SAMPLE_RATE } from "../dsp";
 import { LATENCY_PROBE, TALKERS, buildFixture, fixtureByName } from "../fixtures";
@@ -79,8 +83,8 @@ async function node(side: Side, kind: WorkletSuppressor, context: OfflineAudioCo
   }
   const { processor, binary } = await loadBefore();
   await context.audioWorklet.addModule("/before/worklet.js");
-  // The published worklets read the binary; ours for RNNoise takes it
-  // compiled, so that an earlier build of it can stand on this side too.
+  // The published worklets read the binary; ours for RNNoise and GTCRN take
+  // it compiled, so that an earlier build of either can stand on this side too.
   const created = new AudioWorkletNode(context, processor, {
     processorOptions: { maxChannels: 1, wasmBinary: binary.slice(0), module: await WebAssembly.compile(binary) },
   });
@@ -333,22 +337,44 @@ async function tapReport(node: AudioWorkletNode): Promise<TapReport> {
 }
 
 /**
- * What the RNNoise processor's constructor does to the render thread, timed
- * here on the main thread, which runs the same engine: instantiating a module
- * that was compiled elsewhere (what compiling takes is reported too: it would
- * be the render thread's if the processor compiled), making the state, and then the first quanta,
- * whose code may not have been optimised yet. A render quantum is 2.67 ms.
+ * What a processor's constructor does to the render thread, timed here on the
+ * main thread, which runs the same engine: instantiating a module that was
+ * compiled elsewhere (what compiling takes is reported too: it would be the
+ * render thread's if the processor compiled), making the state, and then the
+ * first quanta, whose code may not have been optimised yet. A render quantum
+ * is 2.67 ms.
  */
-async function rnnoiseConstruction() {
-  const binary = await (await fetch("/audio/rnnoise.wasm")).arrayBuffer();
+interface Construction {
+  url: string;
+  instantiate(module: WebAssembly.Module): unknown;
+  make(exports: unknown): { run(input: Float32Array, output: Float32Array): void; destroy(): void };
+}
+
+const CONSTRUCTION: Partial<Record<WorkletSuppressor, Construction>> = {
+  rnnoise: {
+    url: "/audio/rnnoise.wasm",
+    instantiate: instantiateRnnoise,
+    make: (exports) => new RnnoiseDenoiser(exports as ReturnType<typeof instantiateRnnoise>),
+  },
+  gtcrn: {
+    url: "/audio/gtcrn.wasm",
+    instantiate: instantiateGtcrn,
+    make: (exports) => new GtcrnDenoiser(exports as ReturnType<typeof instantiateGtcrn>),
+  },
+};
+
+async function construction(kind: WorkletSuppressor) {
+  const engine = CONSTRUCTION[kind];
+  if (engine === undefined) return null;
+  const binary = await (await fetch(engine.url)).arrayBuffer();
   let started = performance.now();
   const module = await WebAssembly.compile(binary);
   const compileMs = performance.now() - started;
   started = performance.now();
-  const exports = instantiateRnnoise(module);
+  const exports = engine.instantiate(module);
   const instantiateMs = performance.now() - started;
   started = performance.now();
-  const denoiser = new RnnoiseDenoiser(exports);
+  const denoiser = engine.make(exports);
   const createMs = performance.now() - started;
   const talker = TALKERS[0]?.build() ?? new Float32Array(0);
   const output = new Float32Array(QUANTUM);
@@ -417,7 +443,7 @@ async function realtime(kind: WorkletSuppressor) {
   const window = flat.subarray(Math.max(0, from));
   return {
     attached: true,
-    construction: kind === "rnnoise" ? await rnnoiseConstruction() : null,
+    construction: await construction(kind),
     attachMs,
     soundDb: db(energy(window) / Math.max(1, window.length)),
     // Gaps in the pace tap's render calls from the moment attach began until 300 ms after it resolved.
@@ -442,4 +468,91 @@ async function missingBinary(kind: WorkletSuppressor, path: string): Promise<boo
   }
 }
 
-window.__suppressor = { ready: true, compare, quality, destroyed, missingBinary, realtime };
+/**
+ * The engine the remote mixer cleans a strip with, through the mixer itself
+ * in a real-time context: a talker sent as a MediaStream comes out of the
+ * element the mixer gives as sound (the last recording, speech), with two strips cleaned at once, and when
+ * the call ends every suppressor node that was built has been told to
+ * "destroy". The count is of the messages and the nodes, observed from
+ * outside; that the processor frees its state on the message is held by the
+ * denoiser's own test.
+ */
+async function mixer(kind: WorkletSuppressor) {
+  if (kind !== REMOTE_SUPPRESSOR) return null;
+  resetSuppressorCacheForTests();
+  const counts = { created: 0, destroyed: 0 };
+  const NativeNode = window.AudioWorkletNode;
+  const nativePost = MessagePort.prototype.postMessage;
+  window.AudioWorkletNode = class extends NativeNode {
+    constructor(context: BaseAudioContext, name: string, options?: AudioWorkletNodeOptions) {
+      super(context, name, options);
+      if (name === PROCESSOR_NAME[kind]) counts.created += 1;
+    }
+  } as typeof AudioWorkletNode;
+  MessagePort.prototype.postMessage = function (this: MessagePort, message: unknown, ...rest: unknown[]) {
+    if (message === "destroy") counts.destroyed += 1;
+    return (nativePost as (...args: unknown[]) => void).call(this, message, ...rest);
+  } as typeof MessagePort.prototype.postMessage;
+  try {
+    const remote = new AudioContext({ sampleRate: SAMPLE_RATE });
+    // A recording when there is one: the network takes the synthetic voices for noise.
+    const talker = (await talkers()).at(-1)?.samples ?? new Float32Array(0);
+    const buffer = remote.createBuffer(1, talker.length, SAMPLE_RATE);
+    buffer.getChannelData(0).set(talker);
+    const source = remote.createBufferSource();
+    source.buffer = buffer;
+    source.loop = true;
+    const sent = remote.createMediaStreamDestination();
+    source.connect(sent);
+    source.start();
+
+    const voices = new RemoteVoiceMixer("studio");
+    voices.prepare();
+    const elements = ["a", "b"].map(() => new Audio());
+    for (const [index, element] of elements.entries()) {
+      voices.attach(`voice-${index}`, sent.stream, element, 1, { suppressed: true });
+    }
+    // The suppressor is added in the background once the worklet has loaded.
+    for (let waited = 0; waited < 6000 && !(voices.isSuppressed("voice-0") && voices.isSuppressed("voice-1")); waited += 100) {
+      await sleep(100);
+    }
+    const suppressed = voices.isSuppressed("voice-0") && voices.isSuppressed("voice-1");
+
+    // What the first strip's element plays, heard by a second context.
+    const listener = new AudioContext({ sampleRate: SAMPLE_RATE });
+    const url = URL.createObjectURL(new Blob([TAP], { type: "text/javascript" }));
+    await listener.audioWorklet.addModule(url);
+    URL.revokeObjectURL(url);
+    const tap = new AudioWorkletNode(listener, "bench-tap");
+    tap.connect(listener.destination);
+    listener.createMediaStreamSource(elements[0]?.srcObject as MediaStream).connect(tap);
+    await sleep(4000);
+    const heard = await tapReport(tap);
+    const flat = new Float32Array(heard.samples.length * QUANTUM);
+    heard.samples.forEach((chunk, index) => flat.set(chunk, index * QUANTUM));
+    const window2 = flat.subarray(Math.floor(flat.length / 2));
+
+    // One strip leaves the call, then the rest of the call.
+    voices.remove("voice-0");
+    await sleep(300);
+    const afterOne = { ...counts };
+    voices.dispose();
+    await sleep(300);
+    const afterCall = { ...counts };
+    await listener.close();
+    source.stop();
+    await remote.close();
+    return {
+      suppressed,
+      soundDb: db(energy(window2) / Math.max(1, window2.length)),
+      created: afterCall.created,
+      destroyedAfterOneLeft: afterOne.destroyed,
+      destroyedAfterCall: afterCall.destroyed,
+    };
+  } finally {
+    window.AudioWorkletNode = NativeNode;
+    MessagePort.prototype.postMessage = nativePost;
+  }
+}
+
+window.__suppressor = { ready: true, compare, quality, destroyed, missingBinary, realtime, mixer };

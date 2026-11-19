@@ -379,6 +379,7 @@ async function main() {
         : null,
       realtime: await page.eval(`window.__suppressor.realtime(${JSON.stringify(options.engine)})`),
       destroyed: await page.eval(`window.__suppressor.destroyed(${JSON.stringify(options.engine)})`),
+      mixer: await page.eval(`window.__suppressor.mixer(${JSON.stringify(options.engine)})`),
       // The binary the app fetched for this engine, which may be a SIMD build.
       missingBinaryGivesNull: await page.eval(
         `window.__suppressor.missingBinary(${JSON.stringify(options.engine)}, ${JSON.stringify(`/${state.lastBinary}`)})`,
@@ -437,6 +438,16 @@ async function main() {
     `destroy: before ${before.silentAfter ? "falls silent" : "keeps sounding"}, now ${after.silentAfter ? "falls silent" : "keeps sounding"}`,
   );
   if (!after.soundBefore || !after.silentAfter) problems.push("the current node did not fall silent after destroy");
+  if (result.mixer !== null) {
+    const m = result.mixer;
+    console.log(
+      `remote mixer, two strips: ${m.suppressed ? "both cleaned" : "NOT cleaned"}, the first comes out at ${figure(m.soundDb)} dBFS; ` +
+        `${m.created} suppressor nodes built, ${m.destroyedAfterOneLeft} told to destroy when one strip left, ${m.destroyedAfterCall} when the call ended`,
+    );
+    if (!m.suppressed) problems.push("the remote mixer did not put the suppressor on both strips");
+    if (!(m.soundDb > -60)) problems.push(`the remote mixer's strip came out at ${figure(m.soundDb)} dBFS, not as sound`);
+    if (m.created !== 2 || m.destroyedAfterCall !== m.created) problems.push("the remote mixer left a suppressor node without a destroy");
+  }
   console.log(`a 404 for /${state.lastBinary}: attachSuppressor ${result.missingBinaryGivesNull ? "gives null" : "does not give null"}`);
   if (!result.missingBinaryGivesNull) problems.push("attachSuppressor did not give null for a missing binary");
 

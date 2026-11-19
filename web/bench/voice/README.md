@@ -10,15 +10,16 @@ is rewritten, so that the rewrite can be held to the same sound:
 - **playback**: each remote participant's strip of Web Audio nodes
   (`playback/remoteMixer.ts`, `playback/remoteStrip.ts`,
   `playback/playbackProfile.ts`), for every playback profile;
-- **suppressor**: the noise suppressors whose binaries are built here,
-  Speex and RNNoise (`capture/speex/` and `capture/rnnoise/`, built into
-  `/audio/speex-worklet.js` and `/audio/rnnoise-worklet.js`, with the binaries
-  from `artifacts/recipes/speex/` and `artifacts/recipes/rnnoise/`).
+- **suppressor**: the noise suppressors, Speex, RNNoise and GTCRN
+  (`capture/speex/`, `capture/rnnoise/` and `capture/gtcrn/`, built into
+  `/audio/speex-worklet.js`, `/audio/rnnoise-worklet.js` and
+  `/audio/gtcrn-worklet.js`, with the binaries from `artifacts/recipes/speex/`,
+  `artifacts/recipes/rnnoise/` and `artifacts/recipes/gtcrn/`).
 
 How the microphone is opened and what the browser does to it
 (`micAcquire.ts`, `browserProcessing.ts`, `micPipeline.ts`, the microphone
-constraints) is left out on purpose: it is not being preserved. So are the
-fixed input gain and the suppressor still served as a prebuilt file, GTCRN.
+constraints) is left out on purpose: it is not being preserved. So is the
+fixed input gain.
 
 ## Checks
 
@@ -233,6 +234,12 @@ synthetic speech, which the network takes for noise and attenuates by 20 to
 40 dB at the top of the band, so the record pins what the binary does and
 says nothing about how it treats a voice; `--quality` below does that.
 
+`records/suppressor/gtcrn.txt` is the same for `web/public/audio/gtcrn.wasm`
+through `capture/gtcrn/denoiser.ts`: float-bit output digests and a latency
+measured on a talker (1530 samples), because GTCRN removes the probe's noise
+as well. It is all float, so a sample past full scale goes in as it is, as it
+did in the published worklet.
+
 WebAssembly's arithmetic is the same on every machine, so the output is held
 exactly: any change in what the binary puts out fails, however small, and the
 gains and the peak say where and by how much. A new toolchain, a new SpeexDSP
@@ -291,20 +298,21 @@ network trained on real speech, which the printed tables show for RNNoise.
 
 It also checks three things of the current engine: that a talker played
 through `attachSuppressor` in a real-time context comes out as sound while
-the render thread keeps its pace (and, for RNNoise, what its construction
-costs it); that the that the "destroy" the app
+the render thread keeps its pace (and, for RNNoise and GTCRN, what their
+construction costs it); that the "destroy" the app
 sends when it lets a suppressor go silences the node; and that a 404 for the
 binary makes `attachSuppressor` resolve to null. Chrome is started with
 `--disable-audio-output`, without which a real-time context does not advance
 on a headless Mac. The earlier side shows
-whether it heard "destroy" too. GTCRN, still the published worklet, fails the
-destroy check today: it never hears it.
+whether it heard "destroy" too: the published GTCRN worklet, which GTCRN's
+recipe replaced, never did.
 
-Run against the same revision, GTCRN comes out identical, with a latency
-of 635 samples against Speex's 128 and RNNoise's 1408, and the `fan`
-fixture, at -40 dBFS, leaves GTCRN at -67 dBFS, Speex at -49 and the
-prebuilt RNNoise before the recipe at -72: the starting point GTCRN's recipe
-is measured from.
+Run against the revision before GTCRN was built here, GTCRN comes out
+identical, sample for sample, on all eight fixtures, `clipping` included, in
+Chrome 158, with a latency of 635 samples on the probe (Speex's is 128,
+RNNoise's 1408).
+The `fan` fixture, at -40 dBFS, leaves GTCRN at -67 dBFS, Speex at -49 and
+the prebuilt RNNoise before its recipe at -72.
 
 The current side needs the recipes built and the binaries assembled, as `npm
 test` needs them. Run against the revision before Speex was built here, Speex
@@ -450,7 +458,7 @@ A rewrite changes these files of the harness, not the records:
   from `capture/rnnoise/denoiser.ts`;
 - `suppressor/main.ts`: `attachSuppressor` and
   `resetSuppressorCacheForTests` from `capture/noiseSuppression.ts`, and the
-  options the published worklets read (`maxChannels`, `wasmBinary`).
+  options the earlier worklets read (`maxChannels`, `wasmBinary` and the compiled `module`).
 
 Nothing reads a field of a processor or a node. The detector's frame-level
 reasoning (the noise floor it has learned, the SNR, the voicing of a frame,

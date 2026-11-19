@@ -11,6 +11,7 @@ import { checkEngine, explain, type EngineName } from "../../../../../bench/voic
 const ENGINE_LABELS: ReadonlyArray<readonly [string, EngineName]> = [
   ["Speex", "speex"],
   ["RNNoise", "rnnoise"],
+  ["GTCRN", "gtcrn"],
 ];
 
 describe("suppressor record", () => {
