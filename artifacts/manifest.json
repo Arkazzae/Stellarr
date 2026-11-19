@@ -17,12 +17,12 @@
       "id": "noise-suppression/gtcrn-wasm",
       "path": "audio/gtcrn.wasm",
       "source": { "recipe": "gtcrn", "output": "gtcrn.wasm" },
-      "sha256": "de3e19677501c36dbbdf09ee0221ec283281b30c851ed96f27941e25b4170de1",
-      "size": 477310,
+      "sha256": "69fe0abcb33e8d59616d6bf609516e02867d6efe138680beeefb7a076c49d2a2",
+      "size": 478516,
       "upstream": {
         "project": "https://github.com/Xiaobin-Rong/gtcrn",
         "from": "https://github.com/Xiaobin-Rong/gtcrn.git#502ebfab64da7c4a9af78dcb9c6ceef1ebb01c73 (stream/onnx_models/gtcrn_simple.onnx), converted to C by https://github.com/kraiskil/onnx2c.git#1154edbefb891129948bd494188109d68da9d5d7 after the graph preparation of https://github.com/sapphi-red/gtcrn-wasm.git#24662ff13f184b96edf91f1568e186341a8ac988 (0.0.3), with https://github.com/marton78/pffft.git#179a48d486cbee8ec5416e5c163ad575c2efe1f1 (v1.3.0)",
-        "verified": "Built here from those commits by artifacts/recipes/gtcrn/, in the image its stages in the root Dockerfile pin by digest: Python 3.12 with the packages of requirements.txt by hash and Debian packages from a snapshot for the generation, which checks the generated C against the original model in onnxruntime, and the wasi-sdk 33 image for the compile. The build gave these bytes on arm64 and on amd64 build machines. Driven by our worklet, it puts out what dist/gtcrn.wasm of @sapphi-red/gtcrn-wasm 0.0.3 with its worklet did for the same input; web/bench/voice/records/suppressor/gtcrn.txt holds the output."
+        "verified": "Built here from those commits by artifacts/recipes/gtcrn/, in the image its stages in the root Dockerfile pin by digest: Python 3.12 with the packages of requirements.txt by hash and Debian packages from a snapshot for the generation, which checks the generated C against the original model in onnxruntime, and the wasi-sdk 33 image for the compile. The build gave these bytes on arm64 and on amd64 build machines. The model path is the one of dist/gtcrn.wasm of @sapphi-red/gtcrn-wasm 0.0.3, which gave the same samples, bit for bit, as the previous commit of this recipe on every fixture; this build adds the band above 8 kHz, taken from the input and gated by what the model does to its own top bins. web/bench/voice/records/suppressor/gtcrn.txt holds the output."
       },
       "license": "MIT AND LicenseRef-pffft AND LicenseRef-onnx2c AND SunPro AND CC0-1.0"
     },

@@ -19,7 +19,9 @@
  * - `gtcrn`: a larger network with a far better record on non-stationary noise,
  *   at a higher CPU cost. The module takes 768-sample frames at 48 kHz,
  *   resamples them 3:1 and runs the model at 16 kHz, so the model itself sees
- *   nothing above 8 kHz.
+ *   nothing above 8 kHz. What lies above it is taken from the input, with a
+ *   gain that follows what the model does to the top of its own band, so the
+ *   voice keeps its top octave and the noise there goes with the model's.
  * - `speex`: SpeexDSP's `preprocess`, classic spectral subtraction. The lightest
  *   option and the least effective.
  *

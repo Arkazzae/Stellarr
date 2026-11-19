@@ -238,7 +238,9 @@ says nothing about how it treats a voice; `--quality` below does that.
 through `capture/gtcrn/denoiser.ts`: float-bit output digests and a latency
 measured on a talker (1530 samples), because GTCRN removes the probe's noise
 as well. It is all float, so a sample past full scale goes in as it is, as it
-did in the published worklet.
+did in the published worklet. The module puts the band above 8 kHz back (see
+"The band above 8 kHz" below), which is why its record differs from the one of
+the build it replaced.
 
 WebAssembly's arithmetic is the same on every machine, so the output is held
 exactly: any change in what the binary puts out fails, however small, and the
@@ -322,6 +324,32 @@ the same output in Chrome 158 and in Node. On `clipping` the clamp changes
 old engine turned over, and the difference is -13.6 dBFS RMS, 1.9 dB below
 the old output. The state of the preprocessor carries the change past the
 samples themselves, which is why most of the fixture differs a little.
+
+## The band above 8 kHz
+
+GTCRN's model sees 0 to 8 kHz, and the build it replaced gave a voice back
+wideband: -24 dB of the clean speech's energy above 8 kHz. `gtcrn_dsp.c` now
+puts the band back (the comment at its top says how: the input minus what the
+two resamplers make of it, delayed to match, with a gain that is the share of
+energy the model kept between 5 and 8 kHz). Measured on the five recordings
+in the five rooms of `--quality`, means, A being the build that is identical to
+the one it replaced and B the band added:
+
+| | noise removed | noise removed above 8 kHz | left above 8 kHz in noise-only stretches (input -55) | SI-SDR | energy above 8 kHz | first 43 ms of a phrase above 8 kHz | last 43 ms | worst onset | latency |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| A | -26.0 dB | -62.5 dB | -117 dBFS | 14.7 dB | -24.3 dB | -26.6 dB | -19.0 dB | -12.7 dB | 1530 |
+| B | -26.0 dB | -60.0 dB | -115 dBFS | 17.7 dB | -3.9 dB | -6.7 dB | -4.0 dB | -11.8 dB | 1530 |
+
+Typing, where the clicks are: noise removed above 8 kHz -57.6 dB (A) and
+-48.3 dB (B), left above 8 kHz -118 and -109 dBFS against -60 in; the band
+opens within 3.3 dB of the clean one at the start of a phrase and 1.6 dB at
+the end. Fan at 10 dB: -63.8 and -63.5 dB, band at the start of a phrase
+-2.9 dB, at the end -3.4 dB. No room leaves a hiss tail: the last 43 ms of a
+phrase is below the clean talker's everywhere. In the 0 dB fan the model keeps
+less of the top itself, and the band follows it (-26 dB at the start, -10 dB
+at the end, still 12 dB above A's). The synthetic talkers, which the network
+takes for noise, get no band back either (energy above 8 kHz -55 dB in the
+quiet room becomes -37): the gain follows the model.
 
 ## What the checks were tried against
 
