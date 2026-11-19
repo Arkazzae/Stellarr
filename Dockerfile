@@ -80,6 +80,69 @@ RUN --network=none sh /src/recipe/build.sh /src/rnnoise /src/rnnoise_data.tar.gz
 FROM --platform=$RECIPE_PLATFORM scratch AS recipe-rnnoise
 COPY --from=recipe-rnnoise-build /out/ /
 
+# GTCRN's model and its 48 kHz front-end, the GTCRN noise suppressor
+# (artifacts/recipes/gtcrn/). Three steps, each a stage:
+#
+# - tools: Python with the locked packages and the C++ packages onnx2c needs.
+#   The packages are fetched here and nowhere else. Debian's come from
+#   snapshot.debian.org at the date this image's own sources name, so the
+#   same list gives the same versions; Python's from artifacts/recipes/gtcrn/
+#   requirements.txt, which pip installs only when every hash matches.
+# - generate: the model's C, from upstream's ONNX file, with no network.
+# - build: the compile, in the wasi-sdk image, with no network.
+#
+# The sources of generate are three repositories at a commit each: the model
+# (Xiaobin-Rong/gtcrn), the tool that turns it into C (kraiskil/onnx2c, with
+# its submodules, which the commit names) and the script that prepares the
+# graph for the tool (sapphi-red/gtcrn-wasm at its 0.0.3 commit, which also
+# holds the hand-written GRU the build compiles). The FFT, pffft, is fetched
+# by the build stage.
+FROM --platform=$RECIPE_PLATFORM python:3.12-slim-bookworm@sha256:935c3c5b12357a7e10caa9c1e6ca5692344d97cf229832ef584be2cec9fc03df AS recipe-gtcrn-tools
+# The image's own sources name the snapshots its package lists were cut from,
+# both of 2026-11-04 21:23:39 UTC; these are the same, over http because the
+# image has no certificates yet, and apt checks the signatures.
+RUN printf '%s\n' \
+      'Types: deb' \
+      'URIs: http://snapshot.debian.org/archive/debian/20261104T212339Z' \
+      'Suites: bookworm bookworm-updates' \
+      'Components: main' \
+      'Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg' \
+      '' \
+      'Types: deb' \
+      'URIs: http://snapshot.debian.org/archive/debian-security/20261104T212339Z' \
+      'Suites: bookworm-security' \
+      'Components: main' \
+      'Signed-By: /usr/share/keyrings/debian-archive-keyring.gpg' \
+      > /etc/apt/sources.list.d/debian.sources \
+ && apt-get -o Acquire::Check-Valid-Until=false update \
+ && apt-get install -y --no-install-recommends cmake g++ git make libprotobuf-dev protobuf-compiler \
+ && rm -rf /var/lib/apt/lists/*
+COPY artifacts/recipes/gtcrn/requirements.txt /tmp/requirements.txt
+RUN pip install --no-cache-dir --require-hashes --only-binary=:all: -r /tmp/requirements.txt
+
+FROM --platform=$RECIPE_PLATFORM recipe-gtcrn-tools AS recipe-gtcrn-generate
+ADD https://github.com/Xiaobin-Rong/gtcrn.git#502ebfab64da7c4a9af78dcb9c6ceef1ebb01c73 /src/gtcrn
+ADD https://github.com/kraiskil/onnx2c.git#1154edbefb891129948bd494188109d68da9d5d7 /src/onnx2c
+ADD https://github.com/sapphi-red/gtcrn-wasm.git#24662ff13f184b96edf91f1568e186341a8ac988 /src/gtcrn-wasm
+COPY artifacts/recipes/gtcrn/generate.sh /src/recipe/generate.sh
+RUN --network=none sh /src/recipe/generate.sh /src/gtcrn /src/onnx2c /src/gtcrn-wasm /out
+
+# Only the generated C, so that the compile stage copies nothing else of the
+# generation's image, and so that `--target recipe-gtcrn-c` shows it.
+FROM --platform=$RECIPE_PLATFORM scratch AS recipe-gtcrn-c
+COPY --from=recipe-gtcrn-generate /out/ /
+
+FROM --platform=$RECIPE_PLATFORM ghcr.io/webassembly/wasi-sdk:wasi-sdk-33@sha256:f4d3519a6d4b36e8fd541019e13cb8d232980d9586e2b185f872ab97ea15bcfd AS recipe-gtcrn-build
+# v1.3.0, the release of 2026-11-10: it has a WebAssembly SIMD path.
+ADD https://github.com/marton78/pffft.git#179a48d486cbee8ec5416e5c163ad575c2efe1f1 /src/pffft
+ADD https://github.com/sapphi-red/gtcrn-wasm.git#24662ff13f184b96edf91f1568e186341a8ac988 /src/gtcrn-wasm
+COPY --from=recipe-gtcrn-c / /src/generated/
+COPY artifacts/recipes/gtcrn/ /src/recipe/
+RUN --network=none sh /src/recipe/build.sh /src/pffft /src/gtcrn-wasm /src/generated /out
+
+FROM --platform=$RECIPE_PLATFORM scratch AS recipe-gtcrn
+COPY --from=recipe-gtcrn-build /out/ /
+
 # web/ holds both apps, the web client and Cockpit (web/src/cockpit/). It is a
 # workspace of one npm project with the shared packages/: the root
 # package-lock.json covers all of them. The stage copies every workspace
@@ -103,6 +166,7 @@ COPY artifacts/ artifacts/
 COPY --from=recipe-speex / artifacts/recipes/speex/out/
 COPY --from=recipe-bergamot / artifacts/recipes/bergamot/out/
 COPY --from=recipe-rnnoise / artifacts/recipes/rnnoise/out/
+COPY --from=recipe-gtcrn / artifacts/recipes/gtcrn/out/
 COPY web/ web/
 WORKDIR /src/web
 # The build writes both apps to dist/. nginx sends the .gz file beside the
