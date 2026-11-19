@@ -22,17 +22,6 @@ const ilya: PersonVM = {
 };
 
 describe("ParticipantTiles", () => {
-  it("marks a lone participant for the full-width mobile layout", () => {
-    const { container, rerender } = render(<ParticipantTiles people={[ada]} />);
-
-    expect(container.firstElementChild).toHaveClass("tiles", "single");
-
-    rerender(<ParticipantTiles people={[ada, ilya]} />);
-
-    expect(container.firstElementChild).toHaveClass("tiles");
-    expect(container.firstElementChild).not.toHaveClass("single");
-  });
-
   it("renders a labelled, muted local camera preview", () => {
     const stream = { id: "camera-ada" } as MediaStream;
 

@@ -295,6 +295,8 @@ export interface SoundboardSnapshot {
   sounds: SoundboardSound[];
   settings: SoundboardSettings;
   canManage: boolean;
+  /** Whether the server lets this caller play sounds, by the same rule the hub applies. */
+  canPlay: boolean;
 }
 
 export interface SoundboardPlayedEvent {

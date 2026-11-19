@@ -22,10 +22,12 @@ import { useVoiceContext } from "./VoiceProvider";
  * The dialog that is up. Only one can be, so this is a value rather than a set.
  *
  * `settings` is the server's and `account` is the person's own; `profile` and
- * `voice` are the account dialog opened on a particular pane.
+ * `voice` are the account dialog opened on a particular pane, as `soundboard`
+ * is the server's.
  */
 export type ModalKey =
   | "settings"
+  | "soundboard"
   | "account"
   | "profile"
   | "voice"

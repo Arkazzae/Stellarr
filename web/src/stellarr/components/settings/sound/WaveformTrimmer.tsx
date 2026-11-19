@@ -77,9 +77,10 @@ export interface WaveformTrimmerProps extends DecodedWaveform {
 }
 
 /**
- * A waveform with two handles and the stretch between them. Handles and the
- * selection can be dragged or moved with the arrow keys; the selection keeps
- * to the minimum and maximum clip length, and to the clip itself.
+ * A waveform with two handles and the stretch between them, whose bars are
+ * drawn in the accent. Handles and the selection can be dragged or moved with
+ * the arrow keys; the selection keeps to the minimum and maximum clip length,
+ * and to the clip itself. The times are read out by whoever holds it.
  */
 export function WaveformTrimmer({
   duration,
@@ -171,6 +172,11 @@ export function WaveformTrimmer({
   const startPercent = percent(start);
   const endPercent = percent(end);
   const tabIndex = disabled ? -1 : 0;
+  /** A bar is part of the clip when its middle is. */
+  const kept = (index: number) => {
+    const at = ((index + 0.5) / peaks.length) * duration;
+    return at >= start && at <= end;
+  };
 
   return (
     <div className="wave-editor">
@@ -182,14 +188,19 @@ export function WaveformTrimmer({
       >
         <svg viewBox={`0 0 ${peaks.length * 3} 100`} preserveAspectRatio="none" aria-hidden="true">
           {peaks.map((peak, index) => {
-            const height = Math.max(4, peak * 88);
+            const height = Math.max(4, peak * 100);
             return (
-              <rect key={index} x={index * 3} y={(100 - height) / 2} width="2" height={height} rx="1" />
+              <rect
+                key={index}
+                className={kept(index) ? "kept" : undefined}
+                x={index * 3}
+                y={(100 - height) / 2}
+                width="2"
+                height={height}
+              />
             );
           })}
         </svg>
-        <span className="wave-mask left" style={{ width: `${startPercent}%` }} />
-        <span className="wave-mask right" style={{ left: `${endPercent}%` }} />
         <div
           className="wave-selection"
           style={{ left: `${startPercent}%`, width: `${endPercent - startPercent}%` }}
@@ -207,7 +218,7 @@ export function WaveformTrimmer({
           }}
         />
         <div
-          className="wave-clamp start"
+          className="wave-clamp"
           style={{ left: `${startPercent}%` }}
           role="slider"
           tabIndex={tabIndex}
@@ -220,7 +231,7 @@ export function WaveformTrimmer({
           onKeyDown={(event) => nudgeEdge("start", event)}
         />
         <div
-          className="wave-clamp end"
+          className="wave-clamp"
           style={{ left: `${endPercent}%` }}
           role="slider"
           tabIndex={tabIndex}
@@ -232,11 +243,6 @@ export function WaveformTrimmer({
           onPointerDown={(event) => grabEdge("end", event)}
           onKeyDown={(event) => nudgeEdge("end", event)}
         />
-      </div>
-      <div className="wave-times">
-        <span>{timecode(start)}</span>
-        <b>{(end - start).toFixed(2)} s</b>
-        <span>{timecode(end)}</span>
       </div>
     </div>
   );

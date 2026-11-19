@@ -887,17 +887,15 @@
     grid-row: 1;
     justify-self: center;
     margin-bottom: var(--sp-5);
-    /* The ring of a speaking tile, drawn round the face with a gap. */
+    /* The ring of a speaking tile, drawn round the face with a gap, and
+       nothing blurred round it: no gradients. */
     outline: 3px solid transparent;
     outline-offset: 6px;
-    transition:
-      outline-color var(--dur-base) var(--ease-standard),
-      box-shadow var(--dur-base) var(--ease-standard);
+    transition: outline-color var(--dur-base) var(--ease-standard);
   }
 
   .dm-call-face.speaking .av {
     outline-color: var(--accent);
-    box-shadow: 0 0 24px 9px oklch(0.618 0.185 278 / 0.2);
   }
 
   /* Calling: a ring that waits rather than one that lights up. */

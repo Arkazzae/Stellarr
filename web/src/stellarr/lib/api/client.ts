@@ -356,6 +356,8 @@ export interface ApiClient {
     signal?: AbortSignal,
   ): Promise<SoundboardSound>;
   deleteSoundboardSound(soundId: string, signal?: AbortSignal): Promise<void>;
+  /** The whole order of the server's sounds; it has to name each of them once. */
+  reorderSoundboardSounds(soundIds: string[], signal?: AbortSignal): Promise<void>;
   updateSoundboardSettings(
     patch: Partial<SoundboardSettings>,
     signal?: AbortSignal,

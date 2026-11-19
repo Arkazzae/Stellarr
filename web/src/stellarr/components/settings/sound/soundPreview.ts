@@ -1,27 +1,30 @@
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
  * The listener's own playback preferences, for auditioning a clip.
  *
- * A bare `new Audio()` has no chosen speaker, no output level and no
- * soundboard level. On a machine whose calls are routed somewhere other than
- * the system default it plays into a device nobody is listening to, which is
- * indistinguishable from a preview that does not work.
+ * A bare `new Audio()` has no chosen speaker and no soundboard level. On a
+ * machine whose calls are routed somewhere other than the system default it
+ * plays into a device nobody is listening to, which is indistinguishable from
+ * a preview that does not work.
  */
 export interface SoundPreviewPlayback {
-  /** The call's own output level, 0-100. */
-  outputVolume: number;
-  /** The soundboard's, 0-100: the dial the editor also offers. */
+  /**
+   * The soundboard's level, 0-100. A clip played in a call is mixed at this
+   * level alone, not at the call's output level, and so is its preview.
+   */
   soundboardVolume: number;
   /**
-   * Sends the preview to the speaker calls are routed to. Supplied by the
-   * container, which owns the transport. Failure is not fatal: the system
-   * default is still a speaker.
+   * Sends the preview to the speaker calls are routed to, leaving its level
+   * alone. Supplied by the container, which owns the transport. Failure is
+   * not fatal: the system default is still a speaker.
    */
   route?: (element: HTMLMediaElement) => Promise<void>;
 }
 
 export interface PreviewClip {
+  /** Names the clip, so that whoever started it can tell it is the one playing. */
+  key: string;
   url: string;
   start: number;
   end: number;
@@ -38,16 +41,16 @@ function detach(audio: HTMLAudioElement): void {
   audio.pause();
 }
 
-/** Plays one trimmed clip at a time, at the level a call would play it. */
+/**
+ * Plays one trimmed clip at a time, at the level a call would play it.
+ * `playing` is the key of the clip under way, or null.
+ */
 export function useSoundPreview(playback: SoundPreviewPlayback) {
   const current = useRef<HTMLAudioElement | null>(null);
   const stallGuard = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [playing, setPlaying] = useState<string | null>(null);
 
-  // Output level times soundboard level, the way a played clip is mixed.
-  const volume = Math.min(
-    1,
-    Math.max(0, (playback.outputVolume / 100) * (playback.soundboardVolume / 100)),
-  );
+  const volume = Math.min(1, Math.max(0, playback.soundboardVolume / 100));
 
   const stop = useCallback(() => {
     if (stallGuard.current !== null) clearTimeout(stallGuard.current);
@@ -55,9 +58,10 @@ export function useSoundPreview(playback: SoundPreviewPlayback) {
     const audio = current.current;
     current.current = null;
     if (audio !== null) detach(audio);
+    setPlaying(null);
   }, []);
 
-  // A slider moved while the clip is running is heard on that clip, not only
+  // A level changed while the clip is running is heard on that clip, not only
   // on the next one.
   useEffect(() => {
     if (current.current !== null) current.current.volume = volume;
@@ -77,6 +81,7 @@ export function useSoundPreview(playback: SoundPreviewPlayback) {
     audio.volume = volume;
     void playback.route?.(audio).catch(() => undefined);
     current.current = audio;
+    setPlaying(clip.key);
 
     const fail = () => {
       if (current.current !== audio) return;
@@ -112,5 +117,5 @@ export function useSoundPreview(playback: SoundPreviewPlayback) {
     if (audio.readyState >= HTMLMediaElement.HAVE_METADATA) seek();
   };
 
-  return { play, stop };
+  return { play, stop, playing };
 }

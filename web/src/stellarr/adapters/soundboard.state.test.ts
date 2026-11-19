@@ -28,6 +28,7 @@ function snapshot(
     sounds,
     settings: { everyoneCanPlay: true, rateLimited },
     canManage: true,
+    canPlay: true,
   };
 }
 

@@ -712,62 +712,113 @@
   .sound-error{color:var(--danger-text)}
   .sound-group + .sound-group{margin-top:28px}
   .sound-cap{align-items:baseline}
-  .sound-list{display:flex;flex-direction:column}
+  /* The list sits flush in its box: rows of one height, hairlines between
+     them, and the controls a row does not need at rest kept out of sight
+     until it is pointed at or focused. */
+  .sound-library .sc-b:has(> .sound-list){padding:0;overflow:hidden}
+  .sound-list{position:relative;margin:0;padding:0;list-style:none}
   .sound-row{
-    display:grid;grid-template-columns:auto minmax(0,1fr) auto;
-    align-items:center;gap:13px;padding:12px 2px;
+    display:flex;align-items:center;gap:10px;min-height:48px;padding:0 12px 0 8px;
+    background:var(--set-group,var(--surface-base));
     transition:background var(--dur-fast) var(--ease-standard);
   }
+  .sound-list.readonly .sound-row{padding-left:12px}
   .sound-row + .sound-row{border-top:1px solid var(--line-subtle)}
-  .sound-row.active{background:linear-gradient(90deg,var(--accent-soft),transparent 82%)}
-  .sound-mark,.sound-editor-mark{
-    display:inline-flex;align-items:center;justify-content:center;flex:none;
-    color:var(--text-muted);background:var(--surface-overlay);
+  .sound-row:hover{background:var(--surface-hover)}
+  .sound-grip,.sound-act{
+    flex:none;display:inline-flex;align-items:center;justify-content:center;
+    color:var(--text-muted);
+    transition:background var(--dur-fast) var(--ease-standard),color var(--dur-fast) var(--ease-standard),opacity var(--dur-fast) var(--ease-standard);
   }
-  .sound-mark{width:40px;height:40px;border-radius:12px;font-size:19px}
-  .sound-row-txt{min-width:0;display:flex;flex-direction:column;gap:3px}
-  .sound-row-txt b{font-size:var(--text-14);font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .sound-row-txt span{font-size:var(--text-12);color:var(--text-faint);font-variant-numeric:tabular-nums;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .sound-row-actions{display:flex;align-items:center;gap:14px;padding-right:6px}
-  .sound-row .set-item-act:focus-visible,.sound-row.active .set-item-act{opacity:1}
-  .sound-row:hover .set-item-act{opacity:1}
-  .sound-editor-card{margin-top:20px;padding:20px}
-  .sound-editor-head{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:13px;margin-bottom:20px}
-  .sound-editor-mark{width:42px;height:42px;border-radius:13px;font-size:20px}
-  .sound-editor-head > span:nth-child(2){min-width:0;display:flex;flex-direction:column;gap:3px}
-  .sound-editor-head b{font-size:var(--text-15);font-weight:600}
-  .sound-editor-head small{font-size:var(--text-12);color:var(--text-faint);line-height:1.4}
-  .sound-editor-close{
-    width:34px;height:34px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;
-    color:var(--text-faint);transition:background var(--dur-fast) var(--ease-standard),color var(--dur-fast) var(--ease-standard);
+  .sound-grip{width:16px;height:32px;color:var(--text-faint);cursor:grab;opacity:0;touch-action:manipulation}
+  .sound-act{width:32px;height:32px;border-radius:50%}
+  .sound-act:hover:not(:disabled){background:var(--surface-overlay);color:var(--text)}
+  .sound-act.danger:hover:not(:disabled){background:var(--danger-soft);color:var(--danger-text)}
+  .sound-act:disabled{opacity:.45;cursor:default}
+  .sound-grip:focus-visible,.sound-act:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  .sound-glyph{flex:none;width:24px;font-size:18px;line-height:1;text-align:center}
+  .sound-name{
+    flex:1;min-width:0;font-size:var(--text-14);color:var(--text);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
   }
-  .sound-editor-close:hover{background:var(--surface-overlay);color:var(--text)}
-  .sound-fields{display:grid;grid-template-columns:160px minmax(0,1fr);gap:12px}
-  .sound-field > label{display:block;font-size:var(--text-11);font-weight:650;color:var(--text-faint);margin-bottom:7px}
-  .sound-field-label{display:block;font-size:var(--text-11);font-weight:650;color:var(--text-faint);margin-bottom:7px}
-  /* The symbol is the control: the chosen emoji at reading size, with the
-     picker's own glyph beside it saying that pressing this opens one. */
+  .sound-length{flex:none;font-size:var(--text-12);color:var(--text-faint);font-variant-numeric:tabular-nums}
+  .sound-tools{flex:none;display:flex;gap:2px;margin-left:8px;opacity:0}
+  .sound-row:hover :is(.sound-grip,.sound-tools),
+  .sound-row:has(:focus-visible) .sound-tools,
+  .sound-grip:focus-visible{opacity:1}
+  .sound-row[data-playing] .sound-name,
+  .sound-row[data-playing] .sound-play{color:var(--accent-text)}
+  /* While a row is carried, the others make room for it and none of them
+     answers the pointer that passes over them. */
+  .sound-list[data-dragging]{cursor:grabbing}
+  .sound-list[data-dragging] .sound-row{pointer-events:none}
+  .sound-list[data-dragging] .sound-row:not([data-drag]){transition:transform var(--dur-fast) var(--ease-standard)}
+  .sound-row[data-drag="carried"]{
+    position:relative;z-index:1;background:var(--surface-overlay);box-shadow:var(--shadow-pop);
+  }
+  .sound-row[data-drag="carried"] .sound-grip{opacity:1}
+
+  /* ---------- The editor: a page of its own in place of the list ---------- */
+  .sound-editor{display:flex;flex-direction:column;gap:20px;max-width:680px}
+  .sound-back{
+    align-self:flex-start;display:inline-flex;align-items:center;gap:6px;
+    height:32px;margin-left:-8px;padding:0 10px 0 6px;border-radius:var(--radius-md);
+    font-size:var(--text-13);color:var(--text-muted);
+  }
+  .sound-back:hover:not(:disabled){background:var(--surface-overlay);color:var(--text)}
+  .sound-back:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  .sound-editor-title{margin:-8px 0 0;font-size:var(--text-16);font-weight:600;color:var(--text);outline:none}
+  .sound-fields{display:flex;align-items:flex-end;gap:12px}
+  .sound-field{display:flex;flex-direction:column;gap:8px}
+  .sound-field.grow{flex:1;min-width:0}
+  .sound-label{font-size:var(--text-12);font-weight:600;color:var(--text-muted)}
   .sound-glyph-pick{
-    width:100%;height:38px;display:inline-flex;align-items:center;gap:8px;
-    padding:0 10px;
-    border:1px solid var(--line-subtle);border-radius:var(--radius-sm);
-    background:var(--surface-field);color:var(--text-faint);
-    transition:background var(--dur-fast) var(--ease-standard),border-color var(--dur-fast) var(--ease-standard),color var(--dur-fast) var(--ease-standard);
+    width:44px;height:40px;border-radius:var(--radius-md);font-size:20px;line-height:1;
+    background:var(--surface-field);border:1px solid var(--line);
+    transition:border-color var(--dur-fast) var(--ease-standard);
   }
-  .sound-glyph-face{
-    flex:1;min-width:0;font-size:20px;line-height:1;text-align:left;
-  }
-  .sound-glyph-hint{flex:none}
-  .sound-glyph-pick:hover,.sound-glyph-pick[aria-expanded="true"]{background:var(--surface-overlay);border-color:var(--line);color:var(--accent-text)}
+  .sound-glyph-pick:hover:not(:disabled),.sound-glyph-pick[aria-expanded="true"]{border-color:var(--line-strong)}
   .sound-glyph-pick:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .sound-glyph-pick:disabled{opacity:.55;cursor:not-allowed}
-  .sound-preview-volume{
-    flex:none;display:inline-flex;align-items:center;gap:8px;color:var(--text-faint);
+  .sound-name-field{position:relative;display:block}
+  .sound-name-field .set-input{height:40px;padding-block:0;padding-right:56px}
+  .sound-name-field small{
+    position:absolute;right:12px;top:50%;transform:translateY(-50%);pointer-events:none;
+    font-size:var(--text-11);color:var(--text-faint);font-variant-numeric:tabular-nums;
   }
-  .sound-preview-volume input[type="range"]{width:104px}
-  .sound-preview-volume output{
-    min-width:38px;font-size:var(--text-12);font-variant-numeric:tabular-nums;text-align:right;
+  .sound-clip{display:flex;flex-direction:column;gap:8px}
+  .sound-clip-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+  .sound-source{min-width:0;font-size:var(--text-12);color:var(--text-faint);overflow-wrap:anywhere;text-align:right}
+  .sound-times{
+    display:flex;flex-wrap:wrap;align-items:center;gap:8px 20px;
+    font-size:var(--text-12);color:var(--text-faint);--ui-button-gap:7px;
   }
+  .sound-times b{margin-left:4px;font-weight:500;color:var(--text-muted);font-variant-numeric:tabular-nums}
+  .sound-times .ui-button{margin-left:auto}
+  .sound-editor-actions{display:flex;justify-content:flex-end;gap:8px;padding-top:4px}
+  .sound-emoji-card{overflow:hidden;background:transparent;box-shadow:none}
+  /* The waveform: the bars of the kept stretch in the accent, the rest in a
+     line, and a light handle at each end of it. */
+  .wave-editor{
+    height:112px;padding:12px 10px;border-radius:var(--radius-md);
+    background:var(--surface-field);border:1px solid var(--line);
+  }
+  .wave-plot{position:relative;height:100%;touch-action:none;user-select:none}
+  .wave-plot svg{position:absolute;inset:0;width:100%;height:100%}
+  .wave-plot rect{fill:var(--line-strong)}
+  .wave-plot rect.kept{fill:var(--accent)}
+  .wave-selection{position:absolute;top:0;bottom:0;z-index:1;cursor:grab;outline:none;border-radius:2px}
+  .wave-selection:active{cursor:grabbing}
+  .wave-selection:focus-visible{box-shadow:0 0 0 2px var(--accent)}
+  .wave-clamp{
+    position:absolute;top:-6px;bottom:-6px;width:18px;transform:translateX(-50%);
+    cursor:ew-resize;z-index:2;outline:none;
+  }
+  .wave-clamp::before{
+    content:"";position:absolute;top:0;bottom:0;left:50%;width:4px;margin-left:-2px;
+    border-radius:2px;background:var(--text);
+  }
+  .wave-clamp:focus-visible::before{box-shadow:0 0 0 2px var(--accent)}
 
   /* ---------- WYBÓR KLIENTA ---------- */
   .client-modal .am-card{width:min(600px,100%)}
@@ -803,44 +854,6 @@
     .client-option.current{align-items:center;flex-wrap:nowrap}
     .client-option.current .client-option-text{flex-basis:auto}
   }
-  .sound-emoji-card{overflow:hidden;background:transparent;box-shadow:none}
-  .sound-wave-head{display:flex;align-items:center;gap:16px;margin-top:20px;--ui-button-gap:7px}
-  .sound-wave-head > span{min-width:0;flex:1;display:flex;flex-direction:column;gap:3px}
-  .sound-wave-head b{font-size:var(--text-14);font-weight:550}
-  .sound-wave-head small{font-size:var(--text-12);color:var(--text-faint);line-height:1.4}
-  .wave-editor{margin-top:11px}
-  .wave-plot{
-    position:relative;height:132px;border:1px solid var(--line);border-radius:var(--radius-md);
-    background:var(--surface-field);overflow:hidden;touch-action:none;user-select:none;
-  }
-  .wave-plot svg{position:absolute;inset:16px 0;width:100%;height:100px;fill:var(--accent-text);opacity:.78}
-  .wave-mask{position:absolute;top:0;bottom:0;background:color-mix(in oklab,var(--surface-canvas) 76%,transparent);pointer-events:none}
-  .wave-mask.left{left:0}
-  .wave-mask.right{right:0}
-  .wave-selection{
-    position:absolute;top:0;bottom:0;z-index:1;
-    border-block:1px solid color-mix(in oklab,var(--accent) 65%,transparent);
-    cursor:grab;outline:none;
-  }
-  .wave-selection:active{cursor:grabbing}
-  .wave-selection:focus-visible{box-shadow:inset 0 0 0 2px var(--accent-soft)}
-  .wave-clamp{
-    position:absolute;top:0;bottom:0;width:18px;transform:translateX(-50%);
-    cursor:ew-resize;z-index:2;outline:none;
-  }
-  .wave-clamp::before{
-    content:"";position:absolute;top:0;bottom:0;left:8px;width:2px;background:var(--accent);
-    box-shadow:0 0 0 1px color-mix(in oklab,var(--surface-base) 55%,transparent);
-  }
-  .wave-clamp::after{
-    content:"";position:absolute;top:8px;left:3px;width:12px;height:24px;
-    border-radius:5px;background:var(--accent);border:2px solid var(--surface-base);
-  }
-  .wave-clamp:focus-visible::after{box-shadow:0 0 0 3px var(--accent-soft)}
-  .wave-times{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding-top:8px;font-size:var(--text-11);color:var(--text-faint);font-variant-numeric:tabular-nums}
-  .wave-times b{font-size:var(--text-12);color:var(--text-muted);font-weight:600}
-  .wave-times span:last-child{text-align:right}
-  .sound-editor-actions{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:18px}
   .sound-rules{display:flex;flex-direction:column}
   .sound-rule-row{display:flex;align-items:center;gap:20px;padding:15px 2px}
   .sound-rule-row + .sound-rule-row{border-top:1px solid var(--line-subtle)}
@@ -1205,11 +1218,15 @@
     .perm-tri > button{height:44px}
     .emoji-tile.editable{padding-right:48px}
     .emoji-delete{top:2px;right:2px;width:44px;height:44px;opacity:1}
-    .sound-editor-close{width:44px;height:44px}
-    .sound-glyph-pick{height:44px}
+    .sound-row{min-height:52px}
+    .sound-grip{width:32px;height:44px}
+    .sound-act{width:44px;height:44px}
+    .sound-grip,.sound-tools{opacity:1}
+    .sound-back{height:44px}
+    .sound-glyph-pick{width:48px;height:44px}
+    .sound-name-field .set-input{height:44px}
+    .sound-times .ui-button{--ui-button-min-height:44px}
     .wave-clamp{width:44px}
-    .wave-clamp::before{left:21px}
-    .wave-clamp::after{left:16px}
   }
   /* Mobile settings are an app screen, not a desktop sidebar squeezed above a
      form. Identity, section navigation and content each get one compact band;
@@ -1329,18 +1346,6 @@
     }
     .emoji-editor-body > .fld-note{margin-left:0}
     .emoji-save{margin-left:auto}
-    .wave-plot{height:112px}
-    .wave-plot svg{inset:6px 0}
-    .sound-row-actions{gap:12px;padding-right:2px}
-    .sound-row .set-item-act{opacity:1}
-    .sound-editor-card{padding:16px}
-    .sound-editor-head{margin-bottom:18px}
-    .sound-editor-close{width:44px;height:44px}
-    .sound-glyph-pick{height:44px}
-    .sound-wave-head{align-items:flex-end;--ui-button-min-height:44px}
-    .wave-clamp{width:44px}
-    .wave-clamp::before{left:21px}
-    .wave-clamp::after{left:16px}
     .member-role-select{width:min(160px,46vw);max-width:100%}
     .sv-head{align-items:stretch}
     .role-save{--ui-button-min-height:44px}
@@ -1413,11 +1418,10 @@
     .emoji-editor-actions > span{display:none}
     .emoji-editor-actions button{flex:1;min-height:44px}
     .sound-cap{align-items:flex-start;flex-direction:column;gap:3px}
-    .sound-row{grid-template-columns:auto minmax(0,1fr);gap:11px}
-    .sound-row-actions{grid-column:2;justify-content:flex-start;padding:0 0 2px}
-    .sound-fields{grid-template-columns:minmax(0,1fr)}
-    .sound-wave-head{align-items:stretch}
-    .sound-wave-head > button{align-self:flex-start}
+    .sound-row{gap:6px;padding-right:6px}
+    .sound-tools{margin-left:2px}
+    .sound-clip-head{flex-direction:column;gap:4px}
+    .sound-source{text-align:left}
     .sound-editor-actions > button{flex:1;min-height:44px}
   }
 

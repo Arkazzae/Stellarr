@@ -33,7 +33,7 @@ export function RailVoiceDock() {
   const ui = useUi();
   const voice = useVoice();
   const { ringing } = useFriends();
-  const { voiceSettings } = usePorts();
+  const { voiceSettings, soundboard } = usePorts();
   const settings = useSyncExternalStore(
     voiceSettings.subscribe,
     voiceSettings.getSnapshot,
@@ -45,7 +45,9 @@ export function RailVoiceDock() {
       call={voice.call}
       ringing={ringing}
       sounds={voice.sounds}
-      soundboardSupported={voice.soundboardEnabled}
+      soundboardSupported={voice.soundboardEnabled && voice.soundboard.canPlay}
+      soundboardLive={soundboard.live}
+      onManageSounds={voice.soundboard.canManage ? () => ui.openModal("soundboard") : undefined}
       soundboardVolume={settings.soundboardVolume}
       onChangeSoundboardVolume={(soundboardVolume) =>
         voiceSettings.update({ soundboardVolume })
@@ -61,7 +63,8 @@ export function RailVoiceDock() {
       onToggleCamera={voice.toggleCamera}
       onToggleShare={voice.toggleShare}
       onLeave={ui.leaveCall}
-      onPlaySound={voice.playSound}
+      // A private call has no soundboard, so the dock offers none.
+      onPlaySound={voice.privateCall ? undefined : voice.playSound}
       onReturnToChannel={ui.returnToChannel}
     />
   );

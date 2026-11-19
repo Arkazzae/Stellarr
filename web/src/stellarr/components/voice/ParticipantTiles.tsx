@@ -1,6 +1,8 @@
 import type { OpenProfile, PersonVM } from "@/components/view-models";
+import type { SoundboardLive } from "@/ports";
 
 import { ParticipantTile, type ParticipantTileProps } from "./ParticipantTile";
+import { useTileGrid } from "./useTileGrid";
 
 export interface ParticipantTilesProps {
   /** Only the people on this channel. */
@@ -17,6 +19,8 @@ export interface ParticipantTilesProps {
   onParticipantGateChange?: (personId: string, gated: boolean) => void;
   participantSuppressions?: ReadonlyMap<string, boolean>;
   onParticipantSuppressionChange?: (personId: string, suppressed: boolean) => void;
+  /** The board's clips under way, so whoever played one wears its emoji while it plays. */
+  soundPlays?: SoundboardLive;
   onOpenProfile?: OpenProfile;
 }
 
@@ -40,6 +44,7 @@ export function participantTileProps(
     onParticipantGateChange,
     participantSuppressions,
     onParticipantSuppressionChange,
+    soundPlays,
     onOpenProfile,
   }: ParticipantTileSources,
 ): ParticipantTileProps {
@@ -58,17 +63,21 @@ export function participantTileProps(
     onSuppressionChange:
       onParticipantSuppressionChange &&
       ((suppressed) => onParticipantSuppressionChange(person.id, suppressed)),
+    soundPlays,
     onOpenProfile,
   };
 }
 
 /**
  * The grid of tiles. Whether it shows as a grid, a strip or not at all is
- * decided by the state classes on the stage around it.
+ * decided by the state classes on the stage around it; as a grid, it is as
+ * even as the room allows (`useTileGrid`).
  */
 export function ParticipantTiles({ people, ...sources }: ParticipantTilesProps) {
+  const grid = useTileGrid(people.length);
+
   return (
-    <div className={people.length === 1 ? "tiles single" : "tiles"}>
+    <div ref={grid} className="tiles">
       {people.map((person) => (
         <ParticipantTile key={person.id} {...participantTileProps(person, sources)} />
       ))}

@@ -37,6 +37,7 @@ function props(
 ): VoiceControlBarProps {
   return {
     muted: false,
+    deafened: false,
     cameraOn: false,
     sharing: false,
     cinema: false,
@@ -45,6 +46,7 @@ function props(
     onChangeSettings: vi.fn(),
     cameraSupported: true,
     onToggleMute: vi.fn(),
+    onToggleDeafen: vi.fn(),
     onToggleCamera: vi.fn(),
     onSelectMicrophone: vi.fn(),
     onSelectCamera: vi.fn(),

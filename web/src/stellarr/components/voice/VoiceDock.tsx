@@ -5,10 +5,11 @@ import { ProgressRing } from "@/components/primitives/ProgressRing";
 import type { CallVM } from "@/components/view-models";
 import { SoundboardPopover } from "@/components/voice/SoundboardPopover";
 import type { MessageKey } from "@/i18n";
-import type { NoiseSuppressionMode, Sound, SuppressorDownload } from "@/ports";
+import type { NoiseSuppressionMode, Sound, SoundboardLive, SuppressorDownload } from "@/ports";
 import { useLanguage } from "@/state/hooks";
 
 import { CallClock } from "./CallClock";
+import { IDLE_SOUNDBOARD } from "./soundboardLive";
 
 interface NoiseStep {
   /** What one more press switches to; the five modes form a ring. */
@@ -53,8 +54,12 @@ export interface VoiceDockProps {
    */
   ringing?: boolean;
   sounds: Sound[];
-  /** False renders the soundboard tiles disabled rather than hiding them. */
+  /** False where this person may not play the board: its pads are locked and it says why. */
   soundboardSupported?: boolean;
+  /** What plays in the room and the cooldown, read by the soundboard panel alone. */
+  soundboardLive?: SoundboardLive;
+  /** For people who manage the server: its settings, on the soundboard. */
+  onManageSounds?: () => void;
   soundboardVolume: number;
   onChangeSoundboardVolume: (volume: number) => void;
   onToggleMute: () => void;
@@ -70,7 +75,8 @@ export interface VoiceDockProps {
   noiseDownload?: SuppressorDownload | null;
   onChangeNoiseSuppression: (mode: NoiseSuppressionMode) => void;
   onLeave: () => void;
-  onPlaySound: (soundId: string) => void;
+  /** Absent where the call has no soundboard, which is a private one: the dock then has no trigger. */
+  onPlaySound?: (soundId: string) => void;
   /** Clicking the status row while something is live jumps back to the channel. */
   onReturnToChannel: () => void;
 }
@@ -122,6 +128,8 @@ function LiveDock({
   ringing = false,
   sounds,
   soundboardSupported = true,
+  soundboardLive = IDLE_SOUNDBOARD,
+  onManageSounds,
   soundboardVolume,
   onChangeSoundboardVolume,
   onToggleMute,
@@ -282,26 +290,30 @@ function LiveDock({
             label={t("voiceBar.shareScreen")}
             onClick={onToggleShare}
           />
-          <SoundboardPopover
-            sounds={sounds}
-            open={boardOpen}
-            onOpenChange={setBoardOpen}
-            onPlaySound={onPlaySound}
-            volume={soundboardVolume}
-            onVolumeChange={onChangeSoundboardVolume}
-            supported={soundboardSupported}
-            renderTrigger={(trigger) => (
-              <button
-                type="button"
-                className="dpill icon"
-                title={t("voice.soundboard")}
-                aria-label={t("voice.soundboard")}
-                {...trigger}
-              >
-                <Icon name="board" size={15} />
-              </button>
-            )}
-          />
+          {onPlaySound === undefined ? null : (
+            <SoundboardPopover
+              sounds={sounds}
+              live={soundboardLive}
+              canPlay={soundboardSupported}
+              open={boardOpen}
+              onOpenChange={setBoardOpen}
+              onPlaySound={onPlaySound}
+              onManage={onManageSounds}
+              volume={soundboardVolume}
+              onVolumeChange={onChangeSoundboardVolume}
+              renderTrigger={(trigger) => (
+                <button
+                  type="button"
+                  className="dpill icon"
+                  title={t("voice.soundboard")}
+                  aria-label={t("voice.soundboard")}
+                  {...trigger}
+                >
+                  <Icon name="board" size={15} />
+                </button>
+              )}
+            />
+          )}
         </div>
       </div>
     </div>

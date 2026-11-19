@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import { Button } from "@stellarr/ui";
 import { Icon } from "@stellarr/icons";
@@ -8,6 +8,8 @@ import { WaveformTrimmer, type DecodedWaveform } from "@/components/settings/sou
 import { useLanguage } from "@/state/hooks";
 
 export const DEFAULT_SOUND_GLYPH = "🔊";
+
+export const MAX_SOUND_NAME_LENGTH = 32;
 
 /** A clip being added (`file`) or re-trimmed (`id`), with the edits so far. */
 export interface SoundDraft extends DecodedWaveform {
@@ -37,62 +39,69 @@ export function canSaveSound(draft: SoundDraft): boolean {
 export interface SoundEditorProps {
   draft: SoundDraft;
   busy: boolean;
-  soundboardVolume: number;
-  onSoundboardVolumeChange: (volume: number) => void;
+  /** Whether the draft's clip is being auditioned. */
+  previewing: boolean;
+  /** Seconds as the pane writes them, such as "1,2 s". */
+  formatSeconds: (seconds: number) => string;
   onEdit: (edit: SoundEdit) => void;
+  /** Starts the trimmed clip, or stops it while it plays. */
   onPreview: () => void;
   onSave: () => void;
   onClose: () => void;
 }
 
+/**
+ * One sound on a page of its own inside the pane: back to the list, its
+ * symbol and name, the stretch of the clip that plays, and saving.
+ */
 export function SoundEditor({
   draft,
   busy,
-  soundboardVolume,
-  onSoundboardVolumeChange,
+  previewing,
+  formatSeconds,
   onEdit,
   onPreview,
   onSave,
   onClose,
 }: SoundEditorProps) {
   const { t } = useLanguage();
+  const titleId = useId();
   const nameId = useId();
+  const countId = useId();
+  const title = useRef<HTMLHeadingElement>(null);
   const [emojiAnchor, setEmojiAnchor] = useState<HTMLElement | null>(null);
   // A picker opened by touch must not raise the software keyboard.
   const [emojiAutoFocus, setEmojiAutoFocus] = useState(true);
   const glyph = draft.glyph || DEFAULT_SOUND_GLYPH;
+  const source =
+    draft.file === null
+      ? t("settings.soundSource", { seconds: formatSeconds(draft.duration) })
+      : t("settings.soundFile", { name: draft.file.name, seconds: formatSeconds(draft.duration) });
 
-  // A load that is under way replaces this draft, so a symbol picked in the
-  // meantime would land on a draft that is thrown away.
+  // The list this page replaced held focus; it starts here, on the title, so
+  // that the page is announced and the pane shows its top.
+  useEffect(() => {
+    title.current?.focus();
+  }, []);
+
+  // A symbol picked while the draft is being saved would land on a draft that
+  // is about to close.
   if (busy && emojiAnchor !== null) setEmojiAnchor(null);
 
   return (
     <>
-      <section className="sc sc-b sound-editor-card" aria-labelledby="sound-editor-title">
-        <header className="sound-editor-head">
-          <span className="sound-editor-mark" aria-hidden="true">
-            {glyph}
-          </span>
-          <span>
-            <b id="sound-editor-title">
-              {draft.id === null ? t("settings.newSound") : t("settings.soundEditor")}
-            </b>
-            <small>{t("settings.soundEditorDetail")}</small>
-          </span>
-          <button
-            type="button"
-            className="sound-editor-close"
-            aria-label={t("settings.closeSoundEditor")}
-            disabled={busy}
-            onClick={onClose}
-          >
-            <Icon name="x" size={16} />
-          </button>
-        </header>
+      <section className="sound-editor" aria-labelledby={titleId}>
+        <button type="button" className="sound-back" disabled={busy} onClick={onClose}>
+          <Icon name="caretL" size={16} />
+          {t("settings.allSounds")}
+        </button>
+        <h3 id={titleId} className="sound-editor-title" tabIndex={-1} ref={title}>
+          {draft.id === null ? t("settings.newSound") : t("settings.soundEditor")}
+        </h3>
 
         <div className="sound-fields">
           <div className="sound-field">
-            <span className="sound-field-label" aria-hidden="true">
+            <span className="sound-label" aria-hidden="true">
               {t("settings.soundSymbol")}
             </span>
             {/* The control is the emoji itself: a text box asked people to type
@@ -113,67 +122,67 @@ export function SoundEditor({
                 setEmojiAnchor((open) => (open === null ? button : null));
               }}
             >
-              <span className="sound-glyph-face" aria-hidden="true">
-                {glyph}
-              </span>
-              <Icon name="smiley" size={15} className="sound-glyph-hint" />
+              {glyph}
             </button>
           </div>
-          <div className="sound-field">
-            <label htmlFor={nameId}>{t("settings.soundName")}</label>
-            <input
-              id={nameId}
-              className="set-input"
-              value={draft.name}
-              maxLength={32}
-              disabled={busy}
-              onChange={(event) => onEdit({ name: event.target.value })}
-            />
+          <div className="sound-field grow">
+            <label className="sound-label" htmlFor={nameId}>
+              {t("settings.soundName")}
+            </label>
+            <span className="sound-name-field">
+              <input
+                id={nameId}
+                className="set-input"
+                value={draft.name}
+                maxLength={MAX_SOUND_NAME_LENGTH}
+                disabled={busy}
+                aria-describedby={countId}
+                onChange={(event) => onEdit({ name: event.target.value })}
+              />
+              <small id={countId}>
+                {draft.name.length}/{MAX_SOUND_NAME_LENGTH}
+              </small>
+            </span>
           </div>
         </div>
 
-        <div className="sound-wave-head">
-          <span>
-            <b>{t("settings.soundClip")}</b>
-            <small>{t("settings.soundClipDetail")}</small>
-          </span>
-          {/* The level the clip is auditioned at belongs beside the button, and
-              it is the soundboard level the call plays it through, not a second
-              dial to forget. */}
-          <label className="sound-preview-volume">
-            <Icon name="speaker" size={14} />
-            <input
-              type="range"
-              min={0}
-              max={100}
-              step={5}
-              value={soundboardVolume}
-              aria-label={t("voice.soundboardVolume")}
-              onChange={(event) => onSoundboardVolumeChange(Number(event.target.value))}
-            />
-            <output>{soundboardVolume}%</output>
-          </label>
-          <Button type="button" variant="secondary" size="sm" onClick={onPreview} disabled={busy}>
-            <Icon name="play" size={14} /> {t("settings.soundPreview")}
-          </Button>
+        <div className="sound-clip">
+          <div className="sound-clip-head">
+            <span className="sound-label">{t("settings.soundClip")}</span>
+            <span className="sound-source">{source}</span>
+          </div>
+          <WaveformTrimmer
+            duration={draft.duration}
+            peaks={draft.peaks}
+            start={draft.start}
+            end={draft.end}
+            disabled={busy}
+            onChange={(start, end) => onEdit({ start, end })}
+          />
+          <div className="sound-times">
+            <span>
+              {t("settings.soundStart")} <b>{formatSeconds(draft.start)}</b>
+            </span>
+            <span>
+              {t("settings.soundLength")} <b>{formatSeconds(draft.end - draft.start)}</b>
+            </span>
+            <span>
+              {t("settings.soundEnd")} <b>{formatSeconds(draft.end)}</b>
+            </span>
+            <Button type="button" variant="secondary" size="sm" onClick={onPreview} disabled={busy}>
+              <Icon name={previewing ? "stop" : "play"} size={14} />
+              {previewing ? t("settings.soundPreviewStop") : t("settings.soundPreview")}
+            </Button>
+          </div>
         </div>
-        <WaveformTrimmer
-          duration={draft.duration}
-          peaks={draft.peaks}
-          start={draft.start}
-          end={draft.end}
-          disabled={busy}
-          onChange={(start, end) => onEdit({ start, end })}
-        />
 
         <div className="sound-editor-actions">
-          <Button type="button" variant="secondary" size="sm" onClick={onClose} disabled={busy}>
+          <Button type="button" variant="secondary" onClick={onClose} disabled={busy}>
             {t("common.cancel")}
           </Button>
           <Button
             type="button"
             variant="primary"
-            size="sm"
             onClick={onSave}
             disabled={busy || !canSaveSound(draft)}
           >

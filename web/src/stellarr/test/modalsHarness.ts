@@ -141,6 +141,7 @@ function freshHarness(): Harness {
         sounds: [],
         settings: { everyoneCanPlay: true, rateLimited: true },
         canManage: false,
+        canPlay: true,
         supported: false,
         loading: false,
         error: null,

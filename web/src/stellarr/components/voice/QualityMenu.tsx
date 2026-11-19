@@ -1,6 +1,6 @@
-import { useId, type ReactNode } from "react";
+import { Fragment, useId, type ReactNode } from "react";
 
-import { Icon, type IconName } from "@stellarr/icons";
+import { Icon } from "@stellarr/icons";
 import { Popover, type PopoverTriggerProps } from "@/components/primitives/Popover";
 
 /**
@@ -27,12 +27,9 @@ export interface QualityMenuProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   renderTrigger: (props: PopoverTriggerProps) => ReactNode;
-  /** Which edge of its button group the panel lines up with. */
-  align?: "left" | "right";
   title: string;
   /** What is in force now, shown under the title. */
   summary: string;
-  icon: IconName;
   groups?: readonly QualityGroup[];
   /** Explains why the body is empty or limited. */
   note?: string;
@@ -42,17 +39,17 @@ export interface QualityMenuProps {
 
 /**
  * The drawer behind the small arrow next to the microphone, camera and screen
- * buttons: a heading, one radio group per `QualityGroup` and an optional link
- * to the full settings.
+ * buttons: a title over what is in force, one radio group per `QualityGroup`
+ * and an optional way out to the full settings. The rows are the account
+ * panel's: the choice in the accent with a tick at the end of its row, a
+ * hairline between groups.
  */
 export function QualityMenu({
   open,
   onOpenChange,
   renderTrigger,
-  align = "left",
   title,
   summary,
-  icon,
   groups = [],
   note,
   footer,
@@ -60,70 +57,62 @@ export function QualityMenu({
   const radioName = useId();
 
   return (
-    <Popover
-      open={open}
-      onOpenChange={onOpenChange}
-      className={align === "right" ? "vc-menu right" : "vc-menu"}
-      renderTrigger={renderTrigger}
-    >
+    <Popover open={open} onOpenChange={onOpenChange} className="vc-menu" renderTrigger={renderTrigger}>
       <div className="qm-head">
-        <span className="qm-head-icon" aria-hidden="true">
-          <Icon name={icon} size={17} />
-        </span>
-        <span className="qm-head-copy">
-          <b>{title}</b>
-          <span>{summary}</span>
-        </span>
+        <b>{title}</b>
+        <span>{summary}</span>
       </div>
       {note === undefined ? null : <p className="qm-note">{note}</p>}
       {groups.map((group, index) => (
-        <div
-          key={group.caption}
-          className="qm-group"
-          role="radiogroup"
-          aria-label={group.caption}
-        >
-          <div className="qm-caption">{group.caption}</div>
-          {group.options.map((option) => (
-            <label
-              key={option.id}
-              className={["qm-option", option.selected && "on", option.disabled && "disabled"]
-                .filter(Boolean)
-                .join(" ")}
-            >
-              <input
-                className="qm-radio"
-                type="radio"
-                name={`${radioName}-${index}`}
-                checked={option.selected}
-                disabled={option.disabled}
-                onChange={option.onSelect}
-              />
-              <span className="qm-marker" aria-hidden="true">
-                {option.selected ? <Icon name="tick" size={14} /> : null}
-              </span>
-              <span className="qm-label">{option.label}</span>
-              {option.detail === undefined ? null : (
-                <span className="qm-detail">{option.detail}</span>
-              )}
-            </label>
-          ))}
-        </div>
+        <Fragment key={group.caption}>
+          {index === 0 ? null : <hr className="qm-sep" />}
+          <div className="qm-group" role="radiogroup" aria-label={group.caption}>
+            <div className="qm-caption">{group.caption}</div>
+            {group.options.map((option) => (
+              <label
+                key={option.id}
+                className={["qm-option", option.selected && "on", option.disabled && "disabled"]
+                  .filter(Boolean)
+                  .join(" ")}
+              >
+                <input
+                  className="qm-radio"
+                  type="radio"
+                  name={`${radioName}-${index}`}
+                  checked={option.selected}
+                  disabled={option.disabled}
+                  onChange={option.onSelect}
+                />
+                <span className="qm-label">{option.label}</span>
+                {option.detail === undefined ? null : (
+                  <span className="qm-detail">{option.detail}</span>
+                )}
+                {/* Every row keeps the slot, so the details line up. */}
+                <span className="qm-marker" aria-hidden="true">
+                  {option.selected ? <Icon name="tick" size={14} /> : null}
+                </span>
+              </label>
+            ))}
+          </div>
+        </Fragment>
       ))}
       {footer === undefined ? null : (
-        <button
-          type="button"
-          className="qm-more"
-          onClick={() => {
-            onOpenChange(false);
-            footer.onSelect();
-          }}
-        >
-          <span className="qm-more-icon" aria-hidden="true">
-            <Icon name="sliders" size={14} />
-          </span>
-          {footer.label}
-        </button>
+        <>
+          <hr className="qm-sep" />
+          <button
+            type="button"
+            className="qm-more"
+            onClick={() => {
+              onOpenChange(false);
+              footer.onSelect();
+            }}
+          >
+            <span className="qm-more-icon" aria-hidden="true">
+              <Icon name="sliders" size={16} />
+            </span>
+            {footer.label}
+          </button>
+        </>
       )}
     </Popover>
   );

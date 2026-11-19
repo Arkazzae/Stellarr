@@ -103,6 +103,7 @@ export function DmCallContainer({ fullscreenTarget }: DmCallContainerProps) {
         // calls do not play.
         <VoiceControlBar
           muted={voice.state.muted}
+          deafened={call?.deafened ?? false}
           cameraOn={call?.cameraOn ?? false}
           cameraPending={voice.state.cameraPending}
           sharing={voice.localShare}
@@ -112,6 +113,7 @@ export function DmCallContainer({ fullscreenTarget }: DmCallContainerProps) {
           cameraSupported={voice.cameraSupported}
           fullscreenTarget={fullscreenTarget}
           onToggleMute={voice.toggleMute}
+          onToggleDeafen={voice.toggleDeafen}
           onToggleCamera={voice.toggleCamera}
           onSelectMicrophone={openDeviceSettings}
           onSelectCamera={openDeviceSettings}

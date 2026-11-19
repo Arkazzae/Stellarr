@@ -190,6 +190,7 @@ public sealed partial class Messages
         // Soundboard
         MessageKey.SoundAttachmentInvalid => "Pick an uploaded audio file with a known duration.",
         MessageKey.SoundInvalid => "The name must be 1–32 characters, the symbol 1–16 characters and the clip {min}–{max} s.",
+        MessageKey.SoundOrderIncomplete => "The list must contain every sound exactly once.",
 
         // Client releases
         MessageKey.AndroidReleaseUnavailable => "The Android release is temporarily unavailable.",

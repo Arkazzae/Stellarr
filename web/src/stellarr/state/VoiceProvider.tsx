@@ -69,7 +69,7 @@ export interface VoiceValue {
   suppressorDownload: SuppressorDownload | null;
   sounds: Sound[];
   soundboard: SoundboardState;
-  /** False disables the tiles: unsupported, in a private call, or cooling down. */
+  /** False where the soundboard has no place: unsupported, or a private call. */
   soundboardEnabled: boolean;
   /** True while the current RTC room belongs to a two-person DM. */
   privateCall: boolean;
@@ -150,11 +150,6 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
     ports.soundboard.subscribe,
     ports.soundboard.getSnapshot,
     ports.soundboard.getSnapshot,
-  );
-  const soundCooling = useSyncExternalStore(
-    ports.soundboard.subscribe,
-    () => ports.soundboard.cooldownRemaining() > 0,
-    () => false,
   );
 
   useVoiceSettingsSync({
@@ -385,7 +380,9 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       suppressorDownload: state.suppressorDownload,
       sounds: soundboard.sounds,
       soundboard,
-      soundboardEnabled: !view.privateCall && soundboard.supported && !soundCooling,
+      // The cooldown is not here: it ticks every second, and only the panel
+      // reads it, from the board's own live store.
+      soundboardEnabled: !view.privateCall && soundboard.supported,
       join,
       leave,
       reconnect,
@@ -405,7 +402,6 @@ export function VoiceProvider({ children }: { children: ReactNode }) {
       state,
       problem,
       soundboard,
-      soundCooling,
       join,
       leave,
       reconnect,

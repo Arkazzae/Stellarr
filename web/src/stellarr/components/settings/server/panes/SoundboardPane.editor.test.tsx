@@ -37,8 +37,8 @@ function props(overrides: Partial<SoundboardPaneProps> = {}): SoundboardPaneProp
     onCreate: vi.fn().mockResolvedValue(undefined),
     onUpdate: vi.fn().mockResolvedValue(undefined),
     onDelete: vi.fn().mockResolvedValue(undefined),
-    playback: { outputVolume: 100, soundboardVolume: 100 },
-    onSoundboardVolumeChange: vi.fn(),
+    playback: { soundboardVolume: 100 },
+    onReorder: vi.fn(),
     ...overrides,
   };
 }
@@ -310,7 +310,7 @@ describe("SoundboardPane preview", () => {
     const created = stubAudio();
     const route = vi.fn().mockResolvedValue(undefined);
 
-    await openPreview({ playback: { outputVolume: 50, soundboardVolume: 40, route } });
+    await openPreview({ playback: { soundboardVolume: 40, route } });
 
     const audio = created[0]!;
     expect(audio.volume).toBeCloseTo(0.2);
@@ -326,7 +326,7 @@ describe("SoundboardPane preview", () => {
     const created = stubAudio();
     const route = vi.fn().mockRejectedValue(new Error("device gone"));
 
-    await openPreview({ playback: { outputVolume: 100, soundboardVolume: 100, route } });
+    await openPreview({ playback: { soundboardVolume: 100, route } });
 
     expect(created[0]!.play).toHaveBeenCalledOnce();
     expect(screen.queryByRole("alert")).toBeNull();
@@ -335,7 +335,7 @@ describe("SoundboardPane preview", () => {
   it("follows the soundboard dial while the clip is running", async () => {
     const created = stubAudio();
     const onSoundboardVolumeChange = vi.fn();
-    const base = props({ playback: { outputVolume: 100, soundboardVolume: 100 }, onSoundboardVolumeChange });
+    const base = props({ playback: { soundboardVolume: 100 } });
     const user = userEvent.setup();
     stubSoundFetch();
     const view = renderWithConfirm(<SoundboardPane {...base} />);
@@ -349,7 +349,7 @@ describe("SoundboardPane preview", () => {
 
     view.rerender(
       <ConfirmProvider>
-        <SoundboardPane {...base} playback={{ outputVolume: 100, soundboardVolume: 30 }} />
+        <SoundboardPane {...base} playback={{ soundboardVolume: 30 }} />
       </ConfirmProvider>,
     );
     expect(created[0]!.volume).toBeCloseTo(0.3);

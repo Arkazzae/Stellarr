@@ -226,39 +226,6 @@
     .typing {
       padding: 0 18px;
     }
-
-    .tiles {
-      grid-template-columns: 1fr 1fr;
-    }
-
-    /* One caller should feel like the call, not the first cell of an empty
-       matrix. This is scoped away from screen-sharing, whose compact
-       participant row has a different job. */
-    .voice-stage:not(.streaming) .tiles.single {
-      grid-template-columns: minmax(0, 1fr);
-    }
-
-    .voice-stage:not(.streaming) .tiles.single .tile {
-      max-width: none;
-    }
-  }
-
-  @media (max-width: 767px) and (orientation: landscape) {
-    /* A short landscape stage spends width to avoid a second row disappearing
-       behind the controls. Auto-fit still gives two callers broad tiles. */
-    .voice-stage:not(.streaming) .tiles:not(.single) {
-      grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    }
-
-    .voice-stage:not(.streaming) .tiles.single {
-      align-content: stretch;
-    }
-
-    .voice-stage:not(.streaming) .tiles.single .tile {
-      height: auto;
-      max-height: none;
-      aspect-ratio: auto;
-    }
   }
 
   /* At the 320px floor the regular 316px navigation drawer leaves no useful

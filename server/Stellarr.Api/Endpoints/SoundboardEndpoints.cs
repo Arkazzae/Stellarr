@@ -12,9 +12,9 @@ using Stellarr.Api.Storage;
 namespace Stellarr.Api.Endpoints;
 
 /// <summary>
-/// The sound catalogue of a server and the two rules that decide who may play
-/// it. A sound is an uploaded audio attachment plus a trim, which never alters
-/// the stored file.
+/// The sound catalogue of a server, its order and the two rules that decide
+/// who may play it. A sound is an uploaded audio attachment plus a trim, which
+/// never alters the stored file.
 /// </summary>
 public static class SoundboardEndpoints
 {
@@ -38,6 +38,7 @@ public static class SoundboardEndpoints
         admin.MapPost("/sounds", CreateAsync);
         admin.MapPatch("/sounds/{soundId:guid}", UpdateAsync);
         admin.MapDelete("/sounds/{soundId:guid}", DeleteAsync);
+        admin.MapPut("/order", ReorderAsync);
         admin.MapPatch("/settings", UpdateSettingsAsync);
         return endpoints;
     }
@@ -56,10 +57,13 @@ public static class SoundboardEndpoints
             .ThenBy(x => x.CreatedAt)
             .ToListAsync(cancellationToken);
         var canManage = await CanManageAsync(http, db, serverId, cancellationToken);
+        var canPlay = await SoundboardAccess.CanPlayAsync(
+            db, http.User.RequireUserId(), serverId, server.SoundboardEveryoneCanPlay, cancellationToken);
         return Results.Ok(new SoundboardSnapshotDto(
             sounds.Select(x => x.ToDto()).ToArray(),
             Settings(server),
-            canManage));
+            canManage,
+            canPlay));
     }
 
     private static async Task<IResult> CreateAsync(
@@ -212,6 +216,42 @@ public static class SoundboardEndpoints
 
         await mediaStorage.QueueAttachmentIfUnreferencedAsync(
             $"/assets/{sound.AttachmentId}", uploadedById: null, DateTime.UtcNow, cancellationToken);
+        await NotifyChangedAsync(hub, serverId, cancellationToken);
+        return Results.NoContent();
+    }
+
+    private static async Task<IResult> ReorderAsync(
+        ReorderSoundboardSoundsRequest request,
+        HttpContext http,
+        AppDbContext db,
+        IHubContext<AppHub> hub,
+        Messages messages,
+        CancellationToken cancellationToken)
+    {
+        var serverId = http.RequireActiveServerId();
+        if (!await CanManageAsync(http, db, serverId, cancellationToken))
+        {
+            return Results.Forbid();
+        }
+
+        var sounds = await db.SoundboardSounds.Where(x => x.ServerId == serverId).ToListAsync(cancellationToken);
+        var order = request.SoundIds ?? [];
+        if (order.Distinct().Count() != order.Count ||
+            !order.ToHashSet().SetEquals(sounds.Select(x => x.Id)))
+        {
+            return Results.ValidationProblem(new Dictionary<string, string[]>
+            {
+                ["soundIds"] = [messages.Get(MessageKey.SoundOrderIncomplete)],
+            });
+        }
+
+        var positions = order.Select((id, position) => (id, position)).ToDictionary(x => x.id, x => x.position);
+        foreach (var sound in sounds)
+        {
+            sound.Position = positions[sound.Id];
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
         await NotifyChangedAsync(hub, serverId, cancellationToken);
         return Results.NoContent();
     }

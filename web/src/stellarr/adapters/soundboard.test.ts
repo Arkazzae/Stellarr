@@ -103,6 +103,7 @@ function snapshot(sounds: SoundboardSound[] = []): SoundboardSnapshot {
     sounds,
     settings: { everyoneCanPlay: true, rateLimited: true },
     canManage: true,
+    canPlay: true,
   };
 }
 

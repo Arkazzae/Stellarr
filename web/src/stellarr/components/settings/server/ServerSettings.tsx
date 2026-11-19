@@ -60,6 +60,8 @@ const GROUPS: readonly { caption: MessageKey; panes: readonly SettingsPaneKey[] 
 
 export interface ServerSettingsProps {
   open: boolean;
+  /** The pane the dialog opens on; the overview unless asked otherwise. */
+  initialPane?: SettingsPaneKey;
   onClose: () => void;
   /** Server name, in the sidebar brand and as the dialog's accessible name. */
   name: string;
@@ -102,6 +104,7 @@ type LayoutProps = Omit<ServerSettingsProps, "open"> & { titleId: string };
 
 function SettingsLayout({
   titleId,
+  initialPane = "prz",
   onClose,
   name,
   overview,
@@ -116,7 +119,7 @@ function SettingsLayout({
   danger,
 }: LayoutProps) {
   const { t } = useLanguage();
-  const [active, setActive] = useState<SettingsPaneKey>("prz");
+  const [active, setActive] = useState<SettingsPaneKey>(initialPane);
   const current = ITEMS[active];
 
   /**

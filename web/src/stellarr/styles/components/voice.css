@@ -27,7 +27,10 @@
    * or a voice notice above it must never cut a "Dołącz" in half; the focused
    * surface keeps a floor height and the stage lets you reach the rest.
    */
-  .voice-stage{flex:1;min-height:0;display:flex;flex-direction:column;padding:20px;gap:16px;overflow-y:auto}
+  .voice-stage{
+    flex:1;min-height:0;display:flex;flex-direction:column;
+    padding:var(--sp-4) var(--sp-5) var(--sp-1);gap:var(--sp-3);overflow-y:auto;
+  }
 
   /* ---------- Stage focus: which surface has the stage (local choice) ---------- */
   .stage-focus{
@@ -57,7 +60,6 @@
     .voice-problem-slot.centered {
       padding: 12px;
     }
-    .voice-stage{padding:12px;gap:12px}
   }
   .share-band{
     display:none;border:1px solid var(--line-subtle);border-radius:var(--radius-md);
@@ -103,14 +105,13 @@
   .voice-stage.streaming .share-placeholder{width:100%;height:100%}
   .voice-stage.streaming .tiles{
     flex:none;display:flex;overflow-x:auto;gap:10px;justify-content:center;
-    padding:2px;max-width:100%;align-content:initial;
+    padding:2px;max-width:100%;
   }
-  .voice-stage.streaming .tile{width:170px;min-width:150px;flex:none;gap:6px}
-  /* A compact stage asks for a smaller face; it changes the size, it does
-     not restate the avatar. */
-  .voice-stage.streaming .av{--av-size:var(--av-md);--av-face:15px}
-  .voice-stage.streaming .t-name{left:6px;bottom:6px;font-size:var(--text-11);padding:1px 6px}
-  .voice-stage.streaming .tile .meter{right:8px;bottom:8px}
+  /* The same tile, small: a smaller face over the name. It changes the size,
+     it does not restate the avatar. */
+  .voice-stage.streaming .tile{flex:none;width:168px;max-width:none;aspect-ratio:16 / 9}
+  .voice-stage.streaming .tile .av{--av-size:36px;--av-face:13px;margin-bottom:6px}
+  .voice-stage.streaming .tile:not(.has-video) .t-name{font-size:var(--text-12)}
 
   .share-toolbar{
     position:absolute;right:10px;bottom:10px;
@@ -141,23 +142,43 @@
     .watch-btn,.share-volume,.stop-watch{min-height:44px}
     .share-volume input[type="range"]{min-height:44px}
   }
-  .tiles{
-    flex:1;display:grid;gap:12px;align-content:center;
-    grid-template-columns:repeat(auto-fit, minmax(220px, 1fr));
-    width:100%;
+  /*
+   * The stage's grid, as even as the room allows. `useTileGrid` measures this
+   * box and publishes on it the columns, the rows and the tile shape that give
+   * the largest tile for the people in it; every tile takes the width that
+   * fits both, and never less than 150px, below which the stage scrolls. Only
+   * the grid is a size container: the strip under a share takes its height
+   * from its tiles.
+   */
+  .voice-stage:not(.streaming) .tiles{
+    --gap:var(--sp-3);
+    flex:1;min-height:0;
+    display:flex;flex-wrap:wrap;justify-content:center;align-content:safe center;
+    gap:var(--gap);
+    container:tiles / size;
+  }
+  .voice-stage:not(.streaming) .tile{
+    flex:none;
+    width:max(150px, min(
+      (100cqw - (var(--cols, 1) - 1) * var(--gap)) / var(--cols, 1),
+      (100cqh - (var(--rows, 1) - 1) * var(--gap)) / var(--rows, 1) * var(--tile-ratio, 16 / 9)
+    ));
+    max-width:none;
+    aspect-ratio:var(--tile-ratio, 16 / 9);
   }
   .tile{
     aspect-ratio:16/10;max-width:460px;justify-self:center;width:100%;border-radius:var(--radius-lg);
     background:var(--surface-raised);border:1px solid var(--line-subtle);
     display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
-    position:relative;cursor:grab;
+    position:relative;
     transition:border-color 160ms var(--ease-standard), box-shadow 160ms var(--ease-standard), transform 160ms var(--ease-standard);
   }
   .tile > video{
     position:absolute;inset:0;width:100%;height:100%;object-fit:cover;
     border-radius:inherit;background:var(--surface-canvas);
   }
-  .tile.speaking{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent), 0 0 24px oklch(0.618 0.185 278 / 0.2)}
+  /* An edge in the accent and nothing blurred round it: no gradients. */
+  .tile.speaking{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
   /* The tile already rings itself when someone speaks, so the face is not
      ringed a second time — it pops. */
   .tile .av{transition:transform 200ms var(--ease-standard)}
@@ -170,17 +191,56 @@
     overflow:hidden;white-space:nowrap;
   }
   .tile .t-name > span{min-width:0;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .tile .t-name .st{color:var(--text-faint);font-weight:400}
-  .tile.speaking .t-name .st{color:var(--accent-text)}
+  /* What the person is playing on the board, right after the name and never
+     cut with it. */
+  .tile .t-name > .t-sound{flex:none;max-width:none;overflow:visible;font-size:14px;line-height:1}
   .tile .t-mic{position:absolute;right:10px;top:10px;color:var(--text-faint);opacity:0;transition:opacity var(--dur-base) var(--ease-standard)}
   .tile.muted .t-mic{opacity:1;color:var(--danger-text)}
-  .tile .meter{position:absolute;right:10px;bottom:12px;margin:0}
   /* A camera held back for the viewer's link: the face, and why there is no picture. */
   .tile .t-held{
     max-width:calc(100% - 24px);padding:0 12px;text-align:center;
     font-size:var(--text-12);color:var(--text-muted);
   }
+
+  /*
+   * A tile on the channel's stage: the face in the middle, scaled with the
+   * tile, the name under it, the mute mark after the name, and under both the
+   * note that the picture is held back. A private call places its own tiles
+   * (`friends.css`), so all of this stays on `.voice-stage`.
+   */
+  .voice-stage .tile{
+    container:tile / size;
+    display:grid;
+    grid-template-columns:minmax(0, 1fr) auto auto minmax(0, 1fr);
+    grid-template-rows:1fr auto auto 1fr;
+    align-items:center;gap:0 6px;
+  }
+  .voice-stage .tile .av{
+    grid-column:1 / -1;grid-row:2;justify-self:center;
+    --av-size:clamp(36px, 34cqh, 104px);
+    --av-face:calc(var(--av-size) * 0.34);
+    margin-bottom:clamp(6px, 5cqh, 14px);
+  }
+  .voice-stage .tile:not(.has-video) .t-name{
+    position:static;grid-column:2;grid-row:3;
+    max-width:100%;padding:0;border-radius:0;background:none;
+    font-size:var(--text-13);font-weight:500;line-height:18px;
+  }
+  .voice-stage .tile:not(.has-video) .t-mic{position:static;grid-column:3;grid-row:3;display:none}
+  .voice-stage .tile.muted:not(.has-video) .t-mic{display:inline-flex}
+  .voice-stage .tile.muted:not(.has-video) .t-name{color:var(--text-muted)}
+  .voice-stage .tile .t-held{
+    grid-column:1 / -1;grid-row:4;align-self:start;justify-self:center;
+    margin-top:2px;color:var(--text-faint);
+  }
   .voice-stage.streaming .tile .t-held{font-size:var(--text-11);padding:0 6px}
+  /* With a camera the picture fills the tile and the name keeps its veil in
+     the corner, the mute mark inside it. Media stays dark in a light theme
+     (`recipe.css`), so the name on it stays light, as in a private call. */
+  .voice-stage .tile.has-video .t-name{color:oklch(0.96 0 0)}
+  .voice-stage .tile.has-video .t-mic{top:auto;right:auto;left:18px;bottom:15px;z-index:1}
+  .voice-stage .tile.has-video.muted .t-name{padding-left:26px}
+  .voice-stage .tile-more{top:6px;right:6px}
   .tile-more{
     position:absolute;z-index:2;right:8px;top:8px;
     width:36px;height:36px;border-radius:50%;
@@ -218,43 +278,39 @@
     padding:12px 20px 18px;gap:12px;
     transition:max-height var(--dur-slow) var(--ease-standard), opacity var(--dur-base) var(--ease-standard), padding var(--dur-slow) var(--ease-standard);
   }
-  .vc-side{display:flex;align-items:center;gap:6px}
-  .vc-side.right{justify-content:flex-end}
-  .vc-center{display:flex;align-items:center;gap:10px}
+  /* The controls in the middle column, so they stay centred under the stage
+     whatever the right-hand column holds. */
+  .vc-center{grid-column:2;display:flex;align-items:center;gap:10px}
+  /* The view's own controls, together at the right edge. */
+  .vc-side{grid-column:3;display:flex;align-items:center;justify-content:flex-end;gap:4px}
   .vc-mobile-overflow{display:none}
-  /* Relative, because each arrow's menu hangs off its own group rather than
-     off the middle of the bar — three panels, three anchors. */
   .vc-grp{
-    position:relative;
+    --grp-pad:4px;
     display:flex;align-items:center;gap:2px;
     background:var(--surface-pop);border:1px solid var(--line);
-    border-radius:16px;padding:4px;
+    border-radius:16px;padding:var(--grp-pad);
   }
-  .dock-pop.vc-menu{
-    left:0;right:auto;width:252px;bottom:calc(100% + 7px);
-    padding:4px;border:0;border-radius:var(--radius-lg);
-    box-shadow:var(--elev-drawer);overflow:hidden;
-    animation:vcMenuIn var(--dur-base) var(--ease-standard);
+  /* A control and the panel it opens, so the panel has the control to hang
+     from rather than the pill or the bar. */
+  .vc-ctl{position:relative;display:flex;align-items:center;gap:2px}
+  /* Every panel sits 8px above the pill, past its padding and its 1px frame,
+     centred on its control. The centring is `transform`; the entrance moves
+     `translate`, so the two never fight. */
+  .vc-ctl > .dock-pop{
+    left:50%;right:auto;bottom:calc(100% + var(--grp-pad) + 1px + 8px);
+    width:256px;transform:translateX(-50%);
   }
-  .dock-pop.vc-menu.right{left:auto;right:0}
-  @keyframes vcMenuIn{
-    from{opacity:0;transform:translateY(4px)}
-    to{opacity:1;transform:none}
-  }
-  .qm-head{display:flex;align-items:center;gap:8px;padding:5px 6px 7px}
-  .qm-head-icon{
-    width:26px;height:26px;flex:none;display:inline-flex;align-items:center;justify-content:center;
-    border-radius:var(--radius-md);background:var(--surface-overlay);color:var(--accent-text);
-  }
-  .qm-head-copy{min-width:0;display:flex;flex-direction:column;gap:1px}
-  .qm-head-copy b{font-size:var(--text-13);line-height:1.2;font-weight:600;color:var(--text)}
-  .qm-head-copy span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--text-11);color:var(--text-faint)}
-  .qm-group{padding:2px 0}
-  .qm-group + .qm-group{border-top:1px solid var(--line-subtle);padding-top:4px}
-  .qm-caption{padding:3px 6px;font-size:var(--text-11);font-weight:600;color:var(--text-faint)}
+  .vc-ctl > .dock-pop.board{width:288px}
+
+  /* ---------- Quality menus: the account panel's rows ---------- */
+  .qm-head{display:flex;flex-direction:column;gap:1px;padding:8px 8px 4px}
+  .qm-head b{font-size:var(--text-13);line-height:1.3;font-weight:600;color:var(--text)}
+  .qm-head span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--text-12);color:var(--text-faint)}
+  .qm-sep{height:0;margin:4px 6px;border:none;border-top:1px solid var(--line-subtle)}
+  .qm-caption{padding:8px 8px 4px;font-size:var(--text-11);font-weight:600;color:var(--text-faint)}
   .qm-option{
-    position:relative;width:100%;min-height:34px;display:flex;align-items:center;gap:7px;
-    padding:3px 6px;border-radius:var(--radius-md);text-align:left;
+    position:relative;width:100%;min-height:34px;display:flex;align-items:center;gap:9px;
+    padding:8px;border-radius:var(--radius-md);text-align:left;
     color:var(--text-muted);cursor:pointer;
     transition:background var(--dur-fast) var(--ease-standard),color var(--dur-fast) var(--ease-standard);
   }
@@ -262,37 +318,38 @@
   .qm-radio:focus-visible{outline:0}
   .qm-option:has(.qm-radio:focus-visible){outline:2px solid var(--accent-quiet);outline-offset:1px}
   .qm-option:hover{background:var(--surface-overlay);color:var(--text)}
-  .qm-option.on{background:var(--accent-soft);color:var(--accent-text)}
+  /* The choice is the accent and a tick, never a fill, so a hover on another
+     row cannot look like the choice has moved. */
+  .qm-option.on{color:var(--accent-text)}
   .qm-option.disabled{cursor:not-allowed;opacity:.46}
   .qm-option.disabled:hover{background:transparent;color:var(--text-muted)}
-  .qm-marker{
-    width:18px;height:18px;flex:none;display:inline-flex;align-items:center;justify-content:center;
-    border-radius:var(--radius-sm);color:var(--accent-text);
-  }
-  .qm-option.on .qm-marker{background:var(--surface-raised)}
-  .qm-label{font-size:var(--text-12);font-weight:500}
-  .qm-detail{margin-left:auto;font-size:var(--text-11);color:var(--text-faint);white-space:nowrap}
+  .qm-label{flex:1;min-width:0;font-size:var(--text-13)}
+  .qm-option.on .qm-label{font-weight:550}
+  .qm-detail{font-size:var(--text-11);color:var(--text-faint);white-space:nowrap}
   .qm-option.on .qm-detail{color:var(--accent-text)}
-  .qm-note{
-    margin:1px 6px 3px;padding:6px 7px;border-radius:var(--radius-md);
-    background:var(--surface-overlay);font-size:var(--text-11);line-height:1.35;color:var(--text-faint);
+  .qm-marker{
+    width:16px;height:16px;flex:none;display:inline-flex;align-items:center;justify-content:center;
+    color:var(--accent-text);
   }
+  .qm-note{margin:0 8px 4px;font-size:var(--text-12);line-height:1.4;color:var(--text-faint)}
+  /* The way out to the settings: an ordinary row. */
   .qm-more{
-    width:100%;min-height:34px;display:flex;align-items:center;gap:7px;
-    margin-top:3px;padding:4px 6px;border-top:1px solid var(--line-subtle);
-    border-radius:0 0 var(--radius-md) var(--radius-md);
-    color:var(--text-muted);font-size:var(--text-12);text-align:left;
+    width:100%;min-height:34px;display:flex;align-items:center;gap:9px;
+    padding:8px;border-radius:var(--radius-md);
+    color:var(--text-muted);font-size:var(--text-13);text-align:left;
     transition:background var(--dur-fast) var(--ease-standard),color var(--dur-fast) var(--ease-standard);
   }
   .qm-more:hover{background:var(--surface-overlay);color:var(--text)}
-  .qm-more-icon{width:18px;display:inline-flex;align-items:center;justify-content:center;color:var(--text-faint)}
+  .qm-more-icon{width:16px;flex:none;display:inline-flex;align-items:center;justify-content:center;color:var(--text-faint)}
   .vc-btn{
     width:44px;height:40px;border-radius:12px;
     display:inline-flex;align-items:center;justify-content:center;color:var(--text-muted);
     transition:background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
   }
   .vc-btn:hover{background:var(--surface-overlay);color:var(--text)}
-  .vc-btn[aria-pressed="true"]{background:var(--surface-overlay);color:var(--text)}
+  /* An open panel's trigger looks pressed, as a toggle that is on does. */
+  .vc-btn[aria-pressed="true"],
+  .vc-ctl > .vc-btn[aria-expanded="true"]{background:var(--surface-overlay);color:var(--text)}
   .vc-btn.on{background:var(--accent);color:var(--on-accent)}
   .vc-btn.muted{background:oklch(0.55 0.14 25.5 / 0.16);color:var(--danger-text)}
   .vc-caret{
@@ -344,16 +401,15 @@
       padding:8px 12px max(12px, env(safe-area-inset-bottom));
     }
     .vc-side{display:none}
-    .vc-center{width:100%;max-width:100%;justify-content:center;flex-wrap:nowrap;gap:8px}
-    /* Phone calls keep the three actions used mid-sentence in thumb reach.
-       Device menus and session extras remain available through one disclosure
-       control instead of taking a second row away from the stage. */
-    .vc-center > .vc-grp:first-child{order:1}
-    .vc-center > .vc-grp:first-child .vc-caret{display:none}
-    .vc-center > .vc-grp:first-child .vc-btn,.vc-mobile-more{height:44px}
-    .vc-mobile-overflow{display:block;order:2}
-    .vc-secondary{display:none}
-    .vc-hang{order:3;padding:0 18px}
+    .vc-center{grid-column:1;width:100%;max-width:100%;justify-content:center;flex-wrap:nowrap;gap:8px}
+    /* Phone calls keep what is used mid-sentence in thumb reach: the
+       microphone and the sound, the camera, then "more" and hanging up. Device
+       menus and session extras stay behind that one disclosure control
+       instead of taking a second row away from the stage. */
+    .vc-caret,.vc-wide-only{display:none}
+    .vc-center .vc-btn{height:44px}
+    .vc-mobile-overflow{display:block}
+    .vc-hang{padding:0 18px}
 
     .dock-pop.vc-mobile-menu{
       left:12px;right:12px;bottom:calc(100% + 2px);
@@ -391,7 +447,13 @@
       width:34px;height:34px;flex:none;display:inline-flex;align-items:center;justify-content:center;
       border-radius:10px;background:var(--surface-overlay);color:inherit;
     }
-    .vc-mobile-menu .dp-grid{--dp-tile:58px}
+    /* The sounds view: the menu's head with its way back is the panel's head,
+       the countdown and the volume at its end, and the menu scrolls rather
+       than the pads. */
+    .vc-mobile-menu .sb-head{padding:0 0 6px}
+    .vc-mobile-menu .sb-head > .vc-mobile-menu-head{padding:0 2px}
+    .vc-mobile-menu .sb-head-btn{width:44px;height:44px}
+    .vc-mobile-menu .sb-grid{--sb-pad:44px;max-height:none}
   }
 
   @media (max-width:359px){
@@ -402,7 +464,6 @@
   }
 
   @media (prefers-reduced-motion:reduce){
-    .dock-pop.vc-menu,.dock-pop.vc-pop{animation:none}
     .vc-caret svg{transition:none}
   }
 

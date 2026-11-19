@@ -25,10 +25,6 @@ public sealed partial class AppHub
     /// </summary>
     private static readonly Guid JoinSoundScope = Guid.Empty;
 
-    /// <summary>Who may play when the server keeps its soundboard to staff.</summary>
-    private const ServerPrivileges SoundboardStaff =
-        ServerPrivileges.ManageServer | ServerPrivileges.ManageMessages | ServerPrivileges.ModerateMembers;
-
     /// <summary>
     /// Plays one of the server's clips for everyone seated in a voice channel.
     /// The start is scheduled a fixed lead ahead and shared by all of them, so
@@ -62,8 +58,7 @@ public sealed partial class AppHub
             throw new HubException("Unknown soundboard sound.");
         }
 
-        if (!rules.SoundboardEveryoneCanPlay &&
-            (await ServerAccess.GetAsync(db, userId, serverId) & SoundboardStaff) == ServerPrivileges.None)
+        if (!await SoundboardAccess.CanPlayAsync(db, userId, serverId, rules.SoundboardEveryoneCanPlay))
         {
             throw new HubException("Soundboard playback is restricted.");
         }

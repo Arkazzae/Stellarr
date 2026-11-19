@@ -2,7 +2,7 @@ import { useState, useSyncExternalStore } from "react";
 
 import { Icon } from "@stellarr/icons";
 import type { PopoverTriggerProps } from "@/components/primitives/Popover";
-import type { Sound, VoiceSettings } from "@/ports";
+import type { Sound, SoundboardLive, VoiceSettings } from "@/ports";
 import { useLanguage } from "@/state/LanguageProvider";
 
 import { QualityMenu } from "./QualityMenu";
@@ -12,6 +12,7 @@ import {
   screenQualityMenu,
 } from "./qualityMenus";
 import { SoundboardPopover } from "./SoundboardPopover";
+import { IDLE_SOUNDBOARD } from "./soundboardLive";
 import { VoiceMobileMenu } from "./VoiceMobileMenu";
 
 type Drawer = "mic" | "camera" | "screen";
@@ -36,6 +37,8 @@ function CaretButton({ label, ...trigger }: PopoverTriggerProps & { label: strin
 
 export interface VoiceControlBarProps {
   muted: boolean;
+  /** Everything you would hear is silenced: the call and the soundboard. */
+  deafened: boolean;
   cameraOn: boolean;
   cameraPending?: boolean;
   sharing: boolean;
@@ -44,7 +47,12 @@ export interface VoiceControlBarProps {
 
   /** What the soundboard offers; see `onPlaySound`. */
   sounds?: Sound[];
+  /** False where this person may not play the board: its pads are locked and it says why. */
   soundboardSupported?: boolean;
+  /** What plays in the room and the cooldown, read by the soundboard panel alone. */
+  soundboardLive?: SoundboardLive;
+  /** For people who manage the server: its settings, on the soundboard. */
+  onManageSounds?: () => void;
 
   /** Device settings, applied to the call already in progress. */
   settings: VoiceSettings;
@@ -59,6 +67,7 @@ export interface VoiceControlBarProps {
   fullscreenTarget?: () => HTMLElement | null;
 
   onToggleMute: () => void;
+  onToggleDeafen: () => void;
   onToggleCamera: () => void;
   onSelectMicrophone: () => void;
   onSelectCamera: () => void;
@@ -74,7 +83,10 @@ export interface VoiceControlBarProps {
 }
 
 /**
- * The controls under the stage.
+ * The controls under the stage: what you say and hear in one pill, what you
+ * show in the next, then hanging up, and the controls of the view itself
+ * together on the right. Every control that opens a panel is wrapped with it,
+ * so the panel is centred on the control that opened it.
  *
  * Two pieces of state live here because props cannot describe them: full
  * screen, which the browser can leave on its own (Esc), and which panel is
@@ -82,17 +94,21 @@ export interface VoiceControlBarProps {
  */
 export function VoiceControlBar({
   muted,
+  deafened,
   cameraOn,
   cameraPending = false,
   sharing,
   cinema,
   sounds = [],
-  soundboardSupported,
+  soundboardSupported = true,
+  soundboardLive = IDLE_SOUNDBOARD,
+  onManageSounds,
   settings,
   onChangeSettings,
   cameraSupported = false,
   fullscreenTarget,
   onToggleMute,
+  onToggleDeafen,
   onToggleCamera,
   onSelectMicrophone,
   onSelectCamera,
@@ -143,6 +159,7 @@ export function VoiceControlBar({
   const cinemaTitle = cinema ? t("voiceBar.cinemaExit") : t("voiceBar.cinema");
   const fullscreenTitle = fullscreen ? t("voiceBar.fullscreenExit") : t("voiceBar.fullscreen");
   const micTitle = muted ? t("voiceBar.unmute") : t("voiceBar.mute");
+  const soundTitle = deafened ? t("shell.unmuteSound") : t("shell.muteSound");
   const cameraTitle = cameraPending
     ? t("voiceBar.cameraStarting")
     : cameraOn
@@ -151,7 +168,153 @@ export function VoiceControlBar({
 
   return (
     <div className="vc-bar">
-      <div className="vc-side left">
+      <div className="vc-center">
+        <div className="vc-grp">
+          <div className="vc-ctl">
+            <button
+              type="button"
+              className={muted ? "vc-btn muted" : "vc-btn"}
+              aria-pressed={muted}
+              title={micTitle}
+              aria-label={t("voice.microphone")}
+              onClick={onToggleMute}
+            >
+              <Icon name={muted ? "micSlash" : "mic"} size={19} />
+            </button>
+            <QualityMenu
+              {...drawerState("mic")}
+              title={t("voiceBar.micDrawerTitle")}
+              summary={mic.summary}
+              groups={mic.groups}
+              footer={{ label: t("voiceBar.moreSoundSettings"), onSelect: onSelectMicrophone }}
+              renderTrigger={(trigger) => (
+                <CaretButton label={t("voiceBar.micQualityMenu")} {...trigger} />
+              )}
+            />
+          </div>
+          <button
+            type="button"
+            className={deafened ? "vc-btn muted" : "vc-btn"}
+            aria-pressed={deafened}
+            title={soundTitle}
+            aria-label={t("shell.muteSound")}
+            onClick={onToggleDeafen}
+          >
+            <Icon name={deafened ? "headphonesSlash" : "headphones"} size={19} />
+          </button>
+        </div>
+
+        <div className="vc-grp">
+          <div className="vc-ctl">
+            <button
+              type="button"
+              className={cameraOn ? "vc-btn on" : "vc-btn"}
+              aria-pressed={cameraOn}
+              title={cameraTitle}
+              aria-label={cameraTitle}
+              aria-busy={cameraPending || undefined}
+              disabled={!cameraSupported || cameraPending}
+              onClick={onToggleCamera}
+            >
+              <Icon name="camera" size={19} />
+            </button>
+            <QualityMenu
+              {...drawerState("camera")}
+              title={t("voiceBar.cameraDrawerTitle")}
+              summary={camera.summary}
+              groups={camera.groups}
+              note={cameraSupported ? undefined : t("voiceBar.cameraUnsupported")}
+              footer={{ label: t("voiceBar.moreVideoSettings"), onSelect: onSelectCamera }}
+              renderTrigger={(trigger) => (
+                <CaretButton label={t("voiceBar.cameraQualityMenu")} {...trigger} />
+              )}
+            />
+          </div>
+          {/* A narrow bar keeps only the camera in this pill; "more" has the rest. */}
+          <div className="vc-ctl vc-wide-only">
+            <button
+              type="button"
+              className={sharing ? "vc-btn on" : "vc-btn"}
+              aria-pressed={sharing}
+              title={t("voiceBar.shareScreen")}
+              aria-label={t("voiceBar.shareScreen")}
+              onClick={onToggleShare}
+            >
+              <Icon name="screencast" size={22} />
+            </button>
+            <QualityMenu
+              {...drawerState("screen")}
+              title={t("voiceBar.screenQuality")}
+              summary={screen.summary}
+              groups={screen.groups}
+              renderTrigger={(trigger) => (
+                <CaretButton label={t("voiceBar.screenQuality")} {...trigger} />
+              )}
+            />
+          </div>
+          {onPlaySound === undefined ? null : (
+            <div className="vc-ctl vc-wide-only">
+              <SoundboardPopover
+                sounds={sounds}
+                live={soundboardLive}
+                canPlay={soundboardSupported}
+                open={boardOpen}
+                onOpenChange={setBoardOpen}
+                onPlaySound={onPlaySound}
+                onManage={onManageSounds}
+                volume={settings.soundboardVolume}
+                onVolumeChange={changeSoundboardVolume}
+                renderTrigger={(triggerProps) => (
+                  <button
+                    type="button"
+                    className="vc-btn"
+                    title={t("voice.soundboard")}
+                    aria-label={t("voice.soundboard")}
+                    {...triggerProps}
+                  >
+                    <Icon name="board" size={19} />
+                  </button>
+                )}
+              />
+            </div>
+          )}
+        </div>
+
+        <div className="vc-mobile-overflow">
+          <VoiceMobileMenu
+            open={compactMenuOpen}
+            onOpenChange={changeCompactMenu}
+            sharing={sharing}
+            cinema={cinema}
+            fullscreen={fullscreen}
+            sounds={sounds}
+            soundboardSupported={soundboardSupported}
+            soundboardLive={soundboardLive}
+            onManageSounds={onManageSounds}
+            soundboardVolume={settings.soundboardVolume}
+            onSoundboardVolumeChange={changeSoundboardVolume}
+            onToggleShare={onToggleShare}
+            onToggleCinema={onToggleCinema}
+            onToggleFullscreen={toggleFullscreen}
+            onSelectMicrophone={onSelectMicrophone}
+            onSelectCamera={onSelectCamera}
+            onPlaySound={onPlaySound}
+            onInvite={onInvite}
+          />
+        </div>
+
+        <button
+          type="button"
+          className="vc-hang"
+          title={t("voiceBar.disconnect")}
+          aria-label={t("voiceBar.disconnect")}
+          onClick={onLeave}
+        >
+          <Icon name="phoneX" size={20} />
+        </button>
+      </div>
+
+      <div className="vc-side">
         {onInvite === undefined ? null : (
           <button
             type="button"
@@ -183,137 +346,6 @@ export function VoiceControlBar({
         >
           <Icon name={fullscreen ? "collapse" : "expand"} size={18} />
         </button>
-      </div>
-
-      <div className="vc-center">
-        <div className="vc-grp">
-          <button
-            type="button"
-            className={muted ? "vc-btn muted" : "vc-btn"}
-            aria-pressed={muted}
-            title={micTitle}
-            aria-label={t("voice.microphone")}
-            onClick={onToggleMute}
-          >
-            <Icon name={muted ? "micSlash" : "mic"} size={19} />
-          </button>
-          <QualityMenu
-            {...drawerState("mic")}
-            title={t("voiceBar.micDrawerTitle")}
-            summary={mic.summary}
-            icon="mic"
-            groups={mic.groups}
-            footer={{ label: t("voiceBar.moreSoundSettings"), onSelect: onSelectMicrophone }}
-            renderTrigger={(trigger) => (
-              <CaretButton label={t("voiceBar.micQualityMenu")} {...trigger} />
-            )}
-          />
-          <button
-            type="button"
-            className={cameraOn ? "vc-btn on" : "vc-btn"}
-            aria-pressed={cameraOn}
-            title={cameraTitle}
-            aria-label={cameraTitle}
-            aria-busy={cameraPending || undefined}
-            disabled={!cameraSupported || cameraPending}
-            onClick={onToggleCamera}
-          >
-            <Icon name="camera" size={19} />
-          </button>
-          <QualityMenu
-            {...drawerState("camera")}
-            align="right"
-            title={t("voiceBar.cameraDrawerTitle")}
-            summary={camera.summary}
-            icon="camera"
-            groups={camera.groups}
-            note={cameraSupported ? undefined : t("voiceBar.cameraUnsupported")}
-            footer={{ label: t("voiceBar.moreVideoSettings"), onSelect: onSelectCamera }}
-            renderTrigger={(trigger) => (
-              <CaretButton label={t("voiceBar.cameraQualityMenu")} {...trigger} />
-            )}
-          />
-        </div>
-
-        <div className="vc-mobile-overflow">
-          <VoiceMobileMenu
-            open={compactMenuOpen}
-            onOpenChange={changeCompactMenu}
-            sharing={sharing}
-            cinema={cinema}
-            fullscreen={fullscreen}
-            sounds={sounds}
-            soundboardSupported={soundboardSupported}
-            soundboardVolume={settings.soundboardVolume}
-            onSoundboardVolumeChange={changeSoundboardVolume}
-            onToggleShare={onToggleShare}
-            onToggleCinema={onToggleCinema}
-            onToggleFullscreen={toggleFullscreen}
-            onSelectMicrophone={onSelectMicrophone}
-            onSelectCamera={onSelectCamera}
-            onPlaySound={onPlaySound}
-            onInvite={onInvite}
-          />
-        </div>
-
-        <div className="vc-grp vc-secondary">
-          <button
-            type="button"
-            className={sharing ? "vc-btn on" : "vc-btn"}
-            aria-pressed={sharing}
-            title={t("voiceBar.shareScreen")}
-            aria-label={t("voiceBar.shareScreen")}
-            onClick={onToggleShare}
-          >
-            <Icon name="screencast" size={22} />
-          </button>
-          <QualityMenu
-            {...drawerState("screen")}
-            title={t("voiceBar.screenQuality")}
-            summary={screen.summary}
-            icon="screencast"
-            groups={screen.groups}
-            renderTrigger={(trigger) => (
-              <CaretButton label={t("voiceBar.screenQuality")} {...trigger} />
-            )}
-          />
-          {onPlaySound === undefined ? null : (
-            <SoundboardPopover
-              sounds={sounds}
-              open={boardOpen}
-              onOpenChange={setBoardOpen}
-              onPlaySound={onPlaySound}
-              volume={settings.soundboardVolume}
-              onVolumeChange={changeSoundboardVolume}
-              supported={soundboardSupported}
-              className="vc-pop"
-              renderTrigger={(triggerProps) => (
-                <button
-                  type="button"
-                  className="vc-btn"
-                  title={t("voice.soundboard")}
-                  aria-label={t("voice.soundboard")}
-                  {...triggerProps}
-                >
-                  <Icon name="board" size={19} />
-                </button>
-              )}
-            />
-          )}
-        </div>
-
-        <button
-          type="button"
-          className="vc-hang"
-          title={t("voiceBar.disconnect")}
-          aria-label={t("voiceBar.disconnect")}
-          onClick={onLeave}
-        >
-          <Icon name="phoneX" size={20} />
-        </button>
-      </div>
-
-      <div className="vc-side right">
         {onPopOut === undefined ? null : (
           <button
             type="button"

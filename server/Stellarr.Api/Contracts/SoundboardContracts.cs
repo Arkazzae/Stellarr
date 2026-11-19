@@ -13,10 +13,15 @@ public sealed record SoundboardSoundDto(
 
 public sealed record SoundboardSettingsDto(bool EveryoneCanPlay, bool RateLimited);
 
+/// <param name="CanPlay">
+/// Whether the caller may play these sounds in a call, by the rule the hub
+/// applies to each play.
+/// </param>
 public sealed record SoundboardSnapshotDto(
     IReadOnlyList<SoundboardSoundDto> Sounds,
     SoundboardSettingsDto Settings,
-    bool CanManage);
+    bool CanManage,
+    bool CanPlay);
 
 /// <param name="StartsAtUnixMs">
 /// The moment every client starts the clip against the RTC clock, so that the
@@ -43,6 +48,9 @@ public sealed record UpdateSoundboardSoundRequest(
     double? TrimEndSeconds);
 
 public sealed record UpdateSoundboardSettingsRequest(bool? EveryoneCanPlay, bool? RateLimited);
+
+/// <param name="SoundIds">Every sound of the server, each once, in the new order.</param>
+public sealed record ReorderSoundboardSoundsRequest(IReadOnlyList<Guid>? SoundIds);
 
 public static class SoundboardContractMappings
 {

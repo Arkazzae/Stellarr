@@ -115,7 +115,10 @@ Clients ignore any `VoiceParticipantChanged` snapshot whose `sequence` is older 
 
 Soundboard clips synchronize over SignalR rather than mixing into microphone audio:
 
-- `PlaySoundboard(channelId, soundId)` verifies the caller's seat, permissions, and a 5-second per-user cooldown.
+- `GET /api/soundboard` returns the server's sounds in their saved order, the two rules (`everyoneCanPlay`, `rateLimited`), `canManage`, and `canPlay`: whether the caller may play them, decided by the same rule (`SoundboardAccess`) the hub applies.
+- `PUT /api/admin/soundboard/order` with `{ "soundIds": [...] }` sets that order. It needs `ManageServer`, like the other admin soundboard calls, and the list must name every sound of the server exactly once, or the call answers `400`. A saved order broadcasts `SoundboardChanged`.
+- `PlaySoundboard(channelId, soundId)` verifies the caller's seat in a server voice channel and the play rule: with `everyoneCanPlay` off, only `ManageServer`, `ManageMessages` or `ModerateMembers` may play. Private calls are refused.
+- With `rateLimited` on, each person gets one play per 5 seconds per server, shared by all their connections; with it off there is no cooldown.
 - `GetRtcClock()` estimates client-server clock offset using half the round-trip time.
 - `SoundboardPlayed` carries clip metadata and a `startsAtUnixMs` timestamp scheduled `750 ms` in the future.
 - Each receiver fetches/decodes the clip and schedules playback in `AudioContext`, trimming the leading offset if the event arrived late.
@@ -231,7 +234,7 @@ flowchart LR
 | State store | `web/src/stellarr/lib/voice/store.ts` (`VoiceStateStore`) |
 | Call session management | `web/src/stellarr/lib/voice/rtc/webrtc.ts`, `web/src/stellarr/lib/voice/rtc/webrtcTopology.ts`, `web/src/stellarr/lib/voice/rtc/webrtcParticipant.ts` |
 | Media server client | `web/src/stellarr/lib/voice/rtc/webrtcSfu.ts`, `web/src/stellarr/lib/voice/rtc/webrtcSfuDirectory.ts`, `web/src/stellarr/lib/voice/rtc/webrtcSfuHealth.ts` |
-| Soundboard & arrival sounds | `web/src/stellarr/adapters/soundboard.ts`, `web/src/stellarr/containers/useJoinSound.ts`, `SoundboardEndpoints.cs`, `JoinSound.cs`, `AppHub.cs` |
+| Soundboard & arrival sounds | `web/src/stellarr/adapters/soundboard.ts`, `web/src/stellarr/containers/useJoinSound.ts`, `SoundboardEndpoints.cs`, `SoundboardAccess.cs`, `JoinSound.cs`, `AppHub.cs` |
 | Opus, screen, and camera profiles | `web/src/stellarr/lib/voice/audioProfiles.ts`, `web/src/stellarr/lib/voice/video/screenShare.ts`, `web/src/stellarr/lib/voice/video/camera.ts` |
 | Microphone DSP & VAD | `web/src/stellarr/lib/voice/capture/micPipeline.ts`, `web/src/stellarr/lib/voice/capture/vad.ts`, `web/src/stellarr/lib/voice/capture/detector/` (built into `/audio/detector-worklet.js`) |
 | ICE/TURN credential refresh | `web/src/stellarr/lib/voice/rtc/iceSession.ts` |

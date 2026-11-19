@@ -12,6 +12,7 @@ import { parseUser } from "./accountParsers";
 import {
   definedField,
   expectArray,
+  expectBoolean,
   expectNumber,
   expectRecord,
   expectString,
@@ -247,6 +248,7 @@ export function parseSoundboardSnapshot(value: unknown, path: string): Soundboar
     ),
     settings: parseSoundboardSettings(record["settings"], `${path}.settings`),
     canManage: record["canManage"] === true,
+    canPlay: expectBoolean(record, "canPlay", path),
   };
 }
 

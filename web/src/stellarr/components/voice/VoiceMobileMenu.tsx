@@ -2,10 +2,11 @@ import { useState } from "react";
 
 import { Icon, type IconName } from "@stellarr/icons";
 import { Popover } from "@/components/primitives/Popover";
-import type { Sound } from "@/ports";
+import type { Sound, SoundboardLive } from "@/ports";
 import { useLanguage } from "@/state/LanguageProvider";
 
-import { SoundboardGrid } from "./SoundboardPopover";
+import { SoundboardPanel } from "./SoundboardPanel";
+import { IDLE_SOUNDBOARD } from "./soundboardLive";
 
 interface ActionProps {
   icon: IconName;
@@ -38,7 +39,11 @@ export interface VoiceMobileMenuProps {
   cinema: boolean;
   fullscreen: boolean;
   sounds: Sound[];
+  /** False where this person may not play the board: its pads are locked and it says why. */
   soundboardSupported?: boolean;
+  soundboardLive?: SoundboardLive;
+  /** For people who manage the server: its settings, on the soundboard. */
+  onManageSounds?: () => void;
   soundboardVolume: number;
   onSoundboardVolumeChange: (volume: number) => void;
   onToggleShare: () => void;
@@ -64,7 +69,9 @@ export function VoiceMobileMenu({
   cinema,
   fullscreen,
   sounds,
-  soundboardSupported,
+  soundboardSupported = true,
+  soundboardLive = IDLE_SOUNDBOARD,
+  onManageSounds,
   soundboardVolume,
   onSoundboardVolumeChange,
   onToggleShare,
@@ -158,26 +165,30 @@ export function VoiceMobileMenu({
           </div>
         </>
       ) : onPlaySound === undefined ? null : (
-        <>
-          <div className="vc-mobile-menu-head sounds">
-            <button
-              type="button"
-              className="vc-mobile-back"
-              aria-label={t("voiceBar.backToCallOptions")}
-              onClick={() => setView("actions")}
-            >
-              <Icon name="caret" size={14} />
-            </button>
-            <b>{t("voice.soundboard")}</b>
-          </div>
-          <SoundboardGrid
-            sounds={sounds}
-            onPlaySound={onPlaySound}
-            volume={soundboardVolume}
-            onVolumeChange={onSoundboardVolumeChange}
-            supported={soundboardSupported}
-          />
-        </>
+        // The menu's own head stays, with its way back; the panel brings the
+        // countdown and the volume to its end.
+        <SoundboardPanel
+          sounds={sounds}
+          live={soundboardLive}
+          canPlay={soundboardSupported}
+          onPlaySound={onPlaySound}
+          onManage={onManageSounds && run(onManageSounds)}
+          volume={soundboardVolume}
+          onVolumeChange={onSoundboardVolumeChange}
+          lead={
+            <span className="vc-mobile-menu-head sounds">
+              <button
+                type="button"
+                className="vc-mobile-back"
+                aria-label={t("voiceBar.backToCallOptions")}
+                onClick={() => setView("actions")}
+              >
+                <Icon name="caret" size={14} />
+              </button>
+              <b>{t("voice.soundboard")}</b>
+            </span>
+          }
+        />
       )}
     </Popover>
   );

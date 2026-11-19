@@ -467,13 +467,28 @@
     border-radius:var(--radius-lg);box-shadow:0 16px 40px oklch(0 0 0 / 0.55);
     padding:6px;animation:msgIn 140ms var(--ease-standard);
   }
-  .dock-pop.vc-pop{
-    left:50%;right:auto;transform:translateX(-50%);width:248px;bottom:calc(100% - 6px);
-    animation:vcPopIn 140ms var(--ease-standard);
+  /*
+   * One family for the panels the call's controls open: the soundboard, in
+   * the dock and in the bar, and the bar's quality menus. The look is the
+   * account panel's: no border, the drawer's elevation, a 4px edge. The phone's
+   * "more" menu keeps its own. The entrance moves `translate`, so it adds to
+   * whatever `transform` places a panel instead of replacing it.
+   */
+  .dock-pop.board,
+  .dock-pop.vc-menu{
+    padding:4px;border:0;border-radius:var(--radius-lg);
+    background:var(--surface-raised);box-shadow:var(--elev-drawer);
+    animation:popRise 120ms var(--ease-standard);
   }
-  @keyframes vcPopIn{
-    from{opacity:0;transform:translateX(-50%) translateY(8px)}
-    to{opacity:1;transform:translateX(-50%) translateY(0)}
+  @keyframes popRise{
+    from{opacity:0;translate:0 4px}
+    to{opacity:1;translate:0 0}
+  }
+  /* In the dock: the rail's width, over the dock's top edge, as the account
+     panel sits over its row. The bar places its own (`voice.css`). */
+  .voice-dock .dock-pop.board{left:0;right:0;bottom:calc(100% - 6px)}
+  @media (prefers-reduced-motion:reduce){
+    .dock-pop.board,.dock-pop.vc-menu{animation:none}
   }
   .dp-row{
     width:100%;display:flex;align-items:center;gap:9px;
@@ -485,50 +500,79 @@
   .dp-ico{display:inline-flex;flex:none}
   .dp-state{margin-left:auto;font-size:var(--text-11);color:var(--text-faint)}
   .dp-row.on .dp-state{color:var(--accent-text)}
-  .dp-cap{
-    font-size:var(--text-11);font-weight:600;text-transform:uppercase;letter-spacing:0.08em;
-    color:var(--text-faint);padding:4px 6px 8px;
+  /* ---------- The soundboard panel: in the dock, in the bar, in the phone's menu ---------- */
+  .sb-panel{display:flex;flex-direction:column}
+  .sb-head{display:flex;align-items:center;gap:8px;min-height:36px;padding:2px 2px 2px 8px}
+  .sb-title{font-size:var(--text-13);font-weight:600;color:var(--text)}
+  .sb-head-end{display:flex;align-items:center;gap:4px;margin-left:auto}
+  .sb-meta{font-size:var(--text-12);color:var(--text-faint);font-variant-numeric:tabular-nums;white-space:nowrap}
+  .sb-head-btn{
+    width:28px;height:28px;flex:none;border-radius:var(--radius-md);
+    display:inline-flex;align-items:center;justify-content:center;color:var(--text-faint);
+    transition:background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
   }
-  .dp-volume{padding:4px 6px 8px;margin-bottom:5px;border-bottom:1px solid var(--line-subtle)}
-  .dp-volume-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px;font-size:var(--text-12);color:var(--text-muted)}
-  .dp-volume label{display:inline-flex;align-items:center;gap:6px;font-weight:550}
-  .dp-volume output{font-variant-numeric:tabular-nums;color:var(--text-faint)}
-  .dp-volume input{display:block;width:100%;height:18px;accent-color:var(--accent);cursor:pointer}
-  /*
-   * Three by three, then it scrolls down — never sideways. Columns are
-   * minmax(0,1fr) and names are cut to one line, so a long name can no longer
-   * widen a column past the popover and push the board into a side scroll.
-   */
-  .dp-grid{
-    --dp-tile:54px;
-    display:grid;grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:var(--dp-tile);gap:4px;
-    max-height:calc(3 * var(--dp-tile) + 2 * 4px);
-    overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;
-    scrollbar-width:thin;scrollbar-gutter:stable;
+  .sb-head-btn:hover,.sb-head-btn[aria-expanded="true"]{background:var(--surface-overlay);color:var(--text)}
+  /* The level, shown on request under the head: never a slider at rest. */
+  .sb-volume{display:flex;align-items:center;gap:8px;padding:2px 8px 8px;color:var(--text-faint)}
+  .sb-volume input{flex:1;min-width:0;height:18px;accent-color:var(--accent);cursor:pointer}
+  .sb-volume output{min-width:36px;text-align:right;font-size:var(--text-12);font-variant-numeric:tabular-nums}
+  .sb-search{
+    display:flex;align-items:center;gap:8px;height:32px;margin:0 4px 6px;padding:0 10px;
+    border-radius:var(--radius-md);background:var(--surface-field);border:1px solid var(--line);
+    color:var(--text-faint);
   }
-
-  .dp-board-empty{
-    min-height:146px;display:flex;flex-direction:column;align-items:center;justify-content:center;
-    gap:5px;padding:18px 14px 20px;border-radius:var(--radius-md);text-align:center;
+  .sb-search:focus-within{border-color:var(--accent)}
+  .sb-search input{
+    flex:1;min-width:0;height:100%;background:none;border:0;outline:0;
+    font:inherit;font-size:var(--text-13);color:var(--text);
   }
-  .dp-board-empty-icon{
-    width:44px;height:44px;margin-bottom:5px;border-radius:15px;
-    display:inline-flex;align-items:center;justify-content:center;
-    background:var(--surface-overlay);color:var(--accent-text);
-    box-shadow:inset 0 0 0 1px var(--line-subtle);
+  .sb-search input::placeholder{color:var(--text-faint)}
+  .sb-search input::-webkit-search-cancel-button{display:none}
+  .sb-note{margin:0;padding:0 8px 8px;font-size:var(--text-12);line-height:1.4;color:var(--text-faint)}
+  .sb-empty{margin:0;padding:4px 8px 10px;font-size:var(--text-13);line-height:1.45;color:var(--text-muted)}
+  /* Two columns, the name in full as far as it fits. Six and a half rows,
+     then the list scrolls down, never sideways. */
+  .sb-grid{
+    --sb-pad:38px;
+    display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 4px;
+    max-height:calc(6.5 * var(--sb-pad) + 6 * 2px);
+    overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;
   }
-  .dp-board-empty b{font-size:var(--text-14);font-weight:600;color:var(--text)}
-  .dp-board-empty > span:last-child{max-width:210px;font-size:var(--text-12);line-height:1.45;color:var(--text-faint)}
-  .dp-snd{
-    min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;
-    padding:6px 4px;border-radius:var(--radius-md);
-    font-size:var(--text-11);color:var(--text-faint);
-    transition:background var(--dur-fast) var(--ease-standard), transform var(--dur-fast) var(--ease-standard);
+  .sb-pad{
+    position:relative;overflow:hidden;min-width:0;height:var(--sb-pad);
+    display:flex;align-items:center;gap:8px;padding:0 8px;border-radius:var(--radius-md);
+    font-size:var(--text-13);color:var(--text-muted);text-align:left;
+    transition:background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
   }
-  .dp-snd b{font-size:18px;line-height:1}
-  .dp-snd-name{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-  .dp-snd:hover{background:var(--surface-overlay);color:var(--text)}
-  .dp-snd:active, .dp-snd.play{background:var(--accent);color:var(--on-accent);transform:scale(0.96)}
+  .sb-pad > :not(.sb-fill){position:relative}
+  .sb-glyph{width:20px;flex:none;text-align:center;font-size:17px;line-height:1}
+  .sb-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  /* Only a pointer that hovers: a finger would leave the overlay behind. */
+  @media (hover:hover){
+    .sb-pad:hover:not([aria-disabled]){background:var(--surface-overlay);color:var(--text)}
+  }
+  .sb-pad:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+  /* Playing, for everyone in the call: a flat fill runs across the pad for
+     the length of the clip, whoever pressed it. */
+  .sb-pad.playing{color:var(--accent-text)}
+  .sb-fill{
+    position:absolute;inset:0;background:var(--accent-soft);
+    transform:scaleX(0);transform-origin:left center;pointer-events:none;
+  }
+  .sb-pad[aria-disabled]{cursor:default;color:var(--text-faint)}
+  .sb-pad[aria-disabled] .sb-glyph{opacity:.5}
+  .sb-pad.playing[aria-disabled]{color:var(--accent-text)}
+  .sb-pad.playing[aria-disabled] .sb-glyph{opacity:1}
+  .sb-sep{height:0;margin:4px 6px;border-top:1px solid var(--line-subtle)}
+  .sb-row{
+    width:100%;min-height:34px;display:flex;align-items:center;gap:9px;
+    padding:8px;border-radius:var(--radius-md);
+    font-size:var(--text-13);color:var(--text-muted);text-align:left;
+    transition:background var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
+  }
+  .sb-row svg{flex:none;color:var(--text-faint)}
+  .sb-row:hover{background:var(--surface-overlay);color:var(--text)}
+  .sb-head-btn:focus-visible,.sb-row:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
   .voice-dock.hidden{display:none}
   .dock-card{
     background:none;border:none;padding:0;
@@ -556,7 +600,9 @@
     display:inline-flex;align-items:center;justify-content:center;gap:6px;
     transition:background var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard), color var(--dur-fast) var(--ease-standard);
   }
-  .dpill:hover{background:var(--surface-overlay);color:var(--text)}
+  /* An open panel's trigger looks pressed, as in the call's bar. */
+  .dpill:hover,
+  .dpill[aria-expanded="true"]{background:var(--surface-overlay);color:var(--text)}
   .dpill.icon{padding:0}
   .dpill.muted{color:var(--danger-text);background:var(--danger-soft)}
   .dpill.on{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
@@ -584,10 +630,14 @@
     .dock-row .dpill{grid-column:span 2;width:100%;height:44px}
     .dock-row > .dpill:nth-of-type(4){grid-column:2 / span 2}
     .dock-row > .dpill:nth-of-type(5){grid-column:4 / span 2}
+    /* A private call has no soundboard: the fourth sits alone, centred. */
+    .dock-row > .dpill:nth-of-type(4):last-child{grid-column:3 / span 2}
     .dp-row{min-height:44px}
-    .dp-volume input{min-height:44px}
-    .dp-snd{min-height:44px}
-    .dp-grid{--dp-tile:58px}
+    .sb-grid{--sb-pad:44px}
+    .sb-head-btn{width:44px;height:44px}
+    .sb-search{height:44px}
+    .sb-volume input{min-height:44px}
+    .sb-row{min-height:44px}
   }
 
 }

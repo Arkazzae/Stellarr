@@ -55,6 +55,7 @@ export function CallStage({ fullscreenTarget }: CallStageProps) {
         onParticipantGateChange={voice.setParticipantGate}
         participantSuppressions={voice.participantSuppressions}
         onParticipantSuppressionChange={voice.setParticipantSuppression}
+        soundPlays={ports.soundboard.live}
         onOpenProfile={profile.toggle}
         share={voice.share}
         localShare={voice.localShare}
@@ -64,17 +65,21 @@ export function CallStage({ fullscreenTarget }: CallStageProps) {
       />
       <VoiceControlBar
         muted={voice.state.muted}
+        deafened={voice.call?.deafened ?? false}
         cameraOn={voice.call?.cameraOn ?? false}
         cameraPending={voice.state.cameraPending}
         sharing={voice.localShare}
         cinema={ui.cinema}
         sounds={voice.sounds}
-        soundboardSupported={voice.soundboardEnabled}
+        soundboardSupported={voice.soundboardEnabled && voice.soundboard.canPlay}
+        soundboardLive={ports.soundboard.live}
+        onManageSounds={voice.soundboard.canManage ? () => ui.openModal("soundboard") : undefined}
         settings={settings}
         onChangeSettings={(patch) => ports.voiceSettings.update(patch)}
         cameraSupported={voice.cameraSupported}
         fullscreenTarget={fullscreenTarget}
         onToggleMute={voice.toggleMute}
+        onToggleDeafen={voice.toggleDeafen}
         onToggleCamera={voice.toggleCamera}
         onSelectMicrophone={openDeviceSettings}
         onSelectCamera={openDeviceSettings}

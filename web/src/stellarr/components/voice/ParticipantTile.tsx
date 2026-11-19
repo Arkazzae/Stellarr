@@ -1,10 +1,11 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 
 import { Icon } from "@stellarr/icons";
 import { Avatar } from "@/components/primitives/Avatar";
 import { useContextMenu } from "@/components/primitives/ContextMenu";
 import { UserMenu } from "@/components/roster/UserMenu";
 import type { OpenProfile, PersonVM } from "@/components/view-models";
+import type { SoundboardLive, SoundboardPlay } from "@/ports";
 import { useLanguage } from "@/state/LanguageProvider";
 
 export interface ParticipantTileProps {
@@ -28,7 +29,38 @@ export interface ParticipantTileProps {
   /** Receiver-side suppressor on the same strip. Absent hides the control. */
   suppressed?: boolean;
   onSuppressionChange?: (suppressed: boolean) => void;
+  /** The board's clips under way: one this person played shows after their name. */
+  soundPlays?: SoundboardLive;
   onOpenProfile?: OpenProfile;
+}
+
+/** The latest clip this person played that is still under way, the same object while it plays. */
+function latestPlayOf(plays: readonly SoundboardPlay[], personId: string): SoundboardPlay | undefined {
+  for (let index = plays.length - 1; index >= 0; index -= 1) {
+    if (plays[index]?.userId === personId) return plays[index];
+  }
+  return undefined;
+}
+
+/**
+ * The emoji of the clip a person is playing, beside their name for as long as
+ * it plays. It reads the board's live store itself, so a clip starting
+ * re-renders this and nothing else of the tile.
+ */
+function TileSound({ live, person }: { live: SoundboardLive; person: PersonVM }) {
+  const { t } = useLanguage();
+  const play = useSyncExternalStore(
+    live.subscribe,
+    () => latestPlayOf(live.playing(), person.id),
+    () => undefined,
+  );
+  if (play === undefined) return null;
+  const label = t("voice.soundPlaying", { name: person.displayName, sound: play.sound.name });
+  return (
+    <span className="t-sound" role="img" aria-label={label} title={label}>
+      {play.sound.glyph}
+    </span>
+  );
 }
 
 /** One person on the voice stage. */
@@ -45,6 +77,7 @@ export function ParticipantTile({
   onGateChange,
   suppressed,
   onSuppressionChange,
+  soundPlays,
   onOpenProfile,
 }: ParticipantTileProps) {
   const video = useRef<HTMLVideoElement>(null);
@@ -86,6 +119,7 @@ export function ParticipantTile({
   const classes = [
     "tile",
     className,
+    stream && "has-video",
     hasMenu && "has-actions",
     person.speaking && "speaking",
     person.muted && "muted",
@@ -139,6 +173,13 @@ export function ParticipantTile({
           size="xl"
         />
       )}
+      <span className="t-name">
+        <span>{label ?? person.displayName}</span>
+        {soundPlays === undefined ? null : <TileSound live={soundPlays} person={person} />}
+      </span>
+      <span className="t-mic" aria-hidden="true">
+        <Icon name="micSlash" size={14} />
+      </span>
       {sealed !== null ? (
         <span className="t-held t-sealed" role="status">
           {t(sealed, { name: person.displayName })}
@@ -148,12 +189,6 @@ export function ParticipantTile({
           {t("voice.pictureHeldBack")}
         </span>
       ) : null}
-      <span className="t-name">
-        <span>{label ?? person.displayName}</span>
-      </span>
-      <span className="t-mic" aria-hidden="true">
-        <Icon name="micSlash" size={14} />
-      </span>
       {hasMenu ? (
         <button
           type="button"

@@ -189,6 +189,7 @@ public enum MessageKey
     // Soundboard
     SoundAttachmentInvalid,
     SoundInvalid,
+    SoundOrderIncomplete,
 
     // Client releases
     AndroidReleaseUnavailable,

@@ -12,7 +12,8 @@ export function ModalsContainer() {
   const directory = useDirectory();
   const ui = useUi();
 
-  const settingsOpen = ui.modal === "settings" && directory.canAccessServerSettings;
+  const settingsOpen =
+    (ui.modal === "settings" || ui.modal === "soundboard") && directory.canAccessServerSettings;
   const inviteOpen = ui.modal === "invite" && directory.canManageServer;
   // Fetched when a dialog that shows any of it opens, not at boot.
   const admin = useServerAdmin(
@@ -22,7 +23,12 @@ export function ModalsContainer() {
   return (
     <>
       <ServerDirectoryDialogs />
-      <ServerSettingsDialog open={settingsOpen} {...admin} />
+      <ServerSettingsDialog
+        open={settingsOpen}
+        // The call's soundboard opens the dialog on its own pane.
+        initialPane={ui.modal === "soundboard" ? "board" : "prz"}
+        {...admin}
+      />
       <InviteDialog open={inviteOpen} {...admin} />
       <ChannelSettingsDialog roles={admin.data.roles} />
       <ChannelCreateDialog />

@@ -282,6 +282,7 @@ export function fakeApi(overrides: Partial<ApiClient> = {}): ApiClient {
       sounds: [],
       settings: { everyoneCanPlay: true, rateLimited: true },
       canManage: false,
+      canPlay: true,
     })),
     createSoundboardSound: vi.fn(async (input) => ({
       id: "sound-1",
@@ -302,6 +303,7 @@ export function fakeApi(overrides: Partial<ApiClient> = {}): ApiClient {
       trimEndSeconds: patch.trimEndSeconds ?? 1,
     })),
     deleteSoundboardSound: vi.fn(async () => {}),
+    reorderSoundboardSounds: vi.fn(async () => {}),
     updateSoundboardSettings: vi.fn(async (patch) => ({
       everyoneCanPlay: patch.everyoneCanPlay ?? true,
       rateLimited: patch.rateLimited ?? true,

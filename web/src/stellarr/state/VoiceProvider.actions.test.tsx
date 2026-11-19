@@ -41,6 +41,7 @@ const SOUNDBOARD: SoundboardState = Object.freeze({
   sounds: [],
   settings: { everyoneCanPlay: true, rateLimited: true },
   canManage: false,
+  canPlay: true,
   supported: true,
   loading: false,
   error: null,

@@ -13,6 +13,7 @@ import {
   postForm,
   route,
   sendJson,
+  sendVoid,
 } from "./http";
 
 type LibraryCalls = Pick<AdminApiClient, "listEmoji" | "uploadEmoji" | "deleteEmoji"> &
@@ -22,6 +23,7 @@ type LibraryCalls = Pick<AdminApiClient, "listEmoji" | "uploadEmoji" | "deleteEm
     | "createSoundboardSound"
     | "updateSoundboardSound"
     | "deleteSoundboardSound"
+    | "reorderSoundboardSounds"
     | "updateSoundboardSettings"
   >;
 
@@ -53,6 +55,9 @@ export function libraryCalls(): LibraryCalls {
 
     deleteSoundboardSound: (soundId, signal) =>
       deleteResource(route`/api/admin/soundboard/sounds/${soundId}`, signal),
+
+    reorderSoundboardSounds: (soundIds, signal) =>
+      sendVoid("PUT", "/api/admin/soundboard/order", { soundIds }, signal),
 
     updateSoundboardSettings: (patch, signal) =>
       sendJson(

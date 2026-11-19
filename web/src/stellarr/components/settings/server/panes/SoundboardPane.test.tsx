@@ -38,8 +38,8 @@ function props(overrides: Partial<SoundboardPaneProps> = {}): SoundboardPaneProp
     onCreate: vi.fn(),
     onUpdate: vi.fn(),
     onDelete: vi.fn().mockResolvedValue(undefined),
-    playback: { outputVolume: 100, soundboardVolume: 100 },
-    onSoundboardVolumeChange: vi.fn(),
+    playback: { soundboardVolume: 100 },
+    onReorder: vi.fn(),
     ...overrides,
   };
 }
