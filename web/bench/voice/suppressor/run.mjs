@@ -310,6 +310,10 @@ function printQuality({ rooms, results }) {
   console.log("each cell: before / now, in dB; cost in ms of render time per 10 ms of audio");
   const columns = [
     ["noise down", (m) => m.noiseReduction],
+    ["noise >8k", (m) => m.noiseReductionAbove8k],
+    ["noise >8k dBFS", (m) => m.noiseLevelAbove8k],
+    ["start >8k", (m) => m.onsetAbove8k],
+    ["end >8k", (m) => m.offsetAbove8k],
     ["SI-SDR", (m) => m.siSdr],
     ["speech", (m) => m.speech],
     [">4 kHz", (m) => m.above4k],

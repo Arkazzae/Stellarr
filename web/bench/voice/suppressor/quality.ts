@@ -86,6 +86,11 @@ export interface Measures {
   latency: number;
   /** dB the output sits below the input where the talker is silent, from 1 s in. */
   noiseReduction: number;
+  /** The same, for the energy above 8 kHz alone, which a fan barely has and hiss and typing have. */
+  noiseReductionAbove8k: number;
+  /** The power above 8 kHz left in those stretches, in dBFS, and the input's, for scale. */
+  noiseLevelAbove8k: number;
+  noiseLevelInAbove8k: number;
   /** SI-SDR in dB of the output against the clean talker, aligned by the latency; of the input, for scale. */
   siSdr: number;
   siSdrInput: number;
@@ -99,6 +104,14 @@ export interface Measures {
   onsetWorst: number;
   /** How many phrase starts the onset figures are taken over. */
   onsets: number;
+  /**
+   * Energy above 8 kHz in the first and in the last 43 ms (two 1024-sample
+   * frames) of each phrase, in dB against the clean talker, averaged over
+   * phrases: below 0 at the start is a band that opens late, below 0 at the
+   * end one that closes early, above 0 at the end a hiss tail.
+   */
+  onsetAbove8k: number;
+  offsetAbove8k: number;
 }
 
 const energy = (samples: ArrayLike<number>, from: number, to: number) => {
@@ -162,6 +175,9 @@ function energyAbove(samples: ArrayLike<number>, starts: readonly number[], cuto
   }
   return totals;
 }
+
+/** Mean-square power of a band, from `energyAbove`'s sum over `frames` Hann-windowed frames of FFT_SIZE (Parseval, one-sided). */
+const bandPower = (sum: number, frames: number) => (2 * sum) / (frames * FFT_SIZE * FFT_SIZE * 0.375);
 
 /** The furthest an output may trail its input: 100 ms. */
 const MAX_LATENCY = 4800;
@@ -272,6 +288,18 @@ export function measure(mixture: Mixture, output: Float32Array): Measures {
   const [clean4k, clean8k] = energyAbove(clean, starts, [4000, 8000]);
   const [out4k, out8k] = energyAbove(output.subarray(latency), starts, [4000, 8000]);
 
+  // The noise above 8 kHz, on frames of 1024 samples inside the quiet stretches.
+  const quietStarts: number[] = [];
+  for (let start = SAMPLE_RATE; start + FFT_SIZE <= end; start += FFT_SIZE) {
+    const first = Math.floor(start / BLOCK);
+    const last = Math.floor((start + FFT_SIZE - 1) / BLOCK);
+    let all = true;
+    for (let b = first; b <= last && all; b += 1) all = quiet[b] === true;
+    if (all) quietStarts.push(start);
+  }
+  const [noiseIn8k] = energyAbove(input, quietStarts, [8000]);
+  const [noiseOut8k] = energyAbove(output.subarray(latency), quietStarts, [8000]);
+
   // Phrase starts: a speaking block after at least 200 ms without one.
   const onsetLevels: number[] = [];
   const window = Math.round(0.05 * SAMPLE_RATE);
@@ -289,9 +317,29 @@ export function measure(mixture: Mixture, output: Float32Array): Measures {
     lastSpeaking = b;
   }
 
+  // The top band at the start and at the end of each phrase: a speaking block
+  // with none in the 200 ms before it, and one with none in the 200 ms after.
+  const edge = (firsts: number[]) => {
+    const starts = firsts.filter((start) => start >= 0 && start + 2 * FFT_SIZE <= end).flatMap((start) => [start, start + FFT_SIZE]);
+    const [cleanEdge] = energyAbove(clean, starts, [8000]);
+    const [outEdge] = energyAbove(output.subarray(latency), starts, [8000]);
+    return starts.length === 0 ? NaN : db((outEdge as number) / (cleanEdge as number));
+  };
+  const phraseStarts: number[] = [];
+  const phraseEnds: number[] = [];
+  for (let b = 0; b < blocks; b += 1) {
+    if (!speaking[b]) continue;
+    const near = (direction: 1 | -1) => Array.from({ length: 20 }, (_, k) => speaking[b + direction * (1 + k)] === true).some(Boolean);
+    if (!near(-1)) phraseStarts.push(b * BLOCK);
+    if (!near(1)) phraseEnds.push((b + 1) * BLOCK - 2 * FFT_SIZE);
+  }
+
   return {
     latency,
     noiseReduction: db(noiseOut / noiseIn),
+    noiseReductionAbove8k: db((noiseOut8k as number) / (noiseIn8k as number)),
+    noiseLevelAbove8k: db(bandPower(noiseOut8k as number, quietStarts.length)),
+    noiseLevelInAbove8k: db(bandPower(noiseIn8k as number, quietStarts.length)),
     siSdr: siSdr(aligned),
     siSdrInput: siSdr((i) => input[i] as number),
     speech: db(speechOut / speechClean),
@@ -300,5 +348,7 @@ export function measure(mixture: Mixture, output: Float32Array): Measures {
     onset: onsetLevels.length > 0 ? onsetLevels.reduce((sum, value) => sum + value, 0) / onsetLevels.length : NaN,
     onsetWorst: onsetLevels.length > 0 ? Math.min(...onsetLevels) : NaN,
     onsets: onsetLevels.length,
+    onsetAbove8k: edge(phraseStarts),
+    offsetAbove8k: edge(phraseEnds),
   };
 }
