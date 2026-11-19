@@ -17,8 +17,8 @@ class FakeWorkletNode {
   static created: FakeWorkletNode[] = [];
   static failWith: Error | null = null;
 
-  /** What RNNoise's processor does after construction: say it is ready, fail, or say nothing. */
-  static rnnoise: "ready" | "error" | "silent" = "ready";
+  /** What the processors that are compiled on the main thread do after construction: say they are ready, fail, or say nothing. */
+  static compiled: "ready" | "error" | "silent" = "ready";
 
   connect = vi.fn();
   disconnect = vi.fn();
@@ -35,8 +35,8 @@ class FakeWorkletNode {
   ) {
     if (FakeWorkletNode.failWith) throw FakeWorkletNode.failWith;
     FakeWorkletNode.created.push(this);
-    if (name === PROCESSOR_NAME.rnnoise && FakeWorkletNode.rnnoise !== "silent") {
-      const ready = FakeWorkletNode.rnnoise === "ready";
+    if ((name === PROCESSOR_NAME.rnnoise || name === PROCESSOR_NAME.gtcrn) && FakeWorkletNode.compiled !== "silent") {
+      const ready = FakeWorkletNode.compiled === "ready";
       queueMicrotask(() => (ready ? this.port.onmessage?.({ data: "ready" }) : this.onprocessorerror?.()));
     }
   }
@@ -66,7 +66,7 @@ const lastNode = () => FakeWorkletNode.created.at(-1) as FakeWorkletNode;
 beforeEach(() => {
   vi.stubGlobal("AudioWorkletNode", FakeWorkletNode);
   vi.stubGlobal("fetch", fetchBinary);
-  // The fake binary is eight bytes of nothing; RNNoise's is compiled before the node exists.
+  // The fake binary is eight bytes of nothing; RNNoise's and GTCRN's are compiled before the node exists.
   vi.spyOn(WebAssembly, "compile").mockImplementation(async () => compiled);
 });
 
@@ -76,7 +76,7 @@ afterEach(() => {
   vi.restoreAllMocks();
   FakeWorkletNode.created = [];
   FakeWorkletNode.failWith = null;
-  FakeWorkletNode.rnnoise = "ready";
+  FakeWorkletNode.compiled = "ready";
   binaries.clear();
   fetchBinary.mockClear();
 });
@@ -101,26 +101,18 @@ describe("suppressor graph lifecycle", () => {
     expect(lastNode().port.postMessage).toHaveBeenCalledWith("destroy");
   });
 
-  it.each([
-    ["gtcrn", GTCRN_WORKLET_URL, GTCRN_WASM_URL],
-    ["speex", SPEEX_WORKLET_URL, SPEEX_WASM_URL],
-  ] as const)(
-    "starts %s's processor with one channel and the binary it was served",
-    async (kind, worklet, binary) => {
-      const { context, source } = graph();
+  it("starts Speex's processor with the binary it was served, to compile itself", async () => {
+    const { context, source } = graph();
 
-      await attachSuppressor(kind, context, source);
+    await attachSuppressor("speex", context, source);
 
-      expect(context.audioWorklet.addModule).toHaveBeenCalledWith(worklet);
-      expect(fetchBinary).toHaveBeenCalledWith(binary);
-      expect(lastNode().context).toBe(context);
-      expect(lastNode().name).toBe(PROCESSOR_NAME[kind]);
-      expect(lastNode().options).toEqual({
-        processorOptions: { maxChannels: 1, wasmBinary: binaries.get(binary) },
-      });
-      expect(lastNode().options.processorOptions.wasmBinary).toBe(binaries.get(binary));
-    },
-  );
+    expect(context.audioWorklet.addModule).toHaveBeenCalledWith(SPEEX_WORKLET_URL);
+    expect(fetchBinary).toHaveBeenCalledWith(SPEEX_WASM_URL);
+    expect(lastNode().context).toBe(context);
+    expect(lastNode().name).toBe(PROCESSOR_NAME.speex);
+    expect(lastNode().options).toEqual({ processorOptions: { wasmBinary: binaries.get(SPEEX_WASM_URL) } });
+    expect(lastNode().options.processorOptions.wasmBinary).toBe(binaries.get(SPEEX_WASM_URL));
+  });
 
   it("fetches a binary once per page and registers a worklet once per context", async () => {
     const { context, source } = graph();
@@ -137,17 +129,20 @@ describe("suppressor graph lifecycle", () => {
   });
 });
 
-describe("starting RNNoise", () => {
-  it("hands the processor the binary compiled, one channel's worth of nothing else", async () => {
+describe.each([
+  ["rnnoise", RNNOISE_WORKLET_URL, RNNOISE_WASM_URL],
+  ["gtcrn", GTCRN_WORKLET_URL, GTCRN_WASM_URL],
+] as const)("starting %s", (kind, worklet, binary) => {
+  it("hands the processor the binary compiled, and nothing else", async () => {
     const { context, source } = graph();
 
-    const handle = await attachSuppressor("rnnoise", context, source);
+    const handle = await attachSuppressor(kind, context, source);
 
-    expect(handle?.kind).toBe("rnnoise");
-    expect(context.audioWorklet.addModule).toHaveBeenCalledWith(RNNOISE_WORKLET_URL);
-    expect(fetchBinary).toHaveBeenCalledWith(RNNOISE_WASM_URL);
-    expect(WebAssembly.compile).toHaveBeenCalledWith(binaries.get(RNNOISE_WASM_URL));
-    expect(lastNode().name).toBe(PROCESSOR_NAME.rnnoise);
+    expect(handle?.kind).toBe(kind);
+    expect(context.audioWorklet.addModule).toHaveBeenCalledWith(worklet);
+    expect(fetchBinary).toHaveBeenCalledWith(binary);
+    expect(WebAssembly.compile).toHaveBeenCalledWith(binaries.get(binary));
+    expect(lastNode().name).toBe(PROCESSOR_NAME[kind]);
     expect(lastNode().options).toEqual({ processorOptions: { module: compiled } });
     expect(source.connect).toHaveBeenCalledWith(lastNode());
   });
@@ -156,7 +151,7 @@ describe("starting RNNoise", () => {
     vi.spyOn(WebAssembly, "compile").mockRejectedValue(new WebAssembly.CompileError("not a module"));
     const { context, source } = graph();
 
-    await expect(attachSuppressor("rnnoise", context, source)).resolves.toBeNull();
+    await expect(attachSuppressor(kind, context, source)).resolves.toBeNull();
 
     expect(FakeWorkletNode.created).toHaveLength(0);
     expect(source.connect).not.toHaveBeenCalled();
@@ -165,10 +160,10 @@ describe("starting RNNoise", () => {
   it("returns null, and frees the node, when the processor never says it is ready", async () => {
     vi.useFakeTimers();
     try {
-      FakeWorkletNode.rnnoise = "silent";
+      FakeWorkletNode.compiled = "silent";
       const { context, source } = graph();
 
-      const attached = attachSuppressor("rnnoise", context, source);
+      const attached = attachSuppressor(kind, context, source);
       await vi.advanceTimersByTimeAsync(3000);
 
       await expect(attached).resolves.toBeNull();
@@ -181,10 +176,10 @@ describe("starting RNNoise", () => {
   });
 
   it("returns null, and frees the node, when the processor fails to start", async () => {
-    FakeWorkletNode.rnnoise = "error";
+    FakeWorkletNode.compiled = "error";
     const { context, source } = graph();
 
-    await expect(attachSuppressor("rnnoise", context, source)).resolves.toBeNull();
+    await expect(attachSuppressor(kind, context, source)).resolves.toBeNull();
 
     expect(source.connect).not.toHaveBeenCalled();
     expect(lastNode().port.postMessage).toHaveBeenCalledWith("destroy");

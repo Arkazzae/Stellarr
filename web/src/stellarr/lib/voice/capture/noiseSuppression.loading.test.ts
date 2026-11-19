@@ -48,8 +48,8 @@ describe("suppressor loading", () => {
     const { context, source } = graph();
 
     const handles = await Promise.all([
-      attachSuppressor("gtcrn", context, source),
-      attachSuppressor("gtcrn", context, source),
+      attachSuppressor("speex", context, source),
+      attachSuppressor("speex", context, source),
     ]);
 
     expect(handles.every((handle) => handle !== null)).toBe(true);
@@ -62,11 +62,11 @@ describe("suppressor loading", () => {
     const { context, source } = graph();
     fetchBinary.mockRejectedValueOnce(new Error("offline"));
 
-    await expect(attachSuppressor("gtcrn", context, source)).resolves.toBeNull();
+    await expect(attachSuppressor("speex", context, source)).resolves.toBeNull();
     expect(source.connect).not.toHaveBeenCalled();
 
-    const handle = await attachSuppressor("gtcrn", context, source);
-    expect(handle?.kind).toBe("gtcrn");
+    const handle = await attachSuppressor("speex", context, source);
+    expect(handle?.kind).toBe("speex");
     expect(fetchBinary).toHaveBeenCalledTimes(2);
   });
 
@@ -85,8 +85,8 @@ describe("suppressor loading", () => {
       new Error("404"),
     );
 
-    await expect(attachSuppressor("gtcrn", context, source)).resolves.toBeNull();
-    await expect(attachSuppressor("gtcrn", context, source)).resolves.not.toBeNull();
+    await expect(attachSuppressor("speex", context, source)).resolves.toBeNull();
+    await expect(attachSuppressor("speex", context, source)).resolves.not.toBeNull();
     expect(context.audioWorklet.addModule).toHaveBeenCalledTimes(2);
   });
 });

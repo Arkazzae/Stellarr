@@ -538,7 +538,7 @@ describe("the files the apps name by address", () => {
 
   it("finds the addresses the apps load files from", () => {
     expect([...named.keys()]).toEqual(
-      expect.arrayContaining(["/audio/gtcrn-worklet.js", "/sounds/calling.wav", "/fonts/outfit-100-900-latin.woff2"]),
+      expect.arrayContaining(["/audio/gtcrn.wasm", "/sounds/calling.wav", "/fonts/outfit-100-900-latin.woff2"]),
     );
   });
 

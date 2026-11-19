@@ -15,7 +15,6 @@
 !artifacts
 artifacts/recipes/*/out
 web/public/audio/rnnoise.wasm
-web/public/audio/gtcrn-worklet.js
 web/public/audio/gtcrn.wasm
 web/public/audio/speex.wasm
 web/public/codecs

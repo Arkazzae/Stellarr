@@ -48,7 +48,7 @@ export const REMOTE_SUPPRESSOR: WorkletSuppressor = "gtcrn";
  */
 export const VOICE_PLAYBACK_GAIN = 1.25;
 
-/** The suppressor consumes fixed 10 ms frames, which only fit 48 kHz. */
+/** The suppressors take fixed frames at 48 kHz only. */
 const RECEIVER_SAMPLE_RATE = 48_000;
 
 /** Local processing a listener can put on one strip. */

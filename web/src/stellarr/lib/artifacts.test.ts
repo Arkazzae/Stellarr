@@ -15,8 +15,6 @@ import { spawnSync } from "node:child_process";
 
 import { afterAll, describe, expect, it } from "vitest";
 
-import { PROCESSOR_NAME, WORKLET_URL } from "./voice/capture/noiseSuppression";
-
 interface Artifact {
   id: string;
   path: string;
@@ -35,38 +33,6 @@ const manifest: Artifact[] = readJson(join(artifactsRoot, "manifest.json")).arti
 function sha256(bytes: Buffer): string {
   return createHash("sha256").update(bytes).digest("hex");
 }
-
-// The GTCRN worklet comes from artifacts/, the code that starts it is ours in
-// noiseSuppression.ts. Replacing a worklet with another build
-// or version must not leave the two speaking past each other: a node
-// constructed under a name nothing registered throws, and options the
-// processor does not read leave it without a binary. Speex's and RNNoise's
-// worklets are built from our source and take their names and options from the
-// same modules noiseSuppression.ts does.
-describe("the prebuilt noise-suppression worklets", () => {
-  const engines = Object.entries(WORKLET_URL).flatMap(([kind, url]) => {
-    const source = manifest.find((entry) => `/${entry.path}` === url)?.source.file;
-    if (source === undefined) return [];
-    return [
-      {
-        kind: kind as keyof typeof PROCESSOR_NAME,
-        url,
-        code: readFileSync(join(artifactsRoot, source), "utf8"),
-      },
-    ];
-  });
-
-  it.each(engines)("$url registers the processor $kind is started as", ({ kind, code }) => {
-    const registered = [...code.matchAll(/registerProcessor\(\s*[`'"]([^`'"]+)[`'"]/g)];
-    expect(registered.map(([, name]) => name)).toEqual([PROCESSOR_NAME[kind]]);
-  });
-
-  it.each(engines)("$url reads the options and the message it is given", ({ code }) => {
-    expect(code).toContain("processorOptions.wasmBinary");
-    expect(code).toContain("processorOptions.maxChannels");
-    expect(code).toMatch(/\.data\s*===\s*[`'"]destroy[`'"]/);
-  });
-});
 
 describe("the artifact manifest", () => {
   // assemble.mjs only reads a recipe's out/ folder. Something has to fill it:

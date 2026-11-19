@@ -19,14 +19,6 @@ Noise suppression
 -----------------
 
 Files:
-  audio/gtcrn-worklet.js
-
-Upstream: @sapphi-red/web-noise-suppressor 0.4.1
-  https://github.com/sapphi-red/web-noise-suppressor
-License: MIT
-Copyright (c) 2022 翠 / green
-
-Files:
   audio/rnnoise.wasm
 
 Built here by artifacts/recipes/rnnoise/ from xiph/rnnoise at commit
@@ -67,14 +59,41 @@ explained at http://creativecommons.org/publicdomain/zero/1.0/
 Files:
   audio/gtcrn.wasm
 
-Upstream: @sapphi-red/gtcrn-wasm 0.0.3, built from Xiaobin-Rong/gtcrn, with
-pffft for the STFT and iSTFT
-  https://github.com/sapphi-red/gtcrn-wasm
+Built here by artifacts/recipes/gtcrn/ from the streaming model of
+Xiaobin-Rong/gtcrn at commit 502ebfab64da7c4a9af78dcb9c6ceef1ebb01c73
+(stream/onnx_models/gtcrn_simple.onnx, whose weights are in the binary),
+converted to C by kraiskil/onnx2c at commit
+1154edbefb891129948bd494188109d68da9d5d7 after the graph preparation of
+sapphi-red/gtcrn-wasm 0.0.3, commit 24662ff13f184b96edf91f1568e186341a8ac988.
+From that repository the binary also holds build/gtcrn_gru.c, and Stellarr's
+own recipes/gtcrn/gtcrn_dsp.c is derived from its build/gtcrn_dsp.c (the STFT
+and the 3:1 resampler around the model). pffft v1.3.0, commit
+179a48d486cbee8ec5416e5c163ad575c2efe1f1, does the FFT: src/pffft.c,
+pffft_common.c and the headers they include, with their WebAssembly SIMD
+path. The code onnx2c writes holds its own boilerplate and operator
+templates, which is why its notice is below. The binary is statically linked
+with the parts of wasi-libc, from wasi-sdk 33, that it calls: musl's sinf,
+cosf, tanhf and expm1f with their kernels (__sindf, __cosdf, __rem_pio2f,
+__rem_pio2_large) and scalbn, Arm's expf, dlmalloc, and wasi-libc's own sbrk
+and abort. The worklet that drives it, audio/gtcrn-worklet.js, is Stellarr's
+own code.
   https://github.com/Xiaobin-Rong/gtcrn
+  https://github.com/kraiskil/onnx2c
+  https://github.com/sapphi-red/gtcrn-wasm
   https://github.com/marton78/pffft
-License: MIT (gtcrn-wasm and GTCRN) and the FFTPACK/UCAR license (pffft)
+  https://github.com/WebAssembly/wasi-libc
+License: MIT (GTCRN, gtcrn-wasm, musl, Arm's expf, and wasi-libc's own code,
+which is also offered under Apache-2.0); the FFTPACK/UCAR license (pffft); the
+onnx2c license; the SunPro notice below (musl's sinf, cosf and expm1f and
+their kernels); CC0-1.0 (dlmalloc)
 Copyright (c) 2026 sapphi-red
 Copyright (c) 2024 Rong Xiaobin
+Copyright (c) 2026 Marton Danoczy (pffft)
+Copyright 2005-2020 Rich Felker, et al. (musl)
+Copyright 2017-2018 Arm Limited
+Copyright 1993 Sun Microsystems, Inc.
+dlmalloc: written by Doug Lea and released to the public domain, as
+explained at http://creativecommons.org/publicdomain/zero/1.0/
 
 Files:
   audio/speex.wasm
@@ -290,7 +309,9 @@ Software.
 SunPro notice
 
 musl's atan, sin and cos carry the first form, the kernels they call
-(__sin, __cos, __rem_pio2 and __rem_pio2_large) the second.
+(__sin, __cos, __rem_pio2 and __rem_pio2_large) the second; so do sinf, cosf
+and expm1f and the kernels they call (__sindf, __cosdf, __rem_pio2f), the
+first, and __rem_pio2_large, the second.
 
 Copyright (C) 1993 by Sun Microsystems, Inc. All rights reserved.
 
@@ -344,6 +365,25 @@ EXEMPLARY, OR CONSEQUENTIAL DAMAGES OR OTHER LIABILITY, WHETHER IN AN
 ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN
 CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS WITH THE
 SOFTWARE.
+
+onnx2c license
+
+Onnx2c copyright is held by its authors listed below.
+
+You may use and distribute this software freely.
+You may not hold the authors liable if using or
+distributing this software causes anyone any harm.
+
+
+Authors:
+Kalle Raiskila
+Robin van Emden
+Youngsun Kong
+AUTOMATIC1111
+Thomas Lane
+Can Joshua Lehmann (emmtrix Technologies GmbH)
+Felix Kreutz (Infineon Technologies AG)
+Michael Schirmer
 
 Apache License, Version 2.0
 

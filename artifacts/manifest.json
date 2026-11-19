@@ -14,32 +14,17 @@
       "license": "BSD-3-Clause AND MIT AND SunPro AND CC0-1.0"
     },
     {
-      "id": "noise-suppression/gtcrn-worklet",
-      "path": "audio/gtcrn-worklet.js",
-      "source": { "file": "files/audio/gtcrn-worklet.js" },
-      "sha256": "343322257ef82a421ab9dd795b4afe18c1aa5b48a0ff65bc040a308c78893da8",
-      "size": 8916,
-      "upstream": {
-        "project": "https://github.com/sapphi-red/web-noise-suppressor",
-        "from": "npm:@sapphi-red/web-noise-suppressor@0.4.1/dist/gtcrn/workletProcessor.js",
-        "integrity": "sha512-hy2GnF079+zi4n9BZUf+GGIQ1IofApAk6rgGMyMQ3soHfz/GKu1pcCsmePyIHVvUuv1LrFudw9BmmBqoOKay5w==",
-        "verified": "Identical to the file in the npm tarball, whose sha512 is the integrity above and the one the registry publishes."
-      },
-      "license": "MIT"
-    },
-    {
       "id": "noise-suppression/gtcrn-wasm",
       "path": "audio/gtcrn.wasm",
-      "source": { "file": "files/audio/gtcrn.wasm" },
-      "sha256": "01a5286ddaa1ce6d0dd5510bd9241f3bf0cc727a05d5767ae6881d85d9983719",
-      "size": 196884,
+      "source": { "recipe": "gtcrn", "output": "gtcrn.wasm" },
+      "sha256": "de3e19677501c36dbbdf09ee0221ec283281b30c851ed96f27941e25b4170de1",
+      "size": 477310,
       "upstream": {
-        "project": "https://github.com/sapphi-red/gtcrn-wasm",
-        "from": "npm:@sapphi-red/web-noise-suppressor@0.4.1/dist/gtcrn.wasm",
-        "integrity": "sha512-hy2GnF079+zi4n9BZUf+GGIQ1IofApAk6rgGMyMQ3soHfz/GKu1pcCsmePyIHVvUuv1LrFudw9BmmBqoOKay5w==",
-        "verified": "Identical to the file in the npm tarball, whose sha512 is the integrity above and the one the registry publishes, and to dist/gtcrn.wasm of @sapphi-red/gtcrn-wasm 0.0.3."
+        "project": "https://github.com/Xiaobin-Rong/gtcrn",
+        "from": "https://github.com/Xiaobin-Rong/gtcrn.git#502ebfab64da7c4a9af78dcb9c6ceef1ebb01c73 (stream/onnx_models/gtcrn_simple.onnx), converted to C by https://github.com/kraiskil/onnx2c.git#1154edbefb891129948bd494188109d68da9d5d7 after the graph preparation of https://github.com/sapphi-red/gtcrn-wasm.git#24662ff13f184b96edf91f1568e186341a8ac988 (0.0.3), with https://github.com/marton78/pffft.git#179a48d486cbee8ec5416e5c163ad575c2efe1f1 (v1.3.0)",
+        "verified": "Built here from those commits by artifacts/recipes/gtcrn/, in the image its stages in the root Dockerfile pin by digest: Python 3.12 with the packages of requirements.txt by hash and Debian packages from a snapshot for the generation, which checks the generated C against the original model in onnxruntime, and the wasi-sdk 33 image for the compile. The build gave these bytes on arm64 and on amd64 build machines. Driven by our worklet, it puts out what dist/gtcrn.wasm of @sapphi-red/gtcrn-wasm 0.0.3 with its worklet did for the same input; web/bench/voice/records/suppressor/gtcrn.txt holds the output."
       },
-      "license": "MIT AND LicenseRef-pffft"
+      "license": "MIT AND LicenseRef-pffft AND LicenseRef-onnx2c AND SunPro AND CC0-1.0"
     },
     {
       "id": "noise-suppression/speex-wasm",

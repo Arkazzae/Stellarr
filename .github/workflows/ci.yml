@@ -425,7 +425,7 @@ jobs:
                       /bergamot-models/plen/vocab.plen.spm; do
             get "$path" 200
           done
-          for path in audio/speex.wasm audio/rnnoise.wasm codecs/bergamot/bergamot-translator.wasm; do
+          for path in audio/speex.wasm audio/rnnoise.wasm audio/gtcrn.wasm codecs/bergamot/bergamot-translator.wasm; do
             get "/$path" 200
             recorded=$(jq -r --arg path "$path" '.artifacts[] | select(.path == $path) | .sha256' artifacts/manifest.json)
             [[ $(sha256sum < "$RUNNER_TEMP/body" | cut -d' ' -f1) == "$recorded" ]] \
@@ -434,7 +434,7 @@ jobs:
           # The worklets the build writes from the app's source to a fixed
           # address (web/worklets.ts); under another name one would be missing
           # here.
-          for path in /audio/detector-worklet.js /audio/speex-worklet.js /audio/rnnoise-worklet.js; do
+          for path in /audio/detector-worklet.js /audio/speex-worklet.js /audio/rnnoise-worklet.js /audio/gtcrn-worklet.js; do
             get "$path" 200
             [[ $(header cache-control) == no-cache ]] || fail "$path is cached."
             body_has 'registerProcessor(' || fail "$path registers no processor."

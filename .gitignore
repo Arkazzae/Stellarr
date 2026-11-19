@@ -87,7 +87,6 @@ coverage.cobertura.xml
 # recipes' outputs at the paths artifacts/manifest.json serves them under. The
 # model registry beside them stays tracked.
 /web/public/audio/rnnoise.wasm
-/web/public/audio/gtcrn-worklet.js
 /web/public/audio/gtcrn.wasm
 /web/public/audio/speex.wasm
 /web/public/codecs/
